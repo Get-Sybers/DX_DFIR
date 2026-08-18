@@ -18,5 +18,5 @@ tags:
 dependencies:
   community.docker: ">=3.10.3"
 build_ignore:
-  - molecule
+  - "roles/*/molecule"
   - "*.pyc"
