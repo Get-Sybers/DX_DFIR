@@ -100,9 +100,9 @@ cover the ADX pair; SOF-ELK deploy and delivery run from the collection's
 The original `process-*.sh` scripts still ship under `scripts/` — they are the
 layer the capabilities below were actually exercised with, and are retired per
 source as each role's full path is proven. The CLI additionally needs
-`ansible-playbook` on `PATH` and the package installed (`pip install ./python`, or
-`PYTHONPATH=python` for in-repo runs); `setup-environment.sh` does not install
-these yet.
+`ansible-playbook` on `PATH` and the package installed with `pip install ./python`
+(which provides the `dxdfir` entry point and its one dependency, Typer);
+`setup-environment.sh` does not install these yet.
 
 ## 🧪 What Actually Works
 <a name="what-actually-works"></a>

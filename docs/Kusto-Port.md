@@ -106,7 +106,7 @@ schema, kept for the reasoning even though the Splunk side is retired.
 |:---|:---|:---|
 | Index | **Database** | `host`, `network`, `memory`, `misc`, `mitre` → 5 databases |
 | Sourcetype | **Table** | Kusto entity names cannot contain `:`, so a colon-bearing sourcetype like `zeek:conn` → `ZeekConn` |
-| `props.conf INDEXED_EXTRACTIONS` | **Ingestion mapping** | CSV and JSON mappings, precreated and referenced |
+| `props.conf INDEXED_EXTRACTIONS` | **Ingestion mapping** | JSON ingestion mappings, precreated and referenced |
 | `props.conf` FIELDALIAS / EVAL | **Function**, or update policy | See below |
 | `transforms.conf` | **Update policy** | Only where a materialised second table is wanted |
 | `inputs.conf` monitor stanza | `.ingest into` | No monitoring. Batch, script-driven |

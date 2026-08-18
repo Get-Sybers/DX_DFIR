@@ -21,9 +21,10 @@ dxdfir ingest            # load data_store/processed into it
 dxdfir validate          # run the repo check harness
 ```
 
-`dxdfir deploy`/`ingest` target the ADX emulator; the SOF-ELK path
-(`dxdfir process <source> --pipeline sofelk`, then the `dfir-*-sofelk.yml`
-playbooks) is delivered separately. `man dxdfir` for the manual.
+`dxdfir deploy`/`ingest` target the ADX emulator; the SOF-ELK path is
+`dxdfir process <source> --pipeline sofelk`, then the collection's
+`dfir-deploy-sofelk.yml` / `dfir-ingest-sofelk.yml` playbooks. `man dxdfir` for
+the manual.
 
 ### ⚙️ **Step 1: Setup Environment**
 - **Run setup-environment.sh:**
@@ -141,11 +142,12 @@ DX_DFIR/scripts/ingest-kusto.sh
 - Loads `data_store/processed/` into the emulator: Plaso `json_line` fanned out
   into per-parser `host.L2t<Parser>` tables, EvtxECmd JSON → `host.EvtxEcmdJson`,
   Zeek `conn` → `network.ZeekConn` (every other Zeek log → the generic
-  `network.Zeek`), and Volatility JSONL → `memory.VolatilityJson`.
-- The Velociraptor loader is **not implemented yet** — the table
-  exists, the loader does not. The script says so rather than pretending.
-  (Artefact collection is planned via Velociraptor offline collectors running
-  the EZ Tools; the KAPE path was removed.)
+  `network.Zeek`), Volatility JSONL → `memory.VolatilityJson`, and Velociraptor
+  JSON → `host.VelociraptorJson` (each record wrapped with its `Artefact`/`SourceFile`).
+- The Velociraptor **ingest** loader is wired; what's still partial is the
+  **upstream** collection path — the Velociraptor offline collectors running the
+  EZ Tools (the KAPE replacement) aren't built yet, so in practice there is
+  usually no processed Velociraptor data to load.
 - Ingestion is additive with no fishbucket: re-running duplicates rows. To
   start clean, redeploy (ephemeral default) and re-ingest.
 - `--only l2t|zeek|evtx|volatility|velociraptor` limits to one source;

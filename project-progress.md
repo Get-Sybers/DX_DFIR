@@ -119,7 +119,9 @@ Things that are broken or unsafe right now.
   below and is worth more than any further code —
   [issue #14](https://github.com/Get-Sybers/DX_DFIR/issues/14) is the ranked
   checklist.
-- ⬜ Velociraptor ingestion. The table exists; the loader does not populate it.
+- ⬜ Velociraptor: the ingest loader is wired (`host.VelociraptorJson` via
+  `velociraptor_prepare`), but the upstream offline-collector path that feeds it
+  isn't built, and nothing has run against a real emulator.
 
 ### 🔹 **Data Models & MITRE CAR Mapping**
 - Validate the CAR field mappings against real Windows event logs, Zeek logs,

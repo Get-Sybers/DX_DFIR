@@ -126,6 +126,14 @@ Persist the emulator's data (opt-in; it is ephemeral by default).
 .TP
 .BI --port " PORT"
 Emulator port override.
+.TP
+.BR --repo-root " " \fIPATH\fR ", " --extra-var ", " -e " " \fIKEY=VALUE\fR
+As for
+.B process
+above; use
+.B -e
+to override role variables (e.g.
+.IR dfir_deploy_adx_host ).
 .SS ingest
 .TP
 .BI --only " SOURCE"
@@ -137,6 +145,11 @@ Re-ingest files already recorded in the ledger (additive; duplicates rows).
 .TP
 .B --dry-run
 List what would be loaded; contact nothing.
+.TP
+.BR --repo-root " " \fIPATH\fR ", " --extra-var ", " -e " " \fIKEY=VALUE\fR
+As for
+.B process
+above.
 .SH ENVIRONMENT
 .TP
 .B DFIR_REPO_ROOT
@@ -147,7 +160,7 @@ directory, then from the installed package's location.
 .TP
 .B ANSIBLE_ROLES_PATH
 Set by
-.B process
+.BR process ", " ingest " and " deploy
 to the collection's roles directory so the roles resolve without installing the
 collection.
 .SH EXIT STATUS

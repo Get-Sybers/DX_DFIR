@@ -13,8 +13,8 @@ processing scripts pull their images on first use.
 
 > **For the `dxdfir` CLI path** (the pipeline front-end): this script installs the
 > *scripts'* dependencies, not the CLI's. `dxdfir` additionally needs
-> `ansible-playbook` on `PATH` and the Python package installed
-> (`pip install ./python`, or `PYTHONPATH=python` for in-repo runs) — see
+> `ansible-playbook` on `PATH` and the Python package installed with
+> `pip install ./python` (which provides the `dxdfir` command and Typer) — see
 > [How It Runs](/README.md#how-it-runs).
 
 ## Prerequisites

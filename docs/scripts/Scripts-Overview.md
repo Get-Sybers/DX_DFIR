@@ -11,8 +11,8 @@ collectors running the EZ Tools** (replacing the removed KAPE automation).
 > below has a matching `dfir_<source>` role (`dxdfir process <source>`); the
 > deploy/apply/ingest scripts map to the `dfir_deploy_adx` / `dfir_ingest_adx`
 > roles (`dxdfir deploy` / `dxdfir ingest`). Scripts are retired per source as each
-> role's full path is proven (epic #46); until then both work, and this page
-> documents the scripts.
+> role's full path is proven (epic #46); until then both are available, and this
+> page documents the scripts.
 
 ---
 
