@@ -9,6 +9,14 @@ types populate. It also records the defects the live run surfaced — every one
 of them a "parsed in review, failed the moment it ran" bug that no fake could
 have caught.
 
+> **This records the pre-refactor run.** The schema then had a single
+> `host.L2tCsv` table and the pipeline was script-driven. Plaso now emits
+> `json_line` into per-parser `host.L2t<Parser>` tables, and processing/ingest
+> moved to the `dxdfir` CLI + `get_sybers.dfir` collection (epic #46).
+> Re-validating host + network after those refactors is
+> [issue #44](https://github.com/Get-Sybers/DX_DFIR/issues/44) — so read the
+> `L2tCsv` table names below as of this run, not the current schema.
+
 > **What ran against real tooling vs. what was validated with a fixture.**
 > This distinction is load-bearing and is kept honest throughout:
 >
