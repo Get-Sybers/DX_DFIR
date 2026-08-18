@@ -45,8 +45,8 @@ ansible-playbook playbooks/dfir-ingest-sofelk.yml \
 ```
 
 ## Testing
-The image build + Logstash config compilation (`--config.test_and_exit` over all of
-SOF-ELK's parsing configs) are validated in `docker/sof-elk`. The **Molecule**
-scenario builds the image and brings up the stack, verifies the `elasticsearch` +
-`sof-elk` services are running, and tears it down in `cleanup` — it needs a resourced
-Docker host (Elasticsearch), so it is not run in the lightweight CI environment.
+The **Molecule** scenario builds the image and brings up the stack, verifies the
+`elasticsearch` + `sof-elk` services are running, and tears it down in `cleanup` — it
+needs a resourced Docker host (Elasticsearch), so it is not run in the lightweight CI
+environment. There is no automated Logstash config-compilation check; `docker/sof-elk`
+bakes SOF-ELK's own parsing configs unmodified.

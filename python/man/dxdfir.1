@@ -118,7 +118,7 @@ Pass an extra Ansible variable through to the role; repeatable. Use it to overri
 a role default, e.g.
 .RB \(lq -e\  dfir_zeek_pcap_dir=/evidence/pcaps \(rq
 or
-.RB \(lq -e\  dfir_signatures_lanes=[\(dqyara\(dq] \(rq.
+.RB \(lq -e\  \(aq{\(dqdfir_signatures_lanes\(dq:[\(dqyara\(dq]}\(aq \(rq.
 .SS deploy
 .TP
 .B --persist
@@ -184,7 +184,7 @@ Reprocess memory images, overriding the input directory:
 .B dxdfir process volatility --force -e dfir_volatility_memory_dir=/evidence/mem
 .TP
 Run only the YARA signature lane:
-.B dxdfir process signatures -e dfir_signatures_lanes=[\(dqyara\(dq]
+.B dxdfir process signatures -e \(aq{\(dqdfir_signatures_lanes\(dq:[\(dqyara\(dq]}\(aq
 .TP
 Stand up the emulator, then load Zeek output:
 .B dxdfir deploy && dxdfir ingest --only zeek

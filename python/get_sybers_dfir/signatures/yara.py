@@ -1,14 +1,17 @@
-"""YARA lane — scan files / mounted disk images / process memory with a ruleset.
+"""YARA lane — scan a ruleset against evidence.
 
-Sources (YARA_SOURCES, default all three):
-  files   loose files                          -> matches.jsonl
-  disk    disk images MOUNTED read-only, in place (ewfmount+ntfs-3g via FUSE; needs
-          /dev/fuse) -> disk.jsonl. Never extracts files; skips if the host can't mount.
-  memory  process memory THROUGH Volatility 3 (windows.vadyarascan) -> memory.jsonl
+Sources (default all three):
+  files   loose files                          -> matches.jsonl   (implemented)
+  disk    disk images mounted read-only in place (ewfmount+ntfs-3g via FUSE) ->
+          disk.jsonl      -- NOT YET PORTED: records a note only; the working
+          implementation is in scripts/signatures/yara.sh
+  memory  process memory via Volatility 3 (windows.vadyarascan) -> memory.jsonl
+                          -- NOT YET PORTED: note only; see yara.sh
 
-YARA has no JSON output and the container's recursive scan hangs, so file/disk scans
-loop per-file inside ONE container (per-file scans print strings) and the stable text
-form is parsed here. Each match is a self-describing JSON object.
+YARA has no JSON output and the container's recursive scan hangs, so the file scan
+loops per-file inside ONE container (per-file scans print strings) and the stable text
+form is parsed here. Each match is a self-describing JSON object. parse_vadyarascan()
+exists (and is unit-tested) for when the memory source is wired up.
 """
 from __future__ import annotations
 

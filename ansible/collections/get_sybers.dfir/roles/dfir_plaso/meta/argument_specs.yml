@@ -31,7 +31,7 @@ argument_specs:
       dfir_plaso_sofelk_out_dir:
         type: str
         required: false
-        description: "SOF-ELK-path output dir (its Logstash watch dir)."
+        description: "SOF-ELK-path output dir (delivered into SOF-ELK by dfir_ingest_sofelk)."
       dfir_plaso_module:
         type: str
         required: false

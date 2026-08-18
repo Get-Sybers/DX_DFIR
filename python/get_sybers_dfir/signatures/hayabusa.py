@@ -1,11 +1,14 @@
 """Hayabusa lane — Sigma-based Windows event-log detection -> native JSONL.
 
-EVTX come from loose ``*.evtx`` under the raw tree and from disk images (mount
-read-only and scan winevt\\Logs in place when /dev/fuse is available; otherwise a
-TARGETED image_export of ONLY the event logs, scoped to Hayabusa, since its ``-J``
-JSON input yields 0 detections on Plaso/evtx_dump JSON vs 792 natively, #1324).
+Scans loose ``*.evtx`` under the raw tree. Disk-image EVTX (mount read-only and scan
+winevt\\Logs in place, or a targeted image_export of only the event logs) is NOT YET
+PORTED here — an image with no reachable EVTX records a note only; the working
+implementation is in scripts/signatures/hayabusa.sh. (Hayabusa's ``-J`` JSON input
+yields 0 detections on Plaso/evtx_dump JSON vs 792 natively, #1324, so real .evtx is
+required.)
 
-Native Rust binary (no official image); operator-supplied or ``--fetch``ed.
+Native Rust binary (no official image); operator-supplied. ``--fetch`` is accepted
+for parity with the bash script but not yet implemented here.
 """
 from __future__ import annotations
 

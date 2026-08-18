@@ -25,7 +25,7 @@ argument_specs:
       dfir_zeek_sofelk_out_dir:
         type: str
         required: false
-        description: "SOF-ELK-path output dir (its Logstash watch dir)."
+        description: "SOF-ELK-path output dir (delivered into SOF-ELK by dfir_ingest_sofelk)."
       dfir_zeek_image:
         type: str
         required: false

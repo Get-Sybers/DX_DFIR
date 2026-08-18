@@ -4,9 +4,10 @@ galaxy_info:
   namespace: get_sybers
   author: Get-Sybers
   description: >-
-    Deploy a SOF-ELK stack (operator-supplied image) with an ingest volume, so
-    dfir_ingest_sofelk can deliver into a directory SOF-ELK watches. Runs the
-    container via community.docker.
+    Deploy the from-source SOF-ELK stack (Elasticsearch + Logstash/Filebeat +
+    Kibana) built from docker/sof-elk, with an ingest volume SOF-ELK watches, so
+    dfir_ingest_sofelk can deliver into it. Brings the stack up via
+    community.docker.docker_compose_v2.
   company: Get-Sybers
   license: MIT
   min_ansible_version: "2.15"

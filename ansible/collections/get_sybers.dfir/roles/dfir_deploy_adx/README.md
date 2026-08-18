@@ -36,7 +36,7 @@ re-deploy against the same running cluster is `changed=false`.
 
 ## Example
 ```bash
-dxdfir deploy                       # (once the CLI's deploy is wired to this role)
+dxdfir deploy                       # drives this role
 ansible-playbook playbooks/dfir-deploy-adx.yml
 ```
 

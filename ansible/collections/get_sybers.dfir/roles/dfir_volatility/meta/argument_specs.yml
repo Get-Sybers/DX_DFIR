@@ -27,11 +27,11 @@ argument_specs:
       dfir_volatility_sofelk_out_dir:
         type: str
         required: false
-        description: "SOF-ELK-path output dir (its Logstash watch dir)."
+        description: "SOF-ELK-path output dir (delivered into SOF-ELK by dfir_ingest_sofelk)."
       dfir_volatility_symbols_dir:
         type: str
         required: false
-        description: "Volatility symbol cache (VOLATILITY_SYMBOLS); pre-seed when offline."
+        description: "Volatility 3 symbol cache (passed as --symbols-dir); pre-seed when offline."
       dfir_volatility_renderer:
         type: str
         required: false

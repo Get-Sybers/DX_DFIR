@@ -4,11 +4,12 @@ argument_specs:
     short_description: "YARA / Suricata / Hayabusa detection lanes -> JSONL."
     description:
       - >-
-        Runs the three signature engines over the evidence (YARA over files / mounted
-        disk images / process memory; Suricata over PCAPs; Hayabusa over Windows
-        Event Logs) and writes one <lane>/ folder of detection JSONL under the output
-        dir. Idempotent: a lane whose output already exists is skipped. Disk-image
-        mounting needs /dev/fuse; a lane that can't mount notes it and moves on.
+        Runs the signature engines over the evidence and writes one <lane>/ folder of
+        detection JSONL under the output dir. As ported to Python here: YARA over loose
+        files, Suricata over PCAPs, Hayabusa over loose Windows Event Logs. Disk-image
+        and memory YARA and disk-image Hayabusa are not yet ported (they live in
+        scripts/process-signatures.sh); such a source notes it and produces nothing.
+        Idempotent: a lane whose output already exists is skipped.
     options:
       dfir_signatures_pipeline:
         type: str
@@ -23,7 +24,7 @@ argument_specs:
       dfir_signatures_sofelk_out_dir:
         type: str
         required: false
-        description: "SOF-ELK-path output base (its Logstash watch dir)."
+        description: "SOF-ELK-path output base (delivered into SOF-ELK by dfir_ingest_sofelk)."
       dfir_signatures_lanes:
         type: list
         elements: str
@@ -34,7 +35,7 @@ argument_specs:
         type: bool
         required: false
         default: false
-        description: "Provision rules/binaries when online (never in an air-gapped run)."
+        description: "Accepted for parity with the bash script; provisioning is not yet ported to the Python processor (no-op)."
       dfir_signatures_python_path:
         type: str
         required: false

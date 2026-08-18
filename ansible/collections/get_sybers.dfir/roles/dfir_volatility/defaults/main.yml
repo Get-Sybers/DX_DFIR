@@ -9,7 +9,7 @@ dfir_volatility_repo_root: "{{ role_path }}/../../../../.."
 dfir_volatility_memory_dir: "{{ dfir_volatility_repo_root }}/data_store/raw/memory"
 dfir_volatility_adx_out_dir: "{{ dfir_volatility_repo_root }}/data_store/processed/volatility"
 dfir_volatility_sofelk_out_dir: "{{ dfir_volatility_repo_root }}/data_store/processed/sofelk/volatility"
-# Kernel symbol cache (VOLATILITY_SYMBOLS). Windows plugins fetch ISF tables from
+# Kernel symbol cache (passed as --symbols-dir). Windows plugins fetch ISF tables from
 # the symbol servers on first use — pre-seed this on an isolated host.
 dfir_volatility_symbols_dir: "{{ dfir_volatility_repo_root }}/data_store/dependencies/volatility3-symbols"
 # Custom renderer + plugins live in the repo (dev-scripts), mounted into the run.

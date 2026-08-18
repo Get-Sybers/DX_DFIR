@@ -14,7 +14,7 @@ action** (one container run per plugin per image happens inside Python). One
 | `dfir_volatility_memory_dir` | `<repo>/data_store/raw/memory` | Memory-image tree to process (recursed). |
 | `dfir_volatility_adx_out_dir` | `<repo>/data_store/processed/volatility` | ADX-path output. |
 | `dfir_volatility_sofelk_out_dir` | `<repo>/data_store/processed/sofelk/volatility` | SOF-ELK-path output. |
-| `dfir_volatility_symbols_dir` | `<repo>/data_store/dependencies/volatility3-symbols` | Kernel symbol cache (`VOLATILITY_SYMBOLS`). |
+| `dfir_volatility_symbols_dir` | `<repo>/data_store/dependencies/volatility3-symbols` | Volatility 3 kernel-symbol cache (passed as `--symbols-dir`). |
 | `dfir_volatility_renderer` | `<repo>/dev-scripts/volatility/jsonl_dfir_renderer.py` | Custom JSONL renderer. |
 | `dfir_volatility_plugins_dir` | `<repo>/dev-scripts/volatility/plugins` | Custom plugins (`dfir_processes`, `dfir_registry`). |
 | `dfir_volatility_image` | `sk4la/volatility3:latest` | Volatility 3 container image. |

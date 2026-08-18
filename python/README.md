@@ -21,7 +21,7 @@ Every processor prints a machine-readable JSON summary (`processed`/`skipped`/
 ## The `dxdfir` CLI
 ```bash
 dxdfir process zeek --pipeline adx      # drive the dfir_zeek role (preflight → process → verify)
-dxdfir process signatures -e dfir_signatures_lanes='["yara"]'
+dxdfir process signatures -e '{"dfir_signatures_lanes":["yara"]}'
 dxdfir ingest --only zeek               # load processed output into the ADX emulator
 dxdfir deploy                           # stand up + schema-load the emulator
 dxdfir validate                         # run the check harness
