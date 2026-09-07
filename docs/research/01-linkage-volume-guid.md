@@ -9,7 +9,7 @@
 CAR's `guid` is the one cross-source join key: it travels to Elastic as ECS
 `event.id` on every object and `process.entity_id` on process rows, and
 `LOOKUP JOIN car-detections ON event.id|process.entity_id` is the entire
-convergence contract (`detect/rules/car-detections/join-keys.yml`).
+convergence contract (`python/get_sybers_dxdfir/detect/rules/car-detections/join-keys.yml`).
 
 The cross-dataset value hunt ([`../car-provenance/crosslink/`](../car-provenance/crosslink/))
 found that key holds **nothing real**. Of **44,327** non-null values across the

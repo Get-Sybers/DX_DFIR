@@ -2,7 +2,7 @@
 
 > Part of the CAR cross-source linkage & detection research arc — see [README](README.md) for the full map.
 
-**Status:** merged (timeline crash fix staged in the engine batch)
+**Status:** merged (timeliner robustness fix on engine `main`, PIIAT-MitreCar#65)
 
 ## The gap
 
@@ -35,7 +35,7 @@ top.
 
 ## The fix
 
-The crash fix (staged in the engine batch) makes `build_timeline`:
+The crash fix makes `build_timeline`:
 
 - **skip any table without a `timestamp` column**, so auxiliary tables like
   `image_context` no longer abort the run; and
