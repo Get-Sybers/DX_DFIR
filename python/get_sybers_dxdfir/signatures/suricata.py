@@ -504,13 +504,25 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
     res = {"lane": "suricata", "produced": 0, "skipped": 0, "failed": 0, "note": None,
            "tuning": {}}
 
+    # --fetch (online only) provisions the ET Open ruleset when the dir has none,
+    # the Suricata analogue of the yara lane's DetectRaptor fetch. Best-effort: a
+    # failed fetch (air-gapped / upstream down) is a note, never a lane failure —
+    # suricata still runs on any bundled rules.
+    if fetch:
+        from . import suricata_rules
+        try:
+            res["rules_fetch"] = suricata_rules.fetch(rules_dir)
+        except Exception as exc:                       # noqa: BLE001 — best-effort provisioning
+            res["rules_fetch"] = {"tool": "et-open", "error": str(exc)}
+
     rules_file = None
     for cur, _dirs, files in os.walk(rules_dir):
         if "suricata.rules" in files:
             rules_file = os.path.join(cur, "suricata.rules")
             break
     if not rules_file:
-        res["note"] = "no suricata.rules — using the image's bundled rules"
+        res["note"] = "no suricata.rules — using the image's bundled rules " \
+                      "(run with --fetch online to provision ET Open)"
 
     pcaps = discover(pcap_dir)
     if not pcaps:
