@@ -81,6 +81,22 @@ Terms still bind the operator who fetches, and they are layered:
 - DetectRaptor's **VQL artifacts and CSV lookups are not fetched** — they need a
   Velociraptor server this pipeline does not run.
 
+### Emerging Threats Open (Suricata rules) — fetched, not redistributed
+
+**This repository ships none of it.** The Suricata lane's `--fetch`
+(`get_sybers_dxdfir/signatures/suricata_rules.py`) downloads the
+[ET Open](https://rules.emergingthreats.net/open/) ruleset — the version-pinned
+tarball published per Suricata engine release — and concatenates its `*.rules`
+into `data_store/dependencies/suricata-rules/suricata.rules`, which is
+deny-by-default gitignored. Only the source URL lives in this repository, so no
+redistribution obligation attaches — the same position as DetectRaptor above.
+
+- ET Open is a **rolling feed** (rebuilt daily), so the pin is the engine-version
+  URL, not a content hash; the fetch is HTTPS + structural validation, the trust
+  model the official `suricata-update` uses.
+- The ruleset carries **Proofpoint's ET Open licence** (BSD-style, non-commercial
+  attribution terms); those terms bind the operator who fetches, not this repo.
+
 ---
 
 ---

@@ -693,3 +693,63 @@ def test_signatures_cli_plumbs_pcap_dir(tmp_path, monkeypatch):
     sig_main.main(["--output-dir", str(tmp_path / "o"), "--repo-root", str(tmp_path),
                    "--only", "suricata", "--pcap-dir", "/some/pcaps"])
     assert captured["config"]["suricata"]["pcap_dir"] == "/some/pcaps"
+
+
+# ---- ET Open ruleset provisioning (the suricata --fetch wiring) ------------
+import io as _io
+import tarfile as _tarfile
+from get_sybers_dxdfir.signatures import suricata_rules
+
+
+def _tar_gz(files: dict) -> bytes:
+    buf = _io.BytesIO()
+    with _tarfile.open(fileobj=buf, mode="w:gz") as t:
+        for name, data in files.items():
+            info = _tarfile.TarInfo(name)
+            info.size = len(data)
+            t.addfile(info, _io.BytesIO(data))
+    return buf.getvalue()
+
+
+def test_extract_rules_concatenates_only_rules_members():
+    blob = _tar_gz({
+        "rules/emerging-malware.rules": b"alert tcp any any -> any any (msg:\"m\"; sid:1;)\n",
+        "rules/emerging-dns.rules": b"alert dns any any -> any any (msg:\"d\"; sid:2;)\n",
+        "classification.config": b"config: not a rule\n",   # excluded
+    })
+    text, n = suricata_rules.extract_rules(blob)
+    assert n == 2
+    assert "sid:1;" in text and "sid:2;" in text
+    assert "not a rule" not in text
+
+
+def test_extract_rules_rejects_an_archive_with_no_rules():
+    import pytest
+    with pytest.raises(ValueError):
+        suricata_rules.extract_rules(_tar_gz({"classification.config": b"x"}))
+
+
+def test_fetch_writes_ruleset_and_is_idempotent(tmp_path, monkeypatch):
+    blob = _tar_gz({"rules/a.rules": b"alert ip any any -> any any (msg:\"a\"; sid:9;)\n"})
+    monkeypatch.setattr(suricata_rules, "_download", lambda url: blob)
+    res = suricata_rules.fetch(str(tmp_path))
+    out = tmp_path / "suricata.rules"
+    assert out.is_file() and "sid:9;" in out.read_text() and res["rule_files"] == 1
+    # exists -> skipped; force -> refreshed
+    assert suricata_rules.fetch(str(tmp_path))["skipped"] is True
+    assert suricata_rules.fetch(str(tmp_path), force=True)["skipped"] is False
+
+
+def test_suricata_run_fetches_etopen_when_asked(tmp_path, monkeypatch):
+    called = {}
+    def _fake_fetch(rules_dir, **k):
+        open(os.path.join(rules_dir, "suricata.rules"), "w").write("alert ip any any -> any any (sid:1;)")
+        called["dir"] = rules_dir
+        return {"tool": "et-open", "rule_files": 1}
+    monkeypatch.setattr(suricata_rules, "fetch", _fake_fetch)
+    monkeypatch.setattr(suricata, "_suricata_pass", lambda *a, **k: "")
+    pcaps = tmp_path / "p"; pcaps.mkdir()
+    (pcaps / "c.pcap").write_bytes(_PCAP_MAGIC + b"x")
+    res = suricata.run(output_dir=str(tmp_path / "o"), repo_root=str(tmp_path),
+                       pcap_dir=str(pcaps), fetch=True)
+    assert called and res["rules_fetch"]["rule_files"] == 1   # fetch happened
