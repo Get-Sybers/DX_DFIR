@@ -1,6 +1,6 @@
 # Command-line cross-artefact linkage hunt — DX_DFIR processed dataset
 
-READ-ONLY analysis. Repo `/opt/github/DX_DFIR`, dataset `data_store/processed/`.
+READ-ONLY analysis over the processed dataset `data_store/processed/`.
 Command-bearing artefacts extracted by a single streaming pass over the 6.6 GB
 LoneWolf disk timeline plus targeted reads of the Sysmon evtx, Hayabusa timeline,
 Volatility plugins and `car.db`.
@@ -244,8 +244,10 @@ rule CMD_Silent_RecursiveDelete
 
 ---
 
-### Artefact-extraction working files (scratchpad)
-`/tmp/claude-0/-opt-github-DX-DFIR/efe5c9e9-eea7-4e0b-98c8-5da8aa5f00db/scratchpad/car-crosslink/`
-— `prefetch.jsonl amcache.jsonl appcompatcache.jsonl bam.jsonl userassist.jsonl lnk.jsonl
+### Artefact-extraction working files
+This pass projected per-artefact JSONL out of the processed tree —
+`prefetch.jsonl amcache.jsonl appcompatcache.jsonl bam.jsonl userassist.jsonl lnk.jsonl
 service.jsonl run.jsonl taskjob.jsonl taskcache.jsonl mrulistex.jsonl shellitem.jsonl
-evtx_proc.jsonl` plus `pf_exe.txt am_path.txt shim_path.txt bam_path.txt ua_val.txt`.
+evtx_proc.jsonl` plus the extracted value lists `pf_exe.txt am_path.txt shim_path.txt
+bam_path.txt ua_val.txt` — as intermediate scratch (not committed). The findings above
+are the durable output; the projections are reproducible from `data_store/processed/`.

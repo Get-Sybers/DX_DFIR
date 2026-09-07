@@ -5,7 +5,7 @@
 a program, its command line, its launching user or its scheduled/autostart recipe — deliberately
 scoped to artefacts the earlier LoneWolf re-check **did not** analyse.
 
-**Builds on (do NOT redo):** `scratchpad/car-provenance-lonewolf/process.md` already settled the
+**Builds on (do NOT redo):** `../process.md` already settled the
 execution-artefact family — **prefetch, amcache, shimcache/appcompatcache, userassist, BAM, SRUM** —
 and the `user`-from-`\Users\<name>\` gap. Those findings stand; this document assumes them and covers
 everything else on disk.
@@ -13,8 +13,8 @@ everything else on disk.
 **Evidence (full-file, not sampled from a fixture):**
 `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl` (6.6 GB, `LoneWolf.E01` via plaso).
 Host `DESKTOP-PM6C56D`; principal user `jcloudy` (SID domain `S-1-5-21-2734969515-1644526556-1039763013`).
-Every count below is a full-file tally (`scratchpad/car-provenance-fs/datatype_hist.txt`); every quoted
-record is a verbatim real row (`scratchpad/car-provenance-fs/samples.json`).
+Every count below is a full-file tally over that JSONL; every quoted
+record is a verbatim real row from it.
 
 **Maps checked:** `piiat_mitrecar/mappings/{plaso_exec,plaso_registry,plaso_shellitem,plaso_fs_extra,
 plaso_artifacts,jlecmd,recmd}.py`; `piiat_mitrecar/{crosssource.py,relationships.yml,

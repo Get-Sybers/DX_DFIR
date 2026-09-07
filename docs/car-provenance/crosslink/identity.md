@@ -1,6 +1,6 @@
 # Identity-Linkage Hunt: SIDs & Usernames as Cross-Artefact Convergence Keys
 
-Dataset: `/opt/github/DX_DFIR/data_store/processed/` — READ-ONLY hunt. All values below are real, pulled from the processed data.
+Dataset: `data_store/processed/` — READ-ONLY hunt. All values below are real, pulled from the processed data.
 
 ## TL;DR
 

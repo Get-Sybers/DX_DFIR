@@ -7,7 +7,7 @@ Zone.Identifier). READ-ONLY. This pass is the FS-artefact complement to the comm
 `docs/car-provenance/http.md` (which is Zeek/BITS/network-centric); it grounds the "browser
 depth beyond Firefox" gap (that doc's ranked item #4) in the **real LoneWolf Win10 image**.
 
-- **Real evidence:** `/opt/github/DX_DFIR/data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl`
+- **Real evidence:** `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl`
   (LoneWolf `LoneWolf.E01` via Plaso, 6.6 GB). Every count below is a full-file tally.
 - **Engine http maps:** `third_party/piiat-mitrecar/piiat_mitrecar/mappings/plaso_web.py`
   (msiecf / firefox_cache / firefox_places / javaidx), `core.py` (zeek), `evtx_extra.py` (BITS).

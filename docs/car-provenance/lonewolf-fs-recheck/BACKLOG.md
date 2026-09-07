@@ -3,9 +3,8 @@
 A "find once, done" sweep of every CAR object for Windows filesystem/disk artefacts
 the pipeline does NOT yet turn into the right CAR row — grounded in the real
 LoneWolf Win10 image (`DESKTOP-PM6C56D`, plaso 4.17M events, VSS included).
-Per-object detail: `<object>.md` in this dir. The first-round catalogues
-(`car-provenance/`) and the LS24-corrective (`car-provenance-lonewolf/`) are the
-priors this builds on.
+Per-object detail: one `<object>.md` per CAR object in this dir. The first-round
+property-provenance catalogues in the parent directory are the priors this builds on.
 
 ## The five recurring patterns (this is the real finding)
 Almost every gap is one of five shapes — and most are **cheap re-emits of data plaso

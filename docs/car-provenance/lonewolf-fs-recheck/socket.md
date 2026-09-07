@@ -1,6 +1,6 @@
 # CAR `socket` — FILESYSTEM/disk Property-Provenance Audit (unmined-artefact hunt)
 
-FS/disk companion to the earlier memory-grounded catalogue (`../car-provenance/socket.md`).
+FS/disk companion to the earlier memory-grounded catalogue (`../socket.md`).
 That pass established the **live/memory** truth: the *only* active socket source in this pipeline is
 Volatility3 `windows.piiat.network`/`netscan` → `socket`/`listen` (memory), and WFP 5158 → `socket`/`bind`
 is built-but-inert. **This pass asks a different question: what DISK artefacts record a bound/listening
@@ -167,7 +167,7 @@ conflates "the firewall would permit this app to listen on 9955" with "this app 
   *action* is a command line; whether that command binds a port is opaque on disk (would require parsing the
   target binary's behaviour). No disk field expresses a task-opened socket.
 
-## 5. Cross-reference to the memory pass (`../car-provenance/socket.md`)
+## 5. Cross-reference to the memory pass (`../socket.md`)
 
 - **Consistent:** that pass found the active socket object is memory-only / `listen`-only / local-end-only,
   with WFP 5158 `bind` inert and `remote_*`/`local_path`/`close` unsourced. This FS pass confirms **disk adds
