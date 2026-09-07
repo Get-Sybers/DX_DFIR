@@ -240,7 +240,7 @@ def process(
             counts[lane_name] = counts.get(lane_name, 0) + n
 
     if source is Source.all:
-        lanes = [lane.name for lane in _collection.LANES]     # the five evidence lanes
+        lanes = [lane.name for lane in _collection.LANES]     # evidence lanes + the detection lane (last)
         if collection:
             lanes = [ln for ln in lanes if counts.get(ln, 0) > 0]
             if not lanes:
