@@ -6,7 +6,7 @@
 
 ## The gap
 
-The cross-source value hunt ([Step 04](04-plaso-binary-value-loss.md) and the
+The cross-source value hunt ([Step 04](04-plaso-binary-loss.md) and the
 `docs/car-provenance/crosslink/*.md` notes) kept surfacing the same shape of
 problem: a distinctive value is present in the raw/native artefact but is never
 lifted into a CAR field, so it cannot be used as a cross-source join key.

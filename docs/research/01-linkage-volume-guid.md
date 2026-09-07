@@ -2,7 +2,7 @@
 
 > Part of the CAR cross-source linkage & detection research arc — see [README](README.md) for the full map.
 
-**Status:** merged (#57, #58/#59)
+**Status:** merged (PIIAT-MitreCar#57, PIIAT-MitreCar#58/#59)
 
 ## The gap
 
@@ -43,12 +43,12 @@ GUID grab would drown in the ubiquitous COM CLSID / interface-IID GUIDs
 
 ## The fix
 
-**PR #57** added a `definitive_native_id` convergence tier in `crosssource.py`
+**PR PIIAT-MitreCar#57** added a `definitive_native_id` convergence tier in `crosssource.py`
 that mines `Volume{GUID}` out of `native`. It is token-gated so the COM
 CLSID/interface GUID families are never picked up, case-folded so the real
 mixed-case values collapse to one key, and host- and object-independent.
 
-**PR #58/#59** promoted `volume_guid` to a first-class **nullable header column**
+**PR PIIAT-MitreCar#58/#59** promoted `volume_guid` to a first-class **nullable header column**
 on every CAR object:
 - a shared extractor lives in `native_ids.py`;
 - `enrich` lifts it **fill-only-null** (never overwrites an existing value);

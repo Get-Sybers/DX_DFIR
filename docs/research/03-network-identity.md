@@ -2,7 +2,7 @@
 
 > Part of the CAR cross-source linkage & detection research arc — see [README](README.md) for the full map.
 
-**Status:** merged (PR #61, PR #65, PR #66)
+**Status:** merged (PR PIIAT-MitreCar#61, PR PIIAT-MitreCar#65, PR PIIAT-MitreCar#66)
 
 ## The gap
 
@@ -36,7 +36,7 @@ identity form right was the crux of each fix:
 
 ## The fix
 
-**DNS (PR #61).** `zeek_dns → flow` (message), the queried name in `fqdn`, raw
+**DNS (PR PIIAT-MitreCar#61).** `zeek_dns → flow` (message), the queried name in `fqdn`, raw
 answers kept in native. `enrich._dns_resolution` builds a **host-scoped
 `ip → resolved domain` map** from each (query, answer-IPs) pair, and
 `_stamp_resolved_fqdn` fills `dest_fqdn` / `src_fqdn` on any flow to or from a
@@ -46,12 +46,12 @@ Only IP answers resolve; CNAMEs are skipped. Resolution is gated on
 `source_artefact == "zeek_dns"`, because a conn flow with `service:dns` is
 DNS *traffic*, not DNS *resolution evidence*.
 
-**SSL/SNI (staged in PR #65).** `zeek_ssl → flow` (message); `server_name`
+**SSL/SNI (staged in PR PIIAT-MitreCar#65).** `zeek_ssl → flow` (message); `server_name`
 (the SNI) → `dest_fqdn`; `guid = uid`. enrich propagates the SNI onto the conn
 flow of the same `uid`, so the domain lands **directly on the encrypted flow**
 even when DNS never resolved it.
 
-**x509 (PR #66).** `zeek_x509 → file` (create); `fingerprint → sha256_hash`;
+**x509 (PR PIIAT-MitreCar#66).** `zeek_x509 → file` (create); `fingerprint → sha256_hash`;
 subject / issuer / SAN / validity kept in native. `enrich._cert_by_fingerprint`
 and `_stamp_flow_cert` walk `ssl.cert_chain_fps → x509.fingerprint` and surface
 the **leaf cert subject** on the TLS flow that presented it. The C2 flow now

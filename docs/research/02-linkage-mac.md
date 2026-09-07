@@ -2,7 +2,7 @@
 
 > Part of the CAR cross-source linkage & detection research arc — see [README](README.md) for the full map.
 
-**Status:** merged (#60)
+**Status:** merged (PIIAT-MitreCar#60)
 
 ## The gap
 
@@ -40,7 +40,7 @@ Not every v1-shaped node is a hardware MAC, so three families are excluded:
 
 ## The fix
 
-**PR #60** added `native_ids.mac_from_v1_guid`, which decodes a v1 GUID's node
+**PR PIIAT-MitreCar#60** added `native_ids.mac_from_v1_guid`, which decodes a v1 GUID's node
 into a hardware MAC and applies the three exclusions above.
 `native_ids.mac_addresses` additionally gathers literal `xx:xx:xx:xx:xx:xx`
 strings out of `native`.
