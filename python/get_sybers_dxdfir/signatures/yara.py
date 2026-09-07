@@ -301,8 +301,13 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
     disk_dir = disk_dir or os.path.join(ds, "raw", "disk_images")
     memory_dir = memory_dir or os.path.join(ds, "raw", "memory")
     symbols_dir = symbols_dir or os.path.join(ds, "dependencies", "volatility3-symbols")
+    # The jsonl_dfir renderer is owned by the vendored PIIAT-Mem tool (the same
+    # renderer the volatility PROCESSOR drives through `python -m piiat_mem`); the
+    # memory scan bind-mounts it into the hardened dxdfir/volatility image, whose
+    # baked wrapper (/opt/dfir/vol_wrapper.py) loads it. It lives in the submodule,
+    # not in a dev-scripts/ tree.
     renderer = renderer or os.path.join(
-        repo_root, "dev-scripts", "volatility", "jsonl_dfir_renderer.py")
+        repo_root, "third_party", "piiat-mem", "jsonl_dfir_renderer.py")
     os.makedirs(output_dir, exist_ok=True)
 
     res = {"lane": "yara", "sources": list(sources), "produced": 0, "skipped": 0,

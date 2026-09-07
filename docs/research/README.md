@@ -37,6 +37,7 @@ Two problems stood in the way, and the value hunt named them precisely:
 | 6 | [The behaviour timeline (and psort vs CAR)](06-behaviour-timeline.md) | 2.7M-event behaviour timeline over the full LoneWolf disk; the layer distinction |
 | 7 | [Wiring the detection lanes into the collection](07-detection-lane-wiring.md) | `process all --fetch` runs suricata/yara/hayabusa on the collection's evidence |
 | 8 | [Detection ↔ CAR correlation](08-detection-correlation.md) | suricata + hayabusa alerts joined to the resolved/normalized CAR entities |
+| 9 | [Behaviour sightings](09-behaviour-sightings.md) | the join emitted — detections as STIX Sightings of ATT&CK attack-patterns over the spindle observed-data |
 
 ## How the pieces compose
 
@@ -75,5 +76,6 @@ while `ls24-sample` carries the network + host detections used in Step 8.
 - **Engine (PIIAT-MitreCar):** #57/#58/#59 volume GUID, #60 MAC, #61 DNS + #65
   SSL, #66 x509, #63/#65 timeliner robustness, #54 behaviour layer (prior).
 - **DX_DFIR:** #153 plaso byte-preservation, #152/#154 YARA ruleset, #159/#161/#162
-  detection-lane wiring, plus the submodule pin bumps that carried each engine
-  change onto `main`.
+  detection-lane wiring, #163 this research journey, the behaviour-sightings bridge
+  (`stix/behaviour.py`) + the yara memory-lane renderer fix, plus the submodule pin
+  bumps that carried each engine change onto `main`.
