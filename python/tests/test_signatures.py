@@ -658,3 +658,38 @@ def test_audit_flags_unexpected_and_missing(monkeypatch):
     assert not result["ok"]
     assert any("dxdfir/rogue" in v and "unexpected" in v for v in result["violations"])
     assert not any("sof-elk" in v for v in result["violations"])   # allow-listed
+
+
+# ---- suricata reads the pcap dir it is given (the collection-scoping fix) ----
+_PCAP_MAGIC = b"\xa1\xb2\xc3\xd4"
+
+
+def test_suricata_run_honors_pcap_dir(tmp_path, monkeypatch):
+    # a sorted collection points suricata at its own pcaps/ via pcap_dir; the
+    # lane must discover captures THERE, not only the default data_store/raw/pcaps.
+    pcaps = tmp_path / "collections" / "case" / "pcaps"
+    pcaps.mkdir(parents=True)
+    (pcaps / "c.pcap").write_bytes(_PCAP_MAGIC + b"rest")
+    monkeypatch.setattr(suricata, "_suricata_pass", lambda *a, **k: "")  # no docker
+    res = suricata.run(output_dir=str(tmp_path / "out"), repo_root=str(tmp_path),
+                       pcap_dir=str(pcaps))
+    assert res["note"] != f"no pcaps under {pcaps}"    # it FOUND the capture
+    assert res["failed"] == 1 and res["produced"] == 0  # tried it (stub -> no eve)
+
+
+def test_suricata_run_default_pcap_dir_is_raw_pcaps(tmp_path, monkeypatch):
+    # with no pcap_dir, the default is still data_store/raw/pcaps (unchanged) —
+    # the collection scoping is what supplies the real path.
+    monkeypatch.setattr(suricata, "_suricata_pass", lambda *a, **k: "")
+    res = suricata.run(output_dir=str(tmp_path / "out"), repo_root=str(tmp_path))
+    assert res["note"] == f"no pcaps under {os.path.join(str(tmp_path), 'data_store', 'raw', 'pcaps')}"
+
+
+def test_signatures_cli_plumbs_pcap_dir(tmp_path, monkeypatch):
+    from get_sybers_dxdfir.signatures import __main__ as sig_main
+    captured = {}
+    monkeypatch.setattr(sig_main, "process",
+                        lambda *a, **k: captured.update(k) or {"failed": 0, "processed": 1, "skipped": 0})
+    sig_main.main(["--output-dir", str(tmp_path / "o"), "--repo-root", str(tmp_path),
+                   "--only", "suricata", "--pcap-dir", "/some/pcaps"])
+    assert captured["config"]["suricata"]["pcap_dir"] == "/some/pcaps"

@@ -53,6 +53,11 @@ def main(argv: list[str] | None = None) -> int:
                          "editable template on first run; while template-only or "
                          "invalid, the automatable vars are auto-detected per pcap and "
                          "recorded into it. Tuning resets per pcap.")
+    ap.add_argument("--pcap-dir",
+                    help="the directory of captures the suricata lane replays "
+                         "(default data_store/raw/pcaps). A collection scopes this to "
+                         "its sorted pcaps/ subdir (dxdfir_signatures_pcap_dir); without "
+                         "it a sorted collection's captures never reach suricata.")
     args = ap.parse_args(argv)
 
     lanes = tuple(args.only) if args.only else LANES
@@ -62,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
         "auto_home_net": args.auto_home_net,
         "extra_sets": args.suricata_set or [],
         "tuning_file": args.tuning_file,
+        "pcap_dir": args.pcap_dir,
     }, "hayabusa": {
         "stage_dir": args.stage_dir,
         "vss": args.vss,

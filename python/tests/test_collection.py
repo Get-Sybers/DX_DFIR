@@ -224,3 +224,27 @@ def test_create_on_existing_folder_logs_registered(tmp_path):
     collection.create(tmp_path, "hand")
     events = [e["event"] for e in collection.read_log(tmp_path, "hand")]
     assert "registered" in events and "created" not in events     # registration, not creation
+
+
+# --- the signatures/detection lane is wired to the sorted collection pcaps ----
+
+def test_signatures_lane_registered_for_pcaps():
+    # regression: the signatures lane was ABSENT from LANES, so `process all`
+    # never handed a sorted collection's pcaps/ to suricata (it fell back to the
+    # empty data_store/raw/pcaps). It must map pcaps -> dxdfir_signatures_pcap_dir.
+    sig = next((ln for ln in collection.LANES if ln.name == "signatures"), None)
+    assert sig is not None, "signatures lane missing from LANES"
+    assert sig.subdirs == ("pcaps",)
+    assert sig.input_vars == ("dxdfir_signatures_pcap_dir",)
+    # listed LAST so process all runs it after the evidence lanes
+    assert collection.LANES[-1].name == "signatures"
+
+
+def test_lane_inputs_scopes_signatures_pcaps(tmp_path):
+    collection.create(tmp_path, "case-x")
+    root = collection.collection_dir(tmp_path, "case-x")
+    _write(root / "pcaps" / "c.pcap", _PCAP_MAGIC + b"rest")
+    rows = collection.lane_inputs(tmp_path, "case-x")
+    sig = [(lane, var, str(d), n) for (lane, var, d, n) in rows if lane == "signatures"]
+    assert sig == [("signatures", "dxdfir_signatures_pcap_dir",
+                    str(root / "pcaps"), 1)]

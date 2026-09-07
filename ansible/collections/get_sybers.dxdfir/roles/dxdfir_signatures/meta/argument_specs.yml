@@ -69,6 +69,16 @@ argument_specs:
           template on first run; while it holds no real sections — or is not valid —
           HOME_NET is auto-detected per pcap and the derived values are recorded
           into it for the operator to edit. Tuning is reset per pcap.
+      dxdfir_signatures_pcap_dir:
+        type: str
+        required: false
+        default: ""
+        description: >-
+          Directory of captures the suricata sub-lane replays (empty => the
+          processor default, data_store/raw/pcaps). A collection sets this to its
+          sorted pcaps/ subdir (collection.LANES: signatures ->
+          dxdfir_signatures_pcap_dir) so a sorted collection's captures reach
+          suricata; without it the sub-lane finds nothing.
       dxdfir_signatures_fetch:
         type: bool
         required: false

@@ -21,6 +21,11 @@ dxdfir_signatures_stage_dir: ""
 dxdfir_signatures_vss: false
 # YARA sources to run (comma list of files,disk,memory); empty = all.
 dxdfir_signatures_yara_sources: ""
+# The captures the suricata sub-lane replays (empty => the processor default,
+# data_store/raw/pcaps). A collection sets this to its sorted pcaps/ subdir
+# (collection.LANES: signatures -> dxdfir_signatures_pcap_dir); without it a
+# sorted collection's captures never reach suricata.
+dxdfir_signatures_pcap_dir: ""
 # Per-pcap Suricata tuning file (INI template; empty => the processor's default,
 # data_store/dependencies/suricata-tuning.conf). Written as an editable template
 # on first run; while template-only or invalid, HOME_NET is auto-detected per
@@ -41,5 +46,6 @@ dxdfir_signatures_argv: >-
   + (['--vss'] if dxdfir_signatures_vss | bool else [])
   + (['--yara-sources', dxdfir_signatures_yara_sources] if dxdfir_signatures_yara_sources | length > 0 else [])
   + (['--tuning-file', dxdfir_signatures_suricata_tuning_file] if dxdfir_signatures_suricata_tuning_file | length > 0 else [])
+  + (['--pcap-dir', dxdfir_signatures_pcap_dir] if dxdfir_signatures_pcap_dir | length > 0 else [])
   + (['--fetch'] if dxdfir_signatures_fetch | bool else [])
   + (['--force'] if dxdfir_signatures_force | bool else []) }}
