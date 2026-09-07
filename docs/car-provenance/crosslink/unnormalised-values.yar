@@ -264,7 +264,12 @@ rule Gap_Net_Firewall_And_Flow_Ports
     strings:
         $fw_l = /\|LPort=(3702|1900|2177|2869|135|445|3540|5355|5357|5358|23554|23555|23556|9955)\b/ ascii wide
         $fw_r = /\|RPort=(1900|2177|2869|3702|137|138|547|67)\b/ ascii wide
-        $ssh  = ":22" ascii wide
+        // SSH on an IPv4 endpoint (x.x.x.x:22) — reuses the octet-validated
+        // IPv4 pattern from Gap_Net_IPv4_Address (0-255 per octet) with a leading
+        // \b, so it is NOT a bare ":22" substring of an IPv6 address (::22), a
+        // larger port (:220) or a timestamp (12:22), and never matches an invalid
+        // dotted-quad like 999.999.999.999
+        $ssh  = /\b(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}:22\b/ ascii wide
     condition:
         $fw_l or $fw_r or $ssh
 }
@@ -541,11 +546,16 @@ rule HUNT_Case_MAC_Anchors
         category    = "case-specific-hunt"
         car_gap     = "mac_address (example constants)"
     strings:
-        $m1_txt  = "ec:f4:bb:48:7f:ed" nocase ascii wide   $m1_raw = { EC F4 BB 48 7F ED }   // DLT + volume-GUID node
-        $m2_txt  = "28:e3:47:01:77:77" nocase ascii wide   $m2_raw = { 28 E3 47 01 77 77 }
-        $m3_txt  = "00:1c:c4:2d:f4:0b" nocase ascii wide   $m3_raw = { 00 1C C4 2D F4 0B }   // PowerShell.lnk creator
-        $m4_txt  = "ec:0e:c4:20:7f:0e" nocase ascii wide   $m4_raw = { EC 0E C4 20 7F 0E }
-        $gw_txt  = "5c:8f:e0:2a:1c:68" nocase ascii wide   $gw_raw = { 5C 8F E0 2A 1C 68 }   // NetworkList gateway
+        $m1_txt  = "ec:f4:bb:48:7f:ed" nocase ascii wide   // DLT + volume-GUID node
+        $m1_raw  = { EC F4 BB 48 7F ED }
+        $m2_txt  = "28:e3:47:01:77:77" nocase ascii wide
+        $m2_raw  = { 28 E3 47 01 77 77 }
+        $m3_txt  = "00:1c:c4:2d:f4:0b" nocase ascii wide   // PowerShell.lnk creator
+        $m3_raw  = { 00 1C C4 2D F4 0B }
+        $m4_txt  = "ec:0e:c4:20:7f:0e" nocase ascii wide
+        $m4_raw  = { EC 0E C4 20 7F 0E }
+        $gw_txt  = "5c:8f:e0:2a:1c:68" nocase ascii wide   // NetworkList gateway
+        $gw_raw  = { 5C 8F E0 2A 1C 68 }
         $vm1     = "00:50:56:89:a2:69" nocase ascii wide                                      // VMware vNIC (zeek)
         $vm2     = "00:50:56:89:ab:90" nocase ascii wide
         $vm3     = "00:50:56:89:b3:ff" nocase ascii wide                                      // 5g-webui vNIC
@@ -563,9 +573,18 @@ rule HUNT_Case_Volume_Serials
         category    = "case-specific-hunt"
         car_gap     = "device/volume serial (example constants)"
     strings:
-        $cl_le  = { AC F4 36 4C }   $cl_a = "4C36-F4AC" nocase ascii wide   $cl_d = "1278669996" ascii wide   // CloudLog (removable)
-        $c_le   = { 81 08 92 AA }   $c_a  = "AA92-0881" nocase ascii wide   $c_d  = "2861697153" ascii wide   // C:
-        $os_le  = { 73 2D EE 74 }   $os_a = "74EE-2D73" nocase ascii wide   $os_d = "1961766259" ascii wide   // OSDisk
+        // CloudLog (removable)
+        $cl_le  = { AC F4 36 4C }
+        $cl_a   = "4C36-F4AC" nocase ascii wide
+        $cl_d   = "1278669996" ascii wide
+        // C:
+        $c_le   = { 81 08 92 AA }
+        $c_a    = "AA92-0881" nocase ascii wide
+        $c_d    = "2861697153" ascii wide
+        // OSDisk
+        $os_le  = { 73 2D EE 74 }
+        $os_a   = "74EE-2D73" nocase ascii wide
+        $os_d   = "1961766259" ascii wide
         $label  = "CloudLog" ascii wide nocase
     condition:
         any of them
