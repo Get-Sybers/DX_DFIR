@@ -264,10 +264,12 @@ rule Gap_Net_Firewall_And_Flow_Ports
     strings:
         $fw_l = /\|LPort=(3702|1900|2177|2869|135|445|3540|5355|5357|5358|23554|23555|23556|9955)\b/ ascii wide
         $fw_r = /\|RPort=(1900|2177|2869|3702|137|138|547|67)\b/ ascii wide
-        // SSH on an IPv4 endpoint (x.x.x.x:22) — anchored so it is NOT a bare
-        // ":22" substring of an IPv6 address (::22), a larger port (:220) or a
-        // timestamp (12:22)
-        $ssh  = /([0-9]{1,3}\.){3}[0-9]{1,3}:22\b/ ascii wide
+        // SSH on an IPv4 endpoint (x.x.x.x:22) — reuses the octet-validated
+        // IPv4 pattern from Gap_Net_IPv4_Address (0-255 per octet) with a leading
+        // \b, so it is NOT a bare ":22" substring of an IPv6 address (::22), a
+        // larger port (:220) or a timestamp (12:22), and never matches an invalid
+        // dotted-quad like 999.999.999.999
+        $ssh  = /\b(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}:22\b/ ascii wide
     condition:
         $fw_l or $fw_r or $ssh
 }
