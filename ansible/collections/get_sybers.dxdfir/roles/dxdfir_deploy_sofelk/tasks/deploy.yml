@@ -27,7 +27,13 @@
 - name: "deploy-sofelk | assert the sof-elk + elasticsearch services are running"
   ansible.builtin.assert:
     that:
-      - dxdfir_deploy_sofelk_state.containers | selectattr('Service', 'equalto', 'sof-elk') | selectattr('State', 'equalto', 'running') | list | length > 0
-      - dxdfir_deploy_sofelk_state.containers | selectattr('Service', 'equalto', 'elasticsearch') | selectattr('State', 'equalto', 'running') | list | length > 0
+      - >-
+          dxdfir_deploy_sofelk_state.containers
+          | selectattr('Service', 'equalto', 'sof-elk')
+          | selectattr('State', 'equalto', 'running') | list | length > 0
+      - >-
+          dxdfir_deploy_sofelk_state.containers
+          | selectattr('Service', 'equalto', 'elasticsearch')
+          | selectattr('State', 'equalto', 'running') | list | length > 0
     fail_msg: "the SOF-ELK stack is not fully running: {{ dxdfir_deploy_sofelk_state.containers | map(attribute='Name') | list }}"
     quiet: true
