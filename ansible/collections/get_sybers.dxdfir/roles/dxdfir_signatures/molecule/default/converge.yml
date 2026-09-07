@@ -6,7 +6,7 @@
     dxdfir_signatures_pipeline: elastic
     dxdfir_signatures_repo_root: /tmp/dxdfir_signatures_molecule/repo
     dxdfir_signatures_elastic_out_dir: /tmp/dxdfir_signatures_molecule/repo/data_store/processed/signatures
-    dxdxdfir_signatures_lanes: [yara]
+    dxdfir_signatures_lanes: [yara]
     # the fake repo has no python package — point PYTHONPATH at the real repo.
     dxdfir_signatures_python_path: "{{ (playbook_dir + '/../../../../../../../python') | realpath }}"
   tasks:

@@ -190,7 +190,7 @@ Pass an extra Ansible variable through to the role; repeatable. Use it to overri
 a role default, e.g.
 .RB \(lq -e\  dxdfir_zeek_pcap_dir=/evidence/pcaps \(rq
 or
-.RB \(lq -e\  \(aq{\(dqdxdxdfir_signatures_lanes\(dq:[\(dqyara\(dq]}\(aq \(rq.
+.RB \(lq -e\  \(aq{\(dqdxdfir_signatures_lanes\(dq:[\(dqyara\(dq]}\(aq \(rq.
 .SS build-car
 .TP
 .BI --in " PATH"
@@ -273,7 +273,7 @@ Reprocess memory images, overriding the input directory:
 .B dxdfir process volatility --force -e dxdfir_volatility_memory_dir=/evidence/mem
 .TP
 Run only the YARA signature lane:
-.B dxdfir process signatures -e \(aq{\(dqdxdxdfir_signatures_lanes\(dq:[\(dqyara\(dq]}\(aq
+.B dxdfir process signatures -e \(aq{\(dqdxdfir_signatures_lanes\(dq:[\(dqyara\(dq]}\(aq
 .TP
 Normalise everything processed into CAR, then gate it:
 .B dxdfir build-car && dxdfir verify-car

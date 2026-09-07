@@ -8,9 +8,9 @@
   ansible.builtin.assert:
     that:
       - dxdfir_signatures_pipeline in ['elastic', 'sofelk']
-      - dxdxdfir_signatures_lanes | difference(['yara', 'suricata', 'hayabusa']) | length == 0
+      - dxdfir_signatures_lanes | difference(['yara', 'suricata', 'hayabusa']) | length == 0
     fail_msg: >-
-      dxdfir_signatures needs dxdfir_signatures_pipeline (elastic|sofelk); dxdxdfir_signatures_lanes
+      dxdfir_signatures needs dxdfir_signatures_pipeline (elastic|sofelk); dxdfir_signatures_lanes
       may only contain yara/suricata/hayabusa.
     quiet: true
   tags: [always]

@@ -27,7 +27,7 @@ The Elastic detection rules live as data under `get_sybers_dxdfir/detect/rules/`
 ## The `dxdfir` CLI
 ```bash
 dxdfir process zeek --pipeline elastic  # drive the dxdfir_zeek role (preflight → process → verify)
-dxdfir process signatures -e '{"dxdxdxdfir_signatures_lanes":["yara"]}'
+dxdfir process signatures -e '{"dxdfir_signatures_lanes":["yara"]}'
 dxdfir build-car                        # normalise every processed source into per-source CAR stores
 dxdfir verify-car                       # the CAR correctness gate over the materialised CAR
 dxdfir build-docker                     # build (and hardening-verify) every dxdfir/* tool image

@@ -30,7 +30,7 @@ as a **single action**. One `<lane>/` folder of detections under the output base
 | `dxdfir_signatures_pipeline` | `elastic` | `elastic` or `sofelk` — selects the output destination (the **playbook** decides this). |
 | `dxdfir_signatures_elastic_out_dir` | `<repo>/data_store/processed/signatures` | Elastic-path output base. |
 | `dxdfir_signatures_sofelk_out_dir` | `<repo>/data_store/processed/sofelk/signatures` | SOF-ELK-path output base. |
-| `dxdxdfir_signatures_lanes` | `[]` (all) | Lanes to run — any of `yara`, `suricata`, `hayabusa`. |
+| `dxdfir_signatures_lanes` | `[]` (all) | Lanes to run — any of `yara`, `suricata`, `hayabusa`. |
 | `dxdfir_signatures_stage_dir` | `""` (evtx processor's stage) | Where the hayabusa lane stages disk-image EVTX extractions; already-staged images are reused, never re-extracted. |
 | `dxdfir_signatures_vss` | `false` | Include Volume Shadow Copies when staging disk images. |
 | `dxdfir_signatures_yara_sources` | `""` (all) | YARA sources to run — comma list of `files,disk,memory`. |
@@ -94,7 +94,7 @@ processor, never in a task `when:`. The verify gate tolerates a zero-detection r
 ```bash
 ansible-playbook playbooks/dxdfir-process-signatures.yml -e dxdfir_signatures_pipeline=elastic
 # one lane:
-ansible-playbook playbooks/dxdfir-process-signatures.yml -e '{"dxdxdfir_signatures_lanes":["yara"]}'
+ansible-playbook playbooks/dxdfir-process-signatures.yml -e '{"dxdfir_signatures_lanes":["yara"]}'
 ```
 
 ## Testing

@@ -12,7 +12,7 @@ dxdfir_signatures_sofelk_out_dir: "{{ dxdfir_signatures_repo_root }}/data_store/
 # tasks/process.yml. Override directly to send output to a custom location.
 dxdfir_signatures_out_dir: "{{ dxdfir_signatures_elastic_out_dir if dxdfir_signatures_pipeline == 'elastic' else dxdfir_signatures_sofelk_out_dir }}"
 # Which detection lanes to run; empty = all (yara, suricata, hayabusa).
-dxdxdfir_signatures_lanes: []
+dxdfir_signatures_lanes: []
 # Where the hayabusa lane stages disk-image EVTX extractions (empty => the evtx
 # processor's own stage, data_store/processed/windows_logs/_extracted_evtx —
 # images already staged by either lane are reused, never re-extracted).
@@ -36,7 +36,7 @@ dxdfir_signatures_force: false
 # is the one genuinely per-lane piece; the run/verify/gate skeleton is shared.
 dxdfir_signatures_argv: >-
   {{ ['python3', '-m', 'get_sybers_dxdfir.signatures', '--output-dir', dxdfir_signatures_out_dir, '--repo-root', dxdfir_signatures_repo_root]
-  + (dxdxdfir_signatures_lanes | map('regex_replace', '^', '--only=') | list)
+  + (dxdfir_signatures_lanes | map('regex_replace', '^', '--only=') | list)
   + (['--stage-dir', dxdfir_signatures_stage_dir] if dxdfir_signatures_stage_dir | length > 0 else [])
   + (['--vss'] if dxdfir_signatures_vss | bool else [])
   + (['--yara-sources', dxdfir_signatures_yara_sources] if dxdfir_signatures_yara_sources | length > 0 else [])

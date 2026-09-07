@@ -35,7 +35,7 @@ argument_specs:
           Resolved output base for the selected pipeline (defaults to the
           elastic/sofelk out dir per dxdfir_signatures_pipeline); override to send
           output to a custom location.
-      dxdxdfir_signatures_lanes:
+      dxdfir_signatures_lanes:
         type: list
         elements: str
         required: false
