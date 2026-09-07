@@ -103,10 +103,13 @@ group "Ansible lint"
 # Production-profile ansible-lint over the collection (config: the collection's
 # .ansible-lint). Skipped when ansible-lint is not installed (CI installs it).
 if command -v ansible-lint >/dev/null 2>&1; then
-    if ansible-lint --profile production >/dev/null 2>&1; then
+    # Capture (don't discard) the output so a failure is diagnosable in the log
+    # instead of an opaque "reported violations" with no detail.
+    if _al_out="$(ansible-lint --profile production 2>&1)"; then
         pass "ansible-lint (production profile) on the collection + container ansible"
     else
         fail "ansible-lint reported violations (run: ansible-lint --profile production)"
+        printf '%s\n' "$_al_out" | sed 's/^/      /'
     fi
 else
     skip "ansible-lint not installed"
