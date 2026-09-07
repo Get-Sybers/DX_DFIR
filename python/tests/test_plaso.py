@@ -181,3 +181,45 @@ def test_sanitize_host():
 def test_process_no_inputs_is_clean(tmp_path):
     s = plaso.process(str(tmp_path / "in"), "", str(tmp_path / "out"), "module.py")
     assert s["images"] == 0 and s["vms"] == 0 and s["processed"] == 0 and s["failed"] == 0
+
+
+# ---- REG_BINARY preservation (B4) ------------------------------------------
+def test_run_plaso_log2timeline_extracts_winreg_binary(tmp_path, monkeypatch):
+    """log2timeline must run with --extract_winreg_binary.
+
+    Without it, plaso's winreg parser drops every REG_BINARY value to a lossy
+    "(N bytes)" summary at parse time — before it reaches the .plaso db — so the
+    raw device-identity bytes (MountedDevices drive-letter bindings, disk
+    signatures, USB/volume serials, MACs) are unrecoverable downstream. The flag
+    keeps the raw bytes; the JSON output module then base64url-encodes them.
+    """
+    out_dir = tmp_path / "out"
+    calls = []
+
+    def fake_run(argv, **kwargs):
+        # Emulate the two container steps producing their outputs so run_plaso
+        # proceeds past its existence checks: log2timeline writes the .plaso db,
+        # psort writes the raw json_line.
+        calls.append(argv)
+        if "log2timeline.py" in argv:
+            (out_dir / "plaso").mkdir(parents=True, exist_ok=True)
+            (out_dir / "plaso" / "img_E01.plaso").write_bytes(b"PLASO")
+        else:
+            (out_dir / "jsonl").mkdir(parents=True, exist_ok=True)
+            (out_dir / "jsonl" / ".img_E01.raw").write_text(
+                '{"image_hostname": "HOST"}\n')
+
+        class _Completed:  # minimal subprocess.CompletedProcess stand-in
+            returncode = 0
+
+        return _Completed()
+
+    monkeypatch.setattr(plaso.subprocess, "run", fake_run)
+    res = plaso.run_plaso(
+        str(tmp_path / "in"), "img.E01", "img_E01", str(out_dir), "module.py")
+
+    assert res["ok"] is True
+    # First container invocation is log2timeline, and it must carry the flag.
+    log2timeline_argv = calls[0]
+    assert "log2timeline.py" in log2timeline_argv
+    assert "--extract_winreg_binary" in log2timeline_argv
