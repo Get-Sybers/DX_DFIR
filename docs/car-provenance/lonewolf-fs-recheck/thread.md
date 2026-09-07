@@ -248,7 +248,7 @@ unmined by the current pipeline (captured as filenames, never parsed).
 
 ---
 
-## 8. Key files & evidence (absolute paths)
+## 8. Key files & evidence
 
 - Evidence: `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl` (6.6 GB)
 - Canonical model: `car_data_model.json` (L337-363);

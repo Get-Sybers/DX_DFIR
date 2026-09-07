@@ -7,7 +7,7 @@ READ-ONLY analysis.
 
 ## Canonical object (authoritative)
 
-Source of truth: `/opt/github/DX_DFIR/car_data_model.json` (lines 337-363) and
+Source of truth: `car_data_model.json` (lines 337-363) and
 `third_party/piiat-mitrecar/third_party/car/data_model/thread.yaml`.
 
 - **Fields (15):** hostname, src_pid, src_tid, tgt_pid, tgt_tid, stack_base, stack_limit,
@@ -204,17 +204,17 @@ present. Split by lane:
    real event carries none of them directly (`user` is only reachable by inheritance, `uid`/`src_tid`
    not at all). Documentation-vs-reality mismatch worth noting when trusting the upstream coverage map.
 
-## Key files (absolute paths)
+## Key files
 
-- Canonical model: `/opt/github/DX_DFIR/car_data_model.json` (L337-363);
-  `/opt/github/DX_DFIR/third_party/piiat-mitrecar/third_party/car/data_model/thread.yaml`
-- Sysmon EID 8 map: `/opt/github/DX_DFIR/third_party/piiat-mitrecar/piiat_mitrecar/mappings/sysmon.py` (L442-467)
-- Sysmon source card: `/opt/github/DX_DFIR/third_party/piiat-mitrecar/sources/evtx_sysmon.yaml` (L319-353)
-- Plaso alt-derivation of EID 8: `/opt/github/DX_DFIR/third_party/piiat-mitrecar/piiat_mitrecar/adapters/winevt.py` (L95-98)
-- Sysmon-lane enrich (inherit + R5 dual-link): `/opt/github/DX_DFIR/third_party/piiat-mitrecar/piiat_mitrecar/enrich.py` (L257-260, L488-498); rules `/opt/github/DX_DFIR/third_party/piiat-mitrecar/piiat_mitrecar/relationships.yml` (L21-29)
-- Memory threads plugin: `/opt/github/DX_DFIR/third_party/piiat-mem/plugins/windows/piiat/threads.py`
-- Memory CAR map: `/opt/github/DX_DFIR/third_party/piiat-mem/piiat_mem/mappings.py` (L204-222 piiat.threads, L261-272 thrdscan fallback, L99-104 SUPERSEDES)
-- Memory-lane enrich (host id + inherit): `/opt/github/DX_DFIR/third_party/piiat-mem/piiat_mem/enrich.py` (L72, L288-291, L309-324, L377-380)
-- Injection analytics: `/opt/github/DX_DFIR/third_party/piiat-mitrecar/third_party/car/analytics/CAR-2013-10-002.yaml` (LoadLibrary injection); `.../CAR-2021-05-011.yaml` (remote thread into LSASS)
-- R5 relationship doc: `/opt/github/DX_DFIR/docs/CAR-Relations.md` (L154)
-- Evidence checked (both empty of thread data): `/opt/github/DX_DFIR/data_store/processed/volatility/memdump.mem/plugins/` (no threads jsonl); `/opt/github/DX_DFIR/data_store/processed/windows_logs/unspecified_host/log_EvtxECmd_Output.json` (EID 1/5 only)
+- Canonical model: `car_data_model.json` (L337-363);
+  `third_party/piiat-mitrecar/third_party/car/data_model/thread.yaml`
+- Sysmon EID 8 map: `third_party/piiat-mitrecar/piiat_mitrecar/mappings/sysmon.py` (L442-467)
+- Sysmon source card: `third_party/piiat-mitrecar/sources/evtx_sysmon.yaml` (L319-353)
+- Plaso alt-derivation of EID 8: `third_party/piiat-mitrecar/piiat_mitrecar/adapters/winevt.py` (L95-98)
+- Sysmon-lane enrich (inherit + R5 dual-link): `third_party/piiat-mitrecar/piiat_mitrecar/enrich.py` (L257-260, L488-498); rules `third_party/piiat-mitrecar/piiat_mitrecar/relationships.yml` (L21-29)
+- Memory threads plugin: `third_party/piiat-mem/plugins/windows/piiat/threads.py`
+- Memory CAR map: `third_party/piiat-mem/piiat_mem/mappings.py` (L204-222 piiat.threads, L261-272 thrdscan fallback, L99-104 SUPERSEDES)
+- Memory-lane enrich (host id + inherit): `third_party/piiat-mem/piiat_mem/enrich.py` (L72, L288-291, L309-324, L377-380)
+- Injection analytics: `third_party/piiat-mitrecar/third_party/car/analytics/CAR-2013-10-002.yaml` (LoadLibrary injection); `.../CAR-2021-05-011.yaml` (remote thread into LSASS)
+- R5 relationship doc: `docs/CAR-Relations.md` (L154)
+- Evidence checked (both empty of thread data): `data_store/processed/volatility/memdump.mem/plugins/` (no threads jsonl); `data_store/processed/windows_logs/unspecified_host/log_EvtxECmd_Output.json` (EID 1/5 only)

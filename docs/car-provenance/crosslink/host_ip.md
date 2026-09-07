@@ -208,7 +208,7 @@ rule GENERIC_Windows_Hostname_NETBIOS
 
 ---
 
-## 6. Evidence pointers (absolute paths)
+## 6. Evidence pointers
 
 - Memory static IP / DNS (BGP-WS1-CONF): `data_store/processed/volatility/memdump.mem/plugins/windows.piiat.registry.jsonl` — Tcpip Interface `{89b3e14f-e403-4965-be04-aaeceb0a4e2f}`; ComputerName under `...\Control\ComputerName\ComputerName`.
 - Memory COMPUTERNAME env: `data_store/processed/volatility/memdump.mem/plugins/windows.piiat.processes.jsonl` (EnvVars `COMPUTERNAME=BGP-WS1-CONF`).

@@ -5,7 +5,7 @@ listening events in particular can be helpful in detecting malicious activity."*
 **Canonical fields (10):** `family`, `image_path`, `local_address`, `local_path`, `local_port`, `pid`,
 `protocol`, `remote_address`, `remote_port`, `success`
 **Actions (3):** `bind`, `listen`, `close`
-**Repo:** `/opt/github/DX_DFIR` — READ-ONLY audit, evidence as of 2026-09-07.
+READ-ONLY audit, evidence as of 2026-09-07.
 
 Grounded in:
 - `third_party/piiat-mitrecar/third_party/car/data_model/socket.yaml` + `docs/data_model/socket.md` (semantics + upstream coverage map)
