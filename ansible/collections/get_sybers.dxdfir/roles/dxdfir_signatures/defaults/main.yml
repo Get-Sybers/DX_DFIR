@@ -28,10 +28,11 @@ dxdfir_signatures_yara_sources: ""
 dxdfir_signatures_pcap_dir: ""
 # Disk images the yara disk scan + hayabusa image-EVTX extraction read (empty =>
 # processor default data_store/raw/disk_images). A collection scopes this to its
-# sorted disk_images/ subdir (collection.LANES: dxdfir_signatures_disk_dir).
+# sorted disk_images/ subdir (collection.LANES: signatures -> dxdfir_signatures_disk_dir).
 dxdfir_signatures_disk_dir: ""
 # Memory images the yara memory scan reads (empty => data_store/raw/memory). A
-# collection scopes this to its sorted memory/ subdir (dxdfir_signatures_memory_dir).
+# collection scopes this to its sorted memory/ subdir
+# (collection.LANES: signatures -> dxdfir_signatures_memory_dir).
 dxdfir_signatures_memory_dir: ""
 # Per-pcap Suricata tuning file (INI template; empty => the processor's default,
 # data_store/dependencies/suricata-tuning.conf). Written as an editable template
