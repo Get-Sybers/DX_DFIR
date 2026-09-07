@@ -39,5 +39,21 @@ CAR field** — the natural cross-source keys survive only as text in `native`. 
 - **B4 · plaso data-loss**: `MountedDevices`/`DefaultGatewayMac`/device bytes are emitted only as `(6 bytes)`/`(224 bytes)` summaries — the raw serial/MAC is dropped before any normalisation could recover it (a lane/parser-config fix).
 - **B5 · a reusable YARA "unnormalised-value" ruleset** — the agents produced ~30 YARA stubs (SID, `\Users\<name>\`, MachineGuid/volume/ProcessGuid/task GUID classes, v1-GUID-embedded MAC, IPv4/IPv6/MAC, volume/USB serial, port, DOSfuscation/C2/LOLBin patterns). Consolidate into one ruleset that flags distinctive values present-but-unnormalised across any future dataset — the user's "use YARA to limit missing non-normalised data", operationalised.
 
+## B5 delivered — the consolidated ruleset
+The ~30 stubs scattered across `guids.md`, `identity.md`, `host_ip.md`,
+`ports_serials.md` and `cmdlines.md` are consolidated, de-duplicated and
+compile-checked (YARA 4.5.2) into one file: **`unnormalised-values.yar`** (this
+directory). 33 rules — 23 general/reusable (`Gap_*`, grouped: host-identity
+GUIDs, volume/mount, MAC-bearing v1 GUIDs, network 5-tuple, device serials,
+account/SID identity, command-line obfuscation/C2/LOLBin) plus a clearly-fenced
+"case-specific hunt (example — replace per case)" section (`HUNT_Case_*`) holding
+this dataset's concrete constants. Each rule's `car_gap` meta names the CAR
+field the value should feed. The documented linkage-noise GUID families
+(COM CLSID/IID/TypeLib/AppID, the `c000-…-46` OLE family, the `806e6f6e6963`
+placeholder MAC node) are intentionally omitted with a "do not flag" note.
+Run it via the signatures YARA lane — copy into
+`data_store/dependencies/yara-rules/` (see the header comment and
+`docs/Signature-Rules.md`).
+
 ## Through-line
 Two orthogonal gaps: (1) the disk/evtx/zeek lanes don't build CAR here at all (only memory has a `car.db`), and (2) even where CAR is built, the join key is synthetic-only and every natural cross-source key (GUID, MAC, serial, IP, domain) is unnormalised. The A-class PR fixes the per-field disk squeeze; B1–B5 fix the *linkage* layer so the cross-source convergence stage actually has real keys to join on.
