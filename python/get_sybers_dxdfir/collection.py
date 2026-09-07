@@ -59,12 +59,15 @@ LANES: tuple[Lane, ...] = (
     Lane("zimmerman", ("disk_images", "VM_files"),
          ("dxdfir_zimmerman_input_dir", "dxdfir_zimmerman_vm_dir")),
     # The detection lane (yara/suricata/hayabusa). Listed LAST so `process all`
-    # runs it after the evidence lanes (hayabusa reads the processed evtx stage).
-    # Scoped by the pcaps subdir — the input suricata replays; without this the
-    # suricata sub-lane fell back to the empty data_store/raw/pcaps and produced
-    # nothing on a sorted collection (hayabusa/yara use their own processed/tool
-    # inputs). A collection with pcaps therefore drives the detection lane too.
-    Lane("signatures", ("pcaps",), ("dxdfir_signatures_pcap_dir",)),
+    # runs it after the evidence lanes. Every sub-lane input is scoped to the
+    # collection, so none falls back to an empty data_store/raw/<x> default on a
+    # sorted collection: pcaps -> suricata replay; disk_images -> yara disk scan +
+    # hayabusa image-EVTX extraction; memory -> yara memory scan. (hayabusa's
+    # loose-EVTX scan already walks raw/ recursively, so logs/winevt is covered
+    # without a var.) The lane runs whenever ANY of these subdirs has evidence.
+    Lane("signatures", ("pcaps", "disk_images", "memory"),
+         ("dxdfir_signatures_pcap_dir", "dxdfir_signatures_disk_dir",
+          "dxdfir_signatures_memory_dir")),
 )
 
 # The lane subdirs a collection materialises (order = display order).

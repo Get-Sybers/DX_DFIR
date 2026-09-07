@@ -26,6 +26,13 @@ dxdfir_signatures_yara_sources: ""
 # (collection.LANES: signatures -> dxdfir_signatures_pcap_dir); without it a
 # sorted collection's captures never reach suricata.
 dxdfir_signatures_pcap_dir: ""
+# Disk images the yara disk scan + hayabusa image-EVTX extraction read (empty =>
+# processor default data_store/raw/disk_images). A collection scopes this to its
+# sorted disk_images/ subdir (collection.LANES: dxdfir_signatures_disk_dir).
+dxdfir_signatures_disk_dir: ""
+# Memory images the yara memory scan reads (empty => data_store/raw/memory). A
+# collection scopes this to its sorted memory/ subdir (dxdfir_signatures_memory_dir).
+dxdfir_signatures_memory_dir: ""
 # Per-pcap Suricata tuning file (INI template; empty => the processor's default,
 # data_store/dependencies/suricata-tuning.conf). Written as an editable template
 # on first run; while template-only or invalid, HOME_NET is auto-detected per
@@ -47,5 +54,7 @@ dxdfir_signatures_argv: >-
   + (['--yara-sources', dxdfir_signatures_yara_sources] if dxdfir_signatures_yara_sources | length > 0 else [])
   + (['--tuning-file', dxdfir_signatures_suricata_tuning_file] if dxdfir_signatures_suricata_tuning_file | length > 0 else [])
   + (['--pcap-dir', dxdfir_signatures_pcap_dir] if dxdfir_signatures_pcap_dir | length > 0 else [])
+  + (['--disk-dir', dxdfir_signatures_disk_dir] if dxdfir_signatures_disk_dir | length > 0 else [])
+  + (['--memory-dir', dxdfir_signatures_memory_dir] if dxdfir_signatures_memory_dir | length > 0 else [])
   + (['--fetch'] if dxdfir_signatures_fetch | bool else [])
   + (['--force'] if dxdfir_signatures_force | bool else []) }}

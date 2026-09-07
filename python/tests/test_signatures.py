@@ -753,3 +753,30 @@ def test_suricata_run_fetches_etopen_when_asked(tmp_path, monkeypatch):
     res = suricata.run(output_dir=str(tmp_path / "o"), repo_root=str(tmp_path),
                        pcap_dir=str(pcaps), fetch=True)
     assert called and res["rules_fetch"]["rule_files"] == 1   # fetch happened
+
+
+def test_signatures_cli_plumbs_disk_and_memory_dirs(tmp_path, monkeypatch):
+    # --disk-dir/--memory-dir must reach BOTH sub-lanes that consume them:
+    # yara (disk + memory scans) and hayabusa (image-EVTX extraction, disk only).
+    from get_sybers_dxdfir.signatures import __main__ as sig_main
+    captured = {}
+    monkeypatch.setattr(sig_main, "process",
+                        lambda *a, **k: captured.update(k) or {"failed": 0, "processed": 1, "skipped": 0})
+    sig_main.main(["--output-dir", str(tmp_path / "o"), "--repo-root", str(tmp_path),
+                   "--disk-dir", "/d", "--memory-dir", "/m"])
+    cfg = captured["config"]
+    assert cfg["yara"]["disk_dir"] == "/d" and cfg["yara"]["memory_dir"] == "/m"
+    assert cfg["hayabusa"]["disk_dir"] == "/d"
+
+
+def test_signatures_cli_yara_sources_keeps_scoped_dirs(tmp_path, monkeypatch):
+    # a --yara-sources selection must NOT clobber the scoped disk/memory dirs
+    from get_sybers_dxdfir.signatures import __main__ as sig_main
+    captured = {}
+    monkeypatch.setattr(sig_main, "process",
+                        lambda *a, **k: captured.update(k) or {"failed": 0, "processed": 1, "skipped": 0})
+    sig_main.main(["--output-dir", str(tmp_path / "o"), "--repo-root", str(tmp_path),
+                   "--disk-dir", "/d", "--yara-sources", "disk,memory"])
+    cfg = captured["config"]
+    assert cfg["yara"]["sources"] == ("disk", "memory")
+    assert cfg["yara"]["disk_dir"] == "/d"    # not clobbered by the sources merge
