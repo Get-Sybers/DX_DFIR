@@ -6,7 +6,7 @@
 artefacts** only: WER, crash dumps / minidumps, `hiberfil.sys` / `pagefile.sys` / `MEMORY.DMP`
 (memory-on-disk), prefetch, scheduled tasks — **not** event logs (Sysmon EID 8) and **not** live
 memory (Volatility), both of which are the runtime lanes already catalogued in
-`scratchpad/car-provenance/thread.md` (LS24).
+`../thread.md` (LS24).
 
 **Bottom line up front (the honest headline this pass exists to confirm):**
 `thread` has **near-zero filesystem provenance**. It is a runtime object sourced almost entirely
@@ -24,7 +24,7 @@ start_module, start_module_name, tgt_pid, tgt_tid, uid, user, user_stack_base, u
 (Authoritative: `car_data_model.json` L337-363; `third_party/piiat-mitrecar/third_party/car/data_model/thread.yaml`.)
 
 **Evidence (full-file tallies, read verbatim — not a thin fixture):**
-`/opt/github/DX_DFIR/data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl`
+`data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl`
 (6.6 GB, LoneWolf `LoneWolf.E01` via plaso). Host `DESKTOP-PM6C56D`; the only real interactive user
 is **`jcloudy`** (+ `defaultuser0` OOBE). 66 distinct `data_type`s in the whole timeline.
 
@@ -248,14 +248,14 @@ unmined by the current pipeline (captured as filenames, never parsed).
 
 ---
 
-## 8. Key files & evidence (absolute paths)
+## 8. Key files & evidence
 
-- Evidence: `/opt/github/DX_DFIR/data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl` (6.6 GB)
-- Canonical model: `/opt/github/DX_DFIR/car_data_model.json` (L337-363);
-  `/opt/github/DX_DFIR/third_party/piiat-mitrecar/third_party/car/data_model/thread.yaml`
+- Evidence: `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl` (6.6 GB)
+- Canonical model: `car_data_model.json` (L337-363);
+  `third_party/piiat-mitrecar/third_party/car/data_model/thread.yaml`
 - Only `thread` producer (runtime, out of scope): `…/piiat_mitrecar/mappings/sysmon.py` (L442-467, EID 8)
 - `fs:stat` → **file** object (never thread): `…/piiat_mitrecar/mappings/plaso_fs_extra.py`
-- Prior runtime catalogue (Sysmon EID 8 + memory lanes): `scratchpad/car-provenance/thread.md`
+- Prior runtime catalogue (Sysmon EID 8 + memory lanes): `../thread.md`
 - Confirmed ABSENT from the pipeline (grep, zero matches): any minidump / WER / crashdump / hiberfil /
   pagefile parser or map across `piiat_mitrecar`, `piiat-mem/piiat_mem`, `sources`, `python/`.
 - Real disk artefacts (all `fs:stat` metadata only, contents unparsed): crash dumps

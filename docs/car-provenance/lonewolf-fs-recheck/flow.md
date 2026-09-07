@@ -105,7 +105,7 @@ Legend — **mined?**: **mapped-0** = an active map exists but has no input rows
 - **hosts file** — filestat sees the file; content is not parsed, and a static name→IP map is not a flow event.
 
 ## Key file references
-- Real data: `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl`; inventory `scratchpad/car-provenance-fs/_datatypes.txt`.
+- Real data: `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl` (data_type inventory tallied over that file).
 - Mapped-but-empty SRUM: `third_party/piiat-mitrecar/piiat_mitrecar/mappings/plaso_srum.py:73`; source decl `piiat_mitrecar/sources_model.py:120`; SRUM two-step lane `ansible/collections/get_sybers.dxdfir/roles/dxdfir_zimmerman/` (output `data_store/processed/zimmerman/` — empty).
 - Plaso lane (no `--parsers`, default preset): `python/get_sybers_dxdfir/plaso.py:312`; argv `roles/dxdfir_plaso/defaults/main.yml`.
 - NetworkList mis-route: `piiat_mitrecar/mappings/plaso_registry.py` (`plaso_is_registry`, all `windows:registry:*`).

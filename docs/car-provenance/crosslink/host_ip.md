@@ -1,6 +1,6 @@
 # Cross-Artefact Linkage Hunt: Hostnames, IPs, MACs & Domains
 
-Dataset: `/opt/github/DX_DFIR/data_store/processed/` (READ-ONLY analysis)
+Dataset: `data_store/processed/` (READ-ONLY analysis)
 Scope: plaso (`log2timeline/jsonl/*`), Windows logs (`windows_logs/`), Zeek (`zeek/*`), Volatility memory (`volatility/memdump.mem/plugins/*` + `car.db`).
 
 ---
@@ -208,12 +208,12 @@ rule GENERIC_Windows_Hostname_NETBIOS
 
 ---
 
-## 6. Evidence pointers (absolute paths)
+## 6. Evidence pointers
 
-- Memory static IP / DNS (BGP-WS1-CONF): `/opt/github/DX_DFIR/data_store/processed/volatility/memdump.mem/plugins/windows.piiat.registry.jsonl` — Tcpip Interface `{89b3e14f-e403-4965-be04-aaeceb0a4e2f}`; ComputerName under `...\Control\ComputerName\ComputerName`.
-- Memory COMPUTERNAME env: `/opt/github/DX_DFIR/data_store/processed/volatility/memdump.mem/plugins/windows.piiat.processes.jsonl` (EnvVars `COMPUTERNAME=BGP-WS1-CONF`).
-- CAR normalised host / empty network tables: `/opt/github/DX_DFIR/data_store/processed/volatility/memdump.mem/car.db`.
-- Zeek DNS/flow/C2: `/opt/github/DX_DFIR/data_store/processed/zeek/DFIRdump_FOR_200_capture_pcap/{conn,dns,http,ssl,x509}.json`; second capture `/opt/github/DX_DFIR/data_store/processed/zeek/ME_FOR_1308_pcapng/conn.json`.
-- 5g-webui FQDN cert: `/opt/github/DX_DFIR/data_store/processed/log2timeline/jsonl/5g-webui.jsonl` (`berylia` matches → `/srv/certs/5g-webui.sac.baf.10.berylia.org_cert.crt`).
-- Sysmon host: `/opt/github/DX_DFIR/data_store/processed/windows_logs/unspecified_host/log_EvtxECmd_Output.json` (`Computer = DESKTOP-M913391`).
-- LoneWolf host: `/opt/github/DX_DFIR/data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl` (`image_hostname = DESKTOP-PM6C56D`).
+- Memory static IP / DNS (BGP-WS1-CONF): `data_store/processed/volatility/memdump.mem/plugins/windows.piiat.registry.jsonl` — Tcpip Interface `{89b3e14f-e403-4965-be04-aaeceb0a4e2f}`; ComputerName under `...\Control\ComputerName\ComputerName`.
+- Memory COMPUTERNAME env: `data_store/processed/volatility/memdump.mem/plugins/windows.piiat.processes.jsonl` (EnvVars `COMPUTERNAME=BGP-WS1-CONF`).
+- CAR normalised host / empty network tables: `data_store/processed/volatility/memdump.mem/car.db`.
+- Zeek DNS/flow/C2: `data_store/processed/zeek/DFIRdump_FOR_200_capture_pcap/{conn,dns,http,ssl,x509}.json`; second capture `data_store/processed/zeek/ME_FOR_1308_pcapng/conn.json`.
+- 5g-webui FQDN cert: `data_store/processed/log2timeline/jsonl/5g-webui.jsonl` (`berylia` matches → `/srv/certs/5g-webui.sac.baf.10.berylia.org_cert.crt`).
+- Sysmon host: `data_store/processed/windows_logs/unspecified_host/log_EvtxECmd_Output.json` (`Computer = DESKTOP-M913391`).
+- LoneWolf host: `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl` (`image_hostname = DESKTOP-PM6C56D`).

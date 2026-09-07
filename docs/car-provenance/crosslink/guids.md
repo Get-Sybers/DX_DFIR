@@ -1,6 +1,6 @@
 # GUID cross-artefact linkage hunt — DX_DFIR processed dataset
 
-READ-ONLY scan (rg / python sqlite3). Repo `/opt/github/DX_DFIR`, tree `data_store/processed/`.
+READ-ONLY scan (rg / python sqlite3) over the processed tree `data_store/processed/`.
 
 ## Dataset reality: three distinct hosts (linkage is WITHIN a host)
 The processed tree mixes three unrelated images. A GUID converges *inside* one host's

@@ -1,6 +1,6 @@
 # CAR `user_session` — Property-Provenance Catalogue
 
-Authoritative "find once, done" map of **every canonical field × every artefact/source that can supply it** for the MITRE CAR **`user_session`** object, as implemented in this repo (`/opt/github/DX_DFIR`). Grounded in the pinned CAR data model, the engine mappings, the generated source YAMLs, and real evidence in `data_store/processed/`.
+Authoritative "find once, done" map of **every canonical field × every artefact/source that can supply it** for the MITRE CAR **`user_session`** object, as implemented in this repo. Grounded in the pinned CAR data model, the engine mappings, the generated source YAMLs, and real evidence in `data_store/processed/`.
 
 - **Object def (pinned):** `third_party/piiat-mitrecar/third_party/car/data_model/user_session.yaml`; `car_data_model.json` (lines 364–388).
 - **Fields (10):** `dest_ip, dest_port, hostname, login_id, login_successful, login_type, src_ip, src_port, uid, user`

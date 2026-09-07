@@ -2,10 +2,10 @@
 
 Deep-audit of the MITRE CAR **registry** object against the real Windows-10 **LoneWolf**
 disk-registry evidence, focused on **hive content the pipeline drops** rather than the
-per-field basics (those are in `../car-provenance-lonewolf/registry.md`). Every count
+per-field basics (those are in `../registry.md`). Every count
 below is measured this pass over the actual plaso JSONL. READ-ONLY.
 
-- **Evidence:** `/opt/github/DX_DFIR/data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl`
+- **Evidence:** `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl`
   (6.6 GB, 4,169,774 rows; **1,512,651** are `windows:registry:*`).
 - **Maps under audit:** `third_party/piiat-mitrecar/piiat_mitrecar/mappings/plaso_registry.py`
   (predicate `startswith("windows:registry:")`, action **key_edit**) and `recmd.py`

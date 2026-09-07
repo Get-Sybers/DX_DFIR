@@ -23,7 +23,7 @@ populated from disk**.
 
 ## Ground truth — LoneWolf `DESKTOP-PM6C56D.jsonl`
 
-Source: `/opt/github/DX_DFIR/data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl`
+Source: `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl`
 (6.6 GB, 4,169,774 rows). User = **`jcloudy` (Jim Cloudy)**. Mail client = **Windows 10
 Mail app** (`microsoft.windowscommunicationsapps` / `Comms.Apps.Messaging` / `Unistore.dll`),
 **not** classic Outlook.

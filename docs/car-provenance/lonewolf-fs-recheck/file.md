@@ -1,7 +1,7 @@
 # CAR `file` — FILESYSTEM / disk-artefact provenance, deep sweep (LoneWolf)
 
 Second-pass, filesystem-focused re-audit of the CAR **file** object. Builds on
-`scratchpad/car-provenance-lonewolf/file.md` (which covered LNK / shell items /
+`../file.md` (which covered LNK / shell items /
 jump-list shell-items / USN / Recycle Bin / filestat, the user-from-path gap, the
 LNK "Not a time" drop, and the $MFT-absent finding). This pass hunts the
 **disk/filesystem artefacts that could fill `file` properties but the pipeline is
