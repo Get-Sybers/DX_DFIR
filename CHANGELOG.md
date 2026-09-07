@@ -39,6 +39,26 @@ is `0`, anything may change without notice.
 - `tests/run-checks.sh` (and the `checks` workflow) now run the Python unit
   tests when pytest is installed.
 
+### Added
+- **`dxdfir stix behaviour-sightings`** — joins the detection lanes
+  (suricata / hayabusa / yara) to the CAR entities they touch, against the
+  finished `car.db` stores, and emits each join as a STIX 2.1 **Sighting of the
+  ATT&CK attack-pattern** the detection names, over an `observed-data` keyed on
+  the matched CAR row's spindle `guid` (the behaviour timeline as the primary
+  axis), with the host as `where_sighted_refs`. suricata → the `flow` for the
+  alert's connection pair (a C2 IP read as its resolved `dest_fqdn`); hayabusa →
+  the `process` by ProcessGuid; yara → the `process` by pid or `file` by hash.
+  Reuses the exchange's object builders and validation, so a behaviour bundle
+  merges object-for-object with `stix export` and PIIAT's projection. Documented
+  in `docs/research/09-behaviour-sightings.md`.
+
+### Fixed
+- The YARA **memory** lane's Volatility renderer defaulted to a nonexistent
+  `dev-scripts/volatility/` path (the lane had never run), so
+  `dxdfir process signatures --yara-sources memory` could not scan; it now
+  resolves the renderer the vendored PIIAT-Mem tool owns
+  (`third_party/piiat-mem/jsonl_dfir_renderer.py`).
+
 ## [0.6.0] - 2026-08-30
 
 ### Added

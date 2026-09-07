@@ -90,6 +90,53 @@ def export(
         raise typer.Exit(1)
 
 
+@app.command(name="behaviour-sightings")
+def behaviour_sightings(
+    car: list[Path] = typer.Option(
+        ..., "--car", help="A source's car.db, or a tree to walk for every car.db (repeatable). The "
+                           "finished CAR stores the detections are joined to."),
+    detections: Path = typer.Option(
+        ..., "--detections", help="The detection-lane output dir (its suricata/ hayabusa/ yara/ subdirs), "
+                                  "e.g. data_store/processed/signatures."),
+    out: Path = typer.Option(None, "--out", help="Write the bundle here (default: stdout)."),
+    case: str = typer.Option(..., "--case", help="Case id scoping the observation/sighting ids."),
+    tlp: str = typer.Option(None, "--tlp", help="TLP marking on exported objects: " + "|".join(TLP_LEVELS) + "|none."),
+    producer: str = typer.Option(None, "--producer", help="Producer identity name (default: DX_DFIR)."),
+    attack_index: Path = typer.Option(
+        None, "--attack-index", help="ATT&CK index / STIX bundle (default: the committed index)."),
+    compact: bool = typer.Option(False, "--compact", help="Single-line JSON output instead of indented."),
+) -> None:
+    """Join the detection lanes to the CAR entities they touch and emit each as a
+    STIX 2.1 Sighting of the ATT&CK attack-pattern over the matched CAR row's
+    spindle-identified observed-data — the behaviour timeline as the primary axis.
+    """
+    from . import behaviour as _behaviour
+    from .objects import DEFAULT_PRODUCER
+    if not detections.is_dir():
+        typer.secho(f"--detections is not a directory: {detections}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(2)
+    try:
+        summary, bundle_doc = _behaviour.run_behaviour(
+            car_paths=[str(p) for p in car], detections_dir=str(detections), case_id=case,
+            out=str(out) if out else None, producer=producer or DEFAULT_PRODUCER,
+            tlp=tlp, attack_index=str(attack_index) if attack_index else None)
+    except (OSError, ValueError) as e:
+        typer.secho(f"behaviour-sightings failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(2) from None
+
+    indent = None if compact else 2
+    to_stdout = not out and summary["ok"]
+    if to_stdout:
+        sys.stdout.write(json.dumps(bundle_doc, indent=indent, ensure_ascii=False, default=str) + "\n")
+        sys.stderr.write(json.dumps(summary, indent=indent, ensure_ascii=False, default=str) + "\n")
+    else:
+        sys.stdout.write(json.dumps(summary, indent=indent, ensure_ascii=False, default=str) + "\n")
+    if not summary["ok"]:
+        for problem in summary["validation"]["errors"]:
+            typer.secho(f"   • {problem}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+
 @app.command()
 def pull(
     out: Path = typer.Option(
