@@ -32,9 +32,17 @@ RUN set -eux; \
     ln -s /usr/local/bin/psort /usr/local/bin/psort.py; \
     ln -s /usr/local/bin/image_export /usr/local/bin/image_export.py; \
     printf 'plaso %s (pypi, libyal built from source)\n' "${PLASO_VERSION}" > /etc/dxdfir-plaso-version
+# The image runs as a non-root uid (2000); the wrapper is the only python entry
+# point psort is invoked through, so it MUST be world-READABLE or
+# `python3 /opt/dxdfir/psort_wrapper.py` fails with Errno 13 for uid 2000. Pin the
+# mode with a `chmod` in the RUN below (NOT `COPY --chmod`, which needs BuildKit —
+# the ansible docker builder uses the legacy builder) rather than inheriting the
+# build-context file's perms (which vary by checkout/umask and have shipped as
+# 0640, breaking every psort render).
 COPY plaso/psort_wrapper.py /opt/dxdfir/psort_wrapper.py
 COPY hardening/harden.yml /tmp/hardening/harden.yml
 RUN set -eux; \
+    chmod 0644 /opt/dxdfir/psort_wrapper.py; \
     ansible-playbook -c local -i localhost, /tmp/hardening/harden.yml -e harden_uid=${DFIR_UID} -e harden_gid=${DFIR_GID}; \
     rm -rf /usr/local/bin/ansible* /usr/local/lib/python3*/site-packages/ansible* \
            /etc/ansible /root/.ansible /tmp/hardening

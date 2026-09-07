@@ -119,6 +119,43 @@ def test_discover_vms(tmp_path):
     assert got == ["VM-A", "VM-B"]
 
 
+def test_discover_images_non_recursive_top_level_only(tmp_path):
+    # A loose single-file image dropped straight into VM_files/ (monolithic VMDK)
+    # is picked up at the top level, while an image nested inside a VM-export
+    # folder (owned by discover_vms + get_vm_descriptor) is NOT re-picked.
+    _w(tmp_path / "5g-image-1.vmdk", b"KDMV____")            # loose monolithic VMDK
+    nested = tmp_path / "VM-A"
+    nested.mkdir()
+    _w(nested / "vm.vmdk", b"# Disk DescriptorFile\n")       # inside a VM folder
+    top = {(d["rel"], d["format"]) for d in plaso.discover_images(str(tmp_path), recursive=False)}
+    assert ("5g-image-1.vmdk", "vmdk") in top
+    assert all("/" not in rel and "VM-A" not in rel for rel, _ in top)
+    assert len(top) == 1
+    # the default (recursive) scan still descends into the folder
+    deep = {d["rel"] for d in plaso.discover_images(str(tmp_path))}
+    assert os.path.join("VM-A", "vm.vmdk") in deep
+
+
+def test_process_loose_image_in_vm_dir(tmp_path, monkeypatch):
+    # A loose VMDK in vm_dir (no per-VM folder, empty disk-image dir) must be
+    # discovered and handed to run_plaso mounting vm_dir — the ls24-sample case.
+    in_dir = tmp_path / "disk_images"
+    vm_dir = tmp_path / "VM_files"
+    in_dir.mkdir()
+    vm_dir.mkdir()
+    _w(vm_dir / "5g-image-1.vmdk", b"KDMV____")
+    calls = []
+
+    def fake_run_plaso(mount_dir, src_rel, name, out_dir, module_path, image=plaso._IMAGE):
+        calls.append((mount_dir, src_rel, name))
+        return {"source": src_rel, "ok": True, "host": "h", "output": f"{name}.jsonl"}
+
+    monkeypatch.setattr(plaso, "run_plaso", fake_run_plaso)
+    s = plaso.process(str(in_dir), str(vm_dir), str(tmp_path / "out"), "module.py")
+    assert s["images"] == 1 and s["vms"] == 0 and s["processed"] == 1 and s["failed"] == 0
+    assert calls == [(os.path.realpath(str(vm_dir)), "5g-image-1.vmdk", "5g-image-1_vmdk")]
+
+
 # ---- idempotence marker ----------------------------------------------------
 def test_already_done_requires_db_marker_and_jsonl(tmp_path):
     out = tmp_path

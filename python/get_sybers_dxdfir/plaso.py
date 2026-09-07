@@ -202,11 +202,16 @@ def get_vm_descriptor(vm_dir: str) -> tuple[str | None, str]:
 
 
 # ---- discovery -------------------------------------------------------------
-def discover_images(input_dir: str) -> list[dict]:
+def discover_images(input_dir: str, recursive: bool = True) -> list[dict]:
     """Every processable image under input_dir (content-first), each as
-    {path, rel, format, by}. Skips vmdk-extents and ewf-continuation segments."""
+    {path, rel, format, by}. Skips vmdk-extents and ewf-continuation segments.
+
+    ``recursive=False`` restricts discovery to files sitting DIRECTLY in
+    input_dir (no descent into subdirs) — used to pick up a loose single-file
+    image dropped straight into VM_files/ without confusing it with the
+    per-VM export folders that :func:`discover_vms` owns."""
     picks: list[dict] = []
-    for root, _dirs, files in os.walk(input_dir):
+    for root, dirs, files in os.walk(input_dir):
         for name in sorted(files):
             path = os.path.join(root, name)
             rel = os.path.relpath(path, input_dir)
@@ -221,6 +226,8 @@ def discover_images(input_dir: str) -> list[dict]:
             if fmt in ("", "vmdk-extent", "ewf-cont"):
                 continue
             picks.append({"path": path, "rel": rel, "format": fmt, "by": by})
+        if not recursive:
+            dirs[:] = []   # top level only — never descend into VM-export folders
     # stable order, de-dup by path
     seen, out = set(), []
     for p in sorted(picks, key=lambda d: d["rel"]):
@@ -367,17 +374,28 @@ def process(input_dir, vm_dir, out_dir, module_path, image=_IMAGE, force=False,
 
     images = discover_images(input_dir) if os.path.isdir(input_dir) else []
     vms = discover_vms(vm_dir) if vm_dir else []
+    # Loose single-file images dropped straight into vm_dir (a monolithic .vmdk /
+    # .vhd / .vhdx, or an E01/dd left there) — NOT a per-VM export folder, so
+    # discover_vms misses them. Collection sort routes every VMDK/VHD(X) to
+    # VM_files/, so this is the common case for a single-file VM disk. Top level
+    # only: never re-pick a VM-export folder's own descriptor/extents (those are
+    # handled by discover_vms + get_vm_descriptor below). Each is processed like
+    # any other image, mounting vm_dir instead of input_dir.
+    vm_images = discover_images(vm_dir, recursive=False) if vm_dir and os.path.isdir(vm_dir) else []
     loose = discover_loose(loose_dir) if loose_dir else []
 
     processed = skipped = failed = warnings = 0
     results = []
 
-    for img in images:
+    # (mount_dir, image) pairs: disk-image tree mounts input_dir; a loose image in
+    # vm_dir mounts vm_dir. run_plaso hands log2timeline "/data/<rel>" either way.
+    for mount_dir, img in ([(input_dir, i) for i in images]
+                           + [(vm_dir, i) for i in vm_images]):
         name = get_clean_filename(img["rel"])
         if not force and _already_done(out_dir, name):
             skipped += 1
             continue
-        res = run_plaso(input_dir, img["rel"], name, out_dir, module_path, image)
+        res = run_plaso(mount_dir, img["rel"], name, out_dir, module_path, image)
         if res["ok"]:
             processed += 1
         else:
@@ -423,7 +441,7 @@ def process(input_dir, vm_dir, out_dir, module_path, image=_IMAGE, force=False,
         "input_dir": input_dir,
         "vm_dir": vm_dir,
         "out_dir": out_dir,
-        "images": len(images),
+        "images": len(images) + len(vm_images),
         "vms": len(vms),
         "processed": processed,
         "skipped": skipped,
