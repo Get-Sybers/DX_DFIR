@@ -5,7 +5,10 @@ image (and each VMware VM export) it runs the Plaso two-step in the
 ``log2timeline/plaso`` container:
 
   1. ``log2timeline.py`` parses the image into a durable ``.plaso`` storage db (kept
-     so an analyst can re-run psort later without re-parsing the image).
+     so an analyst can re-run psort later without re-parsing the image). Run with
+     ``--extract_winreg_binary`` so REG_BINARY registry values (MountedDevices
+     drive-letter -> device bindings, device serials, MACs) are stored as raw
+     bytes rather than dropped to a lossy ``(N bytes)`` summary at parse time.
   2. ``psort.py -o l2t_json_dxdfir`` renders the db to json_line with the repo's
      custom output module (dev-scripts/plaso/l2t_json_dxdfir.py), which adds
      image_hostname / username / disk_id / volume_id to EVERY event.
@@ -313,11 +316,28 @@ def run_plaso(mount_dir, src_rel, name, out_dir, module_path, image=_IMAGE) -> d
     with open(log, "w") as logfh:
         # 1) parse image -> .plaso (minimal hardened image:
         #    tool argv passed directly, no caps, no network, read-only rootfs)
+        #
+        #    --extract_winreg_binary: preserve REG_BINARY values as their raw
+        #    bytes in the .plaso db. WITHOUT it, log2timeline's winreg parser
+        #    (winreg_plugins/interface.py:_GetValuesFromKey) drops every binary
+        #    value to a lossy "(N bytes)" summary BEFORE it reaches storage, so
+        #    the raw serial/MAC/disk-signature is gone and psort can never
+        #    recover it. This loses forensically decisive device-identity bytes:
+        #      * HKLM\System\MountedDevices  (\DosDevices\C:/D:/... -> disk
+        #        signature + offset / USB volume serial binding a drive letter
+        #        to a physical device),
+        #      * Tcpip / other REG_BINARY device values handled by the default
+        #        registry plugin.
+        #    With the flag the bytes survive into event_data.values and the JSON
+        #    output module base64url-encodes them (output/shared_json.py:
+        #    _FormatValues), so they are recoverable downstream. Costs some
+        #    extraction speed (plaso warns "significantly slower") — the right
+        #    trade for a DFIR pipeline whose value is device crosslinking.
         subprocess.run(
             container.run(
                 image,
                 ["log2timeline.py", "--status_view", "none", "--partitions", "all",
-                 "--vss-stores", "all",
+                 "--vss-stores", "all", "--extract_winreg_binary",
                  "--storage-file", f"/output/plaso/{name}.plaso", f"/data/{src_rel}"],
                 mounts=[f"{os.path.realpath(mount_dir)}:/data:ro",
                         f"{os.path.realpath(out_dir)}:/output"],
