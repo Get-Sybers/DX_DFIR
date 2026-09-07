@@ -58,6 +58,15 @@ def main(argv: list[str] | None = None) -> int:
                          "(default data_store/raw/pcaps). A collection scopes this to "
                          "its sorted pcaps/ subdir (dxdfir_signatures_pcap_dir); without "
                          "it a sorted collection's captures never reach suricata.")
+    ap.add_argument("--disk-dir",
+                    help="the directory of disk images the yara disk scan and the "
+                         "hayabusa image-EVTX extraction read (default "
+                         "data_store/raw/disk_images). A collection scopes this to its "
+                         "sorted disk_images/ subdir.")
+    ap.add_argument("--memory-dir",
+                    help="the directory of memory images the yara memory scan reads "
+                         "(default data_store/raw/memory). A collection scopes this to "
+                         "its sorted memory/ subdir.")
     args = ap.parse_args(argv)
 
     lanes = tuple(args.only) if args.only else LANES
@@ -71,6 +80,10 @@ def main(argv: list[str] | None = None) -> int:
     }, "hayabusa": {
         "stage_dir": args.stage_dir,
         "vss": args.vss,
+        "disk_dir": args.disk_dir,           # image-EVTX extraction source
+    }, "yara": {
+        "disk_dir": args.disk_dir,           # disk scan source
+        "memory_dir": args.memory_dir,       # memory scan source
     }}
     if args.yara_sources:
         srcs = tuple(s.strip() for s in args.yara_sources.split(",") if s.strip())
@@ -78,7 +91,7 @@ def main(argv: list[str] | None = None) -> int:
         if bad:
             ap.error(f"--yara-sources: unknown source(s) {','.join(bad)} "
                      "(choose from files,disk,memory)")
-        config["yara"] = {"sources": srcs}
+        config["yara"]["sources"] = srcs      # merge — keep the scoped disk/memory dirs
     summary = process(
         args.output_dir, lanes, repo_root=args.repo_root,
         fetch=args.fetch, force=args.force, config=config,
