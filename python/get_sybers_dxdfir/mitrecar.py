@@ -84,11 +84,23 @@ def run_timeline(tool_argv: list[str]) -> subprocess.CompletedProcess:
 
 def main(argv: list[str] | None = None) -> int:
     """A transparent pass-through: every flag is the tool's own (see the
-    PIIAT-MitreCar README) — this lane only supplies the vendored location."""
+    PIIAT-MitreCar README) — this lane only supplies the vendored location.
+
+    The one reserved word is the leading ``timeline`` subcommand, which routes to
+    ``piiat_mitrecar.timeline`` so a non-Python front-end can build the unified
+    CAR timeline as ``python -m get_sybers_dxdfir.mitrecar timeline <car_dir> …``;
+    every other invocation flows to the PIIAT-MitreCar build unchanged.
+    """
+    args = list(sys.argv[1:] if argv is None else argv)
+    if args and args[0] == "timeline":
+        proc = run_timeline(args[1:])
+        sys.stdout.write(proc.stdout)
+        sys.stderr.write(proc.stderr)
+        return proc.returncode
     ap = argparse.ArgumentParser(
         prog="get_sybers_dxdfir.mitrecar", add_help=False,
         description="drive the vendored PIIAT-MitreCar CLI (all flags pass through)")
-    _known, passthrough = ap.parse_known_args(argv)
+    _known, passthrough = ap.parse_known_args(args)
     proc = run(passthrough if passthrough else ["--help"])
     sys.stdout.write(proc.stdout)
     sys.stderr.write(proc.stderr)

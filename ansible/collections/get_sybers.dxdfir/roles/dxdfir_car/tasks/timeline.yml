@@ -1,0 +1,20 @@
+---
+# Union a source's car.db + superset.db (object events + relationship edges) into
+# one property-rich, time-ordered CAR timeline JSONL. Point dxdfir_car_timeline_dir
+# at one source's car dir, or a tree to aggregate every source under it.
+- name: "car-timeline | build the unified CAR timeline"
+  block:
+    - name: "car-timeline | run the timeline builder"
+      ansible.builtin.command:
+        argv: "{{ dxdfir_car_timeline_argv }}"
+      environment:
+        PYTHONPATH: "{{ dxdfir_car_python_path }}"
+      register: dxdfir_car_timeline_run
+      changed_when: dxdfir_car_timeline_run.rc == 0
+  rescue:
+    - name: "car-timeline | surface timeline diagnostics"
+      ansible.builtin.fail:
+        msg: >-
+          dxdfir_car timeline failed.
+          Stdout: {{ dxdfir_car_timeline_run.stdout | default('(no output)') | trim | truncate(1000) }}
+          Stderr: {{ dxdfir_car_timeline_run.stderr | default('') | trim | truncate(1000) }}

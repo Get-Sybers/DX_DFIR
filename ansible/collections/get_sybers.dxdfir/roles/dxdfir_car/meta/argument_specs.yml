@@ -1,0 +1,77 @@
+---
+argument_specs:
+  main:
+    short_description: "Materialise, verify and timeline the MITRE CAR from processed evidence."
+    description:
+      - >-
+        Normalises every processed source into the MITRE CAR data model via the
+        vendored PIIAT-MitreCar engine. Three actions selected by
+        dxdfir_car_action: build (per-source car.db + superset.db +
+        car_<object>.jsonl + car_relationships.jsonl), verify (the CAR correctness
+        promotion gate) and timeline (one property-rich, time-ordered CAR
+        timeline). Pure Python + the vendored engine — no containers.
+    options:
+      dxdfir_car_action:
+        type: str
+        required: false
+        default: build
+        choices: [build, verify, timeline]
+        description: "Which CAR action to run."
+      dxdfir_car_processed_dir:
+        type: str
+        required: false
+        description: "Processed evidence tree the batch build reads from (default data_store/processed)."
+      dxdfir_car_dir:
+        type: str
+        required: false
+        description: "The materialised CAR tree (default data_store/processed/car)."
+      dxdfir_car_module:
+        type: str
+        required: false
+        default: get_sybers_dxdfir.mitrecar
+        description: "The CAR engine module the preflight import-checks."
+      dxdfir_car_python_path:
+        type: str
+        required: false
+        description: "PYTHONPATH to the get_sybers_dxdfir package (in-repo/dev runs)."
+      dxdfir_car_rebuild:
+        type: bool
+        required: false
+        default: false
+        description: "build: rebuild CAR stores that already exist (maps to the engine's --force)."
+      dxdfir_car_in:
+        type: str
+        required: false
+        description: "build (single-source): one processed file/dir -> one car.db. Empty => batch."
+      dxdfir_car_out:
+        type: str
+        required: false
+        description: "build: output dir (single-source: this source's car dir; batch: the car/ root)."
+      dxdfir_car_host:
+        type: str
+        required: false
+        description: "build (single-source): fallback source_host where the map derives none."
+      dxdfir_car_artefacts:
+        type: str
+        required: false
+        description: "build (single-source): comma-separated artefact map keys (default: route by filename)."
+      dxdfir_car_timeline_dir:
+        type: str
+        required: false
+        description: "timeline: a source's car dir, or a tree to aggregate (default the whole car tree)."
+      dxdfir_car_timeline_out:
+        type: str
+        required: false
+        description: "timeline: output path (default <car_dir>/timeline.jsonl)."
+      dxdfir_car_timeline_host:
+        type: str
+        required: false
+        description: "timeline: only events whose source_host matches."
+      dxdfir_car_timeline_after:
+        type: str
+        required: false
+        description: "timeline: only events at/after this ISO timestamp."
+      dxdfir_car_timeline_before:
+        type: str
+        required: false
+        description: "timeline: only events at/before this ISO timestamp."

@@ -1,0 +1,12 @@
+---
+# The playbook holds the decisions; the role groups, the tasks act.
+- name: "DFIR | run the CAR correctness gate over the materialised CAR"
+  hosts: "{{ dxdfir_hosts | default('localhost') }}"
+  connection: "{{ dxdfir_connection | default('local') }}"
+  gather_facts: true
+  tasks:
+    - name: "dxdfir-verify-car | run the car role (verify)"
+      ansible.builtin.include_role:
+        name: dxdfir_car
+      vars:
+        dxdfir_car_action: verify

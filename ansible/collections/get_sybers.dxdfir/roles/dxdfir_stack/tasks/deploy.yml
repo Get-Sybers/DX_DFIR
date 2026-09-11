@@ -1,0 +1,43 @@
+---
+# Bring the stack up. SOF-ELK reuses the dedicated dxdfir_deploy_sofelk role
+# (builds its image + writes its env); the Elastic-native stack uses prebuilt
+# images, so it is brought up directly and verified.
+- name: "stack-deploy | build + bring up the SOF-ELK stack | sofelk"
+  ansible.builtin.include_role:
+    name: dxdfir_deploy_sofelk
+  vars:
+    dxdfir_deploy_sofelk_build: "{{ dxdfir_stack_build }}"
+  when: dxdfir_stack_name == 'sofelk'
+
+- name: "stack-deploy | bring up the elastic stack | elastic"
+  community.docker.docker_compose_v2:
+    project_src: "{{ dxdfir_stack_compose_dir }}"
+    env_files:
+      - "{{ dxdfir_stack_env_file }}"
+    build: "{{ 'always' if dxdfir_stack_build | bool else 'never' }}"
+    state: present
+  register: dxdfir_stack_up
+  when: dxdfir_stack_name == 'elastic'
+
+- name: "stack-deploy | read back the running services | elastic"
+  community.docker.docker_compose_v2:
+    project_src: "{{ dxdfir_stack_compose_dir }}"
+    env_files:
+      - "{{ dxdfir_stack_env_file }}"
+  register: dxdfir_stack_state
+  when: dxdfir_stack_name == 'elastic'
+
+- name: "stack-deploy | assert elasticsearch + kibana are running | elastic"
+  ansible.builtin.assert:
+    that:
+      - >-
+          dxdfir_stack_state.containers
+          | selectattr('Service', 'equalto', 'elasticsearch')
+          | selectattr('State', 'equalto', 'running') | list | length > 0
+      - >-
+          dxdfir_stack_state.containers
+          | selectattr('Service', 'equalto', 'kibana')
+          | selectattr('State', 'equalto', 'running') | list | length > 0
+    fail_msg: "the elastic stack is not fully running: {{ dxdfir_stack_state.containers | map(attribute='Name') | list }}"
+    quiet: true
+  when: dxdfir_stack_name == 'elastic'

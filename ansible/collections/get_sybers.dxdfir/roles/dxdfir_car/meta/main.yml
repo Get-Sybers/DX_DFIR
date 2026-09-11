@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: dxdfir_car
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    Materialise, verify and timeline the MITRE CAR from processed evidence via the
+    vendored PIIAT-MitreCar engine (get_sybers_dxdfir.mitrecar / .carcheck). One
+    role, three actions (build|verify|timeline); the playbook decides.
+  company: Get-Sybers
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [dfir, car, mitre, normalize]
+
+dependencies: []

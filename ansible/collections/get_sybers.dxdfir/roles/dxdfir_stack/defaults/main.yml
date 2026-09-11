@@ -1,0 +1,27 @@
+---
+# dxdfir_stack: bring the analysis stack up/down. One role, five actions
+# (dxdfir_stack_action), two stacks (dxdfir_stack_name); the playbook decides.
+
+# Which lifecycle action: deploy | destroy | start | stop | status.
+dxdfir_stack_action: status
+# Which stack: elastic (docker/elastic, the default) or sofelk (docker/sof-elk).
+dxdfir_stack_name: elastic
+
+# Repo root is five levels up from this role.
+dxdfir_stack_repo_root: "{{ role_path }}/../../../../.."
+
+# Compose dir for the selected stack.
+dxdfir_stack_compose_dir: >-
+  {{ dxdfir_stack_repo_root }}/docker/{{ 'elastic' if dxdfir_stack_name == 'elastic' else 'sof-elk' }}
+
+# Env file for compose interpolation: elastic reads a committed-by-the-operator
+# .env next to its compose file; sofelk uses the data_store env the deploy writes.
+dxdfir_stack_env_file: >-
+  {{ (dxdfir_stack_compose_dir ~ '/.env') if dxdfir_stack_name == 'elastic'
+     else (dxdfir_stack_repo_root ~ '/data_store/sofelk.env') }}
+
+# deploy: build images before starting (elastic uses prebuilt images, so this is
+# a no-op there; sofelk builds its image via the dxdfir_deploy_sofelk role).
+dxdfir_stack_build: true
+# destroy: also remove named volumes (WIPES ingested data).
+dxdfir_stack_remove_volumes: false

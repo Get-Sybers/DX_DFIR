@@ -1,0 +1,7 @@
+---
+- name: "stack-start | start existing stopped containers | {{ dxdfir_stack_name }}"
+  ansible.builtin.command:
+    argv: ["docker", "compose", "-f", "docker-compose.yml", "start"]
+    chdir: "{{ dxdfir_stack_compose_dir }}"
+  register: dxdfir_stack_start
+  changed_when: dxdfir_stack_start.rc == 0

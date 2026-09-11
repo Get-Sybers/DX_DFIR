@@ -1,0 +1,28 @@
+---
+# Audit the hardened dxdfir/* tool-image inventory (get_sybers_dxdfir.images
+# --audit): fails if any expected image is missing/un-hardened, or an unexpected
+# dxdfir/* image is present. A thin audit — no role needed.
+- name: "DFIR | audit the hardened dxdfir/* tool-image inventory"
+  hosts: "{{ dxdfir_hosts | default('localhost') }}"
+  connection: "{{ dxdfir_connection | default('local') }}"
+  gather_facts: true
+  vars:
+    dxdfir_verify_images_repo_root: "{{ playbook_dir }}/../../../.."
+    dxdfir_verify_images_python_path: "{{ dxdfir_verify_images_repo_root }}/python"
+  tasks:
+    - name: "dxdfir-verify-images | the images module imports"
+      ansible.builtin.command:
+        argv: ["python3", "-c", "import get_sybers_dxdfir.images"]
+      environment:
+        PYTHONPATH: "{{ dxdfir_verify_images_python_path }}"
+      register: dxdfir_verify_images_import
+      changed_when: false
+
+    - name: "dxdfir-verify-images | audit the inventory"
+      ansible.builtin.command:
+        argv: ["python3", "-m", "get_sybers_dxdfir.images", "--audit"]
+      environment:
+        PYTHONPATH: "{{ dxdfir_verify_images_python_path }}"
+      register: dxdfir_verify_images_audit
+      changed_when: false
+      failed_when: dxdfir_verify_images_audit.rc != 0
