@@ -1,0 +1,13 @@
+---
+# The playbook holds the decisions; the role groups, the tasks act.
+# Stack (elastic|sofelk) is selected via -e dxdfir_stack_name=...
+- name: "DFIR | stack stop"
+  hosts: "{{ dxdfir_hosts | default('localhost') }}"
+  connection: "{{ dxdfir_connection | default('local') }}"
+  gather_facts: true
+  tasks:
+    - name: "dxdfir-stack-stop | run the stack role (stop)"
+      ansible.builtin.include_role:
+        name: dxdfir_stack
+      vars:
+        dxdfir_stack_action: stop

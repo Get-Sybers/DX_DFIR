@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: dxdfir_cleanup
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    Wipe processed evidence, the materialised CAR tree, or the built dxdfir/* tool
+    images so the next run is clean. Three actions (processed|car|docker); the
+    playbook decides.
+  company: Get-Sybers
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [dfir, cleanup, teardown, maintenance]
+
+dependencies: []

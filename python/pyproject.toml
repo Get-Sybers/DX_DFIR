@@ -27,9 +27,13 @@ dependencies = [
 ]
 
 [project.scripts]
-# `dxdfir` front-end (Typer). The processors also run standalone via
-# `python -m get_sybers_dxdfir.<source>`.
-dxdfir = "get_sybers_dxdfir.cli:app"
+# The primary `dxdfir` front-end is now the Go/termui binary built from ../go
+# (see go/README.md); it drives this package's Ansible collection and processors
+# by shelling out. This Typer app remains as `dxdfir-py` — a dependency-only
+# fallback and the reference the Go front-end mirrors. The processors also run
+# standalone via `python -m get_sybers_dxdfir.<source>`, and the front-end
+# contract modules run as `python -m get_sybers_dxdfir.{collection,mitrecar,carcheck,images,stix}`.
+dxdfir-py = "get_sybers_dxdfir.cli:app"
 
 [tool.setuptools.packages.find]
 include = ["get_sybers_dxdfir*"]

@@ -104,14 +104,33 @@ python3 -m venv "$VENV" || die "could not create the venv (need python3-venv)."
     --upgrade pip >/dev/null 2>&1 || true
 "$VENV/bin/pip" install --quiet --no-index --find-links "$BUNDLE/wheels" \
     get_sybers_dxdfir || die "offline install of the CLI failed (missing wheels?)."
-# a stable entrypoint on PATH if we can write there
-if ln -sf "$VENV/bin/dxdfir" /usr/local/bin/dxdfir 2>/dev/null; then
-    DXDFIR="/usr/local/bin/dxdfir"
+# The Python console script installs as dxdfir-py (a fallback + the reference the
+# Go front-end mirrors).
+DXDFIR_PY="$VENV/bin/dxdfir-py"
+ln -sf "$DXDFIR_PY" /usr/local/bin/dxdfir-py 2>/dev/null || true
+echo "✅ dxdfir-py (Python fallback) installed: $("$DXDFIR_PY" --version 2>/dev/null || echo dxdfir-py)"
+
+# ---- 4b. the Go/termui front-end, offline (from vendored modules) -----------
+if command -v go >/dev/null 2>&1 && [[ -f "$BUNDLE/go-vendor.tar" ]]; then
+    echo "🐹 Building the dxdfir Go front-end (offline, -mod=vendor) ..."
+    tar -xf "$BUNDLE/go-vendor.tar" -C "$TARGET/go" || die "failed to unpack go-vendor.tar"
+    ( cd "$TARGET/go" && GOFLAGS= GOTOOLCHAIN=local GOPROXY=off go build -mod=vendor -o dxdfir ./cmd/dxdfir ) \
+        || die "offline build of the Go front-end failed."
+    if ln -sf "$TARGET/go/dxdfir" /usr/local/bin/dxdfir 2>/dev/null; then
+        DXDFIR="/usr/local/bin/dxdfir"
+    else
+        DXDFIR="$TARGET/go/dxdfir"
+        echo "ℹ️  Could not symlink into /usr/local/bin; use $DXDFIR (or add $TARGET/go to PATH)."
+    fi
+    echo "✅ dxdfir (Go front-end) installed: $("$DXDFIR" --version 2>/dev/null || echo dxdfir)"
 else
-    DXDFIR="$VENV/bin/dxdfir"
-    echo "ℹ️  Could not symlink into /usr/local/bin; use $DXDFIR (or add $VENV/bin to PATH)."
+    echo "ℹ️  No Go toolchain or go-vendor.tar in the bundle — using the Python CLI as 'dxdfir'."
+    if ln -sf "$DXDFIR_PY" /usr/local/bin/dxdfir 2>/dev/null; then
+        DXDFIR="/usr/local/bin/dxdfir"
+    else
+        DXDFIR="$DXDFIR_PY"
+    fi
 fi
-echo "✅ CLI installed: $("$DXDFIR" --version 2>/dev/null || echo dxdfir)"
 
 # ---- 5. the pinned ansible collections, offline -----------------------------
 if [[ -d "$BUNDLE/collections" ]] && ls "$BUNDLE"/collections/*.tar.gz >/dev/null 2>&1; then

@@ -1,0 +1,21 @@
+---
+# FIND FACTS -> check preconditions BEFORE the engine runs. The CAR stage is pure
+# Python + the vendored PIIAT-MitreCar submodule (no containers), so preflight is
+# a module-import guard, not a docker check. The engine's own _ensure_ready()
+# surfaces a missing/uninitialised submodule as a clear error if it slips past.
+
+- name: "car-preflight | the CAR engine module imports"
+  ansible.builtin.command:
+    argv: ["python3", "-c", "import {{ dxdfir_car_module }}"]
+  environment:
+    PYTHONPATH: "{{ dxdfir_car_python_path }}"
+  register: dxdfir_car_import
+  changed_when: false
+
+- name: "car-preflight | the carcheck gate module imports"
+  ansible.builtin.command:
+    argv: ["python3", "-c", "import get_sybers_dxdfir.carcheck"]
+  environment:
+    PYTHONPATH: "{{ dxdfir_car_python_path }}"
+  register: dxdfir_car_carcheck_import
+  changed_when: false

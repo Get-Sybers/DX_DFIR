@@ -1,0 +1,42 @@
+---
+argument_specs:
+  main:
+    short_description: "Bring the analysis stack (Elastic-native or SOF-ELK) up/down via docker compose."
+    description:
+      - >-
+        Lifecycle for the docker-compose analysis backends: deploy (build if
+        needed + bring up + verify running), destroy (down, optionally with
+        volumes), start, stop and status. Localhost-only. The Elastic-native
+        stack uses prebuilt images and requires docker/elastic/.env; SOF-ELK
+        reuses the dxdfir_deploy_sofelk role for its from-source build.
+    options:
+      dxdfir_stack_action:
+        type: str
+        required: false
+        default: status
+        choices: [deploy, destroy, start, stop, status]
+        description: "Which lifecycle action to run."
+      dxdfir_stack_name:
+        type: str
+        required: false
+        default: elastic
+        choices: [elastic, sofelk]
+        description: "Which stack to operate on."
+      dxdfir_stack_compose_dir:
+        type: str
+        required: false
+        description: "Compose dir for the selected stack (default docker/elastic or docker/sof-elk)."
+      dxdfir_stack_env_file:
+        type: str
+        required: false
+        description: "Env file for compose interpolation (elastic: docker/elastic/.env; sofelk: data_store/sofelk.env)."
+      dxdfir_stack_build:
+        type: bool
+        required: false
+        default: true
+        description: "deploy: build images before starting (no-op for the prebuilt elastic stack)."
+      dxdfir_stack_remove_volumes:
+        type: bool
+        required: false
+        default: false
+        description: "destroy: also remove named volumes (WIPES ingested data)."

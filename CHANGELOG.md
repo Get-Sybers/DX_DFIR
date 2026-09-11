@@ -7,6 +7,59 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Added
+- **A Go/[termui](https://github.com/gizak/termui) front-end for `dxdfir`** (`go/`),
+  replacing the Python Typer CLI as the user-facing entry point while keeping the
+  same verb/flag surface, exit-code contract, and repo-root discovery. It drives
+  the existing `get_sybers.dxdfir` Ansible collection and the `get_sybers_dxdfir`
+  processors by shelling out — no processing is re-implemented. Presentation is
+  **adaptive**: `process` and collection creation (`register`, `collection sort`)
+  render a live dashboard — overall gauge, per-lane board, a bounded *filtered*
+  log-tail for the long-pole lanes (volatility/plaso), and an exceptions panel —
+  while quick verbs stay concise plain output and anything piped/CI/non-TTY
+  streams the same progress as plain lines. Because Ansible buffers a lane's
+  output until it exits, progress is reconstructed by **watching the deterministic
+  per-item output files land on disk**, so a multi-hour run is never silent and
+  the tools' firehose never reaches the screen. Built as broken-down Go packages
+  (`cmd/dxdfir` + `internal/{cli,model,repo,run,lanes,collect,tui,plain,termdetect,style}`),
+  the module structure the original 980-line `cli.py` never had.
+- Thin, additive `python -m` front-end contracts so the Go binary can drive the
+  processors from a checkout: `get_sybers_dxdfir.collection` (a non-interactive
+  JSON + `::dxdfir::` progress-sentinel CLI for status/lanes/state/register/sort/
+  hash/select — magic-byte classification and SHA-1 hashing stay the Python
+  detectors, the source of truth), `get_sybers_dxdfir.stix` (`__main__` shim), a
+  `timeline` subcommand on `get_sybers_dxdfir.mitrecar`, and optional progress
+  callbacks on `collection.sort_into` / `write_manifest` / `hash_collection` /
+  `_hash_file` (all backward-compatible; defaults unchanged).
+- **The pipeline stages the CLI ran outside Ansible are now Ansible roles**, so
+  the front-end drives Ansible for the whole pipeline (not just processing +
+  image builds): `dxdfir_car` (build / verify / timeline of the materialised
+  CAR — the epic-#86 stage that had no role), `dxdfir_stack`
+  (deploy/destroy/start/stop/status for the Elastic-native and SOF-ELK stacks,
+  reusing the previously-orphaned `dxdfir_deploy_sofelk` for the SOF-ELK build)
+  and `dxdfir_cleanup` (processed/car/docker teardown), plus the thin
+  `dxdfir-verify-images.yml` audit play. Each follows the `dxdfir_lane`
+  conventions (preflight → act → verify/gate, FQCN, house task-naming) and
+  passes `ansible-lint --profile production`.
+
+### Changed
+- The `dxdfir` console script installed by the Python package is now `dxdfir-py`
+  (a dependency-only fallback and the reference the Go front-end mirrors); the
+  primary `dxdfir` is the Go binary built from `go/` (see `go/README.md`).
+- **The Go CLI now drives Ansible for build-car, verify-car, car-timeline,
+  verify-images, `stack *` and `cleanup *`** (previously in-process Python or a
+  direct `docker`/`bash` subprocess) via the new roles/playbooks above —
+  `cleanup --dry-run` maps to `ansible-playbook --check`. `list` stays native
+  (filesystem inventory), and `collection`/`register`/`stix` keep the streaming
+  `python -m` contract (Ansible buffers per-file progress; stix's stdout is data).
+- **Build + dependency wiring for the Go front-end.** `scripts/setup-environment.sh`
+  installs the Go toolchain when absent and builds+installs the `dxdfir` binary
+  (the Python CLI becomes `dxdfir-py`); `.github/workflows/checks.yml` adds
+  `actions/setup-go` and `tests/run-checks.sh` gains a guarded "Go front-end
+  (gofmt / vet / build)" check group; `THIRD_PARTY_NOTICES.md` records the Go
+  build-time modules + licences; and `scripts/{package-offline,setup-offline}.sh`
+  vendor the Go modules (`go mod vendor`) for reproducible air-gapped builds.
+
 ### Removed
 - **The Kusto/ADX layer.** The Azure Data Explorer emulator was the analysis
   backend from 0.2.0; the Elastic-native path (`docker/elastic`, the ES|QL/EQL

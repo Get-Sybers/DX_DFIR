@@ -83,6 +83,21 @@ echo "📁 Archiving the repository at HEAD ..."
 git -C "$REPO" archive --format=tar HEAD -o "$STAGE/repo.tar" \
     || die "git archive failed (commit your work, or run from a clean checkout)."
 
+# ---- 1b. the Go front-end modules (vendored for a reproducible offline build) -
+# git archive only carries tracked files, so go/vendor (gitignored) is shipped
+# separately. The offline installer extracts it and builds with -mod=vendor.
+if command -v go >/dev/null 2>&1; then
+    echo "🐹 Vendoring the Go front-end modules ..."
+    ( cd "$REPO/go" && GOFLAGS= go mod vendor ) || die "go mod vendor failed."
+    tar -C "$REPO/go" -cf "$STAGE/go-vendor.tar" vendor \
+        || die "failed to package go/vendor."
+    ( cd "$REPO/go" && rm -rf vendor )   # keep the working tree clean
+    echo "   $(du -sh "$STAGE/go-vendor.tar" | cut -f1) of Go modules vendored."
+else
+    echo "⚠️  go not found; skipping Go module vendoring (the offline host will need"
+    echo "    the Go toolchain + network for the modules, or a prebuilt dxdfir binary)."
+fi
+
 # ---- 2. the dxdfir CLI + all Python deps as wheels ---------------------------
 echo "🐍 Building the dxdfir CLI and downloading Python dependencies as wheels ..."
 # `pip wheel` BUILDS the local project into a wheel AND resolves every

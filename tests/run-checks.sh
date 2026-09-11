@@ -150,6 +150,36 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+group "Go front-end (gofmt / vet / build)"
+# ------------------------------------------------------------------------------
+# The Go/termui dxdfir front-end (go/): gofmt must be clean, `go vet` must pass,
+# and the module must build. Skipped when the Go toolchain is not installed
+# (CI installs it via actions/setup-go).
+if command -v go >/dev/null 2>&1; then
+    _gofmt_out="$(gofmt -l go 2>/dev/null)"
+    if [[ -z "$_gofmt_out" ]]; then
+        pass "gofmt: go/ is formatted"
+    else
+        fail "gofmt: files need formatting (run: gofmt -w go)"
+        printf '%s\n' "$_gofmt_out" | sed 's/^/      /'
+    fi
+    if _govet_out="$( (cd go && go vet ./...) 2>&1 )"; then
+        pass "go vet ./..."
+    else
+        fail "go vet reported issues (run: cd go && go vet ./...)"
+        printf '%s\n' "$_govet_out" | sed 's/^/      /'
+    fi
+    if _gobuild_out="$( (cd go && go build ./...) 2>&1 )"; then
+        pass "go build ./..."
+    else
+        fail "go build failed (run: cd go && go build ./...)"
+        printf '%s\n' "$_gobuild_out" | sed 's/^/      /'
+    fi
+else
+    skip "go toolchain not installed"
+fi
+
+# ------------------------------------------------------------------------------
 group "Versioning and documentation"
 # ------------------------------------------------------------------------------
 # One project version, stated in one form. Relabelling alpha -> beta touched a

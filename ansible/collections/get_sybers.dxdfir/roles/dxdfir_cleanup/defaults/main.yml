@@ -1,0 +1,18 @@
+---
+# dxdfir_cleanup: wipe processed evidence, the CAR tree, or the dxdfir/* images.
+# One role, three actions (dxdfir_cleanup_action); the playbook decides. The
+# front-end handles the destructive confirmation and passes --check for a dry run.
+
+dxdfir_cleanup_action: processed
+
+# Repo root is five levels up from this role.
+dxdfir_cleanup_repo_root: "{{ role_path }}/../../../../.."
+
+dxdfir_cleanup_processed_dir: "{{ dxdfir_cleanup_repo_root }}/data_store/processed"
+dxdfir_cleanup_car_dir: "{{ dxdfir_cleanup_repo_root }}/data_store/processed/car"
+dxdfir_cleanup_python_path: "{{ dxdfir_cleanup_repo_root }}/python"
+
+# docker: also prune dangling layers; and target EVERY dxdfir/* image rather than
+# only the hardened tool set (the source of truth is get_sybers_dxdfir.images).
+dxdfir_cleanup_dangling: false
+dxdfir_cleanup_all_dxdfir: false

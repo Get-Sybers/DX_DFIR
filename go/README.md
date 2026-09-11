@@ -1,0 +1,100 @@
+# `dxdfir` — Go / termui front-end
+
+This directory holds the **`dxdfir`** command: a Go [termui](https://github.com/gizak/termui)
+front-end that replaces the Python Typer CLI as the user-facing entry point of the
+DX_DFIR pipeline. It owns *only* the verbs and their presentation — the heavy work
+stays where it belongs:
+
+```
+dxdfir (Go / termui)                 this directory — verbs + adaptive dashboards
+  └─ get_sybers.dxdfir (Ansible)     orchestration: one role per source, preflight → process → verify
+       └─ get_sybers_dxdfir (Python) the minimal per-item processors the roles invoke
+```
+
+The binary never re-implements processing. It shells out to what already exists:
+
+| Verb group | Driven by |
+|---|---|
+| `process` | `ansible-playbook … dxdfir-process-<lane>.yml` (per lane), progress reconstructed by watching output files |
+| `build-docker` | `ansible-playbook … dxdfir-build-images.yml` |
+| `build-car` / `verify-car` / `car-timeline` | `python -m get_sybers_dxdfir.{mitrecar,carcheck}` |
+| `verify-images` | `python -m get_sybers_dxdfir.images --audit` |
+| `register` / `collection …` | `python -m get_sybers_dxdfir.collection …` (magic-byte classify + SHA-1 stay the Python detectors) |
+| `stix …` | `python -m get_sybers_dxdfir.stix …` (data → stdout, summary → stderr) |
+| `stack …` | `docker compose …` |
+| `list`, `cleanup` | native Go (filesystem only) |
+| `validate` | `bash tests/run-checks.sh` |
+
+## Adaptive presentation
+
+Presentation adapts to the work and the terminal:
+
+- **Processing progress** (`process`) and **collection creation** (`register`,
+  `collection sort`) render a **live termui dashboard** — an overall gauge, a
+  per-lane board, a bounded *filtered* log-tail for the long-pole lanes
+  (volatility, plaso), and an exceptions panel. Progress is truthful: a gauge
+  appears only where a real *i/N* exists (files landed, bytes hashed); heartbeat
+  lanes (plaso) show growth + elapsed; spinner lanes (hayabusa, yara) show a
+  spinner, never a fake bar.
+- Everything else prints concise, colour-coded plain output (the good parts of
+  the original layout).
+- **Non-interactive** (piped, CI, `DXDFIR_NO_TUI`, a dumb terminal, or a window
+  below 60×14) automatically streams the same progress as plain lines. The
+  dashboard renders on `/dev/tty`, so a machine-readable stdout stays clean, and
+  the durable end-of-run summary is always printed as plain text on exit.
+
+Why this matters: under Ansible the subprocess is buffered — nothing prints until
+a lane finishes — so a multi-hour run would otherwise show a frozen line.
+Watching the deterministic per-item output paths land on disk gives a live,
+honest progress signal without un-swallowing the tools' firehose of output.
+
+## Build
+
+```sh
+cd go
+make            # build ./dxdfir
+make install    # go install to $GOBIN / $GOPATH/bin as `dxdfir`
+make check      # gofmt -l, go vet, go build
+```
+
+Requires Go ≥ 1.22. Dependencies (termui, cobra) are pinned in `go.mod`.
+
+## Runtime
+
+`dxdfir` locates the repo like the Python CLI did (`--repo-root`, then
+`$DFIR_REPO_ROOT`, then walking up from the cwd, then from the binary's own
+directory — the marker is `ansible/collections/get_sybers.dxdfir`). It prepends
+`<repo>/python` to `PYTHONPATH` for every child it shells, so the processors are
+importable from a bare checkout as well as an installed environment.
+
+Environment / flags:
+
+- `--repo-root PATH` / `$DFIR_REPO_ROOT` — the DX_DFIR checkout.
+- `--no-tui` / `$DXDFIR_NO_TUI` / `$CI` / `TERM=dumb` — force plain output.
+- `--tui` — force the dashboard even when auto-detection is unsure.
+- `$DXDFIR_PYTHON` — the Python interpreter to use (else `python3`/`python`).
+
+Keys in the dashboard: `q` / `Ctrl-C` abort · `Ctrl-L` redraw.
+
+## Module layout
+
+Broken into small, independently-testable packages (nothing outside `internal/tui`
+imports termui, so the runner, watchers and repo detection need no terminal):
+
+```
+cmd/dxdfir/            thin entry: build the command tree, map exit codes
+internal/
+  cli/                 cobra verb tree, one file per verb group
+  model/               shared types (Update/Snapshot/Lane) + the Presenter interface
+  repo/                repo + interpreter/tool discovery
+  run/                 subprocess engine (passthrough, stream, capture, sentinels)
+  lanes/               `process` orchestration: lane specs, output-glob watching, the Job
+  collect/             collection orchestration: drives `python -m …collection`, parses sentinels
+  tui/                 termui presenter (process + collection dashboards, event loop)
+  plain/               non-TTY presenter (same channel contract)
+  termdetect/          TTY detection + opt-outs
+  style/               ASCII-safe glyph + colour vocabulary
+```
+
+The two presenters consume the identical `model.Update` stream, so the
+subprocess/watch layer is the same in both modes and only the presenter differs.

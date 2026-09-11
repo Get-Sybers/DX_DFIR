@@ -1,0 +1,11 @@
+---
+# Stop and remove the stack's containers/networks (optionally its named volumes).
+# Run from the compose dir so relative mounts and the stack's .env resolve.
+- name: "stack-destroy | stop and remove the stack | {{ dxdfir_stack_name }}"
+  ansible.builtin.command:
+    argv: >-
+      {{ ['docker', 'compose', '-f', 'docker-compose.yml', 'down', '--remove-orphans']
+      + (['--volumes'] if dxdfir_stack_remove_volumes | bool else []) }}
+    chdir: "{{ dxdfir_stack_compose_dir }}"
+  register: dxdfir_stack_down
+  changed_when: dxdfir_stack_down.rc == 0

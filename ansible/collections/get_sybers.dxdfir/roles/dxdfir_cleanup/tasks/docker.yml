@@ -1,0 +1,54 @@
+---
+# Remove built dxdfir/* tool images so the next build is clean. Default: only the
+# hardened tool set (get_sybers_dxdfir.images.HARDENED_IMAGES is the source of
+# truth); --all-dxdfir removes every dxdfir/* image present. Only touches images
+# actually on the host. The read-only discovery runs even under --check (a dry
+# run); only the destructive rmi/prune are skipped there.
+- name: "cleanup-docker | docker daemon reachable"
+  ansible.builtin.command: docker version
+  register: dxdfir_cleanup_docker
+  changed_when: false
+  check_mode: false
+
+# {% raw %} shields docker's Go-template format from Ansible's Jinja.
+- name: "cleanup-docker | list images present on the host"
+  ansible.builtin.command:
+    argv: ["docker", "image", "ls", "--format", "{% raw %}{{.Repository}}:{{.Tag}}{% endraw %}"]
+  register: dxdfir_cleanup_present
+  changed_when: false
+  check_mode: false
+
+- name: "cleanup-docker | resolve the hardened tool image set"
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -c
+      - "from get_sybers_dxdfir import images; print('\n'.join(images.HARDENED_IMAGES))"
+  environment:
+    PYTHONPATH: "{{ dxdfir_cleanup_python_path }}"
+  register: dxdfir_cleanup_hardened
+  changed_when: false
+  check_mode: false
+  when: not dxdfir_cleanup_all_dxdfir | bool
+
+- name: "cleanup-docker | compute the images to remove"
+  ansible.builtin.set_fact:
+    dxdfir_cleanup_targets: >-
+      {{ (dxdfir_cleanup_present.stdout_lines | select('match', '^dxdfir/') | list)
+         if dxdfir_cleanup_all_dxdfir | bool
+         else (dxdfir_cleanup_hardened.stdout_lines | intersect(dxdfir_cleanup_present.stdout_lines)) }}
+  check_mode: false
+
+- name: "cleanup-docker | remove the target images"
+  ansible.builtin.command:
+    argv: "{{ ['docker', 'rmi', '-f'] + dxdfir_cleanup_targets }}"
+  register: dxdfir_cleanup_rmi
+  changed_when: dxdfir_cleanup_rmi.rc == 0
+  when: dxdfir_cleanup_targets | length > 0
+
+- name: "cleanup-docker | prune dangling layers"
+  ansible.builtin.command:
+    argv: ["docker", "image", "prune", "-f"]
+  register: dxdfir_cleanup_prune
+  changed_when: dxdfir_cleanup_prune.rc == 0
+  when: dxdfir_cleanup_dangling | bool

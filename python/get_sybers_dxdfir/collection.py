@@ -475,14 +475,20 @@ def read_log(repo: Path, name: str) -> list[dict]:
 
 
 # ---------------------------------------------------------- integrity (SHA-1)
-def _hash_file(path: Path) -> str:
+def _hash_file(path: Path, on_chunk=None) -> str:
     """SHA-1 hex digest of a file (single read pass). SHA-1 is the tracking
     checksum: fast, compact, sufficient for change detection — not a forensic
-    cryptographic integrity guarantee."""
+    cryptographic integrity guarantee.
+
+    ``on_chunk`` (optional) is called with each chunk's byte length as the file
+    streams, so a front-end can render a byte-level progress gauge without
+    reimplementing the read loop. Default None keeps the original behaviour."""
     h1 = hashlib.sha1()
     with open(path, "rb") as fh:
         for chunk in iter(lambda: fh.read(1 << 20), b""):
             h1.update(chunk)
+            if on_chunk is not None:
+                on_chunk(len(chunk))
     return h1.hexdigest()
 
 
@@ -508,19 +514,32 @@ def evidence_files(root: Path) -> list[Path]:
     return sorted(p for p in _walk_files(root) if p not in control)
 
 
-def hash_collection(repo: Path, name: str) -> tuple[list[tuple[str, str]], dict[str, str]]:
+def hash_collection(repo: Path, name: str, on_file=None, on_chunk=None
+                    ) -> tuple[list[tuple[str, str]], dict[str, str]]:
     """``([(relpath, sha1)], {"sha1": rollup})``.
 
     Every evidence file is SHA-1'd; the collection rollup is the SHA-1 of every
     file's hex digest sorted alphabetically and concatenated — order-independent,
     changes whenever any file's content changes. Used for change detection, not
-    cryptographic integrity."""
+    cryptographic integrity.
+
+    Optional progress hooks (default None → original behaviour): ``on_file`` is
+    called ``(relpath, size, index, total)`` before each file is hashed, and
+    ``on_chunk`` is forwarded to ``_hash_file`` for byte-level progress."""
     root = collection_dir(repo, name)
     if not root.is_dir():
         raise ValueError(f"no such collection {name!r} to hash")
+    files = evidence_files(root)
     per_file: list[tuple[str, str]] = []
-    for p in evidence_files(root):
-        per_file.append((str(p.relative_to(root)), _hash_file(p)))
+    for idx, p in enumerate(files):
+        rel = str(p.relative_to(root))
+        if on_file is not None:
+            try:
+                size = p.stat().st_size
+            except OSError:
+                size = 0
+            on_file(rel, size, idx, len(files))
+        per_file.append((rel, _hash_file(p, on_chunk)))
     per_file.sort(key=lambda t: t[0])                    # manifest ordered by path
     rollups = {
         "sha1": hashlib.sha1(
@@ -529,14 +548,18 @@ def hash_collection(repo: Path, name: str) -> tuple[list[tuple[str, str]], dict[
     return per_file, rollups
 
 
-def write_manifest(repo: Path, name: str) -> tuple[dict[str, str], int]:
+def write_manifest(repo: Path, name: str, on_file=None, on_chunk=None
+                   ) -> tuple[dict[str, str], int]:
     """(Re)compute the collection's hash manifest, persist it to
     ``.collection.hashes``, update the per-file registry rows with fresh SHA-1s
     and sizes, and log a 'hashed' event (when registered). Returns
-    ``({"sha1": rollup}, file_count)``. As slow as the evidence is large."""
+    ``({"sha1": rollup}, file_count)``. As slow as the evidence is large.
+
+    ``on_file`` / ``on_chunk`` (optional, default None) are forwarded to
+    ``hash_collection`` so a front-end can render hashing progress."""
     root = collection_dir(repo, name)
     root.mkdir(parents=True, exist_ok=True)
-    per_file, rollups = hash_collection(repo, name)
+    per_file, rollups = hash_collection(repo, name, on_file=on_file, on_chunk=on_chunk)
     header = (f"# DX_DFIR collection manifest\n"
               f"# collection: {name}\n"
               f"# collection_sha1: {rollups['sha1']}\n"
@@ -597,7 +620,7 @@ create = _create
 
 def register(repo: Path, name: str, *,
              from_path: Path | None = None,
-             source: str = "detected") -> Path:
+             source: str = "detected", on_item=None) -> Path:
     """Register a collection. The unified entry point:
 
     * ``from_path=None`` — ensures ``collections/<name>/`` exists (creates its
@@ -620,7 +643,7 @@ def register(repo: Path, name: str, *,
         from_path = Path(from_path).expanduser().resolve()
         dz_target = (dropzone(repo) / name).resolve() if dropzone(repo).exists() else None
         if dz_target is not None and from_path == dz_target:
-            return _promote(repo, name)
+            return _promote(repo, name, on_item=on_item)
         if not from_path.is_dir():
             raise ValueError(f"--from path is not an existing directory: {from_path}")
         return _link_external(repo, name, from_path)
@@ -700,10 +723,15 @@ def dropzone_candidates(repo: Path) -> list[str]:
     return out
 
 
-def _promote(repo: Path, name: str) -> Path:
+def _promote(repo: Path, name: str, on_item=None) -> Path:
     """Internal: move ``data_store/raw/sort/<name>/`` into ``collections/<name>/``,
     register it, and auto-classify any LOOSE files at the collection root into
-    their lane subdirs (existing subdirs are left as-is)."""
+    their lane subdirs (existing subdirs are left as-is).
+
+    ``on_item`` (optional) is called ``(name, subdir, detected_by, action)`` for
+    each loose file as it is classified — action is 'moved' or 'skip' — so a
+    front-end can stream the live classification decisions (same shape as
+    ``sort_into``)."""
     dest = collection_dir(repo, name)   # validates name
     src = dropzone(repo) / name
     if not src.is_dir():
@@ -730,6 +758,10 @@ def _promote(repo: Path, name: str) -> Path:
             if not target.exists():
                 shutil.move(str(p), str(target))
                 _record_file(repo, name, dest, target, detected_by)
+            if on_item is not None:
+                on_item(p.name, subdir, detected_by, "moved")
+        elif on_item is not None:
+            on_item(p.name, None, detected_by, "skip")
     # every hand-staged file already in a lane subdir counts as classified too
     for p in evidence_files(dest):
         try:
@@ -827,11 +859,15 @@ class SortResult:
         return sum(len(v) for v in self.moved.values())
 
 
-def sort_into(repo: Path, name: str, *, dry_run: bool = False) -> SortResult:
+def sort_into(repo: Path, name: str, *, dry_run: bool = False, on_item=None) -> SortResult:
     """Classify each file directly in the dropzone and move it into the named
     collection's matching lane subdir. Works on any existing collection dir
     (registered or not); logs the move only when the collection is registered.
-    Ambiguous/unknown files stay and are reported; dirs/dotfiles are ignored."""
+    Ambiguous/unknown files stay and are reported; dirs/dotfiles are ignored.
+
+    ``on_item`` (optional, default None) is called ``(name, subdir, detected_by,
+    action)`` for each classified file as it is processed — action is 'moved' or
+    'skip' — so a front-end can stream the live classification decisions."""
     root = collection_dir(repo, name)
     if not root.is_dir():
         raise ValueError(
@@ -840,27 +876,37 @@ def sort_into(repo: Path, name: str, *, dry_run: bool = False) -> SortResult:
     dz = dropzone(repo)
     dz.mkdir(parents=True, exist_ok=True)
     res = SortResult()
+
+    def _note(item, subdir, detected_by, action):
+        if on_item is not None:
+            on_item(item, subdir, detected_by, action)
+
     for p in sorted(dz.iterdir()):
         if p.name.startswith("."):
             continue
         if p.is_dir():
             # a subfolder in the dropzone is almost certainly a hand-staged case
             # of its own; surface it so the operator can register it or flatten it
-            res.skipped.append((p.name + "/", "directory — register as its own collection or move its files up"))
+            reason = "directory — register as its own collection or move its files up"
+            res.skipped.append((p.name + "/", reason))
+            _note(p.name + "/", None, "directory", "skip")
             continue
         subdir, detected_by = classify(p)
         if subdir is None:
             res.skipped.append((p.name, detected_by))
+            _note(p.name, None, detected_by, "skip")
             continue
         dest = root / subdir / p.name
         if dest.exists():
             res.skipped.append((p.name, f"already in {subdir}/"))
+            _note(p.name, subdir, detected_by, "skip")
             continue
         if not dry_run:
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(p), str(dest))
             _record_file(repo, name, root, dest, detected_by)
         res.moved.setdefault(subdir, []).append(p.name)
+        _note(p.name, subdir, detected_by, "moved")
     if not dry_run and res.moved_count and is_registered(repo, name):
         log_event(repo, name, "sorted", moved=res.moved_count, skipped=len(res.skipped))
     return res
@@ -877,3 +923,239 @@ def lane_inputs(repo: Path, name: str) -> list[tuple[str, str, Path, int]]:
             n = sum(1 for _ in _walk_files(d)) if d.is_dir() else 0
             out.append((lane.name, var, d, n))
     return out
+
+
+# ------------------------------------------------------------------ front-end CLI
+# ``python -m get_sybers_dxdfir.collection <subcommand>`` — a thin, NON-INTERACTIVE
+# JSON/-progress contract for a front-end (e.g. the Go/termui dxdfir). Structured
+# results go to STDOUT as one JSON object; live progress goes to STDERR as
+# ``::dxdfir:: {json}`` sentinel lines (only with --progress). Prompting and
+# defaulting stay in the front-end; this layer only does the work.
+_SENTINEL = "::dxdfir::"
+
+
+def _emit(**payload) -> None:
+    """Write one progress sentinel to stderr (flushed so it streams live)."""
+    import json as _json
+    import sys as _sys
+    _sys.stderr.write(_SENTINEL + " " + _json.dumps(payload, separators=(",", ":")) + "\n")
+    _sys.stderr.flush()
+
+
+def _cli_repo(explicit) -> Path:
+    """Resolve the repo root the same way the front-end does: --repo-root, then
+    $DFIR_REPO_ROOT, then walk up from cwd for the collection marker."""
+    cands = []
+    if explicit:
+        cands.append(Path(explicit))
+    if os.environ.get("DFIR_REPO_ROOT"):
+        cands.append(Path(os.environ["DFIR_REPO_ROOT"]))
+    cur = Path.cwd()
+    cands.extend([cur, *cur.parents])
+    marker = "ansible/collections/get_sybers.dxdfir"
+    for c in cands:
+        if (c / marker).is_dir():
+            return c.resolve()
+    # Fall back to cwd so operations that only need data_store/ still work.
+    return cur.resolve()
+
+
+def _lane_summary(repo: Path, name: str) -> dict:
+    counts: dict[str, int] = {}
+    for lane_name, _var, _d, n in lane_inputs(repo, name):
+        counts[lane_name] = counts.get(lane_name, 0) + n
+    return {
+        "name": name,
+        "lanes": counts,
+        "total": sum(counts.values()),
+        "sha1": manifest_rollup(repo, name),
+    }
+
+
+def _cmd_status(repo: Path, _args) -> dict:
+    return {
+        "active": get_selected(repo),
+        "registered": [_lane_summary(repo, c) for c in list_collections(repo)],
+        "unregistered": [_lane_summary(repo, c) for c in unregistered(repo)],
+        "candidates": dropzone_candidates(repo),
+    }
+
+
+def _cmd_lanes(repo: Path, args) -> dict:
+    rows = [
+        {"lane": lane, "var": var, "dir": str(d), "count": n}
+        for lane, var, d, n in lane_inputs(repo, args.name)
+    ]
+    return {"name": args.name, "inputs": rows}
+
+
+def _cmd_state(repo: Path, args) -> dict:
+    return {
+        "name": args.name,
+        "registered": is_registered(repo, args.name),
+        "detected": args.name in unregistered(repo),
+        "exists": collection_dir(repo, args.name).is_dir(),
+    }
+
+
+def _cmd_register(repo: Path, args) -> dict:
+    from_path = Path(args.from_path) if args.from_path else None
+    on_item = None
+    # Stream the promote-path classification decisions so the front-end dashboard
+    # is not frozen during register (the slow phase is the trailing hash, but the
+    # classify of a promoted dropzone folder is worth showing live).
+    #
+    # on_item ONLY fires on the promote path — a --from that resolves to this
+    # collection's dropzone folder, moved in and classified per loose file. An
+    # external --from directory is symlinked with no per-item classification, so
+    # emitting a classify denominator there would strand the front-end at 0/N
+    # forever. Gate on exactly the condition register() uses to choose _promote.
+    if args.progress and from_path is not None:
+        resolved = from_path.expanduser().resolve()
+        dz = dropzone(repo)
+        dz_target = (dz / args.name).resolve() if dz.exists() else None
+        if dz_target is not None and resolved == dz_target and resolved.is_dir():
+            loose = [p for p in resolved.iterdir()
+                     if p.is_file() and not p.name.startswith(".")]
+            total = len(loose)
+            _emit(phase="classify", total=total)
+            seen = {"n": 0}
+
+            def on_item(item, subdir, detected_by, action):
+                seen["n"] += 1
+                _emit(phase="classify", file=item, lane=(subdir or ""),
+                      how=detected_by, action=action, done=seen["n"], total=total)
+
+    root = register(repo, args.name, from_path=from_path, source=args.source, on_item=on_item)
+    return {"name": args.name, "root": str(root), "registered": True,
+            "promoted": from_path is not None}
+
+
+def _cmd_sort(repo: Path, args) -> dict:
+    on_item = None
+    if args.progress:
+        dz = dropzone(repo)
+        total = sum(1 for p in dz.iterdir() if not p.name.startswith(".")) if dz.is_dir() else 0
+        _emit(phase="classify", total=total)  # denominator up front
+        seen = {"n": 0}
+
+        def on_item(item, subdir, detected_by, action):
+            seen["n"] += 1
+            _emit(phase="classify", file=item, lane=(subdir or ""),
+                  how=detected_by, action=action, done=seen["n"], total=total)
+
+    res = sort_into(repo, args.name, dry_run=args.dry_run, on_item=on_item)
+    return {
+        "name": args.name,
+        "dry_run": args.dry_run,
+        "moved": res.moved,
+        "moved_count": res.moved_count,
+        "skipped": [[fn, why] for fn, why in res.skipped],
+        "candidates": dropzone_candidates(repo),
+    }
+
+
+def _cmd_hash(repo: Path, args) -> dict:
+    root = collection_dir(repo, args.name)
+    files = evidence_files(root) if root.is_dir() else []
+    total_bytes = 0
+    for p in files:
+        try:
+            total_bytes += p.stat().st_size
+        except OSError:
+            pass
+    on_file = on_chunk = None
+    if args.progress:
+        _emit(phase="hash", file_total=len(files), total_bytes=total_bytes)
+        state = {"bytes": 0, "emitted": 0, "cur": ""}
+
+        def on_file(rel, size, index, total):
+            state["cur"] = rel
+            _emit(phase="hash", file=rel, file_done=index + 1,
+                  file_total=total, done_bytes=state["bytes"], total_bytes=total_bytes)
+
+        def on_chunk(n):
+            state["bytes"] += n
+            # Throttle: emit at most every ~8 MiB of progress.
+            if state["bytes"] - state["emitted"] >= (8 << 20):
+                state["emitted"] = state["bytes"]
+                _emit(phase="hash", file=state["cur"], done_bytes=state["bytes"],
+                      total_bytes=total_bytes)
+
+    rollups, count = write_manifest(repo, args.name, on_file=on_file, on_chunk=on_chunk)
+    if args.progress:
+        # The throttled on_chunk emits at most every ~8 MiB, so the last chunk of
+        # the final file may never cross the threshold and the gauge can stall
+        # below 100%. Emit one truthful terminal update: hashing is complete, so
+        # done_bytes == total_bytes and every file is accounted for.
+        _emit(phase="hash", file=state["cur"], file_done=len(files),
+              file_total=len(files), done_bytes=total_bytes, total_bytes=total_bytes)
+    return {"name": args.name, "sha1": rollups["sha1"], "files": count, "bytes": total_bytes}
+
+
+def _cmd_unregister(repo: Path, args) -> dict:
+    return {"name": args.name, "removed": unregister(repo, args.name)}
+
+
+def _cmd_select(repo: Path, args) -> dict:
+    select_collection(repo, args.name)
+    return {"active": args.name}
+
+
+def _cmd_unselect(repo: Path, _args) -> dict:
+    return {"previous": unselect_collection(repo)}
+
+
+def main(argv=None) -> int:
+    """Non-interactive JSON/-progress front-end contract (see module note)."""
+    import argparse
+    import json as _json
+    import sys as _sys
+
+    ap = argparse.ArgumentParser(
+        prog="get_sybers_dxdfir.collection",
+        description="collection registry / sort / hash — JSON out, ::dxdfir:: progress on stderr")
+    ap.add_argument("--repo-root", default=None, help="DX_DFIR repo (auto-detected otherwise).")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    sub.add_parser("status", help="registered + unregistered + dropzone candidates + active (JSON)")
+    p = sub.add_parser("lanes", help="per-lane scoped input dirs + counts (JSON)")
+    p.add_argument("name")
+    p = sub.add_parser("state", help="registered/detected/exists for one name (JSON)")
+    p.add_argument("name")
+    p = sub.add_parser("register", help="create/promote/link + register a collection")
+    p.add_argument("name")
+    p.add_argument("--from", dest="from_path", default=None)
+    p.add_argument("--source", default="manual")
+    p.add_argument("--progress", action="store_true")
+    p = sub.add_parser("sort", help="sort the dropzone into a collection's lanes")
+    p.add_argument("name")
+    p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--progress", action="store_true")
+    p = sub.add_parser("hash", help="(re)compute the SHA-1 manifest")
+    p.add_argument("name")
+    p.add_argument("--progress", action="store_true")
+    p = sub.add_parser("unregister", help="drop the registry row + marker")
+    p.add_argument("name")
+    p = sub.add_parser("select", help="mark a collection active")
+    p.add_argument("name")
+    sub.add_parser("unselect", help="clear the active collection")
+
+    args = ap.parse_args(argv)
+    repo = _cli_repo(args.repo_root)
+    handlers = {
+        "status": _cmd_status, "lanes": _cmd_lanes, "state": _cmd_state,
+        "register": _cmd_register, "sort": _cmd_sort, "hash": _cmd_hash,
+        "unregister": _cmd_unregister, "select": _cmd_select, "unselect": _cmd_unselect,
+    }
+    try:
+        result = handlers[args.cmd](repo, args)
+    except ValueError as e:
+        _sys.stderr.write(str(e) + "\n")
+        return 2
+    _sys.stdout.write(_json.dumps(result) + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
