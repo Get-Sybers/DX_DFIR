@@ -7,6 +7,36 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Added
+- **A Go/[termui](https://github.com/gizak/termui) front-end for `dxdfir`** (`go/`),
+  replacing the Python Typer CLI as the user-facing entry point while keeping the
+  same verb/flag surface, exit-code contract, and repo-root discovery. It drives
+  the existing `get_sybers.dxdfir` Ansible collection and the `get_sybers_dxdfir`
+  processors by shelling out — no processing is re-implemented. Presentation is
+  **adaptive**: `process` and collection creation (`register`, `collection sort`)
+  render a live dashboard — overall gauge, per-lane board, a bounded *filtered*
+  log-tail for the long-pole lanes (volatility/plaso), and an exceptions panel —
+  while quick verbs stay concise plain output and anything piped/CI/non-TTY
+  streams the same progress as plain lines. Because Ansible buffers a lane's
+  output until it exits, progress is reconstructed by **watching the deterministic
+  per-item output files land on disk**, so a multi-hour run is never silent and
+  the tools' firehose never reaches the screen. Built as broken-down Go packages
+  (`cmd/dxdfir` + `internal/{cli,model,repo,run,lanes,collect,tui,plain,termdetect,style}`),
+  the module structure the original 980-line `cli.py` never had.
+- Thin, additive `python -m` front-end contracts so the Go binary can drive the
+  processors from a checkout: `get_sybers_dxdfir.collection` (a non-interactive
+  JSON + `::dxdfir::` progress-sentinel CLI for status/lanes/state/register/sort/
+  hash/select — magic-byte classification and SHA-1 hashing stay the Python
+  detectors, the source of truth), `get_sybers_dxdfir.stix` (`__main__` shim), a
+  `timeline` subcommand on `get_sybers_dxdfir.mitrecar`, and optional progress
+  callbacks on `collection.sort_into` / `write_manifest` / `hash_collection` /
+  `_hash_file` (all backward-compatible; defaults unchanged).
+
+### Changed
+- The `dxdfir` console script installed by the Python package is now `dxdfir-py`
+  (a dependency-only fallback and the reference the Go front-end mirrors); the
+  primary `dxdfir` is the Go binary built from `go/` (see `go/README.md`).
+
 ### Removed
 - **The Kusto/ADX layer.** The Azure Data Explorer emulator was the analysis
   backend from 0.2.0; the Elastic-native path (`docker/elastic`, the ES|QL/EQL
