@@ -86,7 +86,7 @@ func (r *Runner) Register(ctx context.Context, name, fromPath string, doHash boo
 		st := newState(r.Title)
 		st.phase = "classify"
 		st.send(ctx, updates)
-		args := []string{"register", name}
+		args := []string{"register", name, "--progress"}
 		if fromPath != "" {
 			args = append(args, "--from", fromPath)
 		}

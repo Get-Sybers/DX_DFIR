@@ -620,7 +620,7 @@ create = _create
 
 def register(repo: Path, name: str, *,
              from_path: Path | None = None,
-             source: str = "detected") -> Path:
+             source: str = "detected", on_item=None) -> Path:
     """Register a collection. The unified entry point:
 
     * ``from_path=None`` — ensures ``collections/<name>/`` exists (creates its
@@ -643,7 +643,7 @@ def register(repo: Path, name: str, *,
         from_path = Path(from_path).expanduser().resolve()
         dz_target = (dropzone(repo) / name).resolve() if dropzone(repo).exists() else None
         if dz_target is not None and from_path == dz_target:
-            return _promote(repo, name)
+            return _promote(repo, name, on_item=on_item)
         if not from_path.is_dir():
             raise ValueError(f"--from path is not an existing directory: {from_path}")
         return _link_external(repo, name, from_path)
@@ -723,10 +723,15 @@ def dropzone_candidates(repo: Path) -> list[str]:
     return out
 
 
-def _promote(repo: Path, name: str) -> Path:
+def _promote(repo: Path, name: str, on_item=None) -> Path:
     """Internal: move ``data_store/raw/sort/<name>/`` into ``collections/<name>/``,
     register it, and auto-classify any LOOSE files at the collection root into
-    their lane subdirs (existing subdirs are left as-is)."""
+    their lane subdirs (existing subdirs are left as-is).
+
+    ``on_item`` (optional) is called ``(name, subdir, detected_by, action)`` for
+    each loose file as it is classified — action is 'moved' or 'skip' — so a
+    front-end can stream the live classification decisions (same shape as
+    ``sort_into``)."""
     dest = collection_dir(repo, name)   # validates name
     src = dropzone(repo) / name
     if not src.is_dir():
@@ -753,6 +758,10 @@ def _promote(repo: Path, name: str) -> Path:
             if not target.exists():
                 shutil.move(str(p), str(target))
                 _record_file(repo, name, dest, target, detected_by)
+            if on_item is not None:
+                on_item(p.name, subdir, detected_by, "moved")
+        elif on_item is not None:
+            on_item(p.name, None, detected_by, "skip")
     # every hand-staged file already in a lane subdir counts as classified too
     for p in evidence_files(dest):
         try:
@@ -991,7 +1000,22 @@ def _cmd_state(repo: Path, args) -> dict:
 
 def _cmd_register(repo: Path, args) -> dict:
     from_path = Path(args.from_path) if args.from_path else None
-    root = register(repo, args.name, from_path=from_path, source=args.source)
+    on_item = None
+    # Stream the promote-path classification decisions so the front-end dashboard
+    # is not frozen during register (the slow phase is the trailing hash, but the
+    # classify of a promoted dropzone folder is worth showing live).
+    if args.progress and from_path is not None and from_path.is_dir():
+        loose = [p for p in from_path.iterdir() if p.is_file() and not p.name.startswith(".")]
+        total = len(loose)
+        _emit(phase="classify", total=total)
+        seen = {"n": 0}
+
+        def on_item(item, subdir, detected_by, action):
+            seen["n"] += 1
+            _emit(phase="classify", file=item, lane=(subdir or ""),
+                  how=detected_by, action=action, done=seen["n"], total=total)
+
+    root = register(repo, args.name, from_path=from_path, source=args.source, on_item=on_item)
     return {"name": args.name, "root": str(root), "registered": True,
             "promoted": from_path is not None}
 

@@ -50,9 +50,12 @@ func styleFg(c ui.Color) ui.Style   { return ui.NewStyle(c) }
 func styleBold(c ui.Color) ui.Style { return ui.NewStyle(c, ui.ColorClear, ui.ModifierBold) }
 
 // sanitize makes a dynamic string safe for a termui widget: strip control runes,
-// map anything wide/zero-width/emoji to '?', and break the "](" adjacency that
-// termui's [text](style) markup parser keys on. ASCII stays verbatim (forensic
-// fidelity for paths/hashes).
+// map EVERY non-ASCII rune to '?', and break the "](" adjacency that termui's
+// [text](style) markup parser keys on. Mapping all non-ASCII to a single-byte
+// '?' keeps byte length == column count, so the byte-slicing truncRight/truncLeft/
+// padRight below can never split a multi-byte rune or miscompute a width. ASCII
+// stays verbatim (forensic fidelity for paths/hashes); the full non-ASCII name
+// survives in the plain summary / on-disk logs.
 func sanitize(s string) string {
 	var b strings.Builder
 	b.Grow(len(s))
@@ -63,8 +66,6 @@ func sanitize(s string) string {
 		case unicode.IsControl(r):
 			// drop
 		case r < 128:
-			b.WriteRune(r)
-		case rw.RuneWidth(r) == 1 && !unicode.IsControl(r):
 			b.WriteRune(r)
 		default:
 			b.WriteByte('?')

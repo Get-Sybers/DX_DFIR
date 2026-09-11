@@ -339,6 +339,12 @@ if ! command -v go >/dev/null 2>&1; then
     _gotar="go${GO_VERSION}.linux-${_garch}.tar.gz"
     curl -fsSL "https://go.dev/dl/${_gotar}" -o "/tmp/${_gotar}" \
         || die "Failed to download the Go toolchain (${_gotar})."
+    # Supply-chain: verify the tarball against Go's published SHA-256 BEFORE
+    # extracting it as root over /usr/local/go. Refuse to install on a mismatch.
+    _gosha="$(curl -fsSL "https://go.dev/dl/${_gotar}.sha256")" \
+        || die "Failed to fetch the Go toolchain checksum (${_gotar}.sha256)."
+    echo "${_gosha}  /tmp/${_gotar}" | sha256sum -c - \
+        || die "Go toolchain checksum mismatch for ${_gotar} — refusing to install."
     $SUDO rm -rf /usr/local/go
     $SUDO tar -C /usr/local -xzf "/tmp/${_gotar}" || die "Failed to extract the Go toolchain."
     rm -f "/tmp/${_gotar}"
