@@ -5,16 +5,14 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/get-sybers/dx_dfir/go/internal/repo"
 	"github.com/get-sybers/dx_dfir/go/internal/run"
 )
 
-// newBuildCarCmd builds `dxdfir build-car`, which derives the per-source CAR
-// stores (car.db + superset.db) from processed evidence via
-// `python -m get_sybers_dxdfir.mitrecar`.
-//
-// Default (batch): discover every source under the processed tree and build
-// each one. Single-source (--in): one processed file/dir -> one car.db.
+// The CAR stage is Ansible-orchestrated (dxdfir_car role): build / verify /
+// timeline each front a thin playbook so the CLI drives Ansible, not Python
+// directly. The processors still do the work — the role invokes them.
+
+// newBuildCarCmd — `dxdfir build-car` → dxdfir-build-car.yml.
 func newBuildCarCmd(env *Env) *cobra.Command {
 	var (
 		inPath    string
@@ -26,48 +24,36 @@ func newBuildCarCmd(env *Env) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "build-car [PROCESSED_DIR]",
 		Short: "Build the per-source CAR stores (car.db + superset.db) from processed evidence.",
-		Long: "Build the per-source CAR stores from processed evidence.\n\n" +
+		Long: "Build the per-source CAR stores from processed evidence, via the dxdfir_car\n" +
+			"Ansible role.\n\n" +
 			"Default (batch): discover every source under the processed tree (PROCESSED_DIR,\n" +
 			"or <repo>/data_store/processed) and build each one's car.db + superset.db.\n" +
 			"Single-source (--in): one processed file/dir -> one car.db. A source whose car.db\n" +
 			"already exists is left as-is; pass --rebuild to re-derive it from the current maps.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			py, err := repo.Python()
-			if err != nil {
-				return Fail(127, "%v", err)
-			}
-			r, err := env.resolveRepo()
+			r, ap, err := env.ansibleRepo()
 			if err != nil {
 				return err
 			}
-			var argv []string
+			vars := []string{"dxdfir_car_action=build"}
 			if inPath != "" {
-				argv = []string{"-m", "get_sybers_dxdfir.mitrecar", "--in", inPath}
-				for _, kv := range [][2]string{{"--out", out}, {"--host", host}, {"--artefacts", artefacts}} {
-					if kv[1] != "" {
-						argv = append(argv, kv[0], kv[1])
-					}
-				}
+				vars = append(vars, "dxdfir_car_in="+inPath)
+				vars = appendVar(vars, "dxdfir_car_out", out)
+				vars = appendVar(vars, "dxdfir_car_host", host)
+				vars = appendVar(vars, "dxdfir_car_artefacts", artefacts)
 			} else {
-				batch := r.Path("data_store", "processed")
 				if len(args) > 0 && args[0] != "" {
-					batch = args[0]
+					vars = append(vars, "dxdfir_car_processed_dir="+args[0])
 				}
-				argv = []string{"-m", "get_sybers_dxdfir.mitrecar", "--batch", batch}
-				if out != "" {
-					argv = append(argv, "--out", out)
-				}
-				if rebuild { // the engine's own flag for "rebuild existing"
-					argv = append(argv, "--force")
+				vars = appendVar(vars, "dxdfir_car_out", out)
+				if rebuild {
+					vars = append(vars, "dxdfir_car_rebuild=true")
 				}
 			}
 			code := run.Passthrough(context.Background(),
-				run.Plan{Bin: py, Args: argv, Dir: r.Root}, true)
-			if code != 0 {
-				return ExitError{Code: code}
-			}
-			return nil
+				ansiblePlan(r, ap, "dxdfir-build-car.yml", vars, false), true)
+			return exitCode(code)
 		},
 	}
 	cmd.Flags().StringVar(&inPath, "in", "", "Single-source: one processed file/dir -> one car.db.")
@@ -78,45 +64,33 @@ func newBuildCarCmd(env *Env) *cobra.Command {
 	return cmd
 }
 
-// newVerifyCarCmd builds `dxdfir verify-car`, the CAR correctness gate over the
-// materialised CAR tree (`python -m get_sybers_dxdfir.carcheck`).
+// newVerifyCarCmd — `dxdfir verify-car` → dxdfir-verify-car.yml (the CAR gate).
 func newVerifyCarCmd(env *Env) *cobra.Command {
 	var carDir string
 	cmd := &cobra.Command{
 		Use:   "verify-car",
 		Short: "Run the CAR correctness gate over the materialised CAR tree.",
-		Long: "Run the CAR correctness gate over the materialised CAR tree.\n\n" +
-			"Checks the built CAR (default <repo>/data_store/processed/car) for a valid,\n" +
-			"traceable model. Run the pipeline first (process -> build-car).",
+		Long: "Run the CAR correctness gate (dxdfir_car role, verify action) over the\n" +
+			"materialised CAR (default <repo>/data_store/processed/car). Run the pipeline\n" +
+			"first (process -> build-car).",
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			py, err := repo.Python()
-			if err != nil {
-				return Fail(127, "%v", err)
-			}
-			r, err := env.resolveRepo()
+			r, ap, err := env.ansibleRepo()
 			if err != nil {
 				return err
 			}
-			dir := carDir
-			if dir == "" {
-				dir = r.Path("data_store", "processed", "car")
-			}
+			vars := []string{"dxdfir_car_action=verify"}
+			vars = appendVar(vars, "dxdfir_car_dir", carDir)
 			code := run.Passthrough(context.Background(),
-				run.Plan{Bin: py, Args: []string{"-m", "get_sybers_dxdfir.carcheck", "--car-dir", dir}, Dir: r.Root}, true)
-			if code != 0 {
-				return ExitError{Code: code}
-			}
-			return nil
+				ansiblePlan(r, ap, "dxdfir-verify-car.yml", vars, false), true)
+			return exitCode(code)
 		},
 	}
 	cmd.Flags().StringVar(&carDir, "car-dir", "", "The materialised CAR tree (default: <repo>/data_store/processed/car).")
 	return cmd
 }
 
-// newCarTimelineCmd builds `dxdfir car-timeline`, which unions a source's CAR
-// object events and relationship edges into one time-ordered timeline.jsonl via
-// `python -m get_sybers_dxdfir.mitrecar timeline <CAR_DIR>`.
+// newCarTimelineCmd — `dxdfir car-timeline CAR_DIR` → dxdfir-car-timeline.yml.
 func newCarTimelineCmd(env *Env) *cobra.Command {
 	var (
 		out    string
@@ -127,32 +101,24 @@ func newCarTimelineCmd(env *Env) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "car-timeline CAR_DIR",
 		Short: "Build one property-rich, time-ordered CAR timeline from car.db + superset.db.",
-		Long: "Build one property-rich, time-ordered CAR timeline.\n\n" +
-			"Unions the object events and the relationship edges from a source's CAR stores\n" +
-			"into <car_dir>/timeline.jsonl. Point it at one source's car directory, or a tree\n" +
-			"to aggregate every source under it.",
+		Long: "Build one property-rich, time-ordered CAR timeline (dxdfir_car role, timeline\n" +
+			"action). Unions the object events and relationship edges from a source's CAR\n" +
+			"stores into <car_dir>/timeline.jsonl. Point it at one source's car directory, or\n" +
+			"a tree to aggregate every source under it.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			py, err := repo.Python()
-			if err != nil {
-				return Fail(127, "%v", err)
-			}
-			r, err := env.resolveRepo()
+			r, ap, err := env.ansibleRepo()
 			if err != nil {
 				return err
 			}
-			argv := []string{"-m", "get_sybers_dxdfir.mitrecar", "timeline", args[0]}
-			for _, kv := range [][2]string{{"--out", out}, {"--host", host}, {"--after", after}, {"--before", before}} {
-				if kv[1] != "" {
-					argv = append(argv, kv[0], kv[1])
-				}
-			}
+			vars := []string{"dxdfir_car_action=timeline", "dxdfir_car_timeline_dir=" + args[0]}
+			vars = appendVar(vars, "dxdfir_car_timeline_out", out)
+			vars = appendVar(vars, "dxdfir_car_timeline_host", host)
+			vars = appendVar(vars, "dxdfir_car_timeline_after", after)
+			vars = appendVar(vars, "dxdfir_car_timeline_before", before)
 			code := run.Passthrough(context.Background(),
-				run.Plan{Bin: py, Args: argv, Dir: r.Root}, true)
-			if code != 0 {
-				return ExitError{Code: code}
-			}
-			return nil
+				ansiblePlan(r, ap, "dxdfir-car-timeline.yml", vars, false), true)
+			return exitCode(code)
 		},
 	}
 	cmd.Flags().StringVar(&out, "out", "", "Output path (default: <car_dir>/timeline.jsonl).")
@@ -160,4 +126,20 @@ func newCarTimelineCmd(env *Env) *cobra.Command {
 	cmd.Flags().StringVar(&after, "after", "", "Only events at/after this ISO timestamp.")
 	cmd.Flags().StringVar(&before, "before", "", "Only events at/before this ISO timestamp.")
 	return cmd
+}
+
+// appendVar appends an -e KEY=VALUE only when value is non-empty.
+func appendVar(vars []string, key, value string) []string {
+	if value == "" {
+		return vars
+	}
+	return append(vars, key+"="+value)
+}
+
+// exitCode maps a passthrough exit code to the RunE error contract.
+func exitCode(code int) error {
+	if code != 0 {
+		return ExitError{Code: code}
+	}
+	return nil
 }

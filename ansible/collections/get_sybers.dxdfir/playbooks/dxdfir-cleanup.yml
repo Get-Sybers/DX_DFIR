@@ -1,0 +1,11 @@
+---
+# The playbook holds the decisions; the role groups, the tasks act.
+# Action (processed|car|docker) is selected via -e dxdfir_cleanup_action=...
+- name: "DFIR | wipe processed evidence, the CAR tree, or the dxdfir/* images"
+  hosts: "{{ dxdfir_hosts | default('localhost') }}"
+  connection: "{{ dxdfir_connection | default('local') }}"
+  gather_facts: true
+  tasks:
+    - name: "dxdfir-cleanup | run the cleanup role"
+      ansible.builtin.include_role:
+        name: dxdfir_cleanup

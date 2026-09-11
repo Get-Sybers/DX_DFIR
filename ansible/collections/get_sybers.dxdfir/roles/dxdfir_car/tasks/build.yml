@@ -1,0 +1,28 @@
+---
+# Materialise the per-source CAR stores (car.db + superset.db + car_<object>.jsonl
+# + car_relationships.jsonl) from the processed tree, via the vendored engine.
+# On any failure the rescue surfaces the engine's stdout/stderr as one diagnostic.
+- name: "car-build | materialise and verify | build"
+  block:
+    - name: "car-build | run the CAR engine"
+      ansible.builtin.command:
+        argv: "{{ dxdfir_car_build_argv }}"
+      environment:
+        PYTHONPATH: "{{ dxdfir_car_python_path }}"
+      register: dxdfir_car_run
+      changed_when: dxdfir_car_run.rc == 0
+
+    - name: "car-build | verify CAR stores landed on disk"
+      ansible.builtin.find:
+        paths: "{{ dxdfir_car_dir }}"
+        patterns: ["car.db", "car_*.jsonl"]
+        recurse: true
+      register: dxdfir_car_verify
+      when: dxdfir_car_in | length == 0
+  rescue:
+    - name: "car-build | surface engine diagnostics"
+      ansible.builtin.fail:
+        msg: >-
+          dxdfir_car build failed.
+          Stdout: {{ dxdfir_car_run.stdout | default('(no output)') | trim | truncate(1000) }}
+          Stderr: {{ dxdfir_car_run.stderr | default('') | trim | truncate(1000) }}

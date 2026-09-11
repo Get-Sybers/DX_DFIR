@@ -31,11 +31,34 @@ is `0`, anything may change without notice.
   `timeline` subcommand on `get_sybers_dxdfir.mitrecar`, and optional progress
   callbacks on `collection.sort_into` / `write_manifest` / `hash_collection` /
   `_hash_file` (all backward-compatible; defaults unchanged).
+- **The pipeline stages the CLI ran outside Ansible are now Ansible roles**, so
+  the front-end drives Ansible for the whole pipeline (not just processing +
+  image builds): `dxdfir_car` (build / verify / timeline of the materialised
+  CAR — the epic-#86 stage that had no role), `dxdfir_stack`
+  (deploy/destroy/start/stop/status for the Elastic-native and SOF-ELK stacks,
+  reusing the previously-orphaned `dxdfir_deploy_sofelk` for the SOF-ELK build)
+  and `dxdfir_cleanup` (processed/car/docker teardown), plus the thin
+  `dxdfir-verify-images.yml` audit play. Each follows the `dxdfir_lane`
+  conventions (preflight → act → verify/gate, FQCN, house task-naming) and
+  passes `ansible-lint --profile production`.
 
 ### Changed
 - The `dxdfir` console script installed by the Python package is now `dxdfir-py`
   (a dependency-only fallback and the reference the Go front-end mirrors); the
   primary `dxdfir` is the Go binary built from `go/` (see `go/README.md`).
+- **The Go CLI now drives Ansible for build-car, verify-car, car-timeline,
+  verify-images, `stack *` and `cleanup *`** (previously in-process Python or a
+  direct `docker`/`bash` subprocess) via the new roles/playbooks above —
+  `cleanup --dry-run` maps to `ansible-playbook --check`. `list` stays native
+  (filesystem inventory), and `collection`/`register`/`stix` keep the streaming
+  `python -m` contract (Ansible buffers per-file progress; stix's stdout is data).
+- **Build + dependency wiring for the Go front-end.** `scripts/setup-environment.sh`
+  installs the Go toolchain when absent and builds+installs the `dxdfir` binary
+  (the Python CLI becomes `dxdfir-py`); `.github/workflows/checks.yml` adds
+  `actions/setup-go` and `tests/run-checks.sh` gains a guarded "Go front-end
+  (gofmt / vet / build)" check group; `THIRD_PARTY_NOTICES.md` records the Go
+  build-time modules + licences; and `scripts/{package-offline,setup-offline}.sh`
+  vendor the Go modules (`go mod vendor`) for reproducible air-gapped builds.
 
 ### Removed
 - **The Kusto/ADX layer.** The Azure Data Explorer emulator was the analysis

@@ -1,0 +1,60 @@
+---
+# dxdfir_car: materialise + verify + timeline the MITRE CAR from processed evidence.
+# One role, three actions (dxdfir_car_action); the playbook picks the action.
+
+# Which CAR action to run: build (materialise stores), verify (correctness gate),
+# or timeline (unified time-ordered CAR).
+dxdfir_car_action: build
+
+# Repo root is five levels up from this role
+# (roles/dxdfir_car -> get_sybers.dxdfir -> collections -> ansible -> repo).
+dxdfir_car_repo_root: "{{ role_path }}/../../../../.."
+
+# Processed evidence tree the batch build reads from, and the materialised CAR tree.
+dxdfir_car_processed_dir: "{{ dxdfir_car_repo_root }}/data_store/processed"
+dxdfir_car_dir: "{{ dxdfir_car_repo_root }}/data_store/processed/car"
+
+# The CAR engine module the preflight import-checks (a thin front to the vendored
+# PIIAT-MitreCar); in-repo runs put the package on PYTHONPATH.
+dxdfir_car_module: get_sybers_dxdfir.mitrecar
+dxdfir_car_python_path: "{{ dxdfir_car_repo_root }}/python"
+
+# build: rebuild stores that already exist (maps to the engine's --force).
+dxdfir_car_rebuild: false
+# build (single-source): one processed file/dir -> one car.db. Empty => batch.
+dxdfir_car_in: ""
+dxdfir_car_out: ""
+dxdfir_car_host: ""
+dxdfir_car_artefacts: ""
+
+# timeline: the source car dir (or a tree to aggregate) and optional filters.
+dxdfir_car_timeline_dir: "{{ dxdfir_car_dir }}"
+dxdfir_car_timeline_out: ""
+dxdfir_car_timeline_host: ""
+dxdfir_car_timeline_after: ""
+dxdfir_car_timeline_before: ""
+
+# The build argv, handed to tasks/build.yml. Single-source (--in) vs batch, with
+# the optional flags appended only when set — mirrors the CLI's build-car.
+dxdfir_car_build_argv: >-
+  {{ ['python3', '-m', dxdfir_car_module]
+  + (['--in', dxdfir_car_in]
+     + (['--out', dxdfir_car_out] if dxdfir_car_out | length > 0 else [])
+     + (['--host', dxdfir_car_host] if dxdfir_car_host | length > 0 else [])
+     + (['--artefacts', dxdfir_car_artefacts] if dxdfir_car_artefacts | length > 0 else [])
+     if dxdfir_car_in | length > 0
+     else ['--batch', dxdfir_car_processed_dir]
+     + (['--out', dxdfir_car_out] if dxdfir_car_out | length > 0 else [])
+     + (['--force'] if dxdfir_car_rebuild | bool else [])) }}
+
+# The verify (gate) argv: the CAR correctness check over the materialised tree.
+dxdfir_car_verify_argv: >-
+  {{ ['python3', '-m', 'get_sybers_dxdfir.carcheck', '--car-dir', dxdfir_car_dir] }}
+
+# The timeline argv: union a source's stores into one time-ordered CAR timeline.
+dxdfir_car_timeline_argv: >-
+  {{ ['python3', '-m', dxdfir_car_module, 'timeline', dxdfir_car_timeline_dir]
+  + (['--out', dxdfir_car_timeline_out] if dxdfir_car_timeline_out | length > 0 else [])
+  + (['--host', dxdfir_car_timeline_host] if dxdfir_car_timeline_host | length > 0 else [])
+  + (['--after', dxdfir_car_timeline_after] if dxdfir_car_timeline_after | length > 0 else [])
+  + (['--before', dxdfir_car_timeline_before] if dxdfir_car_timeline_before | length > 0 else []) }}

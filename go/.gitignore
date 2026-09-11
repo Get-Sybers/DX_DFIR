@@ -1,3 +1,6 @@
 # built binary
 /dxdfir
 /dist/
+# vendored modules (created on demand by scripts/package-offline.sh for offline
+# builds; the lock is go.mod + go.sum, not a committed vendor tree)
+/vendor/

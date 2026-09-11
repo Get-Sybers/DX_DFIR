@@ -1,0 +1,7 @@
+---
+- name: "stack-stop | stop containers but keep them | {{ dxdfir_stack_name }}"
+  ansible.builtin.command:
+    argv: ["docker", "compose", "-f", "docker-compose.yml", "stop"]
+    chdir: "{{ dxdfir_stack_compose_dir }}"
+  register: dxdfir_stack_stopped
+  changed_when: dxdfir_stack_stopped.rc == 0

@@ -1,0 +1,44 @@
+---
+# FIND FACTS -> check existence AND location BEFORE touching the stack.
+
+- name: "stack-preflight | docker daemon reachable | {{ dxdfir_stack_name }}"
+  ansible.builtin.command: docker version
+  register: dxdfir_stack_docker
+  changed_when: false
+
+- name: "stack-preflight | docker compose plugin present | {{ dxdfir_stack_name }}"
+  ansible.builtin.command: docker compose version
+  register: dxdfir_stack_compose_v
+  changed_when: false
+
+- name: "stack-preflight | stat the compose file | {{ dxdfir_stack_name }}"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_stack_compose_dir }}/docker-compose.yml"
+  register: dxdfir_stack_compose_stat
+
+- name: "stack-preflight | assert the compose file is present | {{ dxdfir_stack_name }}"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_stack_compose_stat.stat.exists
+    fail_msg: >-
+      no docker-compose.yml under {{ dxdfir_stack_compose_dir }}.
+    quiet: true
+
+# The elastic compose file guards its secrets with ${VAR:?} — compose cannot even
+# parse (up, down or ps) without the operator's .env, so require it for every
+# elastic action and point at the example when it is missing.
+- name: "stack-preflight | stat the elastic env file | {{ dxdfir_stack_name }}"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_stack_env_file }}"
+  register: dxdfir_stack_env_stat
+  when: dxdfir_stack_name == 'elastic'
+
+- name: "stack-preflight | assert the elastic .env is present | {{ dxdfir_stack_name }}"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_stack_env_stat.stat.exists
+    fail_msg: >-
+      {{ dxdfir_stack_env_file }} is missing — copy docker/elastic/.env.example to
+      docker/elastic/.env and set the passwords/keys before running the stack.
+    quiet: true
+  when: dxdfir_stack_name == 'elastic'

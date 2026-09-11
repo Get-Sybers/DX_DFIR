@@ -1,0 +1,41 @@
+---
+argument_specs:
+  main:
+    short_description: "Wipe processed evidence, the CAR tree, or the dxdfir/* tool images."
+    description:
+      - >-
+        Teardown for a re-run. Three actions (dxdfir_cleanup_action): processed
+        (everything under data_store/processed, preserving .gitkeep), car (the
+        materialised CAR tree), and docker (built dxdfir/* images — the hardened
+        set by default, or every dxdfir/* with all_dxdfir; only images present on
+        the host). The front-end confirms destructive runs and can pass --check
+        for a dry run.
+    options:
+      dxdfir_cleanup_action:
+        type: str
+        required: false
+        default: processed
+        choices: [processed, car, docker]
+        description: "Which teardown to run."
+      dxdfir_cleanup_processed_dir:
+        type: str
+        required: false
+        description: "Processed tree to wipe (default data_store/processed)."
+      dxdfir_cleanup_car_dir:
+        type: str
+        required: false
+        description: "CAR tree to wipe (default data_store/processed/car)."
+      dxdfir_cleanup_python_path:
+        type: str
+        required: false
+        description: "PYTHONPATH to the get_sybers_dxdfir package (docker action's image-set lookup)."
+      dxdfir_cleanup_dangling:
+        type: bool
+        required: false
+        default: false
+        description: "docker: also prune dangling layers."
+      dxdfir_cleanup_all_dxdfir:
+        type: bool
+        required: false
+        default: false
+        description: "docker: remove EVERY dxdfir/* image, not only the hardened tool set."

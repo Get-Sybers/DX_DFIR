@@ -1,0 +1,25 @@
+---
+# dxdfir_car: materialise/verify/timeline the CAR. The role GROUPS; the playbook
+# DECIDES the action. Idempotence (rebuild only with --rebuild) lives in the
+# engine, not a task's `when:`.
+
+- name: "car | assert inputs"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_car_action in ['build', 'verify', 'timeline']
+      - dxdfir_car_dir | length > 0
+    fail_msg: >-
+      dxdfir_car needs dxdfir_car_action (build|verify|timeline) and a non-empty
+      dxdfir_car_dir.
+    quiet: true
+  tags: [always]
+
+- name: "car | preflight"
+  ansible.builtin.include_tasks:
+    file: preflight.yml
+    apply:
+      tags: [always]
+  tags: [always]
+
+- name: "car | run the CAR action | {{ dxdfir_car_action }}"
+  ansible.builtin.include_tasks: "{{ dxdfir_car_action }}.yml"

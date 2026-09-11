@@ -1,0 +1,26 @@
+---
+# Remove every top-level entry (files, dirs, symlinks) under dxdfir_cleanup_wipe_dir
+# EXCEPT the tracked .gitkeep, so the directory stays but its contents are gone.
+- name: "cleanup-wipe | stat the target tree"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_cleanup_wipe_dir }}"
+  register: dxdfir_cleanup_wipe_stat
+
+- name: "cleanup-wipe | find top-level contents (keeping .gitkeep)"
+  ansible.builtin.find:
+    paths: "{{ dxdfir_cleanup_wipe_dir }}"
+    recurse: false
+    file_type: any
+    hidden: true
+    excludes: [".gitkeep"]
+  register: dxdfir_cleanup_wipe_found
+  when: dxdfir_cleanup_wipe_stat.stat.exists
+
+- name: "cleanup-wipe | remove them"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ dxdfir_cleanup_wipe_found.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when: dxdfir_cleanup_wipe_stat.stat.exists

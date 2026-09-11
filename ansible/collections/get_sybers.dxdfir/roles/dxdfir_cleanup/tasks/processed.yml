@@ -1,0 +1,8 @@
+---
+- name: "cleanup-processed | select the processed tree"
+  ansible.builtin.set_fact:
+    dxdfir_cleanup_wipe_dir: "{{ dxdfir_cleanup_processed_dir }}"
+  tags: [always]
+
+- name: "cleanup-processed | wipe the tree (preserving .gitkeep)"
+  ansible.builtin.include_tasks: wipe.yml

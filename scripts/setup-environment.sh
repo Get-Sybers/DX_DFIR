@@ -300,8 +300,11 @@ $SUDO "$DXDFIR_VENV/bin/pip" install --quiet --upgrade pip || die "pip upgrade i
 $SUDO "$DXDFIR_VENV/bin/pip" install --quiet --editable "$REPO_ROOT_DIR/python" \
     --constraint "$REPO_ROOT_DIR/python/constraints.txt" \
     || die "Failed to install the dxdfir CLI (and its pinned dependencies)."
-$SUDO ln -sf "$DXDFIR_VENV/bin/dxdfir" /usr/local/bin/dxdfir
-echo "✅ dxdfir installed: $(/usr/local/bin/dxdfir --version 2>/dev/null || echo '/usr/local/bin/dxdfir')"
+# The Go/termui front-end (built below) is the primary `dxdfir`; the Python
+# Typer app is exposed as `dxdfir-py` — a fallback and the reference the Go
+# front-end mirrors. pyproject installs the console script as `dxdfir-py`.
+$SUDO ln -sf "$DXDFIR_VENV/bin/dxdfir-py" /usr/local/bin/dxdfir-py
+echo "✅ dxdfir-py (Python fallback) installed: $(/usr/local/bin/dxdfir-py --version 2>/dev/null || echo '/usr/local/bin/dxdfir-py')"
 
 # ansible-core (a declared dependency, installed with the CLI above) puts
 # ansible-playbook / ansible / ansible-galaxy in the SAME venv bin. dxdfir resolves
@@ -316,6 +319,45 @@ for _ans in ansible ansible-playbook ansible-galaxy; do
         || die "Failed to expose $_ans on PATH (/usr/local/bin)."
 done
 echo "✅ ansible on PATH: $(/usr/local/bin/ansible-playbook --version 2>/dev/null | head -1 || echo 'ansible-playbook')"
+
+################################################################################
+# Build + install the Go/termui `dxdfir` front-end (go/). It is the primary
+# `dxdfir` on PATH; it re-implements no processing — it drives the Ansible
+# collection and the get_sybers_dxdfir processors by shelling out. Go is not in
+# APT_DEPS (not all distros carry a new enough toolchain), so install the pinned
+# upstream toolchain when absent. go.mod requires Go >= 1.22.
+################################################################################
+GO_VERSION="${GO_VERSION:-1.22.12}"
+GO_BIN_DIR="${GO_BIN_DIR:-/opt/dxdfir/bin}"
+if ! command -v go >/dev/null 2>&1; then
+    echo "🐹 Installing the Go toolchain ($GO_VERSION) ..."
+    case "$(uname -m)" in
+        x86_64)        _garch=amd64 ;;
+        aarch64|arm64) _garch=arm64 ;;
+        *) die "unsupported architecture for the Go toolchain: $(uname -m)" ;;
+    esac
+    _gotar="go${GO_VERSION}.linux-${_garch}.tar.gz"
+    curl -fsSL "https://go.dev/dl/${_gotar}" -o "/tmp/${_gotar}" \
+        || die "Failed to download the Go toolchain (${_gotar})."
+    $SUDO rm -rf /usr/local/go
+    $SUDO tar -C /usr/local -xzf "/tmp/${_gotar}" || die "Failed to extract the Go toolchain."
+    rm -f "/tmp/${_gotar}"
+    $SUDO ln -sf /usr/local/go/bin/go /usr/local/bin/go
+    export PATH="/usr/local/go/bin:$PATH"
+fi
+echo "🐹 Building the dxdfir Go front-end ($(go version 2>/dev/null | awk '{print $3}')) ..."
+$SUDO mkdir -p "$GO_BIN_DIR"
+# Build offline from vendored modules when present (air-gapped installs, packaged
+# by scripts/package-offline.sh), else fetch through the module proxy. Pin the
+# toolchain (GOTOOLCHAIN=local) so it never tries to auto-download a newer Go.
+GO_BUILD_MODFLAG=""
+[[ -d "$REPO_ROOT_DIR/go/vendor" ]] && GO_BUILD_MODFLAG="-mod=vendor"
+( cd "$REPO_ROOT_DIR/go" \
+    && $SUDO env PATH="$PATH" HOME="${HOME:-/root}" GOTOOLCHAIN=local \
+        go build ${GO_BUILD_MODFLAG} -o "$GO_BIN_DIR/dxdfir" ./cmd/dxdfir ) \
+    || die "Failed to build the dxdfir Go front-end."
+$SUDO ln -sf "$GO_BIN_DIR/dxdfir" /usr/local/bin/dxdfir
+echo "✅ dxdfir (Go front-end) installed: $(/usr/local/bin/dxdfir --version 2>/dev/null || echo "$GO_BIN_DIR/dxdfir")"
 
 ################################################################################
 # Install the collection's pinned Ansible dependencies (requirements.yml — never
@@ -351,3 +393,4 @@ echo "     scripts/save-docker-images.sh --load   (offline host: load tarballs)"
 echo ""
 echo "🚀 You can now run DX_DFIR — try:  dxdfir --help"
 echo "   (process evidence, build + verify CAR, bring up docker/elastic — see README.md)"
+echo "   dxdfir is the Go/termui front-end (go/); the Python CLI remains as 'dxdfir-py'."

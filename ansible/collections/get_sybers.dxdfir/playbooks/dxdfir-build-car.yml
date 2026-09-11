@@ -1,0 +1,12 @@
+---
+# The playbook holds the decisions; the role groups, the tasks act.
+- name: "DFIR | build the materialised MITRE CAR from processed evidence"
+  hosts: "{{ dxdfir_hosts | default('localhost') }}"
+  connection: "{{ dxdfir_connection | default('local') }}"
+  gather_facts: true
+  tasks:
+    - name: "dxdfir-build-car | run the car role (build)"
+      ansible.builtin.include_role:
+        name: dxdfir_car
+      vars:
+        dxdfir_car_action: build

@@ -1,0 +1,11 @@
+---
+- name: "stack-status | read container status | {{ dxdfir_stack_name }}"
+  ansible.builtin.command:
+    argv: ["docker", "compose", "-f", "docker-compose.yml", "ps"]
+    chdir: "{{ dxdfir_stack_compose_dir }}"
+  register: dxdfir_stack_ps
+  changed_when: false
+
+- name: "stack-status | show container status | {{ dxdfir_stack_name }}"
+  ansible.builtin.debug:
+    var: dxdfir_stack_ps.stdout_lines

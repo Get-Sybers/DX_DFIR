@@ -1,0 +1,14 @@
+---
+# The CAR correctness promotion gate over the materialised tree: each exercised
+# object populated, values sane, car_action in the model's vocabulary, every row
+# traceable, relationship edges naming real endpoints. carcheck exits non-zero
+# (1 checks failed, 2 no CAR present) — failed_when turns that into a play failure
+# with the report on stdout.
+- name: "car-verify | run the CAR correctness gate"
+  ansible.builtin.command:
+    argv: "{{ dxdfir_car_verify_argv }}"
+  environment:
+    PYTHONPATH: "{{ dxdfir_car_python_path }}"
+  register: dxdfir_car_gate
+  changed_when: false
+  failed_when: dxdfir_car_gate.rc != 0

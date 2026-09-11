@@ -3,84 +3,56 @@ package cli
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 
-	"github.com/get-sybers/dx_dfir/go/internal/repo"
 	"github.com/get-sybers/dx_dfir/go/internal/run"
 	"github.com/get-sybers/dx_dfir/go/internal/style"
 )
 
-// stackComposeSubdir maps the --stack value to its directory under docker/.
-var stackComposeSubdir = map[string]string{"elastic": "elastic", "sofelk": "sof-elk"}
+// The analysis-stack lifecycle is Ansible-orchestrated (dxdfir_stack role): each
+// verb fronts a thin dxdfir-stack-<action>.yml play. The stack (elastic|sofelk)
+// rides on -e dxdfir_stack_name.
 
-// stackCompose validates the stack name, resolves the repo, and returns the
-// docker-compose file plus its directory (the compose cwd, so relative volume
-// mounts and .env resolve). Errors already carry the exit contract: 2 for a bad
-// stack name or a missing compose file.
-func (env *Env) stackCompose(stack string) (composeFile, composeDir string, err error) {
-	sub, ok := stackComposeSubdir[stack]
-	if !ok {
-		return "", "", Fail(2, "unknown stack %q — use one of: elastic, sofelk", stack)
-	}
-	r, err := env.resolveRepo()
-	if err != nil {
-		return "", "", err
-	}
-	composeDir = r.Path("docker", sub)
-	composeFile = filepath.Join(composeDir, "docker-compose.yml")
-	if !fileExists(composeFile) {
-		return "", "", Fail(2, "no docker-compose.yml under %s", composeDir)
-	}
-	return composeFile, composeDir, nil
-}
+var validStacks = map[string]bool{"elastic": true, "sofelk": true}
 
-// runCompose runs `docker compose -f <file> <verbArgs...>` from the compose dir.
-func (env *Env) runCompose(stack string, verbArgs ...string) error {
-	if err := repo.Require("docker"); err != nil {
-		return Fail(127, "%v", err)
+// runStackAction drives one dxdfir-stack-<action>.yml with the stack selection
+// and any action-specific vars.
+func (env *Env) runStackAction(stack, action string, vars []string) error {
+	if !validStacks[stack] {
+		return Fail(2, "unknown stack %q — use one of: elastic, sofelk", stack)
 	}
-	composeFile, composeDir, err := env.stackCompose(stack)
+	r, ap, err := env.ansibleRepo()
 	if err != nil {
 		return err
 	}
-	args := append([]string{"compose", "-f", composeFile}, verbArgs...)
+	all := append([]string{"dxdfir_stack_name=" + stack}, vars...)
 	code := run.Passthrough(context.Background(),
-		run.Plan{Bin: "docker", Args: args, Dir: composeDir}, true)
-	if code != 0 {
-		return ExitError{Code: code}
-	}
-	return nil
+		ansiblePlan(r, ap, "dxdfir-stack-"+action+".yml", all, false), true)
+	return exitCode(code)
 }
 
-// newStackCmd builds the `dxdfir stack` group: docker compose around the
-// analysis stacks under docker/elastic and docker/sof-elk. The bare group prints
-// help; the --stack/-s persistent flag selects which stack each subcommand
-// drives.
+// newStackCmd builds the `dxdfir stack` group (deploy/destroy/start/stop/status),
+// each driving the dxdfir_stack role. --stack/-s selects the stack.
 func newStackCmd(env *Env) *cobra.Command {
 	var stack string
-
 	parent := &cobra.Command{
 		Use:   "stack",
-		Short: "Bring the analysis stack up/down (docker compose around docker/elastic or docker/sof-elk).",
-		Long: "Bring the analysis stack up/down.\n\n" +
-			"Thin wrapper over `docker compose` for the stacks under docker/elastic and\n" +
-			"docker/sof-elk. Select one with --stack/-s (elastic|sofelk).",
+		Short: "Bring the analysis stack up/down (dxdfir_stack role around docker/elastic or docker/sof-elk).",
+		Long: "Bring the analysis stack up/down via the dxdfir_stack Ansible role.\n\n" +
+			"Lifecycle for the stacks under docker/elastic and docker/sof-elk. Select one\n" +
+			"with --stack/-s (elastic|sofelk). Elastic requires docker/elastic/.env.",
 	}
 	parent.PersistentFlags().StringVarP(&stack, "stack", "s", "elastic", "Which stack to drive (elastic|sofelk).")
 
 	var build, noBuild bool
 	deploy := &cobra.Command{
 		Use:   "deploy",
-		Short: "Build (if needed) and start the stack in the background (`docker compose up -d`).",
+		Short: "Build (if needed) and bring the stack up, then verify it is running.",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			args := []string{"up", "-d", "--remove-orphans"}
-			if build && !noBuild {
-				args = []string{"up", "--build", "-d", "--remove-orphans"}
-			}
-			if err := env.runCompose(stack, args...); err != nil {
+			vars := []string{"dxdfir_stack_build=" + boolVar(build && !noBuild)}
+			if err := env.runStackAction(stack, "deploy", vars); err != nil {
 				return err
 			}
 			fmt.Println(style.Green(style.GlyphOK + " " + stack + " stack deployed."))
@@ -102,11 +74,8 @@ func newStackCmd(env *Env) *cobra.Command {
 					return Fail(1, "Aborted.")
 				}
 			}
-			args := []string{"down", "--remove-orphans"}
-			if volumes {
-				args = append(args, "--volumes")
-			}
-			if err := env.runCompose(stack, args...); err != nil {
+			vars := []string{"dxdfir_stack_remove_volumes=" + boolVar(volumes)}
+			if err := env.runStackAction(stack, "destroy", vars); err != nil {
 				return err
 			}
 			fmt.Println(style.Green(style.GlyphOK + " " + stack + " stack destroyed."))
@@ -117,40 +86,39 @@ func newStackCmd(env *Env) *cobra.Command {
 	destroy.Flags().BoolVarP(&destroyYes, "yes", "y", false, "Do not prompt.")
 
 	start := &cobra.Command{
-		Use:   "start",
-		Short: "Start EXISTING stopped containers (`docker compose start`).",
-		Args:  cobra.NoArgs,
+		Use: "start", Short: "Start EXISTING stopped containers.", Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := env.runCompose(stack, "start"); err != nil {
+			if err := env.runStackAction(stack, "start", nil); err != nil {
 				return err
 			}
 			fmt.Println(style.Green(style.GlyphOK + " " + stack + " stack started."))
 			return nil
 		},
 	}
-
 	stop := &cobra.Command{
-		Use:   "stop",
-		Short: "Stop containers but keep them (`docker compose stop`).",
-		Args:  cobra.NoArgs,
+		Use: "stop", Short: "Stop containers but keep them.", Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := env.runCompose(stack, "stop"); err != nil {
+			if err := env.runStackAction(stack, "stop", nil); err != nil {
 				return err
 			}
 			fmt.Println(style.Green(style.GlyphOK + " " + stack + " stack stopped."))
 			return nil
 		},
 	}
-
 	status := &cobra.Command{
-		Use:   "status",
-		Short: "Show container status (`docker compose ps`).",
-		Args:  cobra.NoArgs,
+		Use: "status", Short: "Show container status.", Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return env.runCompose(stack, "ps")
+			return env.runStackAction(stack, "status", nil)
 		},
 	}
 
 	parent.AddCommand(deploy, destroy, start, stop, status)
 	return parent
+}
+
+func boolVar(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
 }
