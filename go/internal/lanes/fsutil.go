@@ -4,8 +4,13 @@ import (
 	"bufio"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
+
+// ansiRE matches ANSI/VT escape sequences; kept in step with run.Sanitize's
+// regexp (this package cannot import run without a cycle).
+var ansiRE = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]`)
 
 // glob joins parts into a pattern under root and returns matches (nil on error).
 func glob(root string, parts ...string) []string {
@@ -212,10 +217,15 @@ func itoa(n int) string {
 }
 
 // sanitizeLog mirrors run.Sanitize without importing run (avoids a cycle): drop
-// pre-carriage-return content and trim.
+// everything before the last carriage return (collapsing in-place redraws to
+// their final state), strip ANSI escape sequences, defuse termui's [text](style)
+// markup by breaking the "](" adjacency its parser keys on, and trim — so a
+// tailed log line is safe to hand straight to a termui widget.
 func sanitizeLog(line string) string {
 	if i := strings.LastIndexByte(line, '\r'); i >= 0 {
 		line = line[i+1:]
 	}
+	line = ansiRE.ReplaceAllString(line, "")
+	line = strings.ReplaceAll(line, "](", "] (")
 	return strings.TrimRight(line, " \t")
 }

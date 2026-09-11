@@ -2,10 +2,12 @@
 // keeps the decision in one place so the streaming layer is identical in both
 // modes and only the presenter differs.
 //
-// The contract from the packaging investigation is strict: the dashboard renders
-// to STDERR and must auto-disable whenever STDOUT is not a real terminal, so that
-// `dxdfir stix ... | jq` and other piped/redirected pipelines never see UI bytes
-// on the data channel.
+// The contract from the packaging investigation is strict: the dashboard is
+// drawn by termbox on /dev/tty directly — never on stdout or stderr — and is
+// enabled only for an interactive session, gated on stderr being a real
+// terminal. stdout therefore stays a clean data channel regardless of the TUI
+// decision, so `dxdfir stix ... | jq` and other piped/redirected pipelines never
+// see UI bytes on it.
 package termdetect
 
 import (

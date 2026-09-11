@@ -1004,16 +1004,27 @@ def _cmd_register(repo: Path, args) -> dict:
     # Stream the promote-path classification decisions so the front-end dashboard
     # is not frozen during register (the slow phase is the trailing hash, but the
     # classify of a promoted dropzone folder is worth showing live).
-    if args.progress and from_path is not None and from_path.is_dir():
-        loose = [p for p in from_path.iterdir() if p.is_file() and not p.name.startswith(".")]
-        total = len(loose)
-        _emit(phase="classify", total=total)
-        seen = {"n": 0}
+    #
+    # on_item ONLY fires on the promote path — a --from that resolves to this
+    # collection's dropzone folder, moved in and classified per loose file. An
+    # external --from directory is symlinked with no per-item classification, so
+    # emitting a classify denominator there would strand the front-end at 0/N
+    # forever. Gate on exactly the condition register() uses to choose _promote.
+    if args.progress and from_path is not None:
+        resolved = from_path.expanduser().resolve()
+        dz = dropzone(repo)
+        dz_target = (dz / args.name).resolve() if dz.exists() else None
+        if dz_target is not None and resolved == dz_target and resolved.is_dir():
+            loose = [p for p in resolved.iterdir()
+                     if p.is_file() and not p.name.startswith(".")]
+            total = len(loose)
+            _emit(phase="classify", total=total)
+            seen = {"n": 0}
 
-        def on_item(item, subdir, detected_by, action):
-            seen["n"] += 1
-            _emit(phase="classify", file=item, lane=(subdir or ""),
-                  how=detected_by, action=action, done=seen["n"], total=total)
+            def on_item(item, subdir, detected_by, action):
+                seen["n"] += 1
+                _emit(phase="classify", file=item, lane=(subdir or ""),
+                      how=detected_by, action=action, done=seen["n"], total=total)
 
     root = register(repo, args.name, from_path=from_path, source=args.source, on_item=on_item)
     return {"name": args.name, "root": str(root), "registered": True,
@@ -1072,6 +1083,13 @@ def _cmd_hash(repo: Path, args) -> dict:
                       total_bytes=total_bytes)
 
     rollups, count = write_manifest(repo, args.name, on_file=on_file, on_chunk=on_chunk)
+    if args.progress:
+        # The throttled on_chunk emits at most every ~8 MiB, so the last chunk of
+        # the final file may never cross the threshold and the gauge can stall
+        # below 100%. Emit one truthful terminal update: hashing is complete, so
+        # done_bytes == total_bytes and every file is accounted for.
+        _emit(phase="hash", file=state["cur"], file_done=len(files),
+              file_total=len(files), done_bytes=total_bytes, total_bytes=total_bytes)
     return {"name": args.name, "sha1": rollups["sha1"], "files": count, "bytes": total_bytes}
 
 
