@@ -26,11 +26,17 @@ var forcePlainEnv = []string{
 	"TERM=dumb",
 }
 
-// Stream starts the plan and returns a channel of sanitized output lines and a
-// single-value channel with the exit error (nil on success). The lines channel
-// is closed when both pipes drain; the done channel delivers exactly once after
-// that, so a consumer that reads lines to close then reads done sees the whole
-// tail before the status (the cmd.Wait-after-wg.Wait ordering).
+// Stream starts the plan and returns a channel of raw (verbatim, unsanitized)
+// output lines and a single-value channel with the exit error (nil on success).
+// The lines channel is closed when both pipes drain; the done channel delivers
+// exactly once and is then closed, so a consumer that reads lines to close then
+// reads done sees the whole tail before the status (the cmd.Wait-after-wg.Wait
+// ordering). The deliver-once-then-close contract holds on every return path,
+// including the early setup failures below, so a caller may safely range over
+// done or receive from it once.
+//
+// Display consumers Sanitize each Line.Text themselves; machine-readable
+// consumers parse it verbatim (JSON / ::dxdfir:: sentinels).
 //
 // Cancelling ctx kills the child (exec.CommandContext), which is how an operator
 // quit in the dashboard tears down a running ansible-playbook.
@@ -46,17 +52,20 @@ func Stream(ctx context.Context, p Plan) (<-chan Line, <-chan error) {
 	if err != nil {
 		close(lines)
 		done <- err
+		close(done)
 		return lines, done
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		close(lines)
 		done <- err
+		close(done)
 		return lines, done
 	}
 	if err := cmd.Start(); err != nil {
 		close(lines)
 		done <- err
+		close(done)
 		return lines, done
 	}
 
