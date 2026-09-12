@@ -1,4 +1,4 @@
-.TH DXDFIR 1 "2026-08-15" "get_sybers_dxdfir 0.1.0" "DX_DFIR Manual"
+.TH DXDFIR 1 "2026-09-11" "dxdfir 0.6.0" "DX_DFIR Manual"
 .SH NAME
 dxdfir \- DX_DFIR forensic processing pipeline front-end
 .SH SYNOPSIS
@@ -73,9 +73,11 @@ drives a source's role with
 .RB \(lq python \-m get_sybers_dxdfir. SOURCE \(rq
 for the tight loop.
 .BR build-car ", " verify-car " and " car-timeline
-drive the CAR lane (the vendored PIIAT-MitreCar engine and the
+drive the CAR lane the same way (the
+.B dxdfir_car
+role over the vendored PIIAT-MitreCar engine and the
 .B get_sybers_dxdfir.carcheck
-gate) directly, while
+gate), while
 .B validate
 fronts the repository's check harness
 .RB ( tests/run-checks.sh ).
@@ -236,13 +238,11 @@ role; repeatable (e.g.\&
 Repository root, used when
 .B --repo-root
 is not given. If neither is set, the repo is found by walking up from the current
-directory, then from the installed package's location.
+directory, then from the dxdfir binary's own location.
 .TP
 .B ANSIBLE_ROLES_PATH
-Set by
-.B process
-and
-.B build-docker
+Set by every verb that drives
+.BR ansible-playbook (1)
 to the collection's roles directory so the roles resolve without installing the
 collection.
 .SH EXIT STATUS
@@ -252,8 +252,10 @@ exits
 on success and propagates the exit status of the underlying
 .BR ansible-playbook (1)
 run or tool on failure;
+.B 1
+for a usage error (an unknown verb, flag or argument count);
 .B 2
-for a usage/lookup error (e.g. the repo or a playbook could not be found, or no
+for a lookup error (e.g. the repo or a playbook could not be found, or no
 materialised CAR to verify) and
 .B 127
 if a required tool is not on
@@ -304,4 +306,5 @@ The processors run standalone as
 .SH AUTHOR
 Get-Sybers.
 .SH LICENSE
-MIT.
+Apache-2.0 (the repository licence; the Go front-end declares no subtree licence
+of its own). The Python package and the Ansible collection it drives are MIT.

@@ -122,9 +122,10 @@ the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
 Apache-2.0 at the repository root (see [LICENSE](/LICENSE)) — matched to the
 vendored `car_data_model.json` from [MITRE CAR](https://github.com/mitre-attack/car).
 The pipeline code is offered under the more permissive **MIT** licence as
-self-contained components: the `get_sybers_dxdfir` package + `dxdfir` CLI
-(`python/`) and the `get_sybers.dxdfir` collection (`ansible/collections/`); each
-subtree carries its own declared licence. Third-party tool obligations that fall
+self-contained components: the `get_sybers_dxdfir` package (`python/`) and the
+`get_sybers.dxdfir` collection (`ansible/collections/`); each subtree carries its
+own declared licence. The Go `dxdfir` front-end (`go/`) declares none of its own
+and so carries the repository's Apache-2.0. Third-party tool obligations that fall
 on *you* are in [THIRD_PARTY_NOTICES.md](/THIRD_PARTY_NOTICES.md); Apache-2.0 §4
 attribution is in [NOTICE](/NOTICE).
 

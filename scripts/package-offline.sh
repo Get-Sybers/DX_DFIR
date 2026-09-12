@@ -7,8 +7,8 @@
 #
 #   images/       the hardened dxdfir/* tool images (built + docker-saved) plus the
 #                 one unbuildable image (the .NET runtime), as tars
-#   wheels/       the dxdfir CLI and every Python dependency, as wheels
-#                 (pip download — installed offline with --no-index)
+#   wheels/       the get_sybers_dxdfir processor package, ansible-core and every
+#                 Python dependency, as wheels (installed offline with --no-index)
 #   collections/  the pinned ansible collections (community.docker, ansible.posix)
 #   repo.tar      a clean archive of the repository at HEAD (code, playbooks,
 #                 roles, docs, the data_store skeleton) — no evidence, no .git
@@ -67,7 +67,7 @@ need python3; need tar; need sha256sum; need git
 PIP=""
 if python3 -m pip --version >/dev/null 2>&1; then PIP="python3 -m pip"
 elif command -v pip3 >/dev/null 2>&1; then PIP="pip3"
-else die "no pip available (need python3 -m pip or pip3 to download the CLI wheels). Try: python3 -m ensurepip, or run inside a venv."; fi
+else die "no pip available (need python3 -m pip or pip3 to download the Python wheels). Try: python3 -m ensurepip, or run inside a venv."; fi
 
 VERSION="$(python3 -c "import tomllib,sys; print(tomllib.load(open('$REPO/python/pyproject.toml','rb'))['project']['version'])" 2>/dev/null || echo "0.0.0")"
 ARCH="$(uname -m)"
@@ -98,14 +98,14 @@ else
     echo "    the Go toolchain + network for the modules, or a prebuilt dxdfir binary)."
 fi
 
-# ---- 2. the dxdfir CLI + all Python deps as wheels ---------------------------
-echo "🐍 Building the dxdfir CLI and downloading Python dependencies as wheels ..."
+# ---- 2. the get_sybers_dxdfir package + all Python deps as wheels ------------
+echo "🐍 Building the get_sybers_dxdfir package and downloading Python dependencies as wheels ..."
 # `pip wheel` BUILDS the local project into a wheel AND resolves every
 # dependency into wheels — the project itself is what `pip download` omits.
 # --constraint pins them to python/constraints.txt, the SAME lock
 # setup-environment.sh uses, so the offline bundle carries the exact tested versions.
 $PIP wheel --wheel-dir "$STAGE/wheels" --constraint "$REPO/python/constraints.txt" "$REPO/python" >/dev/null \
-    || die "pip wheel of the CLI failed."
+    || die "pip wheel of the python package failed."
 # bootstrap wheels so the offline venv can upgrade its own pip
 $PIP download --dest "$STAGE/wheels" pip setuptools wheel >/dev/null 2>&1 || true
 

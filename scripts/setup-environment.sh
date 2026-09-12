@@ -273,11 +273,12 @@ if [[ -d "$REPO_ROOT_DIR" ]]; then
 fi
 
 ################################################################################
-# Install the dxdfir CLI. A dedicated venv keeps it off the system Python (PEP 668)
-# and — this is the point — puts ansible-playbook right next to the dxdfir entry
-# point, which is exactly where the CLI resolves it (the CLI drives the Ansible
-# collection). ansible-core is a declared dependency, so this one install gives a
-# working `dxdfir process/ingest/deploy/detect`.
+# Install the get_sybers_dxdfir processor package. A dedicated venv keeps it off
+# the system Python (PEP 668) and — this is the point — delivers ansible-playbook
+# right next to the processors the roles invoke, which is exactly where the Go
+# `dxdfir` front-end (built below) resolves it (the front-end drives the Ansible
+# collection). ansible-core is a declared dependency of the package, so this one
+# install gives a working `dxdfir process/build-car/verify-car/build-docker`.
 #
 # --editable is REQUIRED, not a preference. get_sybers_dxdfir/mitrecar.py locates the
 # vendored PIIAT-MitreCar engine RELATIVE TO ITS OWN FILE (_REPO_ROOT = three dirs
@@ -289,9 +290,9 @@ fi
 # repo tree, so the engine and its nested car / attack-datasources submodules resolve.
 ################################################################################
 DXDFIR_VENV="${DXDFIR_VENV:-/opt/dxdfir/venv}"
-echo "🐍 Installing the dxdfir CLI into $DXDFIR_VENV ..."
-$SUDO python3 -m venv "$DXDFIR_VENV" || die "Failed to create the CLI venv (need python3-venv)."
-$SUDO "$DXDFIR_VENV/bin/pip" install --quiet --upgrade pip || die "pip upgrade in the CLI venv failed."
+echo "🐍 Installing the get_sybers_dxdfir package (+ ansible) into $DXDFIR_VENV ..."
+$SUDO python3 -m venv "$DXDFIR_VENV" || die "Failed to create the venv (need python3-venv)."
+$SUDO "$DXDFIR_VENV/bin/pip" install --quiet --upgrade pip || die "pip upgrade in the venv failed."
 # --constraint pins the exact, tested dependency versions from python/constraints.txt
 # (pyproject carries the ">=" floors; the lock is the single source of truth this
 # installer AND scripts/package-offline.sh consume). Without it a fresh install pulls
@@ -299,19 +300,14 @@ $SUDO "$DXDFIR_VENV/bin/pip" install --quiet --upgrade pip || die "pip upgrade i
 # under itself; with it there are no version literals to drift in this script.
 $SUDO "$DXDFIR_VENV/bin/pip" install --quiet --editable "$REPO_ROOT_DIR/python" \
     --constraint "$REPO_ROOT_DIR/python/constraints.txt" \
-    || die "Failed to install the dxdfir CLI (and its pinned dependencies)."
-# The Go/termui front-end (built below) is the primary `dxdfir`; the Python
-# Typer app is exposed as `dxdfir-py` — a fallback and the reference the Go
-# front-end mirrors. pyproject installs the console script as `dxdfir-py`.
-$SUDO ln -sf "$DXDFIR_VENV/bin/dxdfir-py" /usr/local/bin/dxdfir-py
-echo "✅ dxdfir-py (Python fallback) installed: $(/usr/local/bin/dxdfir-py --version 2>/dev/null || echo '/usr/local/bin/dxdfir-py')"
+    || die "Failed to install the get_sybers_dxdfir package (and its pinned dependencies)."
 
-# ansible-core (a declared dependency, installed with the CLI above) puts
+# ansible-core (a declared dependency, installed with the package above) puts
 # ansible-playbook / ansible / ansible-galaxy in the SAME venv bin. dxdfir resolves
 # ansible-playbook from there itself, but a HUMAN — including the dxdfir-build-images
 # step this script prints at the end — needs them on PATH too, or `ansible-playbook
 # ...` is "command not found" on a fresh shell despite ansible being installed.
-# Expose them beside dxdfir, exactly as the CLI is exposed above.
+# Expose them beside dxdfir, exactly as the Go front-end is exposed below.
 for _ans in ansible ansible-playbook ansible-galaxy; do
     [[ -x "$DXDFIR_VENV/bin/$_ans" ]] \
         || die "Expected $_ans in $DXDFIR_VENV/bin after installing ansible-core."
@@ -325,11 +321,22 @@ echo "✅ ansible on PATH: $(/usr/local/bin/ansible-playbook --version 2>/dev/nu
 # `dxdfir` on PATH; it re-implements no processing — it drives the Ansible
 # collection and the get_sybers_dxdfir processors by shelling out. Go is not in
 # APT_DEPS (not all distros carry a new enough toolchain), so install the pinned
-# upstream toolchain when absent. go.mod requires Go >= 1.22.
+# upstream toolchain when absent OR older than go.mod's floor (Go >= 1.24): the
+# build below pins GOTOOLCHAIN=local, which deliberately refuses toolchain
+# auto-upgrades, so a host provisioned by an earlier release of this script
+# (which pinned 1.22.x) must be re-provisioned here rather than fail the build.
 ################################################################################
-GO_VERSION="${GO_VERSION:-1.22.12}"
+GO_VERSION="${GO_VERSION:-1.24.7}"
+GO_MIN_MINOR=24
 GO_BIN_DIR="${GO_BIN_DIR:-/opt/dxdfir/bin}"
-if ! command -v go >/dev/null 2>&1; then
+_go_ok=0
+if command -v go >/dev/null 2>&1; then
+    _gominor="$(go version 2>/dev/null | grep -oE 'go1\.[0-9]+' | head -1 | cut -d. -f2)"
+    [[ "$_gominor" =~ ^[0-9]+$ ]] && (( _gominor >= GO_MIN_MINOR )) && _go_ok=1
+fi
+if (( ! _go_ok )); then
+    command -v go >/dev/null 2>&1 \
+        && echo "🐹 Found Go $(go version 2>/dev/null | awk '{print $3}') — older than go.mod's 1.${GO_MIN_MINOR} floor; replacing it."
     echo "🐹 Installing the Go toolchain ($GO_VERSION) ..."
     case "$(uname -m)" in
         x86_64)        _garch=amd64 ;;
@@ -363,6 +370,10 @@ GO_BUILD_MODFLAG=""
         go build ${GO_BUILD_MODFLAG} -o "$GO_BIN_DIR/dxdfir" ./cmd/dxdfir ) \
     || die "Failed to build the dxdfir Go front-end."
 $SUDO ln -sf "$GO_BIN_DIR/dxdfir" /usr/local/bin/dxdfir
+# `man dxdfir` (README / Get-Started) must work on a provisioned host, so the
+# manual installs beside the binary. Best-effort: no man tree is not fatal.
+$SUDO install -Dm644 "$REPO_ROOT_DIR/go/man/dxdfir.1" /usr/local/share/man/man1/dxdfir.1 2>/dev/null \
+    || echo "⚠️  Could not install the man page — read it in-tree: man ./go/man/dxdfir.1"
 echo "✅ dxdfir (Go front-end) installed: $(/usr/local/bin/dxdfir --version 2>/dev/null || echo "$GO_BIN_DIR/dxdfir")"
 
 ################################################################################
@@ -399,4 +410,3 @@ echo "     scripts/save-docker-images.sh --load   (offline host: load tarballs)"
 echo ""
 echo "🚀 You can now run DX_DFIR — try:  dxdfir --help"
 echo "   (process evidence, build + verify CAR, bring up docker/elastic — see README.md)"
-echo "   dxdfir is the Go/termui front-end (go/); the Python CLI remains as 'dxdfir-py'."

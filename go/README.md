@@ -1,9 +1,9 @@
 # `dxdfir` — Go / termui front-end
 
 This directory holds the **`dxdfir`** command: a Go [termui](https://github.com/gizak/termui)
-front-end that replaces the Python Typer CLI as the user-facing entry point of the
-DX_DFIR pipeline. It owns *only* the verbs and their presentation — the heavy work
-stays where it belongs:
+front-end, the user-facing entry point of the DX_DFIR pipeline (the Python Typer
+CLI it replaced is retired — this binary is the only front-end). It owns *only*
+the verbs and their presentation — the heavy work stays where it belongs:
 
 ```
 dxdfir (Go / termui)                 this directory — verbs + adaptive dashboards
@@ -17,13 +17,20 @@ The binary never re-implements processing. It shells out to what already exists:
 |---|---|
 | `process` | `ansible-playbook … dxdfir-process-<lane>.yml` (per lane), progress reconstructed by watching output files |
 | `build-docker` | `ansible-playbook … dxdfir-build-images.yml` |
-| `build-car` / `verify-car` / `car-timeline` | `python -m get_sybers_dxdfir.{mitrecar,carcheck}` |
-| `verify-images` | `python -m get_sybers_dxdfir.images --audit` |
+| `build-car` / `verify-car` / `car-timeline` | `ansible-playbook … dxdfir-{build-car,verify-car,car-timeline}.yml` (the `dxdfir_car` role over the engine + carcheck gate) |
+| `verify-images` | `ansible-playbook … dxdfir-verify-images.yml` |
 | `register` / `collection …` | `python -m get_sybers_dxdfir.collection …` (magic-byte classify + SHA-1 stay the Python detectors) |
 | `stix …` | `python -m get_sybers_dxdfir.stix …` (data → stdout, summary → stderr) |
-| `stack …` | `docker compose …` |
-| `list`, `cleanup` | native Go (filesystem only) |
+| `stack …` | `ansible-playbook … dxdfir-stack-<action>.yml` (the `dxdfir_stack` role) |
+| `cleanup …` | `ansible-playbook … dxdfir-cleanup.yml` (`--dry-run` maps to `--check`) |
+| `list` | native Go (filesystem only) |
 | `validate` | `bash tests/run-checks.sh` |
+
+Every `ansible-playbook` argv is built with
+[go-ansible](https://github.com/apenella/go-ansible) v2 (typed command options);
+extra vars stay ordered, repeated `-e KEY=VALUE` pairs so the user's overrides
+keep their last-wins contract. go-ansible only *builds* the command — the
+in-repo `internal/run` engine executes it.
 
 ## Adaptive presentation
 
@@ -57,7 +64,7 @@ make install    # go install to $GOBIN / $GOPATH/bin as `dxdfir`
 make check      # gofmt -l, go vet, go build
 ```
 
-Requires Go ≥ 1.22. Dependencies (termui, cobra) are pinned in `go.mod`.
+Requires Go ≥ 1.24. Dependencies (termui, cobra, go-ansible) are pinned in `go.mod`.
 
 ## Runtime
 

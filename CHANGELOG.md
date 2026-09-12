@@ -43,9 +43,9 @@ is `0`, anything may change without notice.
   passes `ansible-lint --profile production`.
 
 ### Changed
-- The `dxdfir` console script installed by the Python package is now `dxdfir-py`
-  (a dependency-only fallback and the reference the Go front-end mirrors); the
-  primary `dxdfir` is the Go binary built from `go/` (see `go/README.md`).
+- The `dxdfir` command is the Go binary built from `go/` (see `go/README.md`);
+  the Python package no longer installs a console script (the interim
+  `dxdfir-py` fallback went with the Typer CLI — see Removed).
 - **The Go CLI now drives Ansible for build-car, verify-car, car-timeline,
   verify-images, `stack *` and `cleanup *`** (previously in-process Python or a
   direct `docker`/`bash` subprocess) via the new roles/playbooks above —
@@ -53,14 +53,48 @@ is `0`, anything may change without notice.
   (filesystem inventory), and `collection`/`register`/`stix` keep the streaming
   `python -m` contract (Ansible buffers per-file progress; stix's stdout is data).
 - **Build + dependency wiring for the Go front-end.** `scripts/setup-environment.sh`
-  installs the Go toolchain when absent and builds+installs the `dxdfir` binary
-  (the Python CLI becomes `dxdfir-py`); `.github/workflows/checks.yml` adds
+  installs the Go toolchain when absent — or older than go.mod's 1.24 floor,
+  since the build pins `GOTOOLCHAIN=local` — and builds+installs the `dxdfir`
+  binary (and its man page) as the only front-end; `.github/workflows/checks.yml` adds
   `actions/setup-go` and `tests/run-checks.sh` gains a guarded "Go front-end
-  (gofmt / vet / build)" check group; `THIRD_PARTY_NOTICES.md` records the Go
-  build-time modules + licences; and `scripts/{package-offline,setup-offline}.sh`
+  (gofmt / vet / build / test)" check group; `THIRD_PARTY_NOTICES.md` records the
+  Go build-time modules + licences; and `scripts/{package-offline,setup-offline}.sh`
   vendor the Go modules (`go mod vendor`) for reproducible air-gapped builds.
+- **The Go front-end builds its `ansible-playbook` invocations with
+  [go-ansible](https://github.com/apenella/go-ansible) v2.4.1** (typed command
+  options instead of hand-assembled argv). go-ansible only *builds* the command
+  — the in-repo run engine still executes it — and extra vars stay ordered,
+  repeated `-e KEY=VALUE` pairs so the user's overrides keep their last-wins
+  contract (never a collapsed JSON blob). The Go toolchain floor moves
+  1.22 → 1.24 with it (`go.mod`, `setup-environment.sh` installs 1.24.7, CI
+  `setup-go` 1.24); `go mod tidy` also bumped cobra v1.8.1 → v1.10.1 and pflag
+  v1.0.5 → v1.0.10.
+- The **`stix` sub-CLI is reimplemented on stdlib argparse** (typer is gone) with
+  an identical surface: same commands, options, defaults, exit codes
+  (usage 2, validation/push failures 1) and the same stdout=data /
+  stderr=summary stream split the Go passthrough relies on. Only the help
+  rendering changed (plain argparse text instead of rich boxes).
+- **Offline installs without a Go toolchain get no fallback front-end**:
+  `setup-offline.sh` says so and drives the collection playbooks directly with
+  the venv's `ansible-playbook` (the image-inventory audit runs
+  `dxdfir-verify-images.yml` that way), instead of symlinking the retired
+  Python CLI as `dxdfir`. A toolchain older than go.mod's 1.24 floor takes the
+  same path (air-gapped, `GOTOOLCHAIN=local` cannot upgrade itself); when the
+  front-end does build, the venv's ansible tools are symlinked onto PATH and
+  the verify step pins resolution via `DXDFIR_PYTHON`.
+- **CI installs the Python package under the `python/constraints.txt` lock**
+  (`checks` and `smoke` both), so the pinned resolution the installers ship is
+  the one the tests exercise.
 
 ### Removed
+- **The Python Typer front-end.** `python/get_sybers_dxdfir/cli.py` (the
+  980-line Typer app) and the `dxdfir-py` console script are gone — the Go
+  binary (`go/`) is the only front-end; the Python package keeps the processors
+  and the `python -m` contract modules it drives. The typer dependency chain
+  left `python/constraints.txt` with it (typer 0.27.2, rich 15.0.0,
+  Pygments 2.21.0, markdown-it-py 4.2.0, mdurl 0.1.2, shellingham 1.5.4,
+  annotated-doc 0.0.5); the surviving pins are unchanged. The man page moved
+  to `go/man/dxdfir.1` with the verbs it documents.
 - **The Kusto/ADX layer.** The Azure Data Explorer emulator was the analysis
   backend from 0.2.0; the Elastic-native path (`docker/elastic`, the ES|QL/EQL
   detection rules-as-code, the CAR→ECS projection and its Phase-0 risk gate,

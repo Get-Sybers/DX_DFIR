@@ -38,12 +38,12 @@ jobs:
         with:
           python-version: "3.11"
 
-      # The Go/termui front-end (go/) is built + vetted by the "Go build/vet"
+      # The Go/termui front-end (go/) is built, vetted and tested by the Go
       # check group in run-checks.sh, which is guarded on `go` being present.
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: "1.24"
           cache-dependency-path: go/go.sum
 
       - name: Install check dependencies
@@ -68,9 +68,11 @@ jobs:
             -r ansible/collections/get_sybers.dxdfir/requirements.yml \
             -p ansible/collections/get_sybers.dxdfir/.ansible/collections
           # The package's unit tests run inside the harness: install the
-          # package (its declared deps — typer, PyYAML — are what the tests
-          # import) and pytest.
-          python -m pip install --quiet ./python pytest
+          # package (PyYAML is the only declared dep the tests import;
+          # ansible-core/requests/docker are runtime deps of the collection's
+          # playbooks) and pytest, under the python/constraints.txt lock so CI
+          # exercises the same pinned resolution the installers ship.
+          python -m pip install --quiet --constraint python/constraints.txt ./python pytest
 
       - name: Report tool versions
         run: |

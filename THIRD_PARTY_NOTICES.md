@@ -112,15 +112,54 @@ them under `go/vendor/` for reproducible, air-gapped builds.
 | Module | Version | Licence |
 |---|---|---|
 | [github.com/gizak/termui/v3](https://github.com/gizak/termui) | v3.1.0 | MIT |
-| [github.com/spf13/cobra](https://github.com/spf13/cobra) | v1.8.1 | Apache-2.0 |
-| [github.com/spf13/pflag](https://github.com/spf13/pflag) | v1.0.5 | BSD-3-Clause |
+| [github.com/spf13/cobra](https://github.com/spf13/cobra) | v1.10.1 | Apache-2.0 |
+| [github.com/spf13/pflag](https://github.com/spf13/pflag) | v1.0.10 | BSD-3-Clause |
 | [github.com/mattn/go-runewidth](https://github.com/mattn/go-runewidth) | v0.0.2 | MIT |
 | [github.com/mitchellh/go-wordwrap](https://github.com/mitchellh/go-wordwrap) | 2015-03-14 | MIT |
 | [github.com/nsf/termbox-go](https://github.com/nsf/termbox-go) | 2019-01-21 | MIT |
 | [github.com/inconshreveable/mousetrap](https://github.com/inconshreveable/mousetrap) | v1.1.0 | Apache-2.0 |
+| [github.com/apenella/go-ansible/v2](https://github.com/apenella/go-ansible) | v2.4.1 | MIT |
+| [github.com/apenella/go-common-utils](https://github.com/apenella/go-common-utils) (`data`, `error`) | 2022-09-13 | MIT |
+| [github.com/pkg/errors](https://github.com/pkg/errors) | v0.9.1 | BSD-2-Clause |
+| [github.com/stretchr/testify](https://github.com/stretchr/testify) | v1.11.1 | MIT |
+| [github.com/stretchr/objx](https://github.com/stretchr/objx) | v0.5.3 | MIT |
+| [github.com/davecgh/go-spew](https://github.com/davecgh/go-spew) | v1.1.1 | ISC |
+| [github.com/pmezard/go-difflib](https://github.com/pmezard/go-difflib) | v1.0.0 | BSD-3-Clause |
+| [golang.org/x/sync](https://pkg.go.dev/golang.org/x/sync) | v0.17.0 | BSD-3-Clause |
+| [gopkg.in/yaml.v2](https://gopkg.in/yaml.v2) | v2.4.0 | Apache-2.0 |
+| [gopkg.in/yaml.v3](https://gopkg.in/yaml.v3) | v3.0.1 | MIT + Apache-2.0 (dual, per its LICENSE) |
+
+go-ansible builds every `ansible-playbook` argv (typed options); it does not
+execute ansible — the in-repo run engine does. Its `pkg/execute` imports
+`stretchr/testify/mock` in non-test code, which is why the testify chain
+(testify, objx, go-spew, go-difflib, yaml.v3) is genuinely **linked into the
+shipped binary** rather than test-only — verified with `go mod why` /
+`go list -deps`, not assumed from `go.mod`. yaml.v2 arrives via
+go-common-utils. mousetrap is linked on Windows builds only.
 
 The Go toolchain itself (BSD-3-Clause) is installed by
 `scripts/setup-environment.sh` when absent; it is not redistributed.
+
+## Runtime dependencies — the Python package
+
+The `get_sybers_dxdfir` package's direct dependencies, declared in
+`python/pyproject.toml` and installed beside it (never vendored — this closes a
+tracing gap: the Python dependencies were not recorded here before). Exact
+tested versions, transitive closure included, are pinned in
+`python/constraints.txt`; the offline bundle (`scripts/package-offline.sh`)
+carries them as unmodified wheels.
+
+| Package | Licence |
+|---|---|
+| [ansible-core](https://github.com/ansible/ansible) | GPL-3.0-or-later |
+| [requests](https://github.com/psf/requests) | Apache-2.0 |
+| [docker](https://github.com/docker/docker-py) (Docker SDK for Python) | Apache-2.0 |
+| [PyYAML](https://github.com/yaml/pyyaml) | MIT |
+
+ansible-core's GPL does not reach this project's MIT code: nothing here imports
+ansible — the package ships beside it and the front-end invokes
+`ansible-playbook` as a subprocess. Where the offline bundle redistributes the
+wheels, they are unmodified and their source is available upstream.
 
 ## Formerly vendored components
 

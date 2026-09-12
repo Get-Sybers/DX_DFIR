@@ -136,7 +136,8 @@ done < <(find scripts -name "*.sh" -type f | sort)
 group "Python unit tests (get_sybers_dxdfir)"
 # ------------------------------------------------------------------------------
 # The package's pure-logic tests — the processors, the CAR gate (carcheck), the
-# Elastic rules-as-code loader, the STIX exchange, the CLI. No docker, no
+# Elastic rules-as-code loader, the STIX exchange (and its argparse verbs — the
+# Go binary owns the CLI now). No docker, no
 # evidence, no backend. Skipped when pytest is not installed (CI installs it
 # together with the package's own dependencies).
 if python3 -c 'import pytest' >/dev/null 2>&1; then
@@ -150,11 +151,11 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-group "Go front-end (gofmt / vet / build)"
+group "Go front-end (gofmt / vet / build / test)"
 # ------------------------------------------------------------------------------
 # The Go/termui dxdfir front-end (go/): gofmt must be clean, `go vet` must pass,
-# and the module must build. Skipped when the Go toolchain is not installed
-# (CI installs it via actions/setup-go).
+# the module must build, and the package tests must pass. Skipped when the Go
+# toolchain is not installed (CI installs it via actions/setup-go).
 if command -v go >/dev/null 2>&1; then
     _gofmt_out="$(gofmt -l go 2>/dev/null)"
     if [[ -z "$_gofmt_out" ]]; then
@@ -174,6 +175,12 @@ if command -v go >/dev/null 2>&1; then
     else
         fail "go build failed (run: cd go && go build ./...)"
         printf '%s\n' "$_gobuild_out" | sed 's/^/      /'
+    fi
+    if _gotest_out="$( (cd go && go test ./...) 2>&1 )"; then
+        pass "go test ./..."
+    else
+        fail "go test failed (run: cd go && go test ./...)"
+        printf '%s\n' "$_gotest_out" | sed 's/^/      /'
     fi
 else
     skip "go toolchain not installed"

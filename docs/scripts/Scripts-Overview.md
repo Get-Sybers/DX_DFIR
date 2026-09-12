@@ -79,8 +79,8 @@ The analysis container images are catalogued in [Containers](/docs/Containers.md
 |---|---|
 | `setup-environment.sh` | Installs Docker and userland deps (distro-aware); image seeding split into `save-docker-images.sh`. |
 | `save-docker-images.sh` | Save the built hardened `dxdfir/*` images (+ the pulled .NET runtime) as tarballs; `--load` / `--verify` restore them and assert the hardened inventory. |
-| `package-offline.sh` | Build ONE portable air-gap bundle: images, `dxdfir` CLI + deps as wheels, pinned collections, the repo, and `data_store/dependencies/` (YARA/Suricata/Hayabusa rulesets + binary, Volatility symbols, EvtxECmd) under a `MANIFEST.sha256`. |
-| `setup-offline.sh` | Set up from that bundle with zero network: manifest-verify everything, unpack the repo + detection dependencies, load images, install CLI/collections offline, finish with `dxdfir verify-images`. |
+| `package-offline.sh` | Build ONE portable air-gap bundle: images, the `get_sybers_dxdfir` processor package + deps as wheels, the Go front-end's vendored modules (`go-vendor.tar`), pinned collections, the repo, and `data_store/dependencies/` (YARA/Suricata/Hayabusa rulesets + binary, Volatility symbols, EvtxECmd) under a `MANIFEST.sha256`. |
+| `setup-offline.sh` | Set up from that bundle with zero network: manifest-verify everything, unpack the repo + detection dependencies, load images, install the package/collections offline, build the Go `dxdfir` front-end from the vendored modules, finish with `dxdfir verify-images` (or the same audit play via `ansible-playbook` when no Go toolchain is present). |
 
 The Splunk-era and KAPE PowerShell scripts were retired (git history and the frozen
 `deprecated` branch keep them).

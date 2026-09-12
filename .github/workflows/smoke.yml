@@ -31,7 +31,6 @@ on:
       - "python/pyproject.toml"
       - "docker/evtxecmd/**"
       - "docker/hardening/**"
-      - "docker/runtime/**"
       - ".gitmodules"
       - "third_party/**"
       - "tests/smoke-test.sh"
@@ -62,9 +61,10 @@ jobs:
       # The smoke test drives the processors and the CAR lane directly
       # (python -m get_sybers_dxdfir.<module> on PYTHONPATH=python). Installing
       # the package brings its declared dependencies (PyYAML for the engine's
-      # model sources, typer for the CLI); nothing else is needed.
+      # model sources, among others) under the python/constraints.txt lock;
+      # nothing else is needed.
       - name: Install the dxdfir package
-        run: python -m pip install --quiet ./python
+        run: python -m pip install --quiet --constraint python/constraints.txt ./python
 
       # The evtx lane runs EvtxECmd from the bundled image; build it once here
       # (the smoke test asserts its presence and fails loudly if absent).

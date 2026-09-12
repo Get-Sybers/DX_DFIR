@@ -36,7 +36,7 @@ loose process and slow responses.
 
 ## Before you start
 
-Read [What Actually Works](/README.md#what-actually-works) and the
+Read the [pipeline task board](/project-progress.md) and its
 [Known Limitations](/project-progress.md#-known-limitations). A lot of what
 looks broken is known to be broken, and some of it is deliberately deferred.
 

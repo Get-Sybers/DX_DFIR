@@ -1,7 +1,7 @@
 # Get Started
 
-> These steps reflect the paths that actually work today. See
-> [What Actually Works](/README.md#what-actually-works) before you start, and
+> These steps reflect the paths that actually work today. See the
+> [pipeline task board](/project-progress.md) before you start, and
 > read [THIRD_PARTY_NOTICES.md](/THIRD_PARTY_NOTICES.md) for the terms that bind
 > you as the operator (the tools, the fetched rulesets, the Elastic licence).
 
@@ -12,7 +12,7 @@ The **`dxdfir` CLI** is the pipeline's front-end (three-layer design — see
 walk a run end to end:
 
 ```bash
-pip install ./python     # provides dxdfir + ansible-core; or run scripts/setup-environment.sh
+scripts/setup-environment.sh  # builds the Go dxdfir front-end (go/) + installs the processors and ansible-core
 dxdfir process plaso     # sources: plaso | zeek | evtx | volatility | zimmerman | signatures
 dxdfir build-car         # normalise every processed source into CAR (car_<object>.jsonl)
 dxdfir verify-car        # the CAR correctness gate over what was written

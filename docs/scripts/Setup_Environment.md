@@ -11,10 +11,10 @@ concern and lives in its own script, [`save-docker-images.sh`](#pre-seeding-imag
 On a host with registry access nothing further is needed — the individual
 processing scripts pull their images on first use.
 
-> **For the `dxdfir` CLI path** (the pipeline front-end): this script installs the
-> *scripts'* dependencies, not the CLI's. `dxdfir` additionally needs
-> `ansible-playbook` on `PATH` and the Python package installed with
-> `pip install ./python` (which provides the `dxdfir` command and Typer) — see
+> **For the `dxdfir` front-end** (the pipeline's entry point): this script also
+> builds and installs the Go `dxdfir` binary (`go/`, installing the Go toolchain
+> when absent) and installs the `get_sybers_dxdfir` processor package —
+> `ansible-core` included, so `ansible-playbook` lands in the same venv — see
 > [How It Runs](/README.md#how-it-runs).
 
 ## Prerequisites
