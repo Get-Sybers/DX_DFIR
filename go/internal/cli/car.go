@@ -51,8 +51,11 @@ func newBuildCarCmd(env *Env) *cobra.Command {
 					vars = append(vars, "dxdfir_car_rebuild=true")
 				}
 			}
-			code := run.Passthrough(context.Background(),
-				ansiblePlan(r, ap, "dxdfir-build-car.yml", vars, false), true)
+			plan, err := ansiblePlan(r, ap, "dxdfir-build-car.yml", vars, false)
+			if err != nil {
+				return err
+			}
+			code := run.Passthrough(context.Background(), plan, true)
 			return exitCode(code)
 		},
 	}
@@ -81,8 +84,11 @@ func newVerifyCarCmd(env *Env) *cobra.Command {
 			}
 			vars := []string{"dxdfir_car_action=verify"}
 			vars = appendVar(vars, "dxdfir_car_dir", carDir)
-			code := run.Passthrough(context.Background(),
-				ansiblePlan(r, ap, "dxdfir-verify-car.yml", vars, false), true)
+			plan, err := ansiblePlan(r, ap, "dxdfir-verify-car.yml", vars, false)
+			if err != nil {
+				return err
+			}
+			code := run.Passthrough(context.Background(), plan, true)
 			return exitCode(code)
 		},
 	}
@@ -116,8 +122,11 @@ func newCarTimelineCmd(env *Env) *cobra.Command {
 			vars = appendVar(vars, "dxdfir_car_timeline_host", host)
 			vars = appendVar(vars, "dxdfir_car_timeline_after", after)
 			vars = appendVar(vars, "dxdfir_car_timeline_before", before)
-			code := run.Passthrough(context.Background(),
-				ansiblePlan(r, ap, "dxdfir-car-timeline.yml", vars, false), true)
+			plan, err := ansiblePlan(r, ap, "dxdfir-car-timeline.yml", vars, false)
+			if err != nil {
+				return err
+			}
+			code := run.Passthrough(context.Background(), plan, true)
 			return exitCode(code)
 		},
 	}

@@ -12,7 +12,8 @@ import (
 )
 
 // CollectionPath is the marker that identifies a DX_DFIR checkout: a directory
-// is the repo root iff this path exists beneath it (same test as cli.py).
+// is the repo root iff this path exists beneath it (the same test the retired
+// Python CLI used).
 const CollectionPath = "ansible/collections/get_sybers.dxdfir"
 
 // Repo is a resolved DX_DFIR checkout.
@@ -63,7 +64,8 @@ func (r *Repo) Path(parts ...string) string {
 func (r *Repo) CollectionDir() string { return r.Path(CollectionPath) }
 
 // RolesPath is the value for ANSIBLE_ROLES_PATH so a play resolves the roles
-// without the collection being installed (same as cli.py).
+// without the collection being installed (the contract the retired Python CLI
+// established).
 func (r *Repo) RolesPath() string { return r.Path(CollectionPath, "roles") }
 
 // ProcessPlaybook returns the per-source process playbook path.
@@ -93,7 +95,7 @@ func Python() (string, error) {
 // AnsiblePlaybook returns the ansible-playbook to drive the collection. It
 // prefers the one installed alongside the resolved interpreter (ansible-core is
 // a declared dependency of get_sybers_dxdfir, so it ships next to it), then
-// falls back to PATH — the same preference order as cli.py.
+// falls back to PATH — the same preference order the retired Python CLI used.
 func AnsiblePlaybook() (string, error) {
 	if py, err := Python(); err == nil {
 		cand := filepath.Join(filepath.Dir(py), "ansible-playbook")
@@ -109,7 +111,8 @@ func AnsiblePlaybook() (string, error) {
 			"(`pip install ./python` or scripts/setup-environment.sh) — ansible-core ships with it")
 }
 
-// Require returns an error if a tool is not on PATH (fail loud, like cli._need).
+// Require returns an error if a tool is not on PATH (fail loud, as the retired
+// Python CLI did).
 func Require(tool string) error {
 	if _, err := exec.LookPath(tool); err != nil {
 		return fmt.Errorf("required tool not on PATH: %s", tool)

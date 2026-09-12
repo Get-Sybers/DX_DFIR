@@ -1,6 +1,6 @@
 // Package style is the single home for the terminal colour + glyph vocabulary,
-// translated from the Python CLI's typer palette into an ANSI/256-colour set the
-// plain presenter and all non-dashboard verbs share. Colours target STDERR
+// translated from the retired Python CLI's palette into an ANSI/256-colour set
+// the plain presenter and all non-dashboard verbs share. Colours target STDERR
 // (diagnostics); machine-readable payloads on stdout are never styled.
 //
 // The glyph set is deliberately ASCII-safe: termui pins go-runewidth v0.0.2,
@@ -22,7 +22,7 @@ func colorEnabled() bool {
 	return err == nil && fi.Mode()&os.ModeCharDevice != 0
 }
 
-// ANSI SGR codes for the palette. Semantics mirror the Python CLI:
+// ANSI SGR codes for the palette. Semantics mirror the retired Python CLI:
 //
 //	grey   → the "→ command" echo and secondary/info lines
 //	green  → success, present/non-zero counts, progress headers
