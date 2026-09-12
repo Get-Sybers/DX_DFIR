@@ -7,7 +7,7 @@
 ## The gap
 
 The north star for this arc is **a timeline based on behaviour rather than
-artefacts**. `piiat_mitrecar/timeline.py` builds it from `car.db` (with
+artefacts**. `byakugan/timeline.py` builds it from `car.db` (with
 `superset.db`): it walks the normalized CAR objects and the relationship edges
 between them and emits them time-ordered — a behaviour view, not a per-parser
 event dump.

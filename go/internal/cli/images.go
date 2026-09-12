@@ -45,8 +45,11 @@ func newBuildDockerCmd(env *Env) *cobra.Command {
 				vars = append(vars, "dxdfir_images_set="+string(set))
 			}
 			vars = append(vars, extraVars...)
-			code := run.Passthrough(context.Background(),
-				ansiblePlan(r, ap, "dxdfir-build-images.yml", vars, false), true)
+			plan, err := ansiblePlan(r, ap, "dxdfir-build-images.yml", vars, false)
+			if err != nil {
+				return err
+			}
+			code := run.Passthrough(context.Background(), plan, true)
 			return exitCode(code)
 		},
 	}
@@ -74,8 +77,11 @@ func newVerifyImagesCmd(env *Env) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			code := run.Passthrough(context.Background(),
-				ansiblePlan(r, ap, "dxdfir-verify-images.yml", nil, false), true)
+			plan, err := ansiblePlan(r, ap, "dxdfir-verify-images.yml", nil, false)
+			if err != nil {
+				return err
+			}
+			code := run.Passthrough(context.Background(), plan, true)
 			return exitCode(code)
 		},
 	}

@@ -2,7 +2,7 @@
 
 Authoritative "find once, done" map of **every canonical field × every artefact/source that can supply it** for the MITRE CAR **`user_session`** object, as implemented in this repo. Grounded in the pinned CAR data model, the engine mappings, the generated source YAMLs, and real evidence in `data_store/processed/`.
 
-- **Object def (pinned):** `third_party/piiat-mitrecar/third_party/car/data_model/user_session.yaml`; `car_data_model.json` (lines 364–388).
+- **Object def (pinned):** `byakugan/third_party/car/data_model/user_session.yaml`; `car_data_model.json` (lines 364–388).
 - **Fields (10):** `dest_ip, dest_port, hostname, login_id, login_successful, login_type, src_ip, src_port, uid, user`
 - **Actions (5):** `lock, login, logout, reconnect, unlock`
 - **OSSEM-CDM:** no `user_session` schema exists (only `network_session.yml`) — nothing to cross-check against there.
@@ -11,11 +11,11 @@ Authoritative "find once, done" map of **every canonical field × every artefact
 
 | # | source key | tool / parser | events | actions produced | map file | source yaml |
 |---|---|---|---|---|---|---|
-| S1 | `evtx_security_sessions` | EvtxECmd (Security channel) *(alt: Plaso winevt via `l2t_winevt` adapter)* | 4624; 4634/4647/4779; 4778 | login/**unlock**(LogonType 7); logout; reconnect | `piiat_mitrecar/mappings/evtx_windows.py` | `sources/evtx_security_sessions.yaml` |
-| S2 | `evtx_rdp` | EvtxECmd (TerminalServices-LocalSessionManager) | 21; 24; 25 | login; logout; reconnect | `piiat_mitrecar/mappings/evtx_extra.py` | `sources/evtx_rdp.yaml` |
-| S3 | `evtx_more` | EvtxECmd (System / Winlogon) | 7001; 7002 | login; logout | `piiat_mitrecar/mappings/evtx_more.py` | `sources/evtx_more.yaml` |
-| S4 | `l2t_utmp` / `l2t_utmpx` | Plaso utmp / utmpx (Linux/macOS login DB, incl. wtmp) | record-type 6/7; 8 | login; logout | `piiat_mitrecar/mappings/plaso_linux.py` | `sources/l2t_utmp.yaml`, `l2t_utmpx.yaml` |
-| S5 | `l2t_text` | Plaso syslog (`syslog:ssh:login`) | sshd "Accepted" | login | `piiat_mitrecar/mappings/plaso_linux.py` | `sources/l2t_text.yaml` |
+| S1 | `evtx_security_sessions` | EvtxECmd (Security channel) *(alt: Plaso winevt via `l2t_winevt` adapter)* | 4624; 4634/4647/4779; 4778 | login/**unlock**(LogonType 7); logout; reconnect | `byakugan/byakugan/mappings/evtx_windows.py` | `sources/evtx_security_sessions.yaml` |
+| S2 | `evtx_rdp` | EvtxECmd (TerminalServices-LocalSessionManager) | 21; 24; 25 | login; logout; reconnect | `byakugan/byakugan/mappings/evtx_extra.py` | `sources/evtx_rdp.yaml` |
+| S3 | `evtx_more` | EvtxECmd (System / Winlogon) | 7001; 7002 | login; logout | `byakugan/byakugan/mappings/evtx_more.py` | `sources/evtx_more.yaml` |
+| S4 | `l2t_utmp` / `l2t_utmpx` | Plaso utmp / utmpx (Linux/macOS login DB, incl. wtmp) | record-type 6/7; 8 | login; logout | `byakugan/byakugan/mappings/plaso_linux.py` | `sources/l2t_utmp.yaml`, `l2t_utmpx.yaml` |
+| S5 | `l2t_text` | Plaso syslog (`syslog:ssh:login`) | sshd "Accepted" | login | `byakugan/byakugan/mappings/plaso_linux.py` | `sources/l2t_text.yaml` |
 | S6 | `windows.piiat.sessions` | Volatility3 (PIIAT-Mem custom plugin) | per-process token LUID | login | `third_party/piiat-mem/piiat_mem/mappings.py` (+ `plugins/windows/piiat/sessions.py`) | `sources/memory.yaml` |
 | S7 | `windows.sessions` | Volatility3 built-in (fallback) | TS session | login | `third_party/piiat-mem/piiat_mem/mappings.py` | — |
 

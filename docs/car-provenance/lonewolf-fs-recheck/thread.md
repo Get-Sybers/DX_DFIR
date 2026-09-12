@@ -21,7 +21,7 @@ only their filesystem metadata and parses none of their contents.
 **Fields (15):** hostname, src_pid, src_tid, stack_base, stack_limit, start_address, start_function,
 start_module, start_module_name, tgt_pid, tgt_tid, uid, user, user_stack_base, user_stack_limit.
 **Actions (4):** create, remote_create, suspend, terminate.
-(Authoritative: `car_data_model.json` L337-363; `third_party/piiat-mitrecar/third_party/car/data_model/thread.yaml`.)
+(Authoritative: `car_data_model.json` L337-363; `byakugan/third_party/car/data_model/thread.yaml`.)
 
 **Evidence (full-file tallies, read verbatim — not a thin fixture):**
 `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl`
@@ -32,7 +32,7 @@ is **`jcloudy`** (+ `defaultuser0` OOBE). 66 distinct `data_type`s in the whole 
 
 ## 0. What the pipeline can do with threads from disk (code reality)
 
-Exhaustive grep of the ingest code (`third_party/piiat-mitrecar/piiat_mitrecar` + `sources`,
+Exhaustive grep of the ingest code (`byakugan/byakugan` + `sources`,
 `third_party/piiat-mem/piiat_mem`, `python/`):
 
 - **The ONLY `thread` producer in the entire pipeline is Sysmon EID 8** (`mappings/sysmon.py`
@@ -252,12 +252,12 @@ unmined by the current pipeline (captured as filenames, never parsed).
 
 - Evidence: `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl` (6.6 GB)
 - Canonical model: `car_data_model.json` (L337-363);
-  `third_party/piiat-mitrecar/third_party/car/data_model/thread.yaml`
-- Only `thread` producer (runtime, out of scope): `…/piiat_mitrecar/mappings/sysmon.py` (L442-467, EID 8)
-- `fs:stat` → **file** object (never thread): `…/piiat_mitrecar/mappings/plaso_fs_extra.py`
+  `byakugan/third_party/car/data_model/thread.yaml`
+- Only `thread` producer (runtime, out of scope): `…/byakugan/mappings/sysmon.py` (L442-467, EID 8)
+- `fs:stat` → **file** object (never thread): `…/byakugan/mappings/plaso_fs_extra.py`
 - Prior runtime catalogue (Sysmon EID 8 + memory lanes): `../thread.md`
 - Confirmed ABSENT from the pipeline (grep, zero matches): any minidump / WER / crashdump / hiberfil /
-  pagefile parser or map across `piiat_mitrecar`, `piiat-mem/piiat_mem`, `sources`, `python/`.
+  pagefile parser or map across `byakugan`, `piiat-mem/piiat_mem`, `sources`, `python/`.
 - Real disk artefacts (all `fs:stat` metadata only, contents unparsed): crash dumps
   `\Users\jcloudy\AppData\Local\CrashDumps\Dropbox.exe.{13188,5748,9780}.dmp`,
   `\Windows\System32\config\systemprofile\AppData\Local\CrashDumps\svchost.exe.4104.dmp`,

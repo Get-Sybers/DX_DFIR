@@ -1,7 +1,7 @@
 # Get Started
 
-> These steps reflect the paths that actually work today. See
-> [What Actually Works](/README.md#what-actually-works) before you start, and
+> These steps reflect the paths that actually work today. See the
+> [pipeline task board](/project-progress.md) before you start, and
 > read [THIRD_PARTY_NOTICES.md](/THIRD_PARTY_NOTICES.md) for the terms that bind
 > you as the operator (the tools, the fetched rulesets, the Elastic licence).
 
@@ -12,7 +12,7 @@ The **`dxdfir` CLI** is the pipeline's front-end (three-layer design — see
 walk a run end to end:
 
 ```bash
-pip install ./python     # provides dxdfir + ansible-core; or run scripts/setup-environment.sh
+scripts/setup-environment.sh  # builds the Go dxdfir front-end (go/) + installs the processors and ansible-core
 dxdfir process plaso     # sources: plaso | zeek | evtx | volatility | zimmerman | signatures
 dxdfir build-car         # normalise every processed source into CAR (car_<object>.jsonl)
 dxdfir verify-car        # the CAR correctness gate over what was written
@@ -85,10 +85,13 @@ dxdfir build-car                             # every source under data_store/pro
 dxdfir verify-car                            # the promotion gate over the result
 dxdfir car-timeline data_store/processed/car # one time-ordered timeline across every source
 ```
-- `build-car` drives the vendored [PIIAT-MitreCar](https://github.com/Get-Sybers/PIIAT-MitreCar)
-  engine: each processed source becomes its own `car.db` + `superset.db` and one
-  `car_<object>.jsonl` per populated CAR object (plus `car_relationships.jsonl`)
-  under `data_store/processed/car/<source>/`. A source whose store exists is
+- `build-car` drives the external [Byakugan](https://github.com/Get-Sybers/byakugan)
+  engine — the recursive checkout `scripts/setup-environment.sh` provisions at
+  the commit pinned in `byakugan.ref` (default: `byakugan/` beside the repo;
+  set `$BYAKUGAN_ROOT` to point elsewhere): each processed source becomes its
+  own `car.db` + `superset.db` and one `car_<object>.jsonl` per populated CAR
+  object (plus `car_relationships.jsonl`) under
+  `data_store/processed/car/<source>/`. A source whose store exists is
   left alone; `--rebuild` re-derives it after a map change.
 - `verify-car` asserts what was written: each exercised object populated, values
   sane (IPs, ports, SIDs, `car_action` in the engine model's vocabulary), every

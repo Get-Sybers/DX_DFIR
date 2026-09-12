@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	playbook "github.com/apenella/go-ansible/v2/pkg/playbook"
+
 	"github.com/get-sybers/dx_dfir/go/internal/model"
 	"github.com/get-sybers/dx_dfir/go/internal/repo"
 	"github.com/get-sybers/dx_dfir/go/internal/run"
@@ -122,9 +124,17 @@ func (j *Job) runLane(ctx context.Context, updates chan<- model.Update, lane *mo
 	outDir := lr.Spec.outDir(j.Repo.Root, j.Pipeline)
 	longPole := lr.Spec.Kind == model.KindHeartbeat || lr.Spec.Name == "volatility"
 
+	args, err := j.ansibleArgs(lr)
+	if err != nil {
+		lane.State = model.Failed
+		lane.Ended = time.Now()
+		lane.Fails = appendCapped(lane.Fails, err.Error(), 12)
+		emit("", nil)
+		return err
+	}
 	plan := run.Plan{
 		Bin:  j.Ansible,
-		Args: j.ansibleArgs(lr),
+		Args: args,
 		Dir:  j.Repo.Root,
 		Env:  []string{"ANSIBLE_ROLES_PATH=" + j.Repo.RolesPath()},
 	}
@@ -195,21 +205,44 @@ func (j *Job) runLane(ctx context.Context, updates chan<- model.Update, lane *mo
 	}
 }
 
-// ansibleArgs mirrors cli.py._process_lane exactly.
-func (j *Job) ansibleArgs(lr LaneRun) []string {
+// ansibleArgs builds the argv (after the binary) that drives one lane's
+// process playbook, honouring the collection playbook contract and the roles'
+// argument_specs: -e dxdfir_<lane>_pipeline / dxdfir_<lane>_force select the
+// role's behaviour, collection scope vars narrow the inputs.
+//
+// The base command (inventory localhost,/connection local + playbook path)
+// comes from the go-ansible typed builder. The -e vars are deliberately NOT
+// fed through AnsiblePlaybookOptions.ExtraVars (that would serialize them as
+// one JSON --extra-vars blob and lose ordering); they are appended manually as
+// ordered repeated -e pairs: pipeline/force first, then the collection
+// ScopeVars, then the user's --extra-var values LAST so ansible's last-wins
+// semantics let a user override any of them.
+func (j *Job) ansibleArgs(lr LaneRun) ([]string, error) {
 	name := lr.Spec.Name
-	args := []string{
-		"-i", "localhost,", "-c", "local", j.Repo.ProcessPlaybook(name),
-		"-e", "dxdfir_" + name + "_pipeline=" + j.Pipeline,
-		"-e", "dxdfir_" + name + "_force=" + boolStr(j.Force),
+	cmd := playbook.NewAnsiblePlaybookCmd(
+		playbook.WithBinary(j.Ansible),
+		playbook.WithPlaybooks(j.Repo.ProcessPlaybook(name)),
+		playbook.WithPlaybookOptions(&playbook.AnsiblePlaybookOptions{
+			Inventory:  "localhost,",
+			Connection: "local",
+		}),
+	)
+	argv, err := cmd.Command()
+	if err != nil {
+		return nil, err
 	}
+	args := append([]string(nil), argv[1:]...)
+	args = append(args,
+		"-e", "dxdfir_"+name+"_pipeline="+j.Pipeline,
+		"-e", "dxdfir_"+name+"_force="+boolStr(j.Force),
+	)
 	for _, kv := range lr.ScopeVars { // collection scope first (an --extra-var can override)
 		args = append(args, "-e", kv)
 	}
 	for _, kv := range j.ExtraVars {
 		args = append(args, "-e", kv)
 	}
-	return args
+	return args, nil
 }
 
 // activeLog returns the newest on-disk tool log for the lane's active item.

@@ -30,10 +30,10 @@ covered by the prior event-log audit (`docs/car-provenance/authentication.md`).
   rows, 12 `windows:registry:winlogon`, full `SOFTWARE\...\ProfileList`, LSA policy
   keys, `windows:tasks:job`. This is the authoritative "what the pipeline actually
   sees from a disk image" corpus.
-- Engine maps: `third_party/piiat-mitrecar/piiat_mitrecar/mappings/plaso_registry.py`
+- Engine maps: `byakugan/byakugan/mappings/plaso_registry.py`
   (every `windows:registry:*` → **registry** `key_edit`, sam/profile fields kept
   `_native`), `mappings/core.py` (the ONLY `authentication` mapper — evtx Security).
-- Routing: `piiat_mitrecar/pipeline.py:62` (`.L2tWinreg → plaso_registry`),
+- Routing: `byakugan/byakugan/pipeline.py:62` (`.L2tWinreg → plaso_registry`),
   `sources/*.yaml` — **only `evtx_security.yaml` declares `data_model_coverage:
   authentication`.** No plaso/registry/disk source routes to `authentication` at all.
 - Governing law: `docs/CAR-Extraction-Rules.md` §1 (extract every field the artefact

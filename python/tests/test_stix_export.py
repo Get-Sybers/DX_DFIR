@@ -14,10 +14,9 @@ import uuid
 
 import pytest
 import yaml
-from typer.testing import CliRunner
 
-from get_sybers_dxdfir import cli
 from get_sybers_dxdfir.detect import rules_loader as rl
+from get_sybers_dxdfir.stix import cli as stix_cli
 from get_sybers_dxdfir.stix import attack_index, config, export, hits, objects, opencti
 
 SCO_NS = uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
@@ -715,36 +714,47 @@ def test_run_export_writes_and_pushes(rules, tmp_path):
         export.run_export(config.StixConfig(rules_dir=str(tmp_path / "nope")), [str(jsonl)], transport=Explode())
 
 
-def test_cli_stix_export(tmp_path, monkeypatch):
-    runner = CliRunner()
+def _stix(argv, capsys):
+    """Drive the argparse CLI exactly as the Go passthrough does — an argv list to
+    ``main`` — and return (exit_code, stdout, stderr)."""
+    try:
+        stix_cli.main(argv)
+        code = 0
+    except SystemExit as e:
+        code = e.code if e.code is not None else 0
+    captured = capsys.readouterr()
+    return code, captured.out, captured.err
+
+
+def test_cli_stix_export(tmp_path, monkeypatch, capsys):
     jsonl = tmp_path / "hits.jsonl"
     jsonl.write_text(json.dumps(ENVELOPE) + "\n")
     out = tmp_path / "bundle.json"
-    r = runner.invoke(cli.app, ["stix", "export", "--hits", str(jsonl), "--out", str(out),
-                                "--case", "CASE-7", "--tlp", "green"])
-    assert r.exit_code == 0, r.output
+    code, stdout, stderr = _stix(["export", "--hits", str(jsonl), "--out", str(out),
+                                  "--case", "CASE-7", "--tlp", "green"], capsys)
+    assert code == 0, stdout + stderr
     bundle = json.loads(out.read_text())
     assert export.validate_bundle(bundle, external_ids=attack_index.load_attack_index().ids) == ([], [])
     assert not _by_type(bundle, "marking-definition")
     assert _one(bundle, "sighting")["object_marking_refs"] == [objects.TLP_MARKING_IDS["green"]]
     assert _one(bundle, "indicator")["pattern_version"] == config.DEFAULT_STACK_VERSION   # the package's rules
-    summary = json.loads(r.stdout)
+    summary = json.loads(stdout)
     assert summary["summary"]["sightings"] == 1 and summary["bundle"] == str(out)
     # --push takes endpoint/token from the environment and goes through the transport
     rec = RecordingTransport()
     monkeypatch.setattr(opencti, "UrllibTransport", lambda: rec)
     monkeypatch.setenv("DXDFIR_OPENCTI_URL", "https://env.test")
     monkeypatch.setenv("DXDFIR_OPENCTI_TOKEN", "env-token")
-    r = runner.invoke(cli.app, ["stix", "export", "--hits", str(jsonl), "--out", str(out), "--push"])
-    assert r.exit_code == 0, r.output
+    code, stdout, stderr = _stix(["export", "--hits", str(jsonl), "--out", str(out), "--push"], capsys)
+    assert code == 0, stdout + stderr
     assert rec.calls[0][0] == "https://env.test/graphql"
     assert rec.calls[0][1]["Authorization"] == "Bearer env-token"
     # a refused push is exit 1; --push without a token is exit 2; no inputs is exit 2
     monkeypatch.setattr(opencti, "UrllibTransport", lambda: RecordingTransport(403, ""))
-    assert runner.invoke(cli.app, ["stix", "export", "--hits", str(jsonl), "--push"]).exit_code == 1
+    assert _stix(["export", "--hits", str(jsonl), "--push"], capsys)[0] == 1
     monkeypatch.delenv("DXDFIR_OPENCTI_TOKEN")
-    assert runner.invoke(cli.app, ["stix", "export", "--hits", str(jsonl), "--push"]).exit_code == 2
-    assert runner.invoke(cli.app, ["stix", "export"]).exit_code == 2
+    assert _stix(["export", "--hits", str(jsonl), "--push"], capsys)[0] == 2
+    assert _stix(["export"], capsys)[0] == 2
 
 
 # ---- the ATT&CK index: MITRE's authoritative attack-pattern ids (BP §5.2, §2.2)

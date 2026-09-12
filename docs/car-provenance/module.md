@@ -5,8 +5,8 @@
 **Fields (12):** `base_address, fqdn, hostname, image_path, md5_hash, module_name, module_path, pid, sha1_hash, sha256_hash, signature_valid, signer, tid`
 
 Grounding read:
-- Semantics: `third_party/piiat-mitrecar/third_party/car/data_model/module.yaml`; `third_party/piiat-mitrecar/third_party/car/OSSEM-CDM/schemas/entities/module.yml` (fields: name, path, is_signed, signature, signature_status — no hashes, no base_address, no tid in the CDM either); `car_data_model.json` (object list).
-- Engine maps: `third_party/piiat-mitrecar/piiat_mitrecar/mappings/sysmon.py` (EID 7), `.../mappings/evtx_more.py` (WMI 5857); sources `.../sources/evtx_sysmon.yaml`, `.../sources/evtx_more.yaml`, `.../sources/memory.yaml`.
+- Semantics: `byakugan/third_party/car/data_model/module.yaml`; `byakugan/third_party/car/OSSEM-CDM/schemas/entities/module.yml` (fields: name, path, is_signed, signature, signature_status — no hashes, no base_address, no tid in the CDM either); `car_data_model.json` (object list).
+- Engine maps: `byakugan/byakugan/mappings/sysmon.py` (EID 7), `.../mappings/evtx_more.py` (WMI 5857); sources `.../sources/evtx_sysmon.yaml`, `.../sources/evtx_more.yaml`, `.../sources/memory.yaml`.
 - Memory maps (PIIAT-Mem, finished-CAR passthrough): `third_party/piiat-mem/piiat_mem/mappings.py`, plugin `third_party/piiat-mem/plugins/windows/piiat/modules.py`, enrichment `third_party/piiat-mem/piiat_mem/enrich.py`.
 - Evidence: `data_store/processed/windows_logs/unspecified_host/log_EvtxECmd_Output.json`; `data_store/processed/volatility/memdump.mem/car.db`.
 

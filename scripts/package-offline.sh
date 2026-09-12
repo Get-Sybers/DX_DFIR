@@ -7,11 +7,24 @@
 #
 #   images/       the hardened dxdfir/* tool images (built + docker-saved) plus the
 #                 one unbuildable image (the .NET runtime), as tars
-#   wheels/       the dxdfir CLI and every Python dependency, as wheels
-#                 (pip download — installed offline with --no-index)
+#   wheels/       the get_sybers_dxdfir processor package, ansible-core and every
+#                 Python dependency, as wheels (installed offline with --no-index)
 #   collections/  the pinned ansible collections (community.docker, ansible.posix)
 #   repo.tar      a clean archive of the repository at HEAD (code, playbooks,
-#                 roles, docs, the data_store skeleton) — no evidence, no .git
+#                 roles, docs, the data_store skeleton) — no evidence, no .git,
+#                 and NO submodule content: git archive drops gitlinks, which is
+#                 why the two tarballs below exist at all
+#   byakugan.tar  the external Byakugan engine working tree at the commit pinned
+#                 by byakugan.ref (which rides inside repo.tar), INCLUDING the
+#                 nested car + attack-datasources model sources the engine
+#                 rebuilds its object model from AND its freshly built Go parse
+#                 binary go/bin/byakugan-parse (the engine's file ingestion
+#                 requires it and the air-gapped host may have no Go toolchain);
+#                 .git dirs pruned. That binary is a NATIVE executable, so this
+#                 bundle is only installable on the same OS/architecture it was
+#                 packaged on — which is why the bundle name carries <arch>.
+#   piiat-mem.tar the vendored third_party/piiat-mem tree (the volatility lane)
+#                 — the gitlink drop above meant it never reached older bundles
 #   deps.tar      data_store/dependencies/ — the signature rulesets (YARA,
 #                 Suricata, Hayabusa incl. its binary), the Volatility ISF
 #                 symbol cache and the EvtxECmd release: everything the
@@ -51,7 +64,7 @@ while [[ $# -gt 0 ]]; do
         --fetch-rules) DO_FETCH=1 ;;
         --no-tar) DO_TAR=0 ;;
         --no-images) DO_IMAGES=0 ;;
-        -h|--help) sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,43p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "❌ Unknown option: $1" >&2; exit 1 ;;
     esac
     shift
@@ -61,13 +74,17 @@ die() { echo "❌ $*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || die "required tool not on PATH: $1"; }
 
 need python3; need tar; need sha256sum; need git
+# go is REQUIRED now, not merely nice to have: the bundle carries the Byakugan
+# engine's Go parse binary prebuilt (§1c) because the engine's file ingestion
+# requires it and an air-gapped host may have no toolchain to build it with.
+need go
 [[ "$DO_IMAGES" -eq 1 ]] && { need docker; need ansible-playbook; }
 
 # Resolve a python that HAS pip (system python often ships without it).
 PIP=""
 if python3 -m pip --version >/dev/null 2>&1; then PIP="python3 -m pip"
 elif command -v pip3 >/dev/null 2>&1; then PIP="pip3"
-else die "no pip available (need python3 -m pip or pip3 to download the CLI wheels). Try: python3 -m ensurepip, or run inside a venv."; fi
+else die "no pip available (need python3 -m pip or pip3 to download the Python wheels). Try: python3 -m ensurepip, or run inside a venv."; fi
 
 VERSION="$(python3 -c "import tomllib,sys; print(tomllib.load(open('$REPO/python/pyproject.toml','rb'))['project']['version'])" 2>/dev/null || echo "0.0.0")"
 ARCH="$(uname -m)"
@@ -86,26 +103,96 @@ git -C "$REPO" archive --format=tar HEAD -o "$STAGE/repo.tar" \
 # ---- 1b. the Go front-end modules (vendored for a reproducible offline build) -
 # git archive only carries tracked files, so go/vendor (gitignored) is shipped
 # separately. The offline installer extracts it and builds with -mod=vendor.
-if command -v go >/dev/null 2>&1; then
-    echo "🐹 Vendoring the Go front-end modules ..."
-    ( cd "$REPO/go" && GOFLAGS= go mod vendor ) || die "go mod vendor failed."
-    tar -C "$REPO/go" -cf "$STAGE/go-vendor.tar" vendor \
-        || die "failed to package go/vendor."
-    ( cd "$REPO/go" && rm -rf vendor )   # keep the working tree clean
-    echo "   $(du -sh "$STAGE/go-vendor.tar" | cut -f1) of Go modules vendored."
-else
-    echo "⚠️  go not found; skipping Go module vendoring (the offline host will need"
-    echo "    the Go toolchain + network for the modules, or a prebuilt dxdfir binary)."
-fi
+# (go is asserted above, so this no longer degrades to a warning: a bundle with
+# no vendored modules AND no engine parse binary was the silently-useless one.)
+echo "🐹 Vendoring the Go front-end modules ..."
+( cd "$REPO/go" && GOFLAGS= go mod vendor ) || die "go mod vendor failed."
+tar -C "$REPO/go" -cf "$STAGE/go-vendor.tar" vendor \
+    || die "failed to package go/vendor."
+( cd "$REPO/go" && rm -rf vendor )   # keep the working tree clean
+echo "   $(du -sh "$STAGE/go-vendor.tar" | cut -f1) of Go modules vendored."
 
-# ---- 2. the dxdfir CLI + all Python deps as wheels ---------------------------
-echo "🐍 Building the dxdfir CLI and downloading Python dependencies as wheels ..."
+# ---- 1c. the external Byakugan engine (the CAR lane) -------------------------
+# git archive above carries tracked blobs only — gitlinks are dropped — so no
+# submodule content has EVER reached repo.tar; the CAR lane was silently absent
+# from every earlier bundle. The engine is now not even a submodule: it is an
+# external checkout ($BYAKUGAN_ROOT, else the sibling dir of this repo) pinned
+# by byakugan.ref. Package its WORKING TREE — including the nested
+# third_party/car + third_party/attack-datasources it reconstructs its object
+# model from — with .git dirs pruned (the offline host needs the tree at the
+# pin, not history). byakugan.ref itself rides inside repo.tar, so the bundle
+# records which commit this tree is meant to be.
+PROVISION_HINT="run scripts/setup-environment.sh, or manually: git clone --recurse-submodules https://github.com/Get-Sybers/byakugan <root> && git -C <root> checkout <ref from byakugan.ref> && git -C <root> submodule update --init --recursive"
+BYAKUGAN_ROOT="${BYAKUGAN_ROOT:-$(dirname "$REPO")/byakugan}"
+BYAKUGAN_REF="$(grep -vE '^[[:space:]]*(#|$)' "$REPO/byakugan.ref" 2>/dev/null | head -1 | tr -d '[:space:]')"
+[[ -d "$BYAKUGAN_ROOT" ]] \
+    || die "Byakugan engine not found at $BYAKUGAN_ROOT — $PROVISION_HINT"
+# The model sources are the point of shipping the engine: a tarball without
+# them would install cleanly offline and then die on the first build-car.
+for _src in "third_party/car" "third_party/attack-datasources"; do
+    [[ -n "$(find "$BYAKUGAN_ROOT/$_src" -mindepth 1 -print -quit 2>/dev/null)" ]] \
+        || die "engine model sources missing ($BYAKUGAN_ROOT/$_src is empty — nested submodules not initialised) — $PROVISION_HINT"
+done
+# Warn (don't die) off the pin: packaging a deliberate test build must stay
+# possible, but doing it by accident must not be silent.
+_bk_head="$(git -C "$BYAKUGAN_ROOT" rev-parse HEAD 2>/dev/null)"
+if [[ -n "$BYAKUGAN_REF" && -n "$_bk_head" && "$_bk_head" != "$BYAKUGAN_REF" ]]; then
+    echo "⚠️  engine checkout is at ${_bk_head:0:12} but byakugan.ref pins ${BYAKUGAN_REF:0:12} — bundling the CHECKOUT."
+fi
+# The engine's Go parse binary is the OTHER thing a bundle must not be missing:
+# the engine's file ingestion requires go/bin/byakugan-parse and errors with
+# build instructions without it — instructions an air-gapped host with no Go
+# toolchain cannot follow. So build it HERE, on the (online) packaging host,
+# and let it ride inside the tarball below. `go/bin/` is gitignored upstream,
+# which is irrelevant: this tars the WORKING TREE, not `git archive`.
+#
+# ARCH NOTE: byakugan-parse is a native executable for "$ARCH", exactly like the
+# saved container images, so the resulting bundle is arch-specific — the bundle
+# name carries $ARCH for precisely this reason. Package on the same
+# OS/architecture as the target host.
+[[ -d "$BYAKUGAN_ROOT/go" ]] \
+    || die "the Byakugan engine at $BYAKUGAN_ROOT has no go/ directory — the pinned commit (${BYAKUGAN_REF:-unknown}) predates the Go parse binary, or the checkout is incomplete. $PROVISION_HINT"
+echo "🐹 Building the engine's Go parse binary for $ARCH ($(go version 2>/dev/null | awk '{print $3}')) ..."
+# Mirrors `make -C "$BYAKUGAN_ROOT/go" build` (same package, same output path)
+# without making `make` a dependency of this script. GOTOOLCHAIN=local matches
+# the front-end builds: never auto-download a newer Go mid-package.
+( cd "$BYAKUGAN_ROOT/go" \
+    && GOFLAGS= GOTOOLCHAIN=local go build -o bin/byakugan-parse ./cmd/byakugan-parse ) \
+    || die "failed to build the engine's Go parse binary (equivalent: make -C \"$BYAKUGAN_ROOT/go\" build)."
+[[ -x "$BYAKUGAN_ROOT/go/bin/byakugan-parse" ]] \
+    || die "the engine build reported success but $BYAKUGAN_ROOT/go/bin/byakugan-parse is missing or not executable."
+
+echo "🔭 Archiving the Byakugan engine from $BYAKUGAN_ROOT (pin: ${BYAKUGAN_REF:-unknown}) ..."
+tar -C "$BYAKUGAN_ROOT" --exclude=.git -cf "$STAGE/byakugan.tar" . \
+    || die "failed to package the Byakugan engine."
+# Prove the binary actually made it in: a bundle that installs cleanly and then
+# dies on the first build-car is the exact failure this whole section exists to
+# stop, and a stray tar --exclude would reintroduce it silently.
+# Listing style differs between tar implementations (GNU prefixes the "./"
+# member root, others may strip it) — accept both forms.
+tar -tf "$STAGE/byakugan.tar" | grep -Eqx '(\./)?go/bin/byakugan-parse' \
+    || die "byakugan.tar does not contain go/bin/byakugan-parse — the offline CAR lane would be unrunnable."
+echo "   $(du -sh "$STAGE/byakugan.tar" | cut -f1) of engine (incl. car + attack-datasources model sources and the $ARCH parse binary)."
+
+# ---- 1d. the vendored piiat-mem tree (the volatility lane) -------------------
+# Same gitlink drop, other submodule: third_party/piiat-mem never reached
+# repo.tar either, so the offline volatility lane has always been broken.
+# Package the checked-out tree (rooted `piiat-mem`, so the installer can untar
+# it straight into <target>/third_party/).
+[[ -n "$(find "$REPO/third_party/piiat-mem" -mindepth 1 -print -quit 2>/dev/null)" ]] \
+    || die "third_party/piiat-mem is not checked out — run: git -C \"$REPO\" submodule update --init --recursive"
+echo "🧠 Archiving third_party/piiat-mem ..."
+tar -C "$REPO/third_party" --exclude=.git -cf "$STAGE/piiat-mem.tar" piiat-mem \
+    || die "failed to package third_party/piiat-mem."
+
+# ---- 2. the get_sybers_dxdfir package + all Python deps as wheels ------------
+echo "🐍 Building the get_sybers_dxdfir package and downloading Python dependencies as wheels ..."
 # `pip wheel` BUILDS the local project into a wheel AND resolves every
 # dependency into wheels — the project itself is what `pip download` omits.
 # --constraint pins them to python/constraints.txt, the SAME lock
 # setup-environment.sh uses, so the offline bundle carries the exact tested versions.
 $PIP wheel --wheel-dir "$STAGE/wheels" --constraint "$REPO/python/constraints.txt" "$REPO/python" >/dev/null \
-    || die "pip wheel of the CLI failed."
+    || die "pip wheel of the python package failed."
 # bootstrap wheels so the offline venv can upgrade its own pip
 $PIP download --dest "$STAGE/wheels" pip setuptools wheel >/dev/null 2>&1 || true
 

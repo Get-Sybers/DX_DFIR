@@ -20,7 +20,7 @@ import (
 // failed, or the window is below the minimum). The caller falls back to plain.
 var ErrNoTTY = errors.New("tui: terminal unavailable")
 
-// 256-colour palette translated from the Python CLI's typer vocabulary.
+// 256-colour palette translated from the retired Python CLI's palette.
 const (
 	colGreen  = ui.Color(71)
 	colYellow = ui.Color(178)

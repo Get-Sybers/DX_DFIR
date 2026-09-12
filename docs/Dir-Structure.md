@@ -1,20 +1,23 @@
 ## Find Your Way Around
 
-The pipeline is a three-layer design: the **`dxdfir` CLI** (the verbs) drives the
-**`get_sybers.dxdfir` Ansible collection** (orchestration), which invokes the
-**`get_sybers_dxdfir` Python package** (the per-item processing).
+The pipeline is a three-layer design: the **`dxdfir` front-end** (the Go binary,
+`go/` — the verbs) drives the **`get_sybers.dxdfir` Ansible collection**
+(orchestration), which invokes the **`get_sybers_dxdfir` Python package** (the
+per-item processing).
 
 ```
   $DX_DFIR
-    └── python/                                       # get_sybers_dxdfir package + the dxdfir CLI — the front-end
-    │   └── get_sybers_dxdfir/                          # processors (zeek/plaso/volatility/evtx/zimmerman/signatures), the CAR lane (mitrecar, carcheck), stix/, cli.py
-    │   │   └── detect/rules/                         # the Elastic detection rules-as-code (ES|QL / EQL, one YAML per rule)
+    └── go/                                           # the dxdfir front-end (Go/termui) — verbs + dashboards; shells out, re-implements nothing
     │   └── man/                                      # dxdfir.1 man page
+    │
+    └── python/                                       # get_sybers_dxdfir package — the processors the front-end and roles invoke
+    │   └── get_sybers_dxdfir/                          # processors (zeek/plaso/volatility/evtx/zimmerman/signatures), the CAR lane (mitrecar, carcheck), stix/
+    │   │   └── detect/rules/                         # the Elastic detection rules-as-code (ES|QL / EQL, one YAML per rule)
     │   └── tests/                                    # pytest unit tests (pure logic, no Docker)
     │
     └── ansible/collections/get_sybers.dxdfir/         # the Ansible collection — orchestration
-    │   └── roles/                                    # one role per source + dxdfir_images + the SOF-ELK deploy/deliver roles
-    │   └── playbooks/                                # dxdfir-process-* / dxdfir-build-images / dxdfir-deploy-sofelk / dxdfir-ingest-sofelk
+    │   └── roles/                                    # one role per source + dxdfir_images / dxdfir_car / dxdfir_stack / dxdfir_cleanup + the SOF-ELK deploy/deliver roles
+    │   └── playbooks/                                # dxdfir-process-* / dxdfir-build-images / dxdfir-verify-images / dxdfir-build-car / dxdfir-verify-car / dxdfir-car-timeline / dxdfir-stack-* / dxdfir-cleanup / dxdfir-deploy-sofelk / dxdfir-ingest-sofelk
     │
     └── scripts/                                      # Host provisioning: setup, image save/load, the offline bundle (bash)
     │
@@ -22,7 +25,7 @@ The pipeline is a three-layer design: the **`dxdfir` CLI** (the verbs) drives th
     │
     └── dev-scripts/                                  # Experimental/one-off helpers, unsupported (e.g. the Plaso output module)
     │
-    └── third_party/                                  # Vendored engines, as submodules: PIIAT-MitreCar (CAR), PIIAT-Mem (memory)
+    └── third_party/                                  # Vendored as a submodule: PIIAT-Mem (memory)
     │
     └── tests/                                        # run-checks.sh (the check harness that gates CI), smoke-test.sh, the Elastic risk gate
     │
@@ -82,6 +85,11 @@ The pipeline is a three-layer design: the **`dxdfir` CLI** (the verbs) drives th
             │
             └── sofelk/<tool>/                        # --pipeline sofelk output, delivered by dxdfir-ingest-sofelk.yml
 ```
+
+One engine lives **outside** this tree: the CAR lane drives the Byakugan engine
+from an external recursive checkout — `$BYAKUGAN_ROOT`, or a `byakugan/`
+directory beside the DX_DFIR repo — pinned by the repo-root `byakugan.ref` and
+provisioned by `scripts/setup-environment.sh`.
 
 The Splunk-era tree (`splunk/` with its eight apps, and a since-removed
 in-container provisioning `ansible/` — **unrelated to today's

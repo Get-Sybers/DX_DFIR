@@ -5,9 +5,9 @@
 **Canonical fields (19):** ad_domain, app_name, auth_service, auth_target, decision_reason, fqdn, hostname, method, response_time, target_ad_domain, target_uid, target_user, target_user_role, target_user_type, uid, user, user_agent, user_role, user_type
 
 **Ground truth read:**
-- Semantics: `third_party/piiat-mitrecar/third_party/car/data_model/authentication.yaml`, `.../docs/data_model/authentication.md`, root `car_data_model.json` (13 objects; authentication actions = error/failure/success — confirmed).
-- Engine maps: `third_party/piiat-mitrecar/piiat_mitrecar/mappings/core.py` (the ONLY authentication mapper), generated source spec `third_party/piiat-mitrecar/sources/evtx_security.yaml`.
-- Design law: `third_party/piiat-mitrecar/docs/CAR-Relations.md` (authentication ← 4624/4625; identity/joins/inheritance/limits).
+- Semantics: `byakugan/third_party/car/data_model/authentication.yaml`, `.../docs/data_model/authentication.md`, root `car_data_model.json` (13 objects; authentication actions = error/failure/success — confirmed).
+- Engine maps: `byakugan/byakugan/mappings/core.py` (the ONLY authentication mapper), generated source spec `byakugan/sources/evtx_security.yaml`.
+- Design law: `byakugan/docs/CAR-Relations.md` (authentication ← 4624/4625; identity/joins/inheritance/limits).
 - Real evidence inspected: `data_store/processed/windows_logs/unspecified_host/log_EvtxECmd_Output.json` (85 records — **Sysmon EID 1/45 & 5/40 only, NO Security channel**), `data_store/processed/zeek/*/ssh.json` (real SSH auth, `auth_success` present), zeek dirs (conn/dns/files/http/notice/ssh/ssl/weird/x509 — **no kerberos/ntlm/radius/smtp**), `data_store/processed/linux_logs/` (empty).
 
 ---

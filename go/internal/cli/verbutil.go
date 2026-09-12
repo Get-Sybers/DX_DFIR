@@ -25,8 +25,8 @@ func dirExists(p string) bool {
 
 // confirmYes prints prompt to stderr (so stdout stays clean) and reads one line
 // from stdin, returning true only for an affirmative answer. The caller is
-// responsible for the "[y/N]" hint, matching the wording of the Python CLI's
-// typer.confirm prompts.
+// responsible for the "[y/N]" hint, matching the wording of the retired Python
+// CLI's confirmation prompts.
 func confirmYes(prompt string) bool {
 	fmt.Fprint(os.Stderr, prompt)
 	line, err := bufio.NewReader(os.Stdin).ReadString('\n')

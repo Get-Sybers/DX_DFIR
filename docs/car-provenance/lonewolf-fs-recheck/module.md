@@ -16,10 +16,10 @@ filesystem source exhaustively.
 `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl` (6.6 GB, 4,169,774
 events). Counts below are measured from it.
 
-**Engine maps read:** `piiat_mitrecar/mappings/plaso_exec.py` (prefetch/amcache/
+**Engine maps read:** `byakugan/byakugan/mappings/plaso_exec.py` (prefetch/amcache/
 shimcache → process), `plaso_fs_extra.py` (`pe_coff:file` → file), `sysmon.py`
 (EID 7, the only rich module producer), `evtx_more.py` (WMI 5857). Convergence:
-`piiat_mitrecar/crosssource.py`; STIX projection `stix.py`.
+`byakugan/byakugan/crosssource.py`; STIX projection `stix.py`.
 
 **Headline:** the disk holds a *huge* module population that the pipeline parses
 but never turns into `module` rows. Only `sysmon.py` and `evtx_more.py` emit

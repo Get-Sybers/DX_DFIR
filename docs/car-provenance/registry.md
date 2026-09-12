@@ -3,7 +3,7 @@
 Authoritative, exhaustive map of **every canonical `registry` field → every artefact/source that can supply it** in the DX_DFIR pipeline. "Find once, done." Grounded in repo source, honest about gaps and honest nulls. READ-ONLY analysis.
 
 - Object model (authoritative): `car_data_model.json` → `registry` fields = `data, fqdn, hive, hostname, image_path, key, new_content, pid, type, user, value`; actions = `add, key_edit, remove, value_edit`.
-- Semantics: `third_party/piiat-mitrecar/third_party/car/data_model/registry.yaml`, `.../docs/data_model/registry.md`, OSSEM-CDM `.../OSSEM-CDM/schemas/entities/registry.yml`.
+- Semantics: `byakugan/third_party/car/data_model/registry.yaml`, `.../docs/data_model/registry.md`, OSSEM-CDM `.../OSSEM-CDM/schemas/entities/registry.yml`.
 
 ---
 
@@ -33,10 +33,10 @@ Authoritative, exhaustive map of **every canonical `registry` field → every ar
 
 | Code | Source → CAR route | Map file | Actions produced | Status |
 |---|---|---|---|---|
-| **SYS12** | Sysmon EID 12 *RegistryEvent (Object create/delete)* via EvtxECmd `evtx_sysmon` | `piiat-mitrecar/piiat_mitrecar/mappings/sysmon.py` | `add` (Create\*), `remove` (Delete\*) | **ACTIVE** |
+| **SYS12** | Sysmon EID 12 *RegistryEvent (Object create/delete)* via EvtxECmd `evtx_sysmon` | `byakugan/byakugan/mappings/sysmon.py` | `add` (Create\*), `remove` (Delete\*) | **ACTIVE** |
 | **SYS13** | Sysmon EID 13 *RegistryEvent (Value Set)* | `sysmon.py` | `value_edit` | **ACTIVE** |
 | **SYS14** | Sysmon EID 14 *RegistryEvent (Key/Value Rename)* | `sysmon.py` | `key_edit` | **ACTIVE** |
-| **SEC4657** | Security **4657** *registry value modified* | `piiat-mitrecar/to-be-validated/evtx_audit.yml` (spec) | `add`/`value_edit`/`remove` (by `OperationType`) | **QUARANTINED — NOT active** |
+| **SEC4657** | Security **4657** *registry value modified* | `byakugan/to-be-validated/evtx_audit.yml` (spec) | `add`/`value_edit`/`remove` (by `OperationType`) | **QUARANTINED — NOT active** |
 | **PLREG** | Plaso `winreg` (all `windows:registry:*` key/value plugins: run, services, userassist, bam, amcache, shellbags, usb, sam, typedpaths, MRU, …) `plaso_registry` | `plaso_registry.py` | `key_edit` (whole-key snapshot) | **ACTIVE** |
 | **RECMD** | EZ-Tools **RECmd** batch (`--json`) `recmd_batch` | `recmd.py` | `value_edit` (live records; `Deleted:true` → raw) | **ACTIVE** |
 | **MEM** | Volatility3 `windows.piiat.registry` (printkey + hivelist, RECmd-style target list) → PIIAT-Mem CAR passthrough | plugin `piiat-mem/plugins/windows/piiat/registry.py`; map `piiat-mem/piiat_mem/mappings.py` | `value_edit` | **ACTIVE** |

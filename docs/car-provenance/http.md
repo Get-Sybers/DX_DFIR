@@ -2,12 +2,12 @@
 
 **Scope.** Every canonical field of the CAR `http` object, and every artefact/source in this
 repo (and its realistic universe) that can supply it. Grounded in the CAR data model, the
-DX_DFIR engine maps (`piiat_mitrecar.mappings`), the generated `sources/*.yaml`, the repo's
+DX_DFIR engine maps (`byakugan.mappings`), the generated `sources/*.yaml`, the repo's
 `docs/CAR-Relations.md`, OSSEM-CDM, and the actual processed evidence store. READ-ONLY analysis.
 
-- Object semantics: `third_party/piiat-mitrecar/third_party/car/data_model/http.yaml`, `.../docs/data_model/http.md`, `car_data_model.json` (lines 173-201).
-- OSSEM-CDM richer semantics: `third_party/piiat-mitrecar/third_party/car/OSSEM-CDM/schemas/entities/http.yml`.
-- Engine maps (source of truth): `piiat_mitrecar/mappings/core.py` (zeek_http), `.../evtx_extra.py` (BITS), `.../plaso_web.py` (browser/cache/java), `.../_common.py`, `.../normalize.py`.
+- Object semantics: `byakugan/third_party/car/data_model/http.yaml`, `.../docs/data_model/http.md`, `car_data_model.json` (lines 173-201).
+- OSSEM-CDM richer semantics: `byakugan/third_party/car/OSSEM-CDM/schemas/entities/http.yml`.
+- Engine maps (source of truth): `byakugan/byakugan/mappings/core.py` (zeek_http), `.../evtx_extra.py` (BITS), `.../plaso_web.py` (browser/cache/java), `.../_common.py`, `.../normalize.py`.
 - Generated per-source coverage: `sources/{zeek_http,evtx_bits,l2t_msiecf,l2t_firefox_cache,l2t_firefox_places,l2t_javaidx}.yaml`.
 - Design rationale/limits: `docs/CAR-Relations.md` §"http (← Zeek http.log)" (lines 57-87).
 - Ground-truth records: `data_store/processed/zeek/DFIRdump_FOR_200_capture_pcap/http.json`.
