@@ -81,11 +81,14 @@ matching `dxdfir_<source>` role); processors are also runnable as
 | EZ-Tools artefacts — SRUM, registry, … | `process zimmerman` | `zimmerman/` |
 | YARA / Suricata / Hayabusa | `process signatures` | `signatures/<lane>/` (JSONL) |
 
-The **CAR layer is materialised**: the [PIIAT-MitreCar](https://github.com/Get-Sybers/PIIAT-MitreCar)
-engine normalises each processed source into finished CAR events — one
-`car_<object>.jsonl` per object (13 objects) plus `car_relationships.jsonl` —
-under `processed/car/<source>/`. Extraction happens once, in the engine, so that
-JSON is the contract every sink reads and cannot drift from what the engine emits.
+The **CAR layer is materialised**: the [Byakugan](https://github.com/Get-Sybers/byakugan)
+engine (formerly PIIAT-MitreCar) normalises each processed source into finished
+CAR events — one `car_<object>.jsonl` per object (13 objects) plus
+`car_relationships.jsonl` — under `processed/car/<source>/`. The engine is an
+external recursive checkout, provisioned by `scripts/setup-environment.sh` at
+the commit pinned in `byakugan.ref` (`$BYAKUGAN_ROOT`, else `byakugan/` beside
+the repo). Extraction happens once, in the engine, so that JSON is the contract
+every sink reads and cannot drift from what the engine emits.
 
 **Validated** by the CI **smoke test** (the real EVTX → EvtxECmd → CAR path over
 pinned Sysmon fixtures, asserting the extracted field values) and by
@@ -122,9 +125,10 @@ the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
 Apache-2.0 at the repository root (see [LICENSE](/LICENSE)) — matched to the
 vendored `car_data_model.json` from [MITRE CAR](https://github.com/mitre-attack/car).
 The pipeline code is offered under the more permissive **MIT** licence as
-self-contained components: the `get_sybers_dxdfir` package + `dxdfir` CLI
-(`python/`) and the `get_sybers.dxdfir` collection (`ansible/collections/`); each
-subtree carries its own declared licence. Third-party tool obligations that fall
+self-contained components: the `get_sybers_dxdfir` package (`python/`) and the
+`get_sybers.dxdfir` collection (`ansible/collections/`); each subtree carries its
+own declared licence. The Go `dxdfir` front-end (`go/`) declares none of its own
+and so carries the repository's Apache-2.0. Third-party tool obligations that fall
 on *you* are in [THIRD_PARTY_NOTICES.md](/THIRD_PARTY_NOTICES.md); Apache-2.0 §4
 attribution is in [NOTICE](/NOTICE).
 

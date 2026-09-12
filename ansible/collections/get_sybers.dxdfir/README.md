@@ -43,8 +43,8 @@ Detection is not a role: the detections are Elastic rules-as-code
 prepares and gates the materialised CAR they read.
 
 ## Usage
-The **`dxdfir` CLI** (Python package `get_sybers_dxdfir`) is the front-end — it drives
-these roles for you:
+The **`dxdfir` front-end** (the Go binary built from `go/`) drives these roles for
+you; the `get_sybers_dxdfir` Python package provides the processors the roles invoke:
 ```bash
 dxdfir process zeek --pipeline elastic  # = the dxdfir_zeek role, preflight → process → verify
 dxdfir process signatures               # all lanes

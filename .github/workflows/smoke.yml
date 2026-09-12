@@ -3,11 +3,12 @@ name: smoke
 # Runs the pipeline for real and asserts CORRECTNESS — the coverage `checks`
 # deliberately does not provide (issue #10). It processes sha256-pinned Sysmon
 # .evtx through the real evtx lane (EvtxECmd), normalises the output into
-# materialised CAR with the vendored PIIAT-MitreCar engine, asserts every
-# Sysmon-sourced CAR object has rows with its EvtxPayload-derived fields
-# correctly populated, and runs the verify-car gate over the same tree. The
-# EvtxPayload XML→JSON break that zeroed those fields passes `checks` but fails
-# this.
+# materialised CAR with the external Byakugan engine (provisioned below at the
+# commit byakugan.ref pins), asserts every Sysmon-sourced CAR object has rows
+# with its EvtxPayload-derived fields correctly populated, and runs the
+# verify-car gate over the same tree.
+# The EvtxPayload XML→JSON break that zeroed those fields passes `checks` but
+# fails this.
 #
 # Kept OUT of the every-push `checks` job because it builds an image and runs
 # real tools (minutes, not seconds). It runs:
@@ -31,7 +32,10 @@ on:
       - "python/pyproject.toml"
       - "docker/evtxecmd/**"
       - "docker/hardening/**"
-      - "docker/runtime/**"
+      # an engine bump is a pipeline change: byakugan.ref pins the external
+      # Byakugan engine the CAR lane runs, so it must re-run this workflow.
+      # third_party/** stays for the remaining piiat-mem submodule.
+      - "byakugan.ref"
       - ".gitmodules"
       - "third_party/**"
       - "tests/smoke-test.sh"
@@ -49,10 +53,45 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # the CAR lane (get_sybers_dxdfir.mitrecar) reconstructs its model live
-          # from the nested car / attack-datasources submodules — check out
-          # recursively so build-car (and the gate's action vocabulary) work.
+          # the only remaining submodule is third_party/piiat-mem (the
+          # volatility lane). Smoke never touches it, but recursive is harmless
+          # here and keeps this checkout identical to a provisioned host.
           submodules: recursive
+
+      # The CAR lane (get_sybers_dxdfir.mitrecar) drives the EXTERNAL Byakugan
+      # engine — $BYAKUGAN_ROOT, else the sibling dir of the repo — at the
+      # commit pinned by byakugan.ref (first non-comment line). The engine
+      # reconstructs its object model live from ITS OWN nested submodules
+      # (third_party/car + third_party/attack-datasources), so the submodule
+      # init MUST be recursive. byakugan.ref is in the PR path filters above:
+      # bumping the pin re-runs this whole pipeline against the new engine.
+      - name: Provision the Byakugan engine (at the byakugan.ref pin)
+        run: |
+          ref="$(grep -vE '^[[:space:]]*(#|$)' byakugan.ref | head -1 | tr -d '[:space:]')"
+          test -n "$ref"
+          git clone https://github.com/Get-Sybers/byakugan ../byakugan
+          git -C ../byakugan checkout "$ref"
+          git -C ../byakugan submodule update --init --recursive
+
+      # The engine's parse binary is Go, and its go.mod floor is 1.24 — pin the
+      # toolchain rather than inherit whatever the runner image ships.
+      - name: Set up Go (for the engine's parse binary)
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: false
+
+      # The engine's file ingestion REQUIRES go/bin/byakugan-parse: without it
+      # `python -m byakugan` refuses to parse and prints build instructions, so
+      # the smoke run would die at the CAR step with a provisioning error rather
+      # than a real regression. Build it right after the checkout, same as
+      # scripts/setup-environment.sh does on a real host (it runs the plain
+      # `go build -o bin/byakugan-parse ./cmd/byakugan-parse` equivalent of this
+      # make target, to avoid depending on make there).
+      - name: Build the engine's Go parse binary
+        run: |
+          make -C ../byakugan/go build
+          test -x ../byakugan/go/bin/byakugan-parse
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -62,9 +101,10 @@ jobs:
       # The smoke test drives the processors and the CAR lane directly
       # (python -m get_sybers_dxdfir.<module> on PYTHONPATH=python). Installing
       # the package brings its declared dependencies (PyYAML for the engine's
-      # model sources, typer for the CLI); nothing else is needed.
+      # model sources, among others) under the python/constraints.txt lock;
+      # nothing else is needed.
       - name: Install the dxdfir package
-        run: python -m pip install --quiet ./python
+        run: python -m pip install --quiet --constraint python/constraints.txt ./python
 
       # The evtx lane runs EvtxECmd from the bundled image; build it once here
       # (the smoke test asserts its presence and fails loudly if absent).

@@ -2,8 +2,8 @@
 
 Authoritative "find once, done" map of every canonical `email` field to every artefact/source that can supply it, what the DX_DFIR engine maps **today**, and what an unmapped field **would** need. Grounded in-repo; honest about the gaps.
 
-- **Object semantics:** `third_party/piiat-mitrecar/third_party/car/data_model/email.yaml`, `.../docs/data_model/email.md`, `python model/car/objects/email.yml`, `python model/projection/objects/email.yml` (ECS projection).
-- **Engine mapping (the only email mapper):** `third_party/piiat-mitrecar/piiat_mitrecar/mappings/zeek_extra.py` (map `zeek_smtp`), contract `third_party/piiat-mitrecar/sources/zeek_smtp.yaml`, helpers `piiat_mitrecar/normalize.py`.
+- **Object semantics:** `byakugan/third_party/car/data_model/email.yaml`, `.../docs/data_model/email.md`, `python model/car/objects/email.yml`, `python model/projection/objects/email.yml` (ECS projection).
+- **Engine mapping (the only email mapper):** `byakugan/byakugan/mappings/zeek_extra.py` (map `zeek_smtp`), contract `byakugan/sources/zeek_smtp.yaml`, helpers `byakugan/byakugan/normalize.py`.
 - **Design record / caveats:** `docs/CAR-Relations.md` § "email (no artefact yet — principles recorded for the first mapper)".
 - **Evidence checked:** `data_store/processed/zeek/*` (DFIRdump, ME_FOR_1308, keylogging).
 
@@ -19,7 +19,7 @@ Authoritative "find once, done" map of every canonical `email` field to every ar
 - **11 fields have a live mapper** (all via `zeek_smtp`, all tier `direct`/`coalesced`/`derived`): `date, dest_address, dest_ip, dest_port, from, src_address, src_domain, src_ip, src_port, subject, to`.
 - **10 fields are unmapped**: `action_reason, attachment_mime_type, attachment_name, attachment_size, message_body, message_links, message_type, return_address, server_relay, smtp_uid`.
 - **4 of 5 actions are unmapped**: `block, redirect, quarantine, delete` have **no source wired at all** (they are mail-**server** security/audit verdicts, not wire-observable). Only `deliver` has a mapper.
-- **No mail-store / mail-server parser is wired anywhere** (grep for pff/PST/OST/mbox/EML/maillog/Exchange/Postfix across `piiat_mitrecar/` returns nothing). Plaso adapters exist (`l2t_*`, `plaso_*`) but none map to `email`. No CAR sensor (sysmon/osquery/auditd/…) and no CAR analytic (`grep email/`) covers `email` upstream either. Suricata appears only as a signature/alert engine (`python/get_sybers_dxdfir/detect/rules/sig-suricata-alert.yml`), **not** as a CAR extraction source.
+- **No mail-store / mail-server parser is wired anywhere** (grep for pff/PST/OST/mbox/EML/maillog/Exchange/Postfix across `byakugan/` returns nothing). Plaso adapters exist (`l2t_*`, `plaso_*`) but none map to `email`. No CAR sensor (sysmon/osquery/auditd/…) and no CAR analytic (`grep email/`) covers `email` upstream either. Suricata appears only as a signature/alert engine (`python/get_sybers_dxdfir/detect/rules/sig-suricata-alert.yml`), **not** as a CAR extraction source.
 
 **Provenance tiers** (engine vocabulary): `[direct]` = verbatim native field · `[coalesced]` = first non-empty of several (`normalize.first`) · `[derived]` = computed (`domain_of`, `ext`, `epoch_ts`) · `[native/raw]` = retained in the `native` blob but **not** promoted to a canonical column · `[none]` = no source produces it.
 

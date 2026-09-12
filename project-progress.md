@@ -59,7 +59,7 @@ Elastic-native backend reads.
 | [Hayabusa](https://github.com/Yamato-Security/hayabusa) (EVTX → Sigma) | ✅ `get_sybers_dxdfir.signatures` (hayabusa lane; also in the evtx lane) — validated 792 detections | json (Sigma) | ✅ `signatures/hayabusa/` | ⏳ |
 | [Syslog](https://syslog-ng.github.io)                         | ✅ (via Plaso) |                 |              |               |
 
-**CAR is materialized.** The engine ([PIIAT-MitreCar](https://github.com/Get-Sybers/PIIAT-MitreCar)) normalises each evidence
+**CAR is materialized.** The engine ([Byakugan](https://github.com/Get-Sybers/byakugan)) normalises each evidence
 source into finished CAR events and writes one `car_<object>.jsonl` per object
 (13 objects) plus `car_relationships.jsonl` (the superset relationship edges)
 under `processed/car/<source>/` — the materialised CAR every sink reads; the

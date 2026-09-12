@@ -1,0 +1,25 @@
+# ==============================================================================
+# The pinned Byakugan engine commit — the ONE place the engine version lives.
+#
+# The CAR lane (get_sybers_dxdfir.mitrecar) drives the Byakugan engine
+# (https://github.com/Get-Sybers/byakugan) as an EXTERNAL recursive checkout:
+# $BYAKUGAN_ROOT when set, else the `byakugan` directory next to (a sibling
+# of) this repository. It is NOT a vendored submodule, so this file — not a
+# gitlink — records the commit DX_DFIR is tested against. Everything that
+# provisions or checks the engine reads it: scripts/setup-environment.sh
+# (online hosts), scripts/package-offline.sh (the offline bundle),
+# .github/workflows/smoke.yml (CI), and the python seam's off-pin warning.
+#
+# To bump the engine: edit the sha below to the new upstream commit, then
+# re-provision — re-run scripts/setup-environment.sh, or manually:
+#   git clone --recurse-submodules https://github.com/Get-Sybers/byakugan <root>
+#   git -C <root> checkout <sha>
+#   git -C <root> submodule update --init --recursive
+# (recursive is REQUIRED: the engine reconstructs its object model live from
+# its own nested car + attack-datasources submodules). A PR touching this file
+# triggers the smoke workflow, which runs the real pipeline against the new pin.
+#
+# Format: readers take the FIRST non-comment, non-blank line as the ref. Keep
+# it a full 40-hex sha — never a branch or tag — so checkouts are reproducible.
+# ==============================================================================
+b76955dffd09ffb9fa0c4dca5affc349b7e89f16

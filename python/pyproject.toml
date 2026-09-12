@@ -8,9 +8,9 @@ version = "0.6.0"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 dependencies = [
-    "typer>=0.12",
-    # The CLI drives the get_sybers.dxdfir collection with ansible-playbook, so it
-    # ships with the package — installing the CLI installs a working ansible-playbook.
+    # The front-end drives the get_sybers.dxdfir collection with ansible-playbook,
+    # so it ships with the package — installing the processor package installs a
+    # working ansible-playbook.
     "ansible-core>=2.16",
     # The collection's docker-driving roles (dxdfir_images builds the tool images,
     # dxdfir_deploy_sofelk runs compose) use community.docker, whose modules import
@@ -25,15 +25,6 @@ dependencies = [
     # get_sybers_dxdfir now imports it itself.
     "PyYAML>=6.0",
 ]
-
-[project.scripts]
-# The primary `dxdfir` front-end is now the Go/termui binary built from ../go
-# (see go/README.md); it drives this package's Ansible collection and processors
-# by shelling out. This Typer app remains as `dxdfir-py` — a dependency-only
-# fallback and the reference the Go front-end mirrors. The processors also run
-# standalone via `python -m get_sybers_dxdfir.<source>`, and the front-end
-# contract modules run as `python -m get_sybers_dxdfir.{collection,mitrecar,carcheck,images,stix}`.
-dxdfir-py = "get_sybers_dxdfir.cli:app"
 
 [tool.setuptools.packages.find]
 include = ["get_sybers_dxdfir*"]

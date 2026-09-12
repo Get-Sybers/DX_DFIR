@@ -7,8 +7,9 @@
 # inline — the tagged-evidence-line model, applied to the CAR data streams.
 #
 # KEYS: the CAR `guid` travels into Elastic as ECS `event.id` on every CAR
-# object, and as `process.entity_id` on process (the PIIAT-MitreCar-owned
-# CAR->ECS projection decides those names; this file only depends on them).
+# object, and as `process.entity_id` on process (the CAR->ECS projection owned
+# by the Byakugan engine decides those names; this file only
+# depends on them).
 # LOOKUP JOIN needs the SAME field name on both sides, so the lookup index maps
 # the keys under their ECS names.
 #

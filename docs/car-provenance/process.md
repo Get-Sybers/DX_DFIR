@@ -11,12 +11,12 @@ parent_exe, parent_guid, parent_image_path, pid, ppid, sha1_hash, sha256_hash, s
 signature_valid, signer, target_address, target_guid, target_name, target_pid, uid, user.
 
 Grounded in (read verbatim):
-`third_party/piiat-mitrecar/third_party/car/data_model/process.yaml` (+ `docs/data_model/process.md`);
+`byakugan/third_party/car/data_model/process.yaml` (+ `docs/data_model/process.md`);
 `car_data_model.json`; the live engine maps
-`piiat_mitrecar/mappings/{sysmon,evtx_windows,plaso_exec,plaso_srum}.py`,
+`byakugan/byakugan/mappings/{sysmon,evtx_windows,plaso_exec,plaso_srum}.py`,
 `piiat_mem/mappings.py`, the memory plugin `plugins/windows/piiat/{processes,access}.py`;
 generated sources `sources/{evtx_sysmon,evtx_process,memory,plaso_exec_prefetch,plaso_exec_winreg,plaso_exec_cron}.yaml`;
-`piiat_mitrecar/enrich.py` + `relationships.yml`; `docs/CAR-Relations.md`; the quarantined
+`byakugan/byakugan/enrich.py` + `relationships.yml`; `docs/CAR-Relations.md`; the quarantined
 `to-be-validated/evtx_audit.yml`; and real evidence
 (`data_store/processed/volatility/memdump.mem/car.db`, 180 process rows;
 `data_store/processed/windows_logs/.../log_EvtxECmd_Output.json`).
@@ -51,7 +51,7 @@ generated sources `sources/{evtx_sysmon,evtx_process,memory,plaso_exec_prefetch,
   not enter the timeline.
 - **guid**: only Sysmon `ProcessGuid` (S1/S2) is a *real* Windows process GUID. Memory mints
   `proc-<offset>`; 4688 mints a per-record event id; every Plaso source mints a uuid5 **spindle**
-  entity id (`piiat_mitrecar/spindle.yml`). All fill the `guid` slot honestly but are synthetic.
+  entity id (`byakugan/byakugan/spindle.yml`). All fill the `guid` slot honestly but are synthetic.
 - **parent_guid** is never a native column — `enrich.py` (`ev["parent_guid"]`) resolves it, then
   inherits `parent_exe/parent_image_path/parent_command_line` from the resolved parent
   (`relationships.yml → from_parent_process`).

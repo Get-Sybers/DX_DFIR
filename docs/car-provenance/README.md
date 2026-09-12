@@ -5,6 +5,15 @@ and **every artefact/source in the DFIR pipeline that can supply it** — ground
 in the actual engine maps (not the upstream CAR sensor cards, which overclaim),
 in PIIAT-Mem's memory maps, and in real processed evidence.
 
+Path convention: `byakugan/…` cites a file inside the external Byakugan engine
+checkout (`$BYAKUGAN_ROOT`, default: the `byakugan` directory beside this repo,
+pinned by `byakugan.ref`); `third_party/piiat-mem/…` stays repo-relative. The
+engine's own import package was renamed `piiat_mitrecar` → `byakugan`, so the
+doubled prefix in `byakugan/byakugan/mappings/…` is not a typo: the outer
+segment is the checkout, the inner one the package. Engine paths with a single
+segment (`byakugan/sources/…`, `byakugan/to-be-validated/…`,
+`byakugan/third_party/…`) sit beside the package, at the checkout root.
+
 One file per object (all 13). Each has a per-field table
 (`field | sources (source → native field) | action(s) | currently mapped? | confidence & caveats`)
 plus a source×field coverage matrix.
@@ -27,7 +36,7 @@ plus a source×field coverage matrix.
 
 ## How to read it
 - **"currently mapped?"** is the gap column — a `NO` where a genuine source exists is a completeness gap (see [COMPLETENESS-BACKLOG.md](COMPLETENESS-BACKLOG.md)); a `NO` with no source is an **honest null** (documented, never faked).
-- Grounded in `piiat_mitrecar/mappings/` + `sources/*.yaml` (engine), `piiat-mem/piiat_mem/mappings.py` (memory), `to-be-validated/evtx_audit.yml` (the quarantined audit family), and `car_data_model.json`.
+- Grounded in `byakugan/byakugan/mappings/` + `sources/*.yaml` (engine), `piiat-mem/piiat_mem/mappings.py` (memory), `to-be-validated/evtx_audit.yml` (the quarantined audit family), and `car_data_model.json`.
 - **Do not trust the upstream `*.yaml` `coverage_map`s** — the agents found driver/thread/flow sensor cards overclaim (`pid`, `src_tid`, `uid` listed but not on the wire). The per-field tables here are ground truth.
 
 Generated 2026-09-07 by a per-object deep audit; §1 of `docs/CAR-Extraction-Rules.md` (extract every field the artefact can supply) is the governing principle.

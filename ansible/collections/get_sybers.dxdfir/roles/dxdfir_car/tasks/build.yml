@@ -1,6 +1,6 @@
 ---
 # Materialise the per-source CAR stores (car.db + superset.db + car_<object>.jsonl
-# + car_relationships.jsonl) from the processed tree, via the vendored engine.
+# + car_relationships.jsonl) from the processed tree, via the external engine.
 # On any failure the rescue surfaces the engine's stdout/stderr as one diagnostic.
 - name: "car-build | materialise and verify | build"
   block:

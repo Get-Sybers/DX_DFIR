@@ -27,8 +27,11 @@ func (env *Env) runStackAction(stack, action string, vars []string) error {
 		return err
 	}
 	all := append([]string{"dxdfir_stack_name=" + stack}, vars...)
-	code := run.Passthrough(context.Background(),
-		ansiblePlan(r, ap, "dxdfir-stack-"+action+".yml", all, false), true)
+	plan, err := ansiblePlan(r, ap, "dxdfir-stack-"+action+".yml", all, false)
+	if err != nil {
+		return err
+	}
+	code := run.Passthrough(context.Background(), plan, true)
 	return exitCode(code)
 }
 

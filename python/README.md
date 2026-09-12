@@ -1,9 +1,10 @@
 # get_sybers_dxdfir
 
 The processing logic of the DX_DFIR pipeline as an importable, unit-tested Python
-package, plus the **`dxdfir`** command-line front-end (Typer) — the top layer of the
-pipeline. The heavy per-item work (container runs, JSON reshaping) lives here; the
-`get_sybers.dxdfir` Ansible collection orchestrates it one action per task.
+package — the processors plus the `python -m` contract modules the front-end
+drives. The heavy per-item work (container runs, JSON reshaping) lives here; the
+`get_sybers.dxdfir` Ansible collection orchestrates it one action per task, and
+the user-facing **`dxdfir`** front-end is the Go binary built from `go/`.
 
 ## Processors
 Each source is a module runnable standalone or through its role:
@@ -18,13 +19,17 @@ Every processor prints a machine-readable JSON summary (`processed`/`skipped`/
 `failed`/…) so its role can set an honest `changed_when`.
 
 The CAR lane sits on top of the processed tree: `python -m get_sybers_dxdfir.mitrecar`
-drives the vendored [PIIAT-MitreCar](https://github.com/Get-Sybers/PIIAT-MitreCar)
-engine (one `car.db` + `car_<object>.jsonl` per source), and
+drives the external [Byakugan](https://github.com/Get-Sybers/byakugan) engine
+(`$BYAKUGAN_ROOT`, else a `byakugan/` checkout beside the repo, pinned by the
+repo-root `byakugan.ref` and provisioned by `scripts/setup-environment.sh`;
+one `car.db` + `car_<object>.jsonl` per source), and
 `python -m get_sybers_dxdfir.carcheck` is the correctness gate over what it wrote.
 The Elastic detection rules live as data under `get_sybers_dxdfir/detect/rules/`
 (`python -m get_sybers_dxdfir.detect.rules_loader` validates them).
 
-## The `dxdfir` CLI
+## The `dxdfir` front-end (Go)
+The verbs live in the Go binary (`go/` — see [its README](../go/README.md)); it
+shells out to this package and never re-implements processing:
 ```bash
 dxdfir process zeek --pipeline elastic  # drive the dxdfir_zeek role (preflight → process → verify)
 dxdfir process signatures -e '{"dxdfir_signatures_lanes":["yara"]}'
@@ -33,7 +38,7 @@ dxdfir verify-car                       # the CAR correctness gate over the mate
 dxdfir build-docker                     # build (and hardening-verify) every dxdfir/* tool image
 dxdfir validate                         # run the check harness
 dxdfir list                             # list processable sources
-man dxdfir                              # the manual (python/man/dxdfir.1)
+man dxdfir                              # the manual (go/man/dxdfir.1)
 ```
 `process` drives the collection with `ansible-playbook` (the role's one action calls
 the matching `python -m get_sybers_dxdfir.<source>` for the tight loop). `build-car` and
@@ -44,12 +49,14 @@ auto-detected (or pass `--repo-root` / `$DFIR_REPO_ROOT`).
 
 ## Install
 ```bash
-pip install ./python          # provides the `dxdfir` entry point + the package
-install -Dm644 python/man/dxdfir.1 ~/.local/share/man/man1/dxdfir.1   # optional: man page
+pip install ./python          # the processor package (+ ansible-core, so ansible-playbook comes with it)
+install -Dm644 go/man/dxdfir.1 ~/.local/share/man/man1/dxdfir.1   # optional: man page
 ```
-In-repo runs need no install — set `PYTHONPATH=python` (the roles do this via
+The package installs no console script — the `dxdfir` command is the Go binary
+(`scripts/setup-environment.sh` builds and installs it). In-repo runs need no
+install — set `PYTHONPATH=python` (the roles do this via
 `dxdfir_<source>_python_path`). Without installing the man page, read it directly with
-`man ./python/man/dxdfir.1`.
+`man ./go/man/dxdfir.1`.
 
 ## Test
 ```bash

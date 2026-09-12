@@ -53,8 +53,11 @@ func newCleanupActionCmd(env *Env, action, short, promptMsg string, extraVars fu
 			if extraVars != nil {
 				vars = append(vars, extraVars()...)
 			}
-			code := run.Passthrough(context.Background(),
-				ansiblePlan(r, ap, "dxdfir-cleanup.yml", vars, dryRun), true)
+			plan, err := ansiblePlan(r, ap, "dxdfir-cleanup.yml", vars, dryRun)
+			if err != nil {
+				return err
+			}
+			code := run.Passthrough(context.Background(), plan, true)
 			return exitCode(code)
 		},
 	}

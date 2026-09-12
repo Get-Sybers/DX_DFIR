@@ -12,10 +12,9 @@ import json
 import uuid
 
 import pytest
-from typer.testing import CliRunner
 
-from get_sybers_dxdfir import cli
 from get_sybers_dxdfir.detect import rules_loader as rl
+from get_sybers_dxdfir.stix import cli as stix_cli
 from get_sybers_dxdfir.stix import config, export, objects, opencti
 from get_sybers_dxdfir.stix.cti import indicators as ind
 from get_sybers_dxdfir.stix.cti import sightings as sg
@@ -481,58 +480,70 @@ def test_config_cti_index_layers(tmp_path):
     assert config.load_config(env={}).cti_index == "cti-opencti"
 
 
-def test_cli_stix_pull_and_sightings(tmp_path, monkeypatch):
-    runner = CliRunner()
+def _stix(argv, capsys):
+    """Drive the argparse CLI exactly as the Go passthrough does — an argv list to
+    ``main`` — and return (exit_code, stdout, stderr)."""
+    try:
+        stix_cli.main(argv)
+        code = 0
+    except SystemExit as e:
+        code = e.code if e.code is not None else 0
+    out = capsys.readouterr()
+    return code, out.out, out.err
+
+
+def test_cli_stix_pull_and_sightings(tmp_path, monkeypatch, capsys):
     for var in ("DXDFIR_OPENCTI_URL", "DXDFIR_OPENCTI_TOKEN", "DXDFIR_CTI_INDEX"):
         monkeypatch.delenv(var, raising=False)
     bundle_path = tmp_path / "indicators.json"
     bundle_path.write_text(json.dumps({"type": "bundle", "id": "bundle--" + str(uuid.uuid4()), "objects": BUNDLE_OBJECTS}))
     out = tmp_path / "cti.ndjson"
-    r = runner.invoke(cli.app, ["stix", "pull", "--from-bundle", str(bundle_path), "--out", str(out), "--index", "cti-case7"])
-    assert r.exit_code == 0, r.output
+    code, stdout, stderr = _stix(["pull", "--from-bundle", str(bundle_path), "--out", str(out), "--index", "cti-case7"],
+                                 capsys)
+    assert code == 0, stdout + stderr
     assert json.loads(out.read_text().splitlines()[0])["index"]["_index"] == "cti-case7"
-    summary = json.loads(r.stdout)
+    summary = json.loads(stdout)
     assert summary["copy"]["docs"] == 4 and summary["out"] == str(out)
     # without --out the bulk lines are stdout; without endpoint/token (and no bundle) it is exit 2
-    r = runner.invoke(cli.app, ["stix", "pull", "--from-bundle", str(bundle_path)])
-    assert r.exit_code == 0, r.output
-    assert json.loads(r.stdout.splitlines()[0]) == {"index": {"_index": "cti-opencti", "_id": IND_IP}}
-    assert runner.invoke(cli.app, ["stix", "pull"]).exit_code == 2
+    code, stdout, stderr = _stix(["pull", "--from-bundle", str(bundle_path)], capsys)
+    assert code == 0, stdout + stderr
+    assert json.loads(stdout.splitlines()[0]) == {"index": {"_index": "cti-opencti", "_id": IND_IP}}
+    assert _stix(["pull"], capsys)[0] == 2
     # a live-shaped pull goes through the (stubbed) transport with endpoint/token/index from the environment
     rec = RecordingTransport(responses=[_page([_node(IND_IP, "[ipv4-addr:value = '203.0.113.9']")], None, False)])
     monkeypatch.setattr(opencti, "UrllibTransport", lambda: rec)
     monkeypatch.setenv("DXDFIR_OPENCTI_URL", "https://env.test")
     monkeypatch.setenv("DXDFIR_OPENCTI_TOKEN", "env-token")
     monkeypatch.setenv("DXDFIR_CTI_INDEX", "cti-env")
-    r = runner.invoke(cli.app, ["stix", "pull", "--out", str(out), "--since", "2026-08-01T00:00:00Z"])
-    assert r.exit_code == 0, r.output
+    code, stdout, stderr = _stix(["pull", "--out", str(out), "--since", "2026-08-01T00:00:00Z"], capsys)
+    assert code == 0, stdout + stderr
     assert rec.calls[0][0] == "https://env.test/graphql" and rec.calls[0][1]["Authorization"] == "Bearer env-token"
     assert json.loads(rec.calls[0][2])["variables"]["filters"]["filters"][0]["values"] == ["2026-08-01T00:00:00.000Z"]
     assert json.loads(out.read_text().splitlines()[0])["index"]["_index"] == "cti-env"
-    assert "env-token" not in r.output
+    assert "env-token" not in stdout + stderr
     # a refused pull is exit 1; a bad --since is exit 2
     monkeypatch.setattr(opencti, "UrllibTransport", lambda: RecordingTransport(status=403, text=""))
-    assert runner.invoke(cli.app, ["stix", "pull"]).exit_code == 1
-    assert runner.invoke(cli.app, ["stix", "pull", "--since", "yesterday"]).exit_code == 2
+    assert _stix(["pull"], capsys)[0] == 1
+    assert _stix(["pull", "--since", "yesterday"], capsys)[0] == 2
     # sightings: alerts -> bundle on disk, --push through the transport
     alerts = tmp_path / "alerts.jsonl"
     alerts.write_text(json.dumps(_alert()) + "\n")
     sightings_out = tmp_path / "sightings.json"
     pushed = RecordingTransport()
     monkeypatch.setattr(opencti, "UrllibTransport", lambda: pushed)
-    r = runner.invoke(cli.app, ["stix", "sightings", "--alerts", str(alerts), "--out", str(sightings_out),
-                                "--case", "CASE-7", "--push"])
-    assert r.exit_code == 0, r.output
+    code, stdout, stderr = _stix(["sightings", "--alerts", str(alerts), "--out", str(sightings_out),
+                                  "--case", "CASE-7", "--push"], capsys)
+    assert code == 0, stdout + stderr
     bundle = json.loads(sightings_out.read_text())
     assert export.validate_bundle(bundle)[0] == []
     assert next(x for x in bundle["objects"] if x["type"] == "sighting")["sighting_of_ref"] == IND_IP
     assert json.loads(json.loads(pushed.calls[0][2])["variables"]["bundle"]) == bundle
-    assert json.loads(r.stdout)["push"]["ok"] and "env-token" not in r.output
+    assert json.loads(stdout)["push"]["ok"] and "env-token" not in stdout + stderr
     # no alerts given, or alerts without an enrichment: exit 2
-    assert runner.invoke(cli.app, ["stix", "sightings"]).exit_code == 2
+    assert _stix(["sightings"], capsys)[0] == 2
     plain = tmp_path / "plain.jsonl"
     plain.write_text(json.dumps({"event": {"id": "x"}}) + "\n")
-    assert runner.invoke(cli.app, ["stix", "sightings", "--alerts", str(plain)]).exit_code == 2
+    assert _stix(["sightings", "--alerts", str(plain)], capsys)[0] == 2
 
 
 # ---- the indicator-match rule contract -------------------------------------

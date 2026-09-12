@@ -12,7 +12,7 @@ Grounded in the real LoneWolf Win10 image and the engine's actual routing.
 The only email mapper in the engine is `zeek_smtp` (network; STARTTLS → 0 rows).
 **No mail-store parser is wired anywhere** — confirmed three ways:
 
-- `piiat_mitrecar/mappings/` and `sources/*.yaml` contain **no** pff / PST / OST / mbox / EML / MSG / ESE-mail / HxStore adapter.
+- `byakugan/byakugan/mappings/` and `sources/*.yaml` contain **no** pff / PST / OST / mbox / EML / MSG / ESE-mail / HxStore adapter.
 - `pipeline.py` `ROUTES` (the filename→map dispatch): the only email route is `("smtp.json", ["zeek_smtp"])`. `.L2tEsedb` routes **only** to `l2t_srum`; `.L2tOlecf` → `plaso_olecf` (→ `file`). No pff/mbox/HxStore/store.vol route exists.
 - `mappings/core.py` docstring, verbatim: *"email: principles documented; no artefact feeds it yet … so no map — an empty table is honest."*
 

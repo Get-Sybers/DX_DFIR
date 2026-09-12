@@ -11,7 +11,7 @@ suricata alert on `100.101.0.42` lines up with the CAR flow that resolves it to
 `scoring-c2.berylia.org`; a hayabusa T1059 record lines up with a CAR process.
 But nothing *emitted* that join. The engine already projects its **own** CAR
 analytics as STIX Sightings of ATT&CK attack-patterns over the spindle
-observed-data (`piiat_mitrecar/stix.py` + `analytics.py`) — but the DX detection
+observed-data (`byakugan/stix.py` + `analytics.py`) — but the DX detection
 lanes (suricata / hayabusa / yara) were never fused onto that behaviour axis. The
 DX exchange's `stix export` sights the rule *indicator* over observed-data minted
 from the detection's **own** fields, carrying the CAR guid only as an extension

@@ -11,10 +11,10 @@ concern and lives in its own script, [`save-docker-images.sh`](#pre-seeding-imag
 On a host with registry access nothing further is needed — the individual
 processing scripts pull their images on first use.
 
-> **For the `dxdfir` CLI path** (the pipeline front-end): this script installs the
-> *scripts'* dependencies, not the CLI's. `dxdfir` additionally needs
-> `ansible-playbook` on `PATH` and the Python package installed with
-> `pip install ./python` (which provides the `dxdfir` command and Typer) — see
+> **For the `dxdfir` front-end** (the pipeline's entry point): this script also
+> builds and installs the Go `dxdfir` binary (`go/`, installing the Go toolchain
+> when absent) and installs the `get_sybers_dxdfir` processor package —
+> `ansible-core` included, so `ansible-playbook` lands in the same venv — see
 > [How It Runs](/README.md#how-it-runs).
 
 ## Prerequisites
@@ -38,7 +38,13 @@ processing scripts pull their images on first use.
 3. **Userland tools**: Installs the tools the processing scripts shell out to
    (`curl`, `python3`, `unzip`, `tar`, plus `ca-certificates`/`gnupg`), so a
    missing dependency surfaces here rather than halfway through an ingest.
-4. **Permission Management**:
+4. **Byakugan engine provisioning**: Clones (or updates) the external Byakugan
+   engine — the CAR lane's tool — at the commit pinned in the repo-root
+   `byakugan.ref`, with its nested model submodules initialised recursively.
+   The checkout lands at `$BYAKUGAN_ROOT` when set, else in a `byakugan`
+   directory next to (a sibling of) the repository — deliberately outside the
+   repo, so the ownership pass below never touches it.
+5. **Permission Management**:
    - Sets ownership to the current user and Docker group
    - Sets permissions with `u=rwX,g=rX` so directories stay traversable by the
      Docker group and the `.sh` files stay executable

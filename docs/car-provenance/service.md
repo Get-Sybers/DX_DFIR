@@ -4,7 +4,7 @@ Authoritative, exhaustive map of every canonical `service` field to every artefa
 that can supply it, in the **DX_DFIR** pipeline. "Find once, done." Grounded in the repo
 files cited; honest about no-source.
 
-- **Object semantics**: `third_party/piiat-mitrecar/third_party/car/data_model/service.yaml`
+- **Object semantics**: `byakugan/third_party/car/data_model/service.yaml`
 - **Canonical schema**: `car_data_model.json` (object `service`) — confirmed by the `service`
   table in `data_store/processed/volatility/memdump.mem/car.db`.
 - **Canonical fields (10)**: `command_line, exe, fqdn, hostname, image_path, name, pid, ppid, uid, user`
@@ -35,7 +35,7 @@ Notes:
   but the maps emit a **registry** object (key_edit/value_edit). The service facts survive only
   in `_native` (see §3). **On a dead-disk image the pipeline therefore emits zero `service`
   objects today** — the whole object is present in the evidence but not reconstructed.
-- **H Autoruns is NOT wired**: `grep autoruns` over `piiat_mitrecar/` and `python/` is empty.
+- **H Autoruns is NOT wired**: `grep autoruns` over `byakugan/` and `python/` is empty.
   The `coverage_map` in `service.yaml` (`create`/`delete` → `["autoruns_13.98"]`) and
   `sensors/autoruns_13.98.yaml` are **upstream CAR references**, not working sources here.
 - **Sysmon / osquery**: CAR's own `sensors/sysmon_*.yaml` and `sensors/osquery_*.yaml` carry
@@ -194,9 +194,9 @@ sample carries none of the service EventIds. The maps are real; this evidence se
 
 ## 6. File index (grounding)
 
-- Semantics: `third_party/piiat-mitrecar/third_party/car/data_model/service.yaml`
+- Semantics: `byakugan/third_party/car/data_model/service.yaml`
 - Canonical schema: `car_data_model.json` (object `service`); live `car.db` `service` table
-- Maps (emit service): `third_party/piiat-mitrecar/piiat_mitrecar/mappings/evtx_windows.py`
+- Maps (emit service): `byakugan/byakugan/mappings/evtx_windows.py`
   (7045/4697), `.../evtx_more.py` (20003, 7034); `third_party/piiat-mem/piiat_mem/mappings.py`
   (`windows.svcscan`)
 - Maps (hold service facts, emit registry): `.../mappings/plaso_registry.py`, `.../mappings/recmd.py`

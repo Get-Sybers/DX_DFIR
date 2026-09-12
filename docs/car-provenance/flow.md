@@ -4,7 +4,7 @@
 **Actions:** `start`, `message`, `end`.
 **Fields (27):** application_protocol, content, dest_fqdn, dest_hostname, dest_ip, dest_port, end_time, exe, fqdn, hostname, image_path, in_bytes, network_direction, out_bytes, packet_count, pid, ppid, proto_info, src_fqdn, src_hostname, src_ip, src_port, start_time, tcp_flags, transport_protocol, uid, user.
 
-Grounded in: `third_party/piiat-mitrecar/third_party/car/data_model/flow.yaml`, `car_data_model.json`, the four active flow maps, the quarantined WFP audit spec, PIIAT-Mem, and real evidence (`data_store/processed/{zeek,volatility}`).
+Grounded in: `byakugan/third_party/car/data_model/flow.yaml`, `car_data_model.json`, the four active flow maps, the quarantined WFP audit spec, PIIAT-Mem, and real evidence (`data_store/processed/{zeek,volatility}`).
 
 > **The central fact for `flow`.** A network-vantage source (Zeek conn, pcap, NetFlow) gives the 5-tuple, volume, protocols, and TCP history — but carries **no endpoint identity**: no `exe`/`pid`/`ppid`/`user`/`image_path`. Those fields — the ones CAR flow analytics actually key on (`exe`, `user` appear in the detection corpus) — come **only from a host-side source that watches the socket owner**: **Sysmon EID 3**, **memory netscan**, or **WFP 5156** (quarantined). This catalogue's job is to show, per field, which side each source can and cannot fill.
 
@@ -14,12 +14,12 @@ Grounded in: `third_party/piiat-mitrecar/third_party/car/data_model/flow.yaml`, 
 
 | # | Source | Map | Status | Vantage | Gives endpoint owner (exe/pid/user)? |
 |---|--------|-----|--------|---------|--------------------------------------|
-| **S1** | **Zeek conn.log** | `piiat_mitrecar/mappings/zeek_conn.py` | **MAPPED** | network | **NO** (pcap has no host identity) |
-| **S2** | **Sysmon EID 3 NetworkConnect** | `piiat_mitrecar/mappings/sysmon.py:311` | **MAPPED** | host (endpoint) | **YES** — `exe`,`image_path`,`pid`,`user` native; `ppid` inherited |
+| **S1** | **Zeek conn.log** | `byakugan/byakugan/mappings/zeek_conn.py` | **MAPPED** | network | **NO** (pcap has no host identity) |
+| **S2** | **Sysmon EID 3 NetworkConnect** | `byakugan/byakugan/mappings/sysmon.py:311` | **MAPPED** | host (endpoint) | **YES** — `exe`,`image_path`,`pid`,`user` native; `ppid` inherited |
 | **S3** | **Memory netscan / netstat** (Volatility) | `piiat-mem/piiat_mem/mappings.py:125` (`_FLOW_MAP`) | **MAPPED** | host (memory) | **YES** — `pid`,`exe` native; `image_path`,`user`,`uid`,`ppid` **inherited** from owning `_EPROCESS` (definitive) |
-| **S4** | **SMBClient/Connectivity 30803** | `piiat_mitrecar/mappings/evtx_more.py:152` | **MAPPED (thin)** | host (endpoint) | NO (no process ctx on 30803) — only `dest_fqdn` |
-| **S5** | **SRUM network_usage** (Plaso esedb/srum) | `piiat_mitrecar/mappings/plaso_srum.py:73` | **MAPPED** | host (per-app aggregate) | partial — `exe`,`image_path`,`uid` native; no pid/user/endpoints |
-| **U1** | **WFP 5156 (allow) / 5157 (block)** | `piiat-mitrecar/to-be-validated/evtx_audit.yml:157` | **QUARANTINED — NOT active** | host (endpoint) | **YES (spec)** — `image_path`,`pid`,`owning_pid`; no user/exe |
+| **S4** | **SMBClient/Connectivity 30803** | `byakugan/byakugan/mappings/evtx_more.py:152` | **MAPPED (thin)** | host (endpoint) | NO (no process ctx on 30803) — only `dest_fqdn` |
+| **S5** | **SRUM network_usage** (Plaso esedb/srum) | `byakugan/byakugan/mappings/plaso_srum.py:73` | **MAPPED** | host (per-app aggregate) | partial — `exe`,`image_path`,`uid` native; no pid/user/endpoints |
+| **U1** | **WFP 5156 (allow) / 5157 (block)** | `byakugan/to-be-validated/evtx_audit.yml:157` | **QUARANTINED — NOT active** | host (endpoint) | **YES (spec)** — `image_path`,`pid`,`owning_pid`; no user/exe |
 | **U2** | **Zeek dns/ssl/http per-protocol logs** | (raw; `zeek_extra.py` docstring) | **NOT mapped to flow** | network | NO — could enrich `application_protocol`/`proto_info`/`dest_fqdn` by shared `uid` at cascade, not done |
 | **U3** | **Sysmon EID 22 DnsQuery** | (raw; `sysmon.py:469` default None) | **NOT mapped** | host | — (DNS resolution, not a flow; could feed `dest_fqdn`) |
 | **U4** | **Suricata EVE / NetFlow-IPFIX / raw pcap payload** | — | **NOT mapped (no mapper exists)** | network | NO — but pcap payload is the *only* real source of `content` & `proto_info` |
@@ -105,9 +105,9 @@ Legend for "mapped?": **yes** = an active map fills it; **inherit** = filled by 
 - **`flow.yaml` `coverage_map` lists `sysmon_13`** for the start action — that is MITRE's own sensor-taxonomy token for its Sysmon network-connection sensor config, **not** Windows Sysmon EventID 13 (RegistryValueSet). This repo's authoritative endpoint source for flow is **Sysmon EventID 3 (NetworkConnect)**; treat the data-model `coverage_map` as MITRE's generic placeholder, not this engine's coverage.
 
 ### Key file references
-- Active maps: `third_party/piiat-mitrecar/piiat_mitrecar/mappings/{zeek_conn.py, sysmon.py:311, evtx_more.py:152, plaso_srum.py:73}`
+- Active maps: `byakugan/byakugan/mappings/{zeek_conn.py, sysmon.py:311, evtx_more.py:152, plaso_srum.py:73}`
 - Memory flow map: `third_party/piiat-mem/piiat_mem/mappings.py:125` (`_FLOW_MAP`); inheritance list `piiat_mem/enrich.py:72` (`_INHERIT`)
-- Enrich inheritance rules: `piiat_mitrecar/relationships.yml` (`from_owning_process` includes `ppid`)
-- Quarantined WFP spec: `third_party/piiat-mitrecar/to-be-validated/evtx_audit.yml:157-189`
-- Model + semantics: `car_data_model.json`, `third_party/piiat-mitrecar/third_party/car/data_model/flow.yaml`
+- Enrich inheritance rules: `byakugan/byakugan/relationships.yml` (`from_owning_process` includes `ppid`)
+- Quarantined WFP spec: `byakugan/to-be-validated/evtx_audit.yml:157-189`
+- Model + semantics: `car_data_model.json`, `byakugan/third_party/car/data_model/flow.yaml`
 - Relations discipline: `docs/CAR-Relations.md`

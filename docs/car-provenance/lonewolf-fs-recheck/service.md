@@ -8,7 +8,7 @@ grounded in the **real LoneWolf Win10 plaso timeline**.
 - **Object** `service`: fields `command_line, exe, fqdn, hostname, image_path, name, pid, ppid, uid, user`; actions `create, delete, pause, start, stop` (`car_data_model.json`).
 - **Ground truth**: `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl`
   (LoneWolf.E01, host `DESKTOP-PM6C56D`), 4.17M rows. Numbers below are counted from it.
-- **Maps in play**: `third_party/piiat-mitrecar/piiat_mitrecar/mappings/plaso_registry.py`
+- **Maps in play**: `byakugan/byakugan/mappings/plaso_registry.py`
   (F), `.../recmd.py` (G), `.../plaso_exec.py` (prefetch/amcache), `.../plaso_fs_extra.py`
   (filestat/PE = $MFT).
 
@@ -105,7 +105,7 @@ one action:
 - **fqdn** — only if the recorded machine name is dotted; NetBIOS here → null (not faked).
 - **stop / pause** actions — no disk artefact records them.
 - **Autoruns** — CAR's canonical service create/delete sensor is still not wired (empty grep
-  in `piiat_mitrecar/` and `python/`), consistent with the companion catalogue.
+  in `byakugan/` and `python/`), consistent with the companion catalogue.
 
 ---
 
@@ -114,7 +114,7 @@ one action:
 - Real data: `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl` — 1,796
   `windows:registry:service` rows (`parser: winreg/windows_services`), 618 distinct services;
   top-level `object_name` 718, `service_dll` 591, `image_path` 1,760.
-- Mis-classified map (the gap): `third_party/piiat-mitrecar/piiat_mitrecar/mappings/plaso_registry.py`
+- Mis-classified map (the gap): `byakugan/byakugan/mappings/plaso_registry.py`
   (object=registry, action=key_edit; `native_extract` already pulls `object_name`,
   `service_dll`, `start_type`, `service_type`, `error_control`, `name`, `values`).
 - Value-granular disk map: `.../mappings/recmd.py` (registry/value_edit; real but not
@@ -123,7 +123,7 @@ one action:
   `.../mappings/plaso_fs_extra.py` (filestat/PE → file).
 - No disk `car.db` exists yet (`data_store/processed/.../car.db` is the **memory** run only) —
   so the "zero service objects from disk" gap is confirmed by the map logic, not yet by a DB.
-- Semantics: `third_party/piiat-mitrecar/third_party/car/data_model/service.yaml`; schema
+- Semantics: `byakugan/third_party/car/data_model/service.yaml`; schema
   `car_data_model.json`.
 
 ### service_type / start_type reference (observed distributions)
