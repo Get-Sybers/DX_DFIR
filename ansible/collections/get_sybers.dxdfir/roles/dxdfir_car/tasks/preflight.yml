@@ -1,7 +1,8 @@
 ---
 # FIND FACTS -> check preconditions BEFORE the engine runs. The CAR stage is pure
-# Python + the vendored PIIAT-MitreCar submodule (no containers), so preflight is
-# a module-import guard, not a docker check. The engine's own _ensure_ready()
+# Python + the vendored byakugan submodule (formerly PIIAT-MitreCar; no
+# containers), so preflight is a module-import guard, not a docker check. The
+# engine's own _ensure_ready()
 # surfaces a missing/uninitialised submodule as a clear error if it slips past.
 
 - name: "car-preflight | the CAR engine module imports"

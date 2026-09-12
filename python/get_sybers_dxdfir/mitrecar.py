@@ -1,7 +1,7 @@
-"""Drive the standalone **PIIAT-MitreCar** tool (the vendored
-``third_party/piiat-mitrecar`` submodule) — DX_DFIR uses it in an automated
-fashion via its CLI, exactly like the PIIAT-Mem lane: the tool stays a
-standalone public project; this module only decides what to run and invokes
+"""Drive the standalone **byakugan** tool (formerly PIIAT-MitreCar; the
+vendored ``third_party/piiat-mitrecar`` submodule) — DX_DFIR uses it in an
+automated fashion via its CLI, exactly like the PIIAT-Mem lane: the tool stays
+a standalone public project; this module only decides what to run and invokes
 ``python -m piiat_mitrecar``.
 
 The tool turns each processed evidence SOURCE into its own MITRE CAR database
@@ -20,7 +20,7 @@ import subprocess
 import sys
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# The vendored PIIAT-MitreCar submodule — invoked as `python -m piiat_mitrecar`.
+# The vendored byakugan submodule — invoked as `python -m piiat_mitrecar`.
 _PIIAT_MITRECAR_DIR = os.path.join(_REPO_ROOT, "third_party", "piiat-mitrecar")
 
 
@@ -31,7 +31,7 @@ def _env() -> dict:
     return env
 
 
-# PIIAT-MitreCar reconstructs its object model LIVE from ITS OWN pinned
+# byakugan reconstructs its object model LIVE from ITS OWN pinned
 # submodules (car + attack-datasources), so the submodule must be initialised
 # RECURSIVELY — a plain `--init` leaves the model sources missing.
 _MODEL_SOURCES = (
@@ -84,12 +84,12 @@ def run_timeline(tool_argv: list[str]) -> subprocess.CompletedProcess:
 
 def main(argv: list[str] | None = None) -> int:
     """A transparent pass-through: every flag is the tool's own (see the
-    PIIAT-MitreCar README) — this lane only supplies the vendored location.
+    byakugan README) — this lane only supplies the vendored location.
 
     The one reserved word is the leading ``timeline`` subcommand, which routes to
     ``piiat_mitrecar.timeline`` so a non-Python front-end can build the unified
     CAR timeline as ``python -m get_sybers_dxdfir.mitrecar timeline <car_dir> …``;
-    every other invocation flows to the PIIAT-MitreCar build unchanged.
+    every other invocation flows to the byakugan build unchanged.
     """
     args = list(sys.argv[1:] if argv is None else argv)
     if args and args[0] == "timeline":

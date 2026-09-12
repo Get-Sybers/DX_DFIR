@@ -48,10 +48,11 @@ Pred = Callable[[Row], bool]
 
 def _engine_actions():
     """The canonical car_action vocabulary per object — RECONSTRUCTED from the
-    engine's model, exactly as PIIAT-MitreCar builds it: generated from the forked
-    `car` repo we own (third_party/piiat-mitrecar/third_party/car/data_model),
-    never hardcoded here. Returns {object: {actions}} or None if the engine model
-    can't be loaded (submodules not checked out)."""
+    engine's model, exactly as byakugan (formerly PIIAT-MitreCar) builds it:
+    generated from the forked `car` repo we own
+    (third_party/piiat-mitrecar/third_party/car/data_model), never hardcoded
+    here. Returns {object: {actions}} or None if the engine model can't be
+    loaded (submodules not checked out)."""
     eng = os.path.join(_REPO_ROOT, "third_party", "piiat-mitrecar")
     if eng not in sys.path:
         sys.path.insert(0, eng)

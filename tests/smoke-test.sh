@@ -11,11 +11,11 @@
 # What it does, entirely in throwaway temp dirs (never data_store/processed):
 #
 #   process pinned Sysmon .evtx through the real evtx lane (EvtxECmd) ->
-#   normalise the output into materialised CAR (the vendored PIIAT-MitreCar
-#   engine, via get_sybers_dxdfir.mitrecar) -> assert each Sysmon-sourced CAR
-#   object has rows AND its EvtxPayload-derived fields are populated with the
-#   expected values -> run the verify-car gate (get_sybers_dxdfir.carcheck) over
-#   the same tree.
+#   normalise the output into materialised CAR (the vendored byakugan engine,
+#   formerly PIIAT-MitreCar, via get_sybers_dxdfir.mitrecar) -> assert each
+#   Sysmon-sourced CAR object has rows AND its EvtxPayload-derived fields are
+#   populated with the expected values -> run the verify-car gate
+#   (get_sybers_dxdfir.carcheck) over the same tree.
 #
 # Fixtures: the `sysmon-attack-samples` group in dev-scripts/samples-manifest.tsv
 # (real Sysmon telemetry from sbousseaden/EVTX-ATTACK-SAMPLES, sha256-pinned, a
@@ -108,7 +108,7 @@ docker image inspect dxdfir/evtxecmd:latest >/dev/null 2>&1 \
     || die "image dxdfir/evtxecmd:latest missing — build it: docker build -t dxdfir/evtxecmd:latest -f docker/evtxecmd/Dockerfile docker"
 # The CAR lane reconstructs its model from the engine's nested submodules.
 python3 -c 'import sys; from get_sybers_dxdfir import mitrecar; sys.exit(0 if mitrecar._model_sources_present() else 1)' 2>/dev/null \
-    || die "PIIAT-MitreCar's model sources are missing — run: git submodule update --init --recursive third_party/piiat-mitrecar"
+    || die "byakugan's model sources are missing — run: git submodule update --init --recursive third_party/piiat-mitrecar"
 pass "docker, python3, dxdfir/evtxecmd:latest and the vendored CAR engine present"
 
 # =============================================================================
@@ -135,7 +135,7 @@ fi
 pass "EvtxECmd processed $processed log(s)"
 
 # =============================================================================
-# Normalise the processed evtx into finished CAR (PIIAT-MitreCar engine): one
+# Normalise the processed evtx into finished CAR (byakugan engine): one
 # car_<object>.jsonl per populated object, plus car_relationships.jsonl — the
 # materialised CAR every sink reads. Extraction happens in the engine; this is
 # the real CAR path.

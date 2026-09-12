@@ -85,10 +85,11 @@ dxdfir build-car                             # every source under data_store/pro
 dxdfir verify-car                            # the promotion gate over the result
 dxdfir car-timeline data_store/processed/car # one time-ordered timeline across every source
 ```
-- `build-car` drives the vendored [PIIAT-MitreCar](https://github.com/Get-Sybers/PIIAT-MitreCar)
-  engine: each processed source becomes its own `car.db` + `superset.db` and one
-  `car_<object>.jsonl` per populated CAR object (plus `car_relationships.jsonl`)
-  under `data_store/processed/car/<source>/`. A source whose store exists is
+- `build-car` drives the vendored [byakugan](https://github.com/Get-Sybers/byakugan)
+  engine (formerly PIIAT-MitreCar): each processed source becomes its own
+  `car.db` + `superset.db` and one `car_<object>.jsonl` per populated CAR
+  object (plus `car_relationships.jsonl`) under
+  `data_store/processed/car/<source>/`. A source whose store exists is
   left alone; `--rebuild` re-derives it after a map change.
 - `verify-car` asserts what was written: each exercised object populated, values
   sane (IPs, ports, SIDs, `car_action` in the engine model's vocabulary), every

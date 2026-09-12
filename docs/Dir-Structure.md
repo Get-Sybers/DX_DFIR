@@ -25,7 +25,7 @@ per-item processing).
     │
     └── dev-scripts/                                  # Experimental/one-off helpers, unsupported (e.g. the Plaso output module)
     │
-    └── third_party/                                  # Vendored engines, as submodules: PIIAT-MitreCar (CAR), PIIAT-Mem (memory)
+    └── third_party/                                  # Vendored engines, as submodules: byakugan (CAR, formerly PIIAT-MitreCar), PIIAT-Mem (memory)
     │
     └── tests/                                        # run-checks.sh (the check harness that gates CI), smoke-test.sh, the Elastic risk gate
     │

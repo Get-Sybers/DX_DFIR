@@ -1,5 +1,5 @@
 # Python dependency lock for the get_sybers_dxdfir processor package and the
-# vendored PIIAT-MitreCar engine it runs in-process.
+# vendored byakugan engine (formerly PIIAT-MitreCar) it runs in-process.
 #
 # pyproject.toml carries the ">=" floors (what the code needs); THIS file pins the
 # exact, tested resolution so a fresh `pip install` is reproducible and an

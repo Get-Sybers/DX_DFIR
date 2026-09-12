@@ -236,9 +236,10 @@ confirm "Do you wish to proceed?" || { echo "Setup cancelled."; exit 1; }
 ################################################################################
 # Pull the git submodules — RECURSIVELY.
 #
-# The CAR lane (get_sybers_dxdfir.mitrecar) drives the vendored PIIAT-MitreCar
-# engine in third_party/piiat-mitrecar, which reconstructs its object model LIVE
-# from ITS OWN pinned submodules (third_party/car, third_party/attack-datasources).
+# The CAR lane (get_sybers_dxdfir.mitrecar) drives the vendored byakugan engine
+# (formerly PIIAT-MitreCar) in third_party/piiat-mitrecar, which reconstructs
+# its object model LIVE from ITS OWN pinned submodules (third_party/car,
+# third_party/attack-datasources).
 # A plain `git submodule update --init` leaves those nested modules empty and the
 # `dxdfir` CAR/timeline commands then fail, so the init MUST be recursive. Runs
 # before the chown/chmod below so the freshly checked-out files inherit them too.
@@ -251,7 +252,7 @@ if [[ -f "$REPO_ROOT_DIR/.gitmodules" ]]; then
     git "${GIT_SAFE[@]}" -C "$REPO_ROOT_DIR" submodule sync --recursive >/dev/null 2>&1 || true
     git "${GIT_SAFE[@]}" -C "$REPO_ROOT_DIR" submodule update --init --recursive \
         || die "Failed to initialise git submodules recursively (need network + git access)."
-    echo "✅ Submodules checked out (incl. PIIAT-MitreCar's nested car + attack-datasources)."
+    echo "✅ Submodules checked out (incl. byakugan's nested car + attack-datasources)."
 else
     echo "ℹ️  No .gitmodules found — skipping submodule init."
 fi
@@ -281,7 +282,7 @@ fi
 # install gives a working `dxdfir process/build-car/verify-car/build-docker`.
 #
 # --editable is REQUIRED, not a preference. get_sybers_dxdfir/mitrecar.py locates the
-# vendored PIIAT-MitreCar engine RELATIVE TO ITS OWN FILE (_REPO_ROOT = three dirs
+# vendored byakugan engine RELATIVE TO ITS OWN FILE (_REPO_ROOT = three dirs
 # up from __file__ -> third_party/piiat-mitrecar). A plain copying install puts the
 # package under the venv's site-packages, three dirs up from which is .../lib/pythonX.Y
 # with no third_party/ — so `dxdfir build-car` can't reach the engine and dies

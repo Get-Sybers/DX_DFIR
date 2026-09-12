@@ -125,6 +125,11 @@ is `0`, anything may change without notice.
   over the same tree; it needs no backend.
 - `tests/run-checks.sh` (and the `checks` workflow) now run the Python unit
   tests when pytest is installed.
+- **The CAR engine's GitHub repository was renamed** PIIAT-MitreCar →
+  [byakugan](https://github.com/Get-Sybers/byakugan): `.gitmodules` now points
+  the `third_party/piiat-mitrecar` submodule at the new URL. The vendored path
+  (`third_party/piiat-mitrecar`) and the `piiat_mitrecar` Python package are
+  unchanged upstream — only the repository name changed — so no code changes.
 
 ### Added
 - **`dxdfir stix behaviour-sightings`** — joins the detection lanes

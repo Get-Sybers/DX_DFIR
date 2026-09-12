@@ -3,4 +3,4 @@
 	url = https://github.com/Get-Sybers/PIIAT-Mem.git
 [submodule "third_party/piiat-mitrecar"]
 	path = third_party/piiat-mitrecar
-	url = https://github.com/Get-Sybers/PIIAT-MitreCar.git
+	url = https://github.com/Get-Sybers/byakugan.git

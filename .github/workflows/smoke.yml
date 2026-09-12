@@ -3,11 +3,11 @@ name: smoke
 # Runs the pipeline for real and asserts CORRECTNESS — the coverage `checks`
 # deliberately does not provide (issue #10). It processes sha256-pinned Sysmon
 # .evtx through the real evtx lane (EvtxECmd), normalises the output into
-# materialised CAR with the vendored PIIAT-MitreCar engine, asserts every
-# Sysmon-sourced CAR object has rows with its EvtxPayload-derived fields
-# correctly populated, and runs the verify-car gate over the same tree. The
-# EvtxPayload XML→JSON break that zeroed those fields passes `checks` but fails
-# this.
+# materialised CAR with the vendored byakugan engine (formerly PIIAT-MitreCar),
+# asserts every Sysmon-sourced CAR object has rows with its EvtxPayload-derived
+# fields correctly populated, and runs the verify-car gate over the same tree.
+# The EvtxPayload XML→JSON break that zeroed those fields passes `checks` but
+# fails this.
 #
 # Kept OUT of the every-push `checks` job because it builds an image and runs
 # real tools (minutes, not seconds). It runs:

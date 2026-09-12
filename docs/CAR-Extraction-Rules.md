@@ -2,7 +2,7 @@
 
 The MITRE CAR data model is DX_DFIR's extraction target. The CAR objects, their
 fields and their canonical actions are reconstructed from the pinned `car`
-submodule (the forked MITRE model we own), and the engine ([PIIAT-MitreCar](https://github.com/Get-Sybers/PIIAT-MitreCar))
+submodule (the forked MITRE model we own), and the engine ([byakugan](https://github.com/Get-Sybers/byakugan), formerly PIIAT-MitreCar)
 normalises every artefact into finished CAR events against it. These four
 principles govern how each CAR object is built.
 

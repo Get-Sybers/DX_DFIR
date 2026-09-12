@@ -1,5 +1,6 @@
-"""The mitrecar lane — DX_DFIR drives the vendored PIIAT-MitreCar via its CLI
-(the submodule stays standalone; the engine's own 100-test suite lives there)."""
+"""The mitrecar lane — DX_DFIR drives the vendored byakugan engine (formerly
+PIIAT-MitreCar) via its CLI (the submodule stays standalone; the engine's own
+100-test suite lives there)."""
 import json
 import os
 

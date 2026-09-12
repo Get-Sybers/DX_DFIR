@@ -5,8 +5,8 @@ argument_specs:
     description:
       - >-
         Normalises every processed source into the MITRE CAR data model via the
-        vendored PIIAT-MitreCar engine. Three actions selected by
-        dxdfir_car_action: build (per-source car.db + superset.db +
+        vendored byakugan engine (formerly PIIAT-MitreCar). Three actions
+        selected by dxdfir_car_action: build (per-source car.db + superset.db +
         car_<object>.jsonl + car_relationships.jsonl), verify (the CAR correctness
         promotion gate) and timeline (one property-rich, time-ordered CAR
         timeline). Pure Python + the vendored engine — no containers.

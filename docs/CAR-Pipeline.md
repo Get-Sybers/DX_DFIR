@@ -60,11 +60,11 @@ skipping the newly-covered events. (`dxdfir build-car` fronts the same engine as
 
 ## 3. Components (the vendored `third_party/piiat-mitrecar` submodule)
 
-The engine is the standalone public **[PIIAT-MitreCar](https://github.com/Get-Sybers/PIIAT-MitreCar)** tool,
-vendored as a submodule and driven via its CLI by the thin
+The engine is the standalone public **[byakugan](https://github.com/Get-Sybers/byakugan)** tool
+(formerly PIIAT-MitreCar), vendored as a submodule and driven via its CLI by the thin
 `get_sybers_dxdfir/mitrecar.py` lane — exactly the PIIAT-Mem pattern.
 
-**Recursive submodules (required).** PIIAT-MitreCar reconstructs its object model
+**Recursive submodules (required).** The engine reconstructs its object model
 LIVE from its OWN pinned submodules (`third_party/car` = the CAR model,
 `third_party/attack-datasources` = the ATT&CK data-sources superset + relationship
 vocabulary) — nothing is committed as a copy. So the submodule must be initialised
