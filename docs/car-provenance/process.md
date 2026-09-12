@@ -11,7 +11,7 @@ parent_exe, parent_guid, parent_image_path, pid, ppid, sha1_hash, sha256_hash, s
 signature_valid, signer, target_address, target_guid, target_name, target_pid, uid, user.
 
 Grounded in (read verbatim):
-`third_party/piiat-mitrecar/third_party/car/data_model/process.yaml` (+ `docs/data_model/process.md`);
+`byakugan/third_party/car/data_model/process.yaml` (+ `docs/data_model/process.md`);
 `car_data_model.json`; the live engine maps
 `piiat_mitrecar/mappings/{sysmon,evtx_windows,plaso_exec,plaso_srum}.py`,
 `piiat_mem/mappings.py`, the memory plugin `plugins/windows/piiat/{processes,access}.py`;

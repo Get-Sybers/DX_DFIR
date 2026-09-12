@@ -5,6 +5,10 @@ and **every artefact/source in the DFIR pipeline that can supply it** — ground
 in the actual engine maps (not the upstream CAR sensor cards, which overclaim),
 in PIIAT-Mem's memory maps, and in real processed evidence.
 
+Path convention: `byakugan/…` cites a file inside the external Byakugan engine
+checkout (`$BYAKUGAN_ROOT`, default: the `byakugan` directory beside this repo,
+pinned by `byakugan.ref`); `third_party/piiat-mem/…` stays repo-relative.
+
 One file per object (all 13). Each has a per-field table
 (`field | sources (source → native field) | action(s) | currently mapped? | confidence & caveats`)
 plus a source×field coverage matrix.

@@ -58,19 +58,25 @@ which is required after new maps land or the existing (stale) stores would keep
 skipping the newly-covered events. (`dxdfir build-car` fronts the same engine as
 `python -m get_sybers_dxdfir.mitrecar`.)
 
-## 3. Components (the vendored `third_party/piiat-mitrecar` submodule)
+## 3. Components (the external Byakugan engine)
 
-The engine is the standalone public **[byakugan](https://github.com/Get-Sybers/byakugan)** tool
-(formerly PIIAT-MitreCar), vendored as a submodule and driven via its CLI by the thin
-`get_sybers_dxdfir/mitrecar.py` lane — exactly the PIIAT-Mem pattern.
+The engine is the standalone public **[Byakugan](https://github.com/Get-Sybers/byakugan)**
+tool, driven via its CLI by the thin `get_sybers_dxdfir/mitrecar.py` lane —
+exactly the PIIAT-Mem pattern — from an **external checkout**: `$BYAKUGAN_ROOT`
+when set, else a `byakugan/` checkout beside the DX_DFIR repo. The repo-root
+`byakugan.ref` file pins the engine commit DX_DFIR is tested against;
+`scripts/setup-environment.sh` provisions the checkout at that pin, or manually:
+`git clone --recurse-submodules https://github.com/Get-Sybers/byakugan <root>
+&& git -C <root> checkout <ref from byakugan.ref>
+&& git -C <root> submodule update --init --recursive`.
 
-**Recursive submodules (required).** The engine reconstructs its object model
+**Recursive checkout (required).** The engine reconstructs its object model
 LIVE from its OWN pinned submodules (`third_party/car` = the CAR model,
 `third_party/attack-datasources` = the ATT&CK data-sources superset + relationship
-vocabulary) — nothing is committed as a copy. So the submodule must be initialised
-**recursively**: `git submodule update --init --recursive third_party/piiat-mitrecar`.
-The `mitrecar.py` lane self-plumbs this (recursive init on first run) and errors
-clearly if it can't.
+vocabulary, both resolved inside the engine checkout) — nothing is committed as
+a copy, so every provisioning path above is recursive. The `mitrecar.py` lane
+errors clearly, with that provisioning command, when the engine or its nested
+submodules are missing.
 
 **Two stores per source.** The lane produces, beside each `car.db`: a
 `superset.db` (the CAR+ATT&CK superset model + the relationship-instance timeline

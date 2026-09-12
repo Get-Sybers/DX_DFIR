@@ -5,7 +5,7 @@ galaxy_info:
   author: Get-Sybers
   description: >-
     Materialise, verify and timeline the MITRE CAR from processed evidence via the
-    vendored byakugan engine, formerly PIIAT-MitreCar
+    external Byakugan engine
     (get_sybers_dxdfir.mitrecar / .carcheck). One role, three actions
     (build|verify|timeline); the playbook decides.
   company: Get-Sybers

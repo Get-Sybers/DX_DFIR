@@ -3,9 +3,10 @@ name: smoke
 # Runs the pipeline for real and asserts CORRECTNESS — the coverage `checks`
 # deliberately does not provide (issue #10). It processes sha256-pinned Sysmon
 # .evtx through the real evtx lane (EvtxECmd), normalises the output into
-# materialised CAR with the vendored byakugan engine (formerly PIIAT-MitreCar),
-# asserts every Sysmon-sourced CAR object has rows with its EvtxPayload-derived
-# fields correctly populated, and runs the verify-car gate over the same tree.
+# materialised CAR with the external Byakugan engine (provisioned below at the
+# commit byakugan.ref pins), asserts every Sysmon-sourced CAR object has rows
+# with its EvtxPayload-derived fields correctly populated, and runs the
+# verify-car gate over the same tree.
 # The EvtxPayload XML→JSON break that zeroed those fields passes `checks` but
 # fails this.
 #
@@ -31,6 +32,10 @@ on:
       - "python/pyproject.toml"
       - "docker/evtxecmd/**"
       - "docker/hardening/**"
+      # an engine bump is a pipeline change: byakugan.ref pins the external
+      # Byakugan engine the CAR lane runs, so it must re-run this workflow.
+      # third_party/** stays for the remaining piiat-mem submodule.
+      - "byakugan.ref"
       - ".gitmodules"
       - "third_party/**"
       - "tests/smoke-test.sh"
@@ -48,10 +53,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # the CAR lane (get_sybers_dxdfir.mitrecar) reconstructs its model live
-          # from the nested car / attack-datasources submodules — check out
-          # recursively so build-car (and the gate's action vocabulary) work.
+          # the only remaining submodule is third_party/piiat-mem (the
+          # volatility lane). Smoke never touches it, but recursive is harmless
+          # here and keeps this checkout identical to a provisioned host.
           submodules: recursive
+
+      # The CAR lane (get_sybers_dxdfir.mitrecar) drives the EXTERNAL Byakugan
+      # engine — $BYAKUGAN_ROOT, else the sibling dir of the repo — at the
+      # commit pinned by byakugan.ref (first non-comment line). The engine
+      # reconstructs its object model live from ITS OWN nested submodules
+      # (third_party/car + third_party/attack-datasources), so the submodule
+      # init MUST be recursive. byakugan.ref is in the PR path filters above:
+      # bumping the pin re-runs this whole pipeline against the new engine.
+      - name: Provision the Byakugan engine (at the byakugan.ref pin)
+        run: |
+          ref="$(grep -vE '^[[:space:]]*(#|$)' byakugan.ref | head -1 | tr -d '[:space:]')"
+          test -n "$ref"
+          git clone https://github.com/Get-Sybers/byakugan ../byakugan
+          git -C ../byakugan checkout "$ref"
+          git -C ../byakugan submodule update --init --recursive
 
       - name: Set up Python
         uses: actions/setup-python@v5

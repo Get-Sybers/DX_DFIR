@@ -29,6 +29,8 @@ import re
 import sys
 from collections.abc import Callable
 
+from get_sybers_dxdfir import mitrecar
+
 # The 13 CAR objects — one car_<object>.jsonl each, per source.
 _OBJECTS = ("authentication", "driver", "email", "file", "flow", "http",
             "module", "process", "registry", "service", "socket", "thread",
@@ -48,12 +50,12 @@ Pred = Callable[[Row], bool]
 
 def _engine_actions():
     """The canonical car_action vocabulary per object — RECONSTRUCTED from the
-    engine's model, exactly as byakugan (formerly PIIAT-MitreCar) builds it:
-    generated from the forked `car` repo we own
-    (third_party/piiat-mitrecar/third_party/car/data_model), never hardcoded
-    here. Returns {object: {actions}} or None if the engine model can't be
-    loaded (submodules not checked out)."""
-    eng = os.path.join(_REPO_ROOT, "third_party", "piiat-mitrecar")
+    engine's model, exactly as the Byakugan engine builds it: generated from
+    the forked `car` repo we own (<engine root>/third_party/car/data_model),
+    never hardcoded here. The external engine checkout is resolved by the one
+    canonical resolver (mitrecar.engine_root). Returns {object: {actions}} or
+    None if the engine model can't be loaded (engine not provisioned)."""
+    eng = mitrecar.engine_root()
     if eng not in sys.path:
         sys.path.insert(0, eng)
     try:
@@ -206,7 +208,7 @@ def run(car_dir: str = DEFAULT_CAR_DIR) -> _Checker:
     actions = _engine_actions()
     if actions is None:
         c._fail("CAR action vocabulary — engine model not loadable "
-                "(init submodules: git submodule update --init --recursive)")
+                f"(provision the Byakugan engine: {mitrecar.PROVISION_HINT})")
 
     # -- per-object population + value sanity ---------------------------------
     for obj in _OBJECTS:

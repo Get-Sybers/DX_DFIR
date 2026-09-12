@@ -15,8 +15,9 @@ dxdfir_car_processed_dir: "{{ dxdfir_car_repo_root }}/data_store/processed"
 dxdfir_car_dir: "{{ dxdfir_car_repo_root }}/data_store/processed/car"
 
 # The CAR engine module the preflight import-checks (a thin front to the
-# vendored byakugan engine, formerly PIIAT-MitreCar); in-repo runs put the
-# package on PYTHONPATH.
+# external Byakugan engine — $BYAKUGAN_ROOT, else byakugan/ beside the repo,
+# pinned by the repo-root byakugan.ref); in-repo runs put the package on
+# PYTHONPATH.
 dxdfir_car_module: get_sybers_dxdfir.mitrecar
 dxdfir_car_python_path: "{{ dxdfir_car_repo_root }}/python"
 

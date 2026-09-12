@@ -81,12 +81,14 @@ matching `dxdfir_<source>` role); processors are also runnable as
 | EZ-Tools artefacts — SRUM, registry, … | `process zimmerman` | `zimmerman/` |
 | YARA / Suricata / Hayabusa | `process signatures` | `signatures/<lane>/` (JSONL) |
 
-The **CAR layer is materialised**: the [byakugan](https://github.com/Get-Sybers/byakugan)
+The **CAR layer is materialised**: the [Byakugan](https://github.com/Get-Sybers/byakugan)
 engine (formerly PIIAT-MitreCar) normalises each processed source into finished
 CAR events — one `car_<object>.jsonl` per object (13 objects) plus
-`car_relationships.jsonl` — under `processed/car/<source>/`. Extraction happens
-once, in the engine, so that JSON is the contract every sink reads and cannot
-drift from what the engine emits.
+`car_relationships.jsonl` — under `processed/car/<source>/`. The engine is an
+external recursive checkout, provisioned by `scripts/setup-environment.sh` at
+the commit pinned in `byakugan.ref` (`$BYAKUGAN_ROOT`, else `byakugan/` beside
+the repo). Extraction happens once, in the engine, so that JSON is the contract
+every sink reads and cannot drift from what the engine emits.
 
 **Validated** by the CI **smoke test** (the real EVTX → EvtxECmd → CAR path over
 pinned Sysmon fixtures, asserting the extracted field values) and by

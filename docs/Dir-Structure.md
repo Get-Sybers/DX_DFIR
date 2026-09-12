@@ -25,7 +25,7 @@ per-item processing).
     │
     └── dev-scripts/                                  # Experimental/one-off helpers, unsupported (e.g. the Plaso output module)
     │
-    └── third_party/                                  # Vendored engines, as submodules: byakugan (CAR, formerly PIIAT-MitreCar), PIIAT-Mem (memory)
+    └── third_party/                                  # Vendored as a submodule: PIIAT-Mem (memory)
     │
     └── tests/                                        # run-checks.sh (the check harness that gates CI), smoke-test.sh, the Elastic risk gate
     │
@@ -85,6 +85,11 @@ per-item processing).
             │
             └── sofelk/<tool>/                        # --pipeline sofelk output, delivered by dxdfir-ingest-sofelk.yml
 ```
+
+One engine lives **outside** this tree: the CAR lane drives the Byakugan engine
+from an external recursive checkout — `$BYAKUGAN_ROOT`, or a `byakugan/`
+directory beside the DX_DFIR repo — pinned by the repo-root `byakugan.ref` and
+provisioned by `scripts/setup-environment.sh`.
 
 The Splunk-era tree (`splunk/` with its eight apps, and a since-removed
 in-container provisioning `ansible/` — **unrelated to today's

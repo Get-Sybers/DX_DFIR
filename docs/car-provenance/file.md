@@ -2,7 +2,7 @@
 
 Authoritative "find once, done" map of **every canonical field → every artefact/source that can supply it**, grounded in the DX_DFIR engine as it stands today. READ-ONLY analysis.
 
-- **Object semantics:** `third_party/piiat-mitrecar/third_party/car/data_model/file.yaml`; `car_data_model.json` (canonical field list confirmed identical to the task).
+- **Object semantics:** `byakugan/third_party/car/data_model/file.yaml`; `car_data_model.json` (canonical field list confirmed identical to the task).
 - **Canonical fields (26):** company, content, creation_time, extension, file_name, file_path, fqdn, gid, group, hostname, image_path, link_target, md5_hash, mime_type, mode, owner, owner_uid, pid, ppid, previous_creation_time, sha1_hash, sha256_hash, signature_valid, signer, uid, user.
 - **Actions (7):** acl_modify, create, delete, modify, read, timestomp, write.
 
@@ -37,7 +37,7 @@ Authoritative "find once, done" map of **every canonical field → every artefac
 
 ### Inert / to-be-validated (spec written, NOT wired into the pipeline)
 
-Quarantined in `third_party/piiat-mitrecar/to-be-validated/evtx_audit.yml` (pipeline note: `piiat_mitrecar/pipeline.py:45`). These are schema-grounded but no corpus has the audit subcategory enabled, so they never run.
+Quarantined in `byakugan/to-be-validated/evtx_audit.yml` (pipeline note: `piiat_mitrecar/pipeline.py:45`). These are schema-grounded but no corpus has the audit subcategory enabled, so they never run.
 
 | # | Source | Actions | Spec |
 |---|---|---|---|

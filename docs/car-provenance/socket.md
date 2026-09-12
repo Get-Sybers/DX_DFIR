@@ -8,10 +8,10 @@ listening events in particular can be helpful in detecting malicious activity."*
 READ-ONLY audit, evidence as of 2026-09-07.
 
 Grounded in:
-- `third_party/piiat-mitrecar/third_party/car/data_model/socket.yaml` + `docs/data_model/socket.md` (semantics + upstream coverage map)
+- `byakugan/third_party/car/data_model/socket.yaml` + `docs/data_model/socket.md` (semantics + upstream coverage map)
 - `car_data_model.json` (canonical field/action list — matches the object header above exactly)
-- `third_party/piiat-mitrecar/model/{car,projection}/objects/socket.yml` (reconstructed CAR object + ECS projection)
-- CAR sensors `third_party/piiat-mitrecar/third_party/car/sensors/{osquery_4.6.0,auditd_2.8}.yaml`
+- `byakugan/model/{car,projection}/objects/socket.yml` (reconstructed CAR object + ECS projection)
+- CAR sensors `byakugan/third_party/car/sensors/{osquery_4.6.0,auditd_2.8}.yaml`
 
 ---
 
@@ -19,7 +19,7 @@ Grounded in:
 
 - **Exactly ONE active socket source ships in this pipeline: MEMORY (Volatility 3 netscan/netstat / `windows.piiat.network`) via PIIAT-Mem → CAR `socket`/`listen`.** It is the primary (only) dead-box socket source.
 - That memory source only produces the **`listen`** action and only the **local-end** fields (`local_address`, `local_port`, `protocol`, `family`, `pid`, `success`) + `image_path` **by enrichment**. It never asserts `remote_*` or `local_path`, and never `bind`/`close`.
-- **Windows Security 5158 (WFP bind) → `socket`/`bind` exists but is INERT** — quarantined in `third_party/piiat-mitrecar/to-be-validated/evtx_audit.yml`, not in the active `mappings/` package.
+- **Windows Security 5158 (WFP bind) → `socket`/`bind` exists but is INERT** — quarantined in `byakugan/to-be-validated/evtx_audit.yml`, not in the active `mappings/` package.
 - **Sysmon 3, WFP 5156/5157 are mapped to `flow`, NOT `socket`** (deliberate — the connection "as made"). **5031 firewall block is not referenced anywhere in the repo.**
 - No `socket` source exists for **`remote_address`, `remote_port`, `local_path`, or the `close` action** — honest no-source (matches even the upstream CAR coverage map, which leaves `local_path` and `success` empty and has no non-osquery sensor).
 - **The current evidence corpus contains ZERO socket rows** — no netscan/netstat/`piiat.network` output was collected into `data_store/processed/volatility/…`, and the EvtxECmd corpus has only Sysmon 1/5 (no 5158, no Sysmon 3). The capability is present but unexercised.

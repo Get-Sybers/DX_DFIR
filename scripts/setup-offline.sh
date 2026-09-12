@@ -9,11 +9,17 @@
 #   2. unpacks the repository to the target dir (default: ./DX_DFIR), then
 #      restores data_store/dependencies from deps.tar — the signature rulesets
 #      (YARA/Suricata/Hayabusa), the Volatility symbol cache and EvtxECmd
-#   3. loads the container images and runs the hardened-inventory guard
-#   4. installs the get_sybers_dxdfir processors + ansible into a venv from the
+#   3. unpacks the external Byakugan engine (byakugan.tar — the CAR lane) next
+#      to the repo ($BYAKUGAN_ROOT, else <target>/../byakugan: where the CAR
+#      lane resolves it) and the piiat-mem tree (piiat-mem.tar — the volatility
+#      lane) into <target>/third_party/. Bundles from before these tarballs
+#      existed install with a warning: those two lanes are then unavailable
+#      offline until provisioned by hand, everything else still works
+#   4. loads the container images and runs the hardened-inventory guard
+#   5. installs the get_sybers_dxdfir processors + ansible into a venv from the
 #      bundled wheels (no PyPI)
-#   5. installs the pinned ansible collections from the bundle (no Galaxy)
-#   6. prints how to run the pipeline
+#   6. installs the pinned ansible collections from the bundle (no Galaxy)
+#   7. prints how to run the pipeline
 #
 # Nothing here reaches the network. Prerequisites on the offline host: docker,
 # python3 (+ venv), tar, sha256sum — all normally present on an analysis box.
@@ -38,7 +44,7 @@ while [[ $# -gt 0 ]]; do
         --target) TARGET="$(realpath -m "$2")"; shift ;;
         --venv) VENV="$(realpath -m "$2")"; shift ;;
         --skip-images) SKIP_IMAGES=1 ;;
-        -h|--help) sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "❌ Unknown option: $1" >&2; exit 1 ;;
     esac
     shift
@@ -74,6 +80,44 @@ if [[ -f "$BUNDLE/deps.tar" ]]; then
     done
 else
     echo "⚠️  No deps.tar in the bundle — the signature lanes have no rules until you provision data_store/dependencies by hand."
+fi
+
+# ---- 2b. the external Byakugan engine (the CAR lane) ------------------------
+# repo.tar carries NO submodule/engine content (git archive drops gitlinks), so
+# the engine ships as its own tarball. It unpacks to where the CAR lane
+# (get_sybers_dxdfir.mitrecar) resolves it: $BYAKUGAN_ROOT when set, else the
+# `byakugan` directory NEXT TO the repo — a sibling, deliberately outside
+# $TARGET. If you set $BYAKUGAN_ROOT here, keep it exported for every dxdfir
+# run too, or the runtime falls back to the sibling default and misses it.
+# An older bundle without the tarball is a warning, not a death: the rest of
+# the bundle still works, only build-car / verify-car are unavailable offline.
+BYAKUGAN_DEST="${BYAKUGAN_ROOT:-$(dirname "$TARGET")/byakugan}"
+if [[ -f "$BUNDLE/byakugan.tar" ]]; then
+    echo "🔭 Unpacking the Byakugan engine to $BYAKUGAN_DEST ..."
+    mkdir -p "$BYAKUGAN_DEST" || die "could not create $BYAKUGAN_DEST"
+    tar -xf "$BUNDLE/byakugan.tar" -C "$BYAKUGAN_DEST" || die "failed to unpack byakugan.tar"
+    echo "✅ Byakugan engine at $BYAKUGAN_DEST (pinned commit recorded in $TARGET/byakugan.ref)"
+else
+    echo "⚠️  No byakugan.tar in the bundle (packaged before the engine shipped) —"
+    echo "    the CAR lane (build-car / verify-car) is unavailable offline until a"
+    echo "    recursive engine checkout is provisioned at $BYAKUGAN_DEST by hand"
+    echo "    (a bundle this old predates byakugan.ref; take the pinned commit from"
+    echo "    a current DX_DFIR checkout's byakugan.ref, or use the engine repo:"
+    echo "    https://github.com/Get-Sybers/byakugan)."
+fi
+
+# ---- 2c. the vendored piiat-mem tree (the volatility lane) ------------------
+# Same gitlink drop: third_party/piiat-mem never reached older bundles either.
+# The tarball is rooted `piiat-mem`, so it lands as $TARGET/third_party/piiat-mem
+# — exactly where the volatility lane resolves it relative to the repo.
+if [[ -f "$BUNDLE/piiat-mem.tar" ]]; then
+    echo "🧠 Unpacking third_party/piiat-mem ..."
+    mkdir -p "$TARGET/third_party"
+    tar -xf "$BUNDLE/piiat-mem.tar" -C "$TARGET/third_party" || die "failed to unpack piiat-mem.tar"
+else
+    echo "⚠️  No piiat-mem.tar in the bundle (packaged before it shipped) — the"
+    echo "    volatility lane is unavailable offline until third_party/piiat-mem"
+    echo "    is provisioned by hand."
 fi
 
 # ---- 3. images + inventory guard --------------------------------------------

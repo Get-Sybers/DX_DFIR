@@ -300,9 +300,9 @@ for md in sorted(root.rglob("*.md")):
     # processed forensic samples (whole disk images, vendored OS docs), whose
     # internal links are not this project's documentation to validate — third-
     # party caches (ansible-lint installs the collection's pinned deps under
-    # .ansible/), and the vendored submodules under third_party/ (the CAR engine
-    # and its own pinned car / attack-datasources repos: MITRE's analytic docs
-    # use website-absolute links like /data_model/flow, not ours to validate).
+    # .ansible/), and third_party/ (the vendored PIIAT-Mem submodule: upstream
+    # docs, not ours to validate; the Byakugan CAR engine lives in an external
+    # checkout outside the repo, so it never enters this walk).
     if ".git/" in str(md) or rel.startswith("data_store/"): continue
     if "/.ansible/" in str(md) or rel.startswith(".ansible/"): continue
     if rel.startswith("third_party/") or "/third_party/" in str(md): continue

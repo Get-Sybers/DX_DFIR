@@ -10,7 +10,7 @@ lane** those seven sources ignore.
 - **Actions (5 in brief; model also has create/metadata/terminate):** `lock, login, logout, reconnect, unlock`
 - **Ground truth image:** LoneWolf Win10 (`LoneWolf.E01`, host `DESKTOP-PM6C56D`), plaso super-timeline
   `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl` (6.5 GB, 4.17 M rows). Real records quoted below.
-- **Engine maps:** `third_party/piiat-mitrecar/piiat_mitrecar/mappings/` (`plaso_registry.py`, `plaso_linux.py`),
+- **Engine maps:** `byakugan/piiat_mitrecar/mappings/` (`plaso_registry.py`, `plaso_linux.py`),
   enrichment `piiat_mitrecar/enrich.py`, routing `piiat_mitrecar/pipeline.py`.
 
 ---

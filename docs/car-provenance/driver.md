@@ -4,9 +4,9 @@
 **Canonical fields (11):** `base_address`, `fqdn`, `hostname`, `image_path`, `md5_hash`, `module_name`, `pid`, `sha1_hash`, `sha256_hash`, `signature_valid`, `signer`
 **Actions (2):** `load`, `unload`
 
-Grounding: `third_party/piiat-mitrecar/third_party/car/data_model/driver.yaml`, `car_data_model.json` (object index 5), CAR sensor `third_party/piiat-mitrecar/third_party/car/sensors/sysmon_13.yaml`.
+Grounding: `byakugan/third_party/car/data_model/driver.yaml`, `car_data_model.json` (object index 5), CAR sensor `byakugan/third_party/car/sensors/sysmon_13.yaml`.
 
-> **Authority note.** The bundled `driver.yaml` `coverage_map` is **stale** and is NOT the source of truth. It lists `sysmon_13 → {fqdn, image_path, pid, sha256, signature_valid, signer}` — but that map (a) omits `hostname`, `md5_hash`, `sha1_hash` which the shipped engine *does* extract, and (b) asserts `pid` which the engine correctly does **not** extract (Sysmon EID 6 carries no `ProcessId`). The authoritative "currently mapped" state is the executable engine map `third_party/piiat-mitrecar/piiat_mitrecar/mappings/sysmon.py` (`sysmon_driver_load` variant) and PIIAT-Mem `third_party/piiat-mem/piiat_mem/mappings.py` (`windows.modules`), reflected in generated source files `sources/evtx_sysmon.yaml` and `sources/memory.yaml`.
+> **Authority note.** The bundled `driver.yaml` `coverage_map` is **stale** and is NOT the source of truth. It lists `sysmon_13 → {fqdn, image_path, pid, sha256, signature_valid, signer}` — but that map (a) omits `hostname`, `md5_hash`, `sha1_hash` which the shipped engine *does* extract, and (b) asserts `pid` which the engine correctly does **not** extract (Sysmon EID 6 carries no `ProcessId`). The authoritative "currently mapped" state is the executable engine map `byakugan/piiat_mitrecar/mappings/sysmon.py` (`sysmon_driver_load` variant) and PIIAT-Mem `third_party/piiat-mem/piiat_mem/mappings.py` (`windows.modules`), reflected in generated source files `sources/evtx_sysmon.yaml` and `sources/memory.yaml`.
 
 ---
 
@@ -67,7 +67,7 @@ This is an **honest structural no-source**, not merely an unmapped one.
 
 ## Cross-source convergence (wired, report-layer)
 
-`third_party/piiat-mitrecar/piiat_mitrecar/crosssource.py` converges per-source `car.db` stores. Because `driver ∈ _HASHED` (line 47) and `driver ∈ _IMAGED` (line 49), a Sysmon EID 6 driver row and a memory `windows.modules` driver row for the **same `.sys`** converge:
+`byakugan/piiat_mitrecar/crosssource.py` converges per-source `car.db` stores. Because `driver ∈ _HASHED` (line 47) and `driver ∈ _IMAGED` (line 49), a Sysmon EID 6 driver row and a memory `windows.modules` driver row for the **same `.sys`** converge:
 - at **DEFINITIVE_CONTENT** tier if a shared content hash exists (only if the memory row were hashed — currently it is not), or
 - at **HEURISTIC_IMAGE** tier on the `image_path` **basename** (this is the realistic join today).
 

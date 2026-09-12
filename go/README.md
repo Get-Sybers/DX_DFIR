@@ -80,6 +80,8 @@ Environment / flags:
 - `--no-tui` / `$DXDFIR_NO_TUI` / `$CI` / `TERM=dumb` — force plain output.
 - `--tui` — force the dashboard even when auto-detection is unsure.
 - `$DXDFIR_PYTHON` — the Python interpreter to use (else `python3`/`python`).
+- `$BYAKUGAN_ROOT` — the external Byakugan engine checkout the CAR lane drives
+  (else `byakugan/` beside the repo; pinned by `byakugan.ref`).
 
 Keys in the dashboard: `q` / `Ctrl-C` abort · `Ctrl-L` redraw.
 

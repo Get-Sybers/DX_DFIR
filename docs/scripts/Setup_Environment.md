@@ -38,7 +38,13 @@ processing scripts pull their images on first use.
 3. **Userland tools**: Installs the tools the processing scripts shell out to
    (`curl`, `python3`, `unzip`, `tar`, plus `ca-certificates`/`gnupg`), so a
    missing dependency surfaces here rather than halfway through an ingest.
-4. **Permission Management**:
+4. **Byakugan engine provisioning**: Clones (or updates) the external Byakugan
+   engine — the CAR lane's tool — at the commit pinned in the repo-root
+   `byakugan.ref`, with its nested model submodules initialised recursively.
+   The checkout lands at `$BYAKUGAN_ROOT` when set, else in a `byakugan`
+   directory next to (a sibling of) the repository — deliberately outside the
+   repo, so the ownership pass below never touches it.
+5. **Permission Management**:
    - Sets ownership to the current user and Docker group
    - Sets permissions with `u=rwX,g=rX` so directories stay traversable by the
      Docker group and the `.sh` files stay executable

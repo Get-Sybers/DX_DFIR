@@ -85,6 +85,16 @@ is `0`, anything may change without notice.
 - **CI installs the Python package under the `python/constraints.txt` lock**
   (`checks` and `smoke` both), so the pinned resolution the installers ship is
   the one the tests exercise.
+- **The Byakugan engine (formerly PIIAT-MitreCar) is no longer vendored** as
+  the `third_party/piiat-mitrecar` submodule: DX_DFIR now plugs into an
+  **external recursive checkout** — `$BYAKUGAN_ROOT` when set, else a
+  `byakugan/` directory beside the repo — pinned by the new repo-root
+  `byakugan.ref` file (the same commit the old gitlink pinned) and provisioned
+  by `scripts/setup-environment.sh`, the CI smoke workflow, and the offline
+  bundle. The bundle now actually ships the engine (`byakugan.tar`, nested
+  model submodules included) and the PIIAT-Mem tree (`piiat-mem.tar`):
+  `git archive` never carried submodule content, so no submodule had ever
+  reached a bundle and `build-car` had never worked air-gapped.
 
 ### Removed
 - **The Python Typer front-end.** `python/get_sybers_dxdfir/cli.py` (the

@@ -85,9 +85,11 @@ dxdfir build-car                             # every source under data_store/pro
 dxdfir verify-car                            # the promotion gate over the result
 dxdfir car-timeline data_store/processed/car # one time-ordered timeline across every source
 ```
-- `build-car` drives the vendored [byakugan](https://github.com/Get-Sybers/byakugan)
-  engine (formerly PIIAT-MitreCar): each processed source becomes its own
-  `car.db` + `superset.db` and one `car_<object>.jsonl` per populated CAR
+- `build-car` drives the external [Byakugan](https://github.com/Get-Sybers/byakugan)
+  engine — the recursive checkout `scripts/setup-environment.sh` provisions at
+  the commit pinned in `byakugan.ref` (default: `byakugan/` beside the repo;
+  set `$BYAKUGAN_ROOT` to point elsewhere): each processed source becomes its
+  own `car.db` + `superset.db` and one `car_<object>.jsonl` per populated CAR
   object (plus `car_relationships.jsonl`) under
   `data_store/processed/car/<source>/`. A source whose store exists is
   left alone; `--rebuild` re-derives it after a map change.

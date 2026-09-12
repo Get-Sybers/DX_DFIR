@@ -2,14 +2,15 @@
 profile: production
 
 # Lint the whole repo (the collection AND the ansible baked into the container
-# images under docker/); caches, evidence, vendored submodules and generated
+# images under docker/); caches, evidence, the vendored submodule and generated
 # build output are excluded.
 exclude_paths:
   - .ansible/
   - .claude/
   - data_store/
-  # Vendored submodules (the CAR engine + MITRE's car / attack-datasources):
-  # third-party YAML we neither own nor lint (matches the doc-link check).
+  # The vendored PIIAT-Mem submodule: third-party YAML we neither own nor lint
+  # (matches the doc-link check; the Byakugan CAR engine is an external
+  # checkout outside the repo, so it never enters the walk).
   - third_party/
   - ansible/collections/get_sybers.dxdfir/.ansible/
   # Elastic detection rules-as-code: these are rule DATA (ES|QL/EQL definitions

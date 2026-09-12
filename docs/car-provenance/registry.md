@@ -3,7 +3,7 @@
 Authoritative, exhaustive map of **every canonical `registry` field → every artefact/source that can supply it** in the DX_DFIR pipeline. "Find once, done." Grounded in repo source, honest about gaps and honest nulls. READ-ONLY analysis.
 
 - Object model (authoritative): `car_data_model.json` → `registry` fields = `data, fqdn, hive, hostname, image_path, key, new_content, pid, type, user, value`; actions = `add, key_edit, remove, value_edit`.
-- Semantics: `third_party/piiat-mitrecar/third_party/car/data_model/registry.yaml`, `.../docs/data_model/registry.md`, OSSEM-CDM `.../OSSEM-CDM/schemas/entities/registry.yml`.
+- Semantics: `byakugan/third_party/car/data_model/registry.yaml`, `.../docs/data_model/registry.md`, OSSEM-CDM `.../OSSEM-CDM/schemas/entities/registry.yml`.
 
 ---
 

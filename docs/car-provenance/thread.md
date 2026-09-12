@@ -8,7 +8,7 @@ READ-ONLY analysis.
 ## Canonical object (authoritative)
 
 Source of truth: `car_data_model.json` (lines 337-363) and
-`third_party/piiat-mitrecar/third_party/car/data_model/thread.yaml`.
+`byakugan/third_party/car/data_model/thread.yaml`.
 
 - **Fields (15):** hostname, src_pid, src_tid, tgt_pid, tgt_tid, stack_base, stack_limit,
   start_address, start_function, start_module, start_module_name, user, uid,
@@ -207,14 +207,14 @@ present. Split by lane:
 ## Key files
 
 - Canonical model: `car_data_model.json` (L337-363);
-  `third_party/piiat-mitrecar/third_party/car/data_model/thread.yaml`
-- Sysmon EID 8 map: `third_party/piiat-mitrecar/piiat_mitrecar/mappings/sysmon.py` (L442-467)
-- Sysmon source card: `third_party/piiat-mitrecar/sources/evtx_sysmon.yaml` (L319-353)
-- Plaso alt-derivation of EID 8: `third_party/piiat-mitrecar/piiat_mitrecar/adapters/winevt.py` (L95-98)
-- Sysmon-lane enrich (inherit + R5 dual-link): `third_party/piiat-mitrecar/piiat_mitrecar/enrich.py` (L257-260, L488-498); rules `third_party/piiat-mitrecar/piiat_mitrecar/relationships.yml` (L21-29)
+  `byakugan/third_party/car/data_model/thread.yaml`
+- Sysmon EID 8 map: `byakugan/piiat_mitrecar/mappings/sysmon.py` (L442-467)
+- Sysmon source card: `byakugan/sources/evtx_sysmon.yaml` (L319-353)
+- Plaso alt-derivation of EID 8: `byakugan/piiat_mitrecar/adapters/winevt.py` (L95-98)
+- Sysmon-lane enrich (inherit + R5 dual-link): `byakugan/piiat_mitrecar/enrich.py` (L257-260, L488-498); rules `byakugan/piiat_mitrecar/relationships.yml` (L21-29)
 - Memory threads plugin: `third_party/piiat-mem/plugins/windows/piiat/threads.py`
 - Memory CAR map: `third_party/piiat-mem/piiat_mem/mappings.py` (L204-222 piiat.threads, L261-272 thrdscan fallback, L99-104 SUPERSEDES)
 - Memory-lane enrich (host id + inherit): `third_party/piiat-mem/piiat_mem/enrich.py` (L72, L288-291, L309-324, L377-380)
-- Injection analytics: `third_party/piiat-mitrecar/third_party/car/analytics/CAR-2013-10-002.yaml` (LoadLibrary injection); `.../CAR-2021-05-011.yaml` (remote thread into LSASS)
+- Injection analytics: `byakugan/third_party/car/analytics/CAR-2013-10-002.yaml` (LoadLibrary injection); `.../CAR-2021-05-011.yaml` (remote thread into LSASS)
 - R5 relationship doc: `docs/CAR-Relations.md` (L154)
 - Evidence checked (both empty of thread data): `data_store/processed/volatility/memdump.mem/plugins/` (no threads jsonl); `data_store/processed/windows_logs/unspecified_host/log_EvtxECmd_Output.json` (EID 1/5 only)

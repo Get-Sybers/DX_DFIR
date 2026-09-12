@@ -47,7 +47,7 @@ from .attack_index import AttackIndex, load_attack_index
 from .export import make_bundle, summarise, validate_bundle
 
 # CAR object tables the join reads (the engine's per-object store, one table
-# per CAR object — see byakugan store.py, formerly PIIAT-MitreCar). Only these
+# per CAR object — see the Byakugan engine's store.py). Only these
 # carry a joinable subject.
 _FLOW_COLS = ("guid", "timestamp", "hostname", "fqdn", "src_ip", "dest_ip", "src_port",
               "dest_port", "transport_protocol", "application_protocol", "dest_fqdn", "src_fqdn")

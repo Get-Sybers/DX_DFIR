@@ -1,5 +1,6 @@
 # Python dependency lock for the get_sybers_dxdfir processor package and the
-# vendored byakugan engine (formerly PIIAT-MitreCar) it runs in-process.
+# external Byakugan engine it runs as a subprocess of the same interpreter
+# (the engine's own deps, PyYAML, ride this lock too).
 #
 # pyproject.toml carries the ">=" floors (what the code needs); THIS file pins the
 # exact, tested resolution so a fresh `pip install` is reproducible and an

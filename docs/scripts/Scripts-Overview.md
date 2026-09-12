@@ -60,8 +60,10 @@ than needing a `/dev/fuse` mount.
 
 No shell scripts here either:
 
-- **`dxdfir build-car`** drives the vendored byakugan engine (formerly
-  PIIAT-MitreCar) over the processed tree: one `car.db` + `superset.db` and
+- **`dxdfir build-car`** drives the external Byakugan engine (the recursive
+  checkout `setup-environment.sh` provisions at the `byakugan.ref` pin —
+  `$BYAKUGAN_ROOT`, else `byakugan/` beside the repo) over the processed
+  tree: one `car.db` + `superset.db` and
   one `car_<object>.jsonl` per populated object per source, under
   `data_store/processed/car/<source>/`.
   **`dxdfir verify-car`** (`get_sybers_dxdfir.carcheck`) is the gate over what was
@@ -78,10 +80,10 @@ The analysis container images are catalogued in [Containers](/docs/Containers.md
 
 | Script | Description |
 |---|---|
-| `setup-environment.sh` | Installs Docker and userland deps (distro-aware); image seeding split into `save-docker-images.sh`. |
+| `setup-environment.sh` | Installs Docker and userland deps (distro-aware) and provisions the external Byakugan engine at the `byakugan.ref` pin (recursive); image seeding split into `save-docker-images.sh`. |
 | `save-docker-images.sh` | Save the built hardened `dxdfir/*` images (+ the pulled .NET runtime) as tarballs; `--load` / `--verify` restore them and assert the hardened inventory. |
-| `package-offline.sh` | Build ONE portable air-gap bundle: images, the `get_sybers_dxdfir` processor package + deps as wheels, the Go front-end's vendored modules (`go-vendor.tar`), pinned collections, the repo, and `data_store/dependencies/` (YARA/Suricata/Hayabusa rulesets + binary, Volatility symbols, EvtxECmd) under a `MANIFEST.sha256`. |
-| `setup-offline.sh` | Set up from that bundle with zero network: manifest-verify everything, unpack the repo + detection dependencies, load images, install the package/collections offline, build the Go `dxdfir` front-end from the vendored modules, finish with `dxdfir verify-images` (or the same audit play via `ansible-playbook` when no Go toolchain is present). |
+| `package-offline.sh` | Build ONE portable air-gap bundle: images, the `get_sybers_dxdfir` processor package + deps as wheels, the Go front-end's vendored modules (`go-vendor.tar`), pinned collections, the repo, the Byakugan engine tree (`byakugan.tar`, at the `byakugan.ref` pin, nested model submodules included) and the PIIAT-Mem tree (`piiat-mem.tar`) — `git archive` drops submodule content, so `repo.tar` alone never carried either — and `data_store/dependencies/` (YARA/Suricata/Hayabusa rulesets + binary, Volatility symbols, EvtxECmd) under a `MANIFEST.sha256`. |
+| `setup-offline.sh` | Set up from that bundle with zero network: manifest-verify everything, unpack the repo + detection dependencies, the Byakugan engine (to `$BYAKUGAN_ROOT`, else `byakugan/` beside the repo) and `third_party/piiat-mem`, load images, install the package/collections offline, build the Go `dxdfir` front-end from the vendored modules, finish with `dxdfir verify-images` (or the same audit play via `ansible-playbook` when no Go toolchain is present). |
 
 The Splunk-era and KAPE PowerShell scripts were retired (git history and the frozen
 `deprecated` branch keep them).

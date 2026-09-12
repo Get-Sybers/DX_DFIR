@@ -4,7 +4,7 @@ Authoritative, exhaustive map of every canonical `service` field to every artefa
 that can supply it, in the **DX_DFIR** pipeline. "Find once, done." Grounded in the repo
 files cited; honest about no-source.
 
-- **Object semantics**: `third_party/piiat-mitrecar/third_party/car/data_model/service.yaml`
+- **Object semantics**: `byakugan/third_party/car/data_model/service.yaml`
 - **Canonical schema**: `car_data_model.json` (object `service`) — confirmed by the `service`
   table in `data_store/processed/volatility/memdump.mem/car.db`.
 - **Canonical fields (10)**: `command_line, exe, fqdn, hostname, image_path, name, pid, ppid, uid, user`
@@ -194,9 +194,9 @@ sample carries none of the service EventIds. The maps are real; this evidence se
 
 ## 6. File index (grounding)
 
-- Semantics: `third_party/piiat-mitrecar/third_party/car/data_model/service.yaml`
+- Semantics: `byakugan/third_party/car/data_model/service.yaml`
 - Canonical schema: `car_data_model.json` (object `service`); live `car.db` `service` table
-- Maps (emit service): `third_party/piiat-mitrecar/piiat_mitrecar/mappings/evtx_windows.py`
+- Maps (emit service): `byakugan/piiat_mitrecar/mappings/evtx_windows.py`
   (7045/4697), `.../evtx_more.py` (20003, 7034); `third_party/piiat-mem/piiat_mem/mappings.py`
   (`windows.svcscan`)
 - Maps (hold service facts, emit registry): `.../mappings/plaso_registry.py`, `.../mappings/recmd.py`

@@ -228,7 +228,8 @@ echo "1. ✅ Check and install Docker (completed)"
 echo "2. ✅ Install required userland tools (completed)"
 echo "3. ✅ Set up Docker group permissions (completed)"
 echo "4. 🔧 Initialise the git submodules (recursively)"
-echo "5. 🔧 Set ownership and permissions on the DX_DFIR repository"
+echo "5. 🔧 Provision the external Byakugan engine at its pinned commit"
+echo "6. 🔧 Set ownership and permissions on the DX_DFIR repository"
 echo -e "\n==================================================\n"
 
 confirm "Do you wish to proceed?" || { echo "Setup cancelled."; exit 1; }
@@ -236,13 +237,14 @@ confirm "Do you wish to proceed?" || { echo "Setup cancelled."; exit 1; }
 ################################################################################
 # Pull the git submodules — RECURSIVELY.
 #
-# The CAR lane (get_sybers_dxdfir.mitrecar) drives the vendored byakugan engine
-# (formerly PIIAT-MitreCar) in third_party/piiat-mitrecar, which reconstructs
-# its object model LIVE from ITS OWN pinned submodules (third_party/car,
-# third_party/attack-datasources).
-# A plain `git submodule update --init` leaves those nested modules empty and the
-# `dxdfir` CAR/timeline commands then fail, so the init MUST be recursive. Runs
-# before the chown/chmod below so the freshly checked-out files inherit them too.
+# The remaining vendored submodule is third_party/piiat-mem: the PIIAT-Mem tree
+# the volatility lane (get_sybers_dxdfir.volatility) drives in place. --recursive
+# is kept on principle even though piiat-mem nests nothing today: it is a no-op
+# then, and it means any submodule that DOES nest content checks out complete
+# instead of silently empty — the failure mode that bit the CAR engine while it
+# was vendored here. (The Byakugan engine is no longer a submodule; it is
+# provisioned as an external checkout in the next step.) Runs before the
+# chown/chmod below so the freshly checked-out files inherit them too.
 if [[ -f "$REPO_ROOT_DIR/.gitmodules" ]]; then
     echo "🔗 Initialising git submodules (recursive)..."
     # safe.directory is scoped to THIS invocation with `-c` (the repo may be owned
@@ -252,10 +254,73 @@ if [[ -f "$REPO_ROOT_DIR/.gitmodules" ]]; then
     git "${GIT_SAFE[@]}" -C "$REPO_ROOT_DIR" submodule sync --recursive >/dev/null 2>&1 || true
     git "${GIT_SAFE[@]}" -C "$REPO_ROOT_DIR" submodule update --init --recursive \
         || die "Failed to initialise git submodules recursively (need network + git access)."
-    echo "✅ Submodules checked out (incl. byakugan's nested car + attack-datasources)."
+    echo "✅ Submodules checked out (third_party/piiat-mem)."
 else
     echo "ℹ️  No .gitmodules found — skipping submodule init."
 fi
+
+################################################################################
+# Provision the external Byakugan engine at its pinned commit.
+#
+# The CAR lane (get_sybers_dxdfir.mitrecar) drives the Byakugan engine from an
+# EXTERNAL checkout, resolved exactly as the python seam resolves it:
+# $BYAKUGAN_ROOT when set, else the `byakugan` directory next to (a sibling of)
+# this repository. The commit is pinned in byakugan.ref at the repo root (the
+# first non-comment line) — the version the pipeline is tested against; bump it
+# there, then re-run this script.
+#
+# The engine's OWN nested submodules (third_party/car, third_party/
+# attack-datasources) are REQUIRED at runtime — it reconstructs its object
+# model live from them — so every path below inits them recursively.
+#
+# Deliberately NO $SUDO here: the engine lives OUTSIDE the repository in the
+# invoking user's space, and the repo-scoped chown below does not cover it —
+# a root-owned sibling checkout would be exactly the permissions trap the
+# chown exists to avoid.
+BYAKUGAN_ROOT="${BYAKUGAN_ROOT:-$(dirname "$REPO_ROOT_DIR")/byakugan}"
+BYAKUGAN_URL="https://github.com/Get-Sybers/byakugan"
+# Same scoped safe.directory guard as the submodule step above: a re-run under
+# a different uid than the one that provisioned the checkout (root vs operator)
+# must not die at git's dubious-ownership check with a misleading origin error.
+BYA_GIT=(git -c "safe.directory=$BYAKUGAN_ROOT" -c "safe.directory=*")
+BYAKUGAN_REF="$(grep -vE '^[[:space:]]*(#|$)' "$REPO_ROOT_DIR/byakugan.ref" 2>/dev/null | head -1 | tr -d '[:space:]')"
+[[ -n "$BYAKUGAN_REF" ]] \
+    || die "no pinned engine commit — byakugan.ref at the repo root must carry a sha on its first non-comment line."
+
+if [[ -e "$BYAKUGAN_ROOT/.git" ]]; then
+    # An existing checkout: only accept it if origin really is the engine repo
+    # (case-insensitive, .git suffix and trailing slash optional — https and
+    # ssh remotes both end [/:]owner/repo). Anything else at the resolved path
+    # is somebody else's directory; refusing beats silently rebasing it.
+    _origin="$("${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" remote get-url origin 2>/dev/null)"
+    _origin_norm="${_origin,,}"; _origin_norm="${_origin_norm%/}"; _origin_norm="${_origin_norm%.git}"
+    [[ "$_origin_norm" == *[/:]get-sybers/byakugan ]] \
+        || die "$BYAKUGAN_ROOT is a git repo but its origin ('$_origin') is not $BYAKUGAN_URL — move it aside, or point \$BYAKUGAN_ROOT elsewhere."
+    if [[ "$("${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" rev-parse HEAD 2>/dev/null)" == "$BYAKUGAN_REF" ]]; then
+        # Already on the pin: skip the fetch so a re-run works offline; the
+        # submodule update below is then a local no-op (or a first init).
+        echo "🔭 Byakugan engine already at the pinned commit ($BYAKUGAN_ROOT)."
+    else
+        echo "🔭 Updating the Byakugan engine at $BYAKUGAN_ROOT to the pinned commit ..."
+        "${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" fetch origin \
+            || die "failed to fetch the Byakugan engine (need network + git access)."
+        "${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" checkout --quiet "$BYAKUGAN_REF" \
+            || die "failed to check out the pinned engine commit $BYAKUGAN_REF."
+    fi
+    "${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" submodule update --init --recursive \
+        || die "failed to initialise the engine's nested submodules (car + attack-datasources)."
+elif [[ -e "$BYAKUGAN_ROOT" ]]; then
+    die "$BYAKUGAN_ROOT exists but is not a git checkout — move it aside, or point \$BYAKUGAN_ROOT at the real engine checkout."
+else
+    echo "🔭 Cloning the Byakugan engine to $BYAKUGAN_ROOT ..."
+    git clone "$BYAKUGAN_URL" "$BYAKUGAN_ROOT" \
+        || die "failed to clone the Byakugan engine (need network + git access)."
+    "${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" checkout --quiet "$BYAKUGAN_REF" \
+        || die "failed to check out the pinned engine commit $BYAKUGAN_REF."
+    "${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" submodule update --init --recursive \
+        || die "failed to initialise the engine's nested submodules (car + attack-datasources)."
+fi
+echo "✅ Byakugan engine provisioned: $BYAKUGAN_ROOT @ $BYAKUGAN_REF"
 
 ################################################################################
 # Set ownership and permissions for DX_DFIR.
@@ -281,14 +346,17 @@ fi
 # collection). ansible-core is a declared dependency of the package, so this one
 # install gives a working `dxdfir process/build-car/verify-car/build-docker`.
 #
-# --editable is REQUIRED, not a preference. get_sybers_dxdfir/mitrecar.py locates the
-# vendored byakugan engine RELATIVE TO ITS OWN FILE (_REPO_ROOT = three dirs
-# up from __file__ -> third_party/piiat-mitrecar). A plain copying install puts the
-# package under the venv's site-packages, three dirs up from which is .../lib/pythonX.Y
-# with no third_party/ — so `dxdfir build-car` can't reach the engine and dies
-# "third_party/piiat-mitrecar is not initialised", even though the submodules WERE
-# initialised (above) in the repo tree. Editable keeps the installed module IN the
-# repo tree, so the engine and its nested car / attack-datasources submodules resolve.
+# --editable is REQUIRED, not a preference. The package still resolves paths
+# RELATIVE TO ITS OWN FILES (_REPO_ROOT = three dirs up from __file__):
+# volatility.py locates the vendored piiat-mem tree (third_party/piiat-mem),
+# carcheck.py defaults its --car-dir under the repo's data_store, and
+# mitrecar.py anchors the Byakugan engine's SIBLING-DIR default (and reads
+# byakugan.ref) at that same root. A plain copying install puts the package
+# under the venv's site-packages, three dirs up from which is .../lib/pythonX.Y
+# with no third_party/, data_store/ or byakugan.ref — the volatility lane dies
+# "not initialised" even though the submodule WAS initialised (above), and the
+# engine default degrades to a path nothing provisioned. Editable keeps the
+# installed module IN the repo tree, so every _REPO_ROOT-relative path resolves.
 ################################################################################
 DXDFIR_VENV="${DXDFIR_VENV:-/opt/dxdfir/venv}"
 echo "🐍 Installing the get_sybers_dxdfir package (+ ansible) into $DXDFIR_VENV ..."

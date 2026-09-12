@@ -75,7 +75,11 @@ for the tight loop.
 .BR build-car ", " verify-car " and " car-timeline
 drive the CAR lane the same way (the
 .B dxdfir_car
-role over the vendored byakugan engine (formerly PIIAT-MitreCar) and the
+role over the external Byakugan engine \(em see
+.B BYAKUGAN_ROOT
+under
+.B ENVIRONMENT
+\(em and the
 .B get_sybers_dxdfir.carcheck
 gate), while
 .B validate
@@ -239,6 +243,19 @@ Repository root, used when
 .B --repo-root
 is not given. If neither is set, the repo is found by walking up from the current
 directory, then from the dxdfir binary's own location.
+.TP
+.B BYAKUGAN_ROOT
+Root of the external Byakugan engine checkout the CAR lane drives
+.RB ( build-car / car-timeline ).
+Default: a
+.I byakugan/
+directory beside the repository. The commit the pipeline is tested against is
+pinned in
+.I byakugan.ref
+at the repository root;
+.I scripts/setup-environment.sh
+provisions the checkout (recursively \(em the engine's nested submodules are
+required).
 .TP
 .B ANSIBLE_ROLES_PATH
 Set by every verb that drives

@@ -19,8 +19,10 @@ Every processor prints a machine-readable JSON summary (`processed`/`skipped`/
 `failed`/…) so its role can set an honest `changed_when`.
 
 The CAR lane sits on top of the processed tree: `python -m get_sybers_dxdfir.mitrecar`
-drives the vendored [byakugan](https://github.com/Get-Sybers/byakugan) engine
-(formerly PIIAT-MitreCar; one `car.db` + `car_<object>.jsonl` per source), and
+drives the external [Byakugan](https://github.com/Get-Sybers/byakugan) engine
+(`$BYAKUGAN_ROOT`, else a `byakugan/` checkout beside the repo, pinned by the
+repo-root `byakugan.ref` and provisioned by `scripts/setup-environment.sh`;
+one `car.db` + `car_<object>.jsonl` per source), and
 `python -m get_sybers_dxdfir.carcheck` is the correctness gate over what it wrote.
 The Elastic detection rules live as data under `get_sybers_dxdfir/detect/rules/`
 (`python -m get_sybers_dxdfir.detect.rules_loader` validates them).

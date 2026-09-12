@@ -11,7 +11,15 @@
 #                 Python dependency, as wheels (installed offline with --no-index)
 #   collections/  the pinned ansible collections (community.docker, ansible.posix)
 #   repo.tar      a clean archive of the repository at HEAD (code, playbooks,
-#                 roles, docs, the data_store skeleton) — no evidence, no .git
+#                 roles, docs, the data_store skeleton) — no evidence, no .git,
+#                 and NO submodule content: git archive drops gitlinks, which is
+#                 why the two tarballs below exist at all
+#   byakugan.tar  the external Byakugan engine working tree at the commit pinned
+#                 by byakugan.ref (which rides inside repo.tar), INCLUDING the
+#                 nested car + attack-datasources model sources the engine
+#                 rebuilds its object model from; .git dirs pruned
+#   piiat-mem.tar the vendored third_party/piiat-mem tree (the volatility lane)
+#                 — the gitlink drop above meant it never reached older bundles
 #   deps.tar      data_store/dependencies/ — the signature rulesets (YARA,
 #                 Suricata, Hayabusa incl. its binary), the Volatility ISF
 #                 symbol cache and the EvtxECmd release: everything the
@@ -51,7 +59,7 @@ while [[ $# -gt 0 ]]; do
         --fetch-rules) DO_FETCH=1 ;;
         --no-tar) DO_TAR=0 ;;
         --no-images) DO_IMAGES=0 ;;
-        -h|--help) sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,43p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "❌ Unknown option: $1" >&2; exit 1 ;;
     esac
     shift
@@ -97,6 +105,49 @@ else
     echo "⚠️  go not found; skipping Go module vendoring (the offline host will need"
     echo "    the Go toolchain + network for the modules, or a prebuilt dxdfir binary)."
 fi
+
+# ---- 1c. the external Byakugan engine (the CAR lane) -------------------------
+# git archive above carries tracked blobs only — gitlinks are dropped — so no
+# submodule content has EVER reached repo.tar; the CAR lane was silently absent
+# from every earlier bundle. The engine is now not even a submodule: it is an
+# external checkout ($BYAKUGAN_ROOT, else the sibling dir of this repo) pinned
+# by byakugan.ref. Package its WORKING TREE — including the nested
+# third_party/car + third_party/attack-datasources it reconstructs its object
+# model from — with .git dirs pruned (the offline host needs the tree at the
+# pin, not history). byakugan.ref itself rides inside repo.tar, so the bundle
+# records which commit this tree is meant to be.
+PROVISION_HINT="run scripts/setup-environment.sh, or manually: git clone --recurse-submodules https://github.com/Get-Sybers/byakugan <root> && git -C <root> checkout <ref from byakugan.ref> && git -C <root> submodule update --init --recursive"
+BYAKUGAN_ROOT="${BYAKUGAN_ROOT:-$(dirname "$REPO")/byakugan}"
+BYAKUGAN_REF="$(grep -vE '^[[:space:]]*(#|$)' "$REPO/byakugan.ref" 2>/dev/null | head -1 | tr -d '[:space:]')"
+[[ -d "$BYAKUGAN_ROOT" ]] \
+    || die "Byakugan engine not found at $BYAKUGAN_ROOT — $PROVISION_HINT"
+# The model sources are the point of shipping the engine: a tarball without
+# them would install cleanly offline and then die on the first build-car.
+for _src in "third_party/car" "third_party/attack-datasources"; do
+    [[ -n "$(find "$BYAKUGAN_ROOT/$_src" -mindepth 1 -print -quit 2>/dev/null)" ]] \
+        || die "engine model sources missing ($BYAKUGAN_ROOT/$_src is empty — nested submodules not initialised) — $PROVISION_HINT"
+done
+# Warn (don't die) off the pin: packaging a deliberate test build must stay
+# possible, but doing it by accident must not be silent.
+_bk_head="$(git -C "$BYAKUGAN_ROOT" rev-parse HEAD 2>/dev/null)"
+if [[ -n "$BYAKUGAN_REF" && -n "$_bk_head" && "$_bk_head" != "$BYAKUGAN_REF" ]]; then
+    echo "⚠️  engine checkout is at ${_bk_head:0:12} but byakugan.ref pins ${BYAKUGAN_REF:0:12} — bundling the CHECKOUT."
+fi
+echo "🔭 Archiving the Byakugan engine from $BYAKUGAN_ROOT (pin: ${BYAKUGAN_REF:-unknown}) ..."
+tar -C "$BYAKUGAN_ROOT" --exclude=.git -cf "$STAGE/byakugan.tar" . \
+    || die "failed to package the Byakugan engine."
+echo "   $(du -sh "$STAGE/byakugan.tar" | cut -f1) of engine (incl. car + attack-datasources model sources)."
+
+# ---- 1d. the vendored piiat-mem tree (the volatility lane) -------------------
+# Same gitlink drop, other submodule: third_party/piiat-mem never reached
+# repo.tar either, so the offline volatility lane has always been broken.
+# Package the checked-out tree (rooted `piiat-mem`, so the installer can untar
+# it straight into <target>/third_party/).
+[[ -n "$(find "$REPO/third_party/piiat-mem" -mindepth 1 -print -quit 2>/dev/null)" ]] \
+    || die "third_party/piiat-mem is not checked out — run: git -C \"$REPO\" submodule update --init --recursive"
+echo "🧠 Archiving third_party/piiat-mem ..."
+tar -C "$REPO/third_party" --exclude=.git -cf "$STAGE/piiat-mem.tar" piiat-mem \
+    || die "failed to package third_party/piiat-mem."
 
 # ---- 2. the get_sybers_dxdfir package + all Python deps as wheels ------------
 echo "🐍 Building the get_sybers_dxdfir package and downloading Python dependencies as wheels ..."

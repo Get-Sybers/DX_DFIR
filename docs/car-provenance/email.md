@@ -2,8 +2,8 @@
 
 Authoritative "find once, done" map of every canonical `email` field to every artefact/source that can supply it, what the DX_DFIR engine maps **today**, and what an unmapped field **would** need. Grounded in-repo; honest about the gaps.
 
-- **Object semantics:** `third_party/piiat-mitrecar/third_party/car/data_model/email.yaml`, `.../docs/data_model/email.md`, `python model/car/objects/email.yml`, `python model/projection/objects/email.yml` (ECS projection).
-- **Engine mapping (the only email mapper):** `third_party/piiat-mitrecar/piiat_mitrecar/mappings/zeek_extra.py` (map `zeek_smtp`), contract `third_party/piiat-mitrecar/sources/zeek_smtp.yaml`, helpers `piiat_mitrecar/normalize.py`.
+- **Object semantics:** `byakugan/third_party/car/data_model/email.yaml`, `.../docs/data_model/email.md`, `python model/car/objects/email.yml`, `python model/projection/objects/email.yml` (ECS projection).
+- **Engine mapping (the only email mapper):** `byakugan/piiat_mitrecar/mappings/zeek_extra.py` (map `zeek_smtp`), contract `byakugan/sources/zeek_smtp.yaml`, helpers `piiat_mitrecar/normalize.py`.
 - **Design record / caveats:** `docs/CAR-Relations.md` § "email (no artefact yet — principles recorded for the first mapper)".
 - **Evidence checked:** `data_store/processed/zeek/*` (DFIRdump, ME_FOR_1308, keylogging).
 

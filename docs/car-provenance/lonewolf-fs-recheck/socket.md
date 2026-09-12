@@ -10,7 +10,7 @@ completely-unmined seam: **the Windows Firewall rule set in the registry.**
 
 - **Evidence (real):** `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl` (6.6 GB, LoneWolf
   Win10 via plaso). Every count/example below is measured on this file this pass.
-- **Maps under audit:** `third_party/piiat-mitrecar/piiat_mitrecar/mappings/plaso_registry.py` (claims every
+- **Maps under audit:** `byakugan/piiat_mitrecar/mappings/plaso_registry.py` (claims every
   `windows:registry:*` type as `registry`/`key_edit`), `plaso_artifacts.py`, `plaso_fs_extra.py`,
   `plaso_linux.py`. Memory socket map for the field vocabulary:
   `third_party/piiat-mem/piiat_mem/mappings.py` `_SOCKET_MAP`.

@@ -107,8 +107,7 @@ rules match nothing — the rules are the specification, not the pipelines.
 
 **Model.** The CAR `guid` travels into Elastic as ECS **`event.id`** on every CAR
 object and as **`process.entity_id`** on process (names owned by the CAR->ECS
-projection of the byakugan engine, formerly PIIAT-MitreCar; this contract
-only depends on them).
+projection of the Byakugan engine; this contract only depends on them).
 `LOOKUP JOIN` needs the same field name on both sides, so the lookup index maps
 the keys under those ECS names. Any ES|QL over the CAR streams then flags the
 CAR rows a detection matched, inline:

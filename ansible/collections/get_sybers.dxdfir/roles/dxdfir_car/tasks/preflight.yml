@@ -1,9 +1,10 @@
 ---
 # FIND FACTS -> check preconditions BEFORE the engine runs. The CAR stage is pure
-# Python + the vendored byakugan submodule (formerly PIIAT-MitreCar; no
-# containers), so preflight is a module-import guard, not a docker check. The
-# engine's own _ensure_ready()
-# surfaces a missing/uninitialised submodule as a clear error if it slips past.
+# Python + the external Byakugan engine checkout ($BYAKUGAN_ROOT, else byakugan/
+# beside the repo; no containers), so preflight is a module-import guard, not a
+# docker check. The lane's own _ensure_ready() surfaces a missing or
+# incompletely-provisioned engine checkout as a clear error, with the
+# provisioning command, if it slips past.
 
 - name: "car-preflight | the CAR engine module imports"
   ansible.builtin.command:
