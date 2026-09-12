@@ -168,8 +168,10 @@ tar -C "$BYAKUGAN_ROOT" --exclude=.git -cf "$STAGE/byakugan.tar" . \
 # Prove the binary actually made it in: a bundle that installs cleanly and then
 # dies on the first build-car is the exact failure this whole section exists to
 # stop, and a stray tar --exclude would reintroduce it silently.
-tar -tf "$STAGE/byakugan.tar" | grep -qx './go/bin/byakugan-parse' \
-    || die "byakugan.tar does not contain ./go/bin/byakugan-parse — the offline CAR lane would be unrunnable."
+# Listing style differs between tar implementations (GNU prefixes the "./"
+# member root, others may strip it) — accept both forms.
+tar -tf "$STAGE/byakugan.tar" | grep -Eqx '(\./)?go/bin/byakugan-parse' \
+    || die "byakugan.tar does not contain go/bin/byakugan-parse — the offline CAR lane would be unrunnable."
 echo "   $(du -sh "$STAGE/byakugan.tar" | cut -f1) of engine (incl. car + attack-datasources model sources and the $ARCH parse binary)."
 
 # ---- 1d. the vendored piiat-mem tree (the volatility lane) -------------------

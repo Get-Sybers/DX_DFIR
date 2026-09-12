@@ -84,6 +84,27 @@ fi
 
 die() { echo "❌ $*" >&2; exit 1; }
 
+# Build invocation-scoped safe.directory flags (into GIT_SAFE_FLAGS) trusting
+# ONE checkout root — never `git config --global`, which would be a persistent,
+# accumulating change to the operator's own git config. Recursive submodule
+# operations walk into nested submodule repos whose paths cannot be
+# pre-enumerated, so the root entry alone is not enough: git >= 2.46
+# understands a trailing "/*" leading-path match that scopes trust to the root
+# and everything under it; older gits only match exact paths or the global
+# "*", so there the invocation-scoped wildcard remains the fallback (still
+# per-command, never persisted).
+git_safe_flags() {
+    local root="$1" major minor
+    IFS=. read -r major minor _ <<< "$(git --version 2>/dev/null | awk '{print $3}')"
+    major="${major//[^0-9]/}"; minor="${minor//[^0-9]/}"
+    if [[ -n "$major" && -n "$minor" ]] \
+        && (( major > 2 || (major == 2 && minor >= 46) )); then
+        GIT_SAFE_FLAGS=(-c "safe.directory=$root" -c "safe.directory=$root/*")
+    else
+        GIT_SAFE_FLAGS=(-c "safe.directory=$root" -c "safe.directory=*")
+    fi
+}
+
 confirm() {
     local prompt="$1"
     if [[ "$ASSUME_YES" == true ]]; then
@@ -249,9 +270,10 @@ confirm "Do you wish to proceed?" || { echo "Setup cancelled."; exit 1; }
 if [[ -f "$REPO_ROOT_DIR/.gitmodules" ]]; then
     echo "🔗 Initialising git submodules (recursive)..."
     # safe.directory is scoped to THIS invocation with `-c` (the repo may be owned
-    # by a different user until the chown below) — never `git config --global`,
-    # which is a persistent, accumulating change to the operator's own git config.
-    GIT_SAFE=(-c "safe.directory=$REPO_ROOT_DIR" -c "safe.directory=*")
+    # by a different user until the chown below); git_safe_flags trusts the repo
+    # root — and, on git >= 2.46, only the paths beneath it.
+    git_safe_flags "$REPO_ROOT_DIR"
+    GIT_SAFE=("${GIT_SAFE_FLAGS[@]}")
     git "${GIT_SAFE[@]}" -C "$REPO_ROOT_DIR" submodule sync --recursive >/dev/null 2>&1 || true
     git "${GIT_SAFE[@]}" -C "$REPO_ROOT_DIR" submodule update --init --recursive \
         || die "Failed to initialise git submodules recursively (need network + git access)."
@@ -283,7 +305,8 @@ BYAKUGAN_URL="https://github.com/Get-Sybers/byakugan"
 # Same scoped safe.directory guard as the submodule step above: a re-run under
 # a different uid than the one that provisioned the checkout (root vs operator)
 # must not die at git's dubious-ownership check with a misleading origin error.
-BYA_GIT=(git -c "safe.directory=$BYAKUGAN_ROOT" -c "safe.directory=*")
+git_safe_flags "$BYAKUGAN_ROOT"
+BYA_GIT=(git "${GIT_SAFE_FLAGS[@]}")
 BYAKUGAN_REF="$(grep -vE '^[[:space:]]*(#|$)' "$REPO_ROOT_DIR/byakugan.ref" 2>/dev/null | head -1 | tr -d '[:space:]')"
 [[ -n "$BYAKUGAN_REF" ]] \
     || die "no pinned engine commit — byakugan.ref at the repo root must carry a sha on its first non-comment line."
