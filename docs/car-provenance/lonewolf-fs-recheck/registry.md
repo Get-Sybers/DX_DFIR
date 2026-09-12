@@ -7,9 +7,9 @@ below is measured this pass over the actual plaso JSONL. READ-ONLY.
 
 - **Evidence:** `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl`
   (6.6 GB, 4,169,774 rows; **1,512,651** are `windows:registry:*`).
-- **Maps under audit:** `byakugan/piiat_mitrecar/mappings/plaso_registry.py`
+- **Maps under audit:** `byakugan/byakugan/mappings/plaso_registry.py`
   (predicate `startswith("windows:registry:")`, action **key_edit**) and `recmd.py`
-  (RECmd batch → **value_edit**). Routing: `piiat_mitrecar/pipeline.py` `ROUTES`.
+  (RECmd batch → **value_edit**). Routing: `byakugan/byakugan/pipeline.py` `ROUTES`.
 - **Extraction lane:** `python/get_sybers_dxdfir/zimmerman.py` (`ARTIFACT_GROUPS` filter +
   per-tool argv) and `plaso.py`.
 - **CAR registry fields:** `data, fqdn, hive, hostname, image_path, key, new_content, pid,

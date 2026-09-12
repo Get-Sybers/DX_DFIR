@@ -121,7 +121,7 @@ Legend — **action**: which socket action the row carries. **mapped?**: `yes+wh
 | **`bind`** | Security 5158 WFP | **INERT** — `to-be-validated/evtx_audit.yml` | Schema-grounded, not sample-verified; absent from all corpora. |
 | **`close`** | — | **NO SOURCE** | No producer emits `close`: a memory snapshot can't observe a close transition; no WFP close EID is mapped; osquery upstream has it but isn't ingested. |
 
-Minor: the cascade verb map (`piiat_mitrecar/cascade_relationships.yml:38`) declares only `socket: bind: "bound to"` — the **active `listen`** action falls through to `default_spoke_verb: accessed`. Cosmetic (STIX/relations narration), not a data gap.
+Minor: the cascade verb map (`byakugan/byakugan/cascade_relationships.yml:38`) declares only `socket: bind: "bound to"` — the **active `listen`** action falls through to `default_spoke_verb: accessed`. Cosmetic (STIX/relations narration), not a data gap.
 
 ---
 

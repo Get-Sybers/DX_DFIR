@@ -6,7 +6,7 @@
 
 **Ground truth read:**
 - Semantics: `byakugan/third_party/car/data_model/authentication.yaml`, `.../docs/data_model/authentication.md`, root `car_data_model.json` (13 objects; authentication actions = error/failure/success — confirmed).
-- Engine maps: `byakugan/piiat_mitrecar/mappings/core.py` (the ONLY authentication mapper), generated source spec `byakugan/sources/evtx_security.yaml`.
+- Engine maps: `byakugan/byakugan/mappings/core.py` (the ONLY authentication mapper), generated source spec `byakugan/sources/evtx_security.yaml`.
 - Design law: `byakugan/docs/CAR-Relations.md` (authentication ← 4624/4625; identity/joins/inheritance/limits).
 - Real evidence inspected: `data_store/processed/windows_logs/unspecified_host/log_EvtxECmd_Output.json` (85 records — **Sysmon EID 1/45 & 5/40 only, NO Security channel**), `data_store/processed/zeek/*/ssh.json` (real SSH auth, `auth_success` present), zeek dirs (conn/dns/files/http/notice/ssh/ssl/weird/x509 — **no kerberos/ntlm/radius/smtp**), `data_store/processed/linux_logs/` (empty).
 

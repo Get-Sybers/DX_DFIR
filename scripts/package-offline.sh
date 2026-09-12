@@ -17,7 +17,12 @@
 #   byakugan.tar  the external Byakugan engine working tree at the commit pinned
 #                 by byakugan.ref (which rides inside repo.tar), INCLUDING the
 #                 nested car + attack-datasources model sources the engine
-#                 rebuilds its object model from; .git dirs pruned
+#                 rebuilds its object model from AND its freshly built Go parse
+#                 binary go/bin/byakugan-parse (the engine's file ingestion
+#                 requires it and the air-gapped host may have no Go toolchain);
+#                 .git dirs pruned. That binary is a NATIVE executable, so this
+#                 bundle is only installable on the same OS/architecture it was
+#                 packaged on — which is why the bundle name carries <arch>.
 #   piiat-mem.tar the vendored third_party/piiat-mem tree (the volatility lane)
 #                 — the gitlink drop above meant it never reached older bundles
 #   deps.tar      data_store/dependencies/ — the signature rulesets (YARA,
@@ -69,6 +74,10 @@ die() { echo "❌ $*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || die "required tool not on PATH: $1"; }
 
 need python3; need tar; need sha256sum; need git
+# go is REQUIRED now, not merely nice to have: the bundle carries the Byakugan
+# engine's Go parse binary prebuilt (§1c) because the engine's file ingestion
+# requires it and an air-gapped host may have no toolchain to build it with.
+need go
 [[ "$DO_IMAGES" -eq 1 ]] && { need docker; need ansible-playbook; }
 
 # Resolve a python that HAS pip (system python often ships without it).
@@ -94,17 +103,14 @@ git -C "$REPO" archive --format=tar HEAD -o "$STAGE/repo.tar" \
 # ---- 1b. the Go front-end modules (vendored for a reproducible offline build) -
 # git archive only carries tracked files, so go/vendor (gitignored) is shipped
 # separately. The offline installer extracts it and builds with -mod=vendor.
-if command -v go >/dev/null 2>&1; then
-    echo "🐹 Vendoring the Go front-end modules ..."
-    ( cd "$REPO/go" && GOFLAGS= go mod vendor ) || die "go mod vendor failed."
-    tar -C "$REPO/go" -cf "$STAGE/go-vendor.tar" vendor \
-        || die "failed to package go/vendor."
-    ( cd "$REPO/go" && rm -rf vendor )   # keep the working tree clean
-    echo "   $(du -sh "$STAGE/go-vendor.tar" | cut -f1) of Go modules vendored."
-else
-    echo "⚠️  go not found; skipping Go module vendoring (the offline host will need"
-    echo "    the Go toolchain + network for the modules, or a prebuilt dxdfir binary)."
-fi
+# (go is asserted above, so this no longer degrades to a warning: a bundle with
+# no vendored modules AND no engine parse binary was the silently-useless one.)
+echo "🐹 Vendoring the Go front-end modules ..."
+( cd "$REPO/go" && GOFLAGS= go mod vendor ) || die "go mod vendor failed."
+tar -C "$REPO/go" -cf "$STAGE/go-vendor.tar" vendor \
+    || die "failed to package go/vendor."
+( cd "$REPO/go" && rm -rf vendor )   # keep the working tree clean
+echo "   $(du -sh "$STAGE/go-vendor.tar" | cut -f1) of Go modules vendored."
 
 # ---- 1c. the external Byakugan engine (the CAR lane) -------------------------
 # git archive above carries tracked blobs only — gitlinks are dropped — so no
@@ -133,10 +139,38 @@ _bk_head="$(git -C "$BYAKUGAN_ROOT" rev-parse HEAD 2>/dev/null)"
 if [[ -n "$BYAKUGAN_REF" && -n "$_bk_head" && "$_bk_head" != "$BYAKUGAN_REF" ]]; then
     echo "⚠️  engine checkout is at ${_bk_head:0:12} but byakugan.ref pins ${BYAKUGAN_REF:0:12} — bundling the CHECKOUT."
 fi
+# The engine's Go parse binary is the OTHER thing a bundle must not be missing:
+# the engine's file ingestion requires go/bin/byakugan-parse and errors with
+# build instructions without it — instructions an air-gapped host with no Go
+# toolchain cannot follow. So build it HERE, on the (online) packaging host,
+# and let it ride inside the tarball below. `go/bin/` is gitignored upstream,
+# which is irrelevant: this tars the WORKING TREE, not `git archive`.
+#
+# ARCH NOTE: byakugan-parse is a native executable for "$ARCH", exactly like the
+# saved container images, so the resulting bundle is arch-specific — the bundle
+# name carries $ARCH for precisely this reason. Package on the same
+# OS/architecture as the target host.
+[[ -d "$BYAKUGAN_ROOT/go" ]] \
+    || die "the Byakugan engine at $BYAKUGAN_ROOT has no go/ directory — the pinned commit (${BYAKUGAN_REF:-unknown}) predates the Go parse binary, or the checkout is incomplete. $PROVISION_HINT"
+echo "🐹 Building the engine's Go parse binary for $ARCH ($(go version 2>/dev/null | awk '{print $3}')) ..."
+# Mirrors `make -C "$BYAKUGAN_ROOT/go" build` (same package, same output path)
+# without making `make` a dependency of this script. GOTOOLCHAIN=local matches
+# the front-end builds: never auto-download a newer Go mid-package.
+( cd "$BYAKUGAN_ROOT/go" \
+    && GOFLAGS= GOTOOLCHAIN=local go build -o bin/byakugan-parse ./cmd/byakugan-parse ) \
+    || die "failed to build the engine's Go parse binary (equivalent: make -C \"$BYAKUGAN_ROOT/go\" build)."
+[[ -x "$BYAKUGAN_ROOT/go/bin/byakugan-parse" ]] \
+    || die "the engine build reported success but $BYAKUGAN_ROOT/go/bin/byakugan-parse is missing or not executable."
+
 echo "🔭 Archiving the Byakugan engine from $BYAKUGAN_ROOT (pin: ${BYAKUGAN_REF:-unknown}) ..."
 tar -C "$BYAKUGAN_ROOT" --exclude=.git -cf "$STAGE/byakugan.tar" . \
     || die "failed to package the Byakugan engine."
-echo "   $(du -sh "$STAGE/byakugan.tar" | cut -f1) of engine (incl. car + attack-datasources model sources)."
+# Prove the binary actually made it in: a bundle that installs cleanly and then
+# dies on the first build-car is the exact failure this whole section exists to
+# stop, and a stray tar --exclude would reintroduce it silently.
+tar -tf "$STAGE/byakugan.tar" | grep -qx './go/bin/byakugan-parse' \
+    || die "byakugan.tar does not contain ./go/bin/byakugan-parse — the offline CAR lane would be unrunnable."
+echo "   $(du -sh "$STAGE/byakugan.tar" | cut -f1) of engine (incl. car + attack-datasources model sources and the $ARCH parse binary)."
 
 # ---- 1d. the vendored piiat-mem tree (the volatility lane) -------------------
 # Same gitlink drop, other submodule: third_party/piiat-mem never reached

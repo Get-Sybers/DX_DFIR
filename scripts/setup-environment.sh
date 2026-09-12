@@ -229,6 +229,7 @@ echo "2. ✅ Install required userland tools (completed)"
 echo "3. ✅ Set up Docker group permissions (completed)"
 echo "4. 🔧 Initialise the git submodules (recursively)"
 echo "5. 🔧 Provision the external Byakugan engine at its pinned commit"
+echo "     (and build its Go parse binary, once the Go toolchain is in place)"
 echo "6. 🔧 Set ownership and permissions on the DX_DFIR repository"
 echo -e "\n==================================================\n"
 
@@ -321,6 +322,8 @@ else
         || die "failed to initialise the engine's nested submodules (car + attack-datasources)."
 fi
 echo "✅ Byakugan engine provisioned: $BYAKUGAN_ROOT @ $BYAKUGAN_REF"
+# NOTE: the engine's Go parse binary (go/bin/byakugan-parse) is built further
+# down, AFTER the Go toolchain section — `go` is not guaranteed on PATH here.
 
 ################################################################################
 # Set ownership and permissions for DX_DFIR.
@@ -444,6 +447,41 @@ $SUDO ln -sf "$GO_BIN_DIR/dxdfir" /usr/local/bin/dxdfir
 $SUDO install -Dm644 "$REPO_ROOT_DIR/go/man/dxdfir.1" /usr/local/share/man/man1/dxdfir.1 2>/dev/null \
     || echo "⚠️  Could not install the man page — read it in-tree: man ./go/man/dxdfir.1"
 echo "✅ dxdfir (Go front-end) installed: $(/usr/local/bin/dxdfir --version 2>/dev/null || echo "$GO_BIN_DIR/dxdfir")"
+
+################################################################################
+# Build the Byakugan engine's OWN Go parse binary (go/bin/byakugan-parse).
+#
+# The engine's file ingestion REQUIRES it: `python -m byakugan` refuses to parse
+# evidence and prints build instructions when the binary is missing, so an
+# engine checkout that is provisioned but unbuilt fails on the analyst's first
+# build-car instead of here. This is a build of the ENGINE's module
+# (github.com/get-sybers/byakugan/go), not of this repo's go/ front-end.
+#
+# It runs HERE, not next to the engine checkout above, purely because of script
+# order: the checkout step happens before the Go toolchain is installed, and
+# `go` is only guaranteed on PATH from this point on. $BYAKUGAN_ROOT and
+# $BYAKUGAN_REF are still in scope from that step.
+#
+# Deliberately NO $SUDO — same reason the checkout above has none: the engine
+# lives OUTSIDE the repository in the invoking user's space, and a root-owned
+# build artefact there is exactly the permissions trap the repo chown avoids.
+# GOTOOLCHAIN=local matches the front-end build: never auto-download a newer Go.
+#
+# The command below mirrors `make -C "$BYAKUGAN_ROOT/go" build` exactly (same
+# package, same output path) without making `make` a dependency of this script.
+################################################################################
+[[ -d "$BYAKUGAN_ROOT/go" ]] \
+    || die "the Byakugan engine at $BYAKUGAN_ROOT has no go/ directory — the pinned commit ($BYAKUGAN_REF) predates the Go parse binary, or the checkout is incomplete. Bump byakugan.ref, or re-provision the engine."
+echo "🐹 Building the Byakugan engine's Go parse binary ($(go version 2>/dev/null | awk '{print $3}')) ..."
+# HOME="${HOME:-/root}" for the same reason the front-end build above sets it:
+# `go build` needs a writable HOME for its build cache and dies without one.
+( cd "$BYAKUGAN_ROOT/go" \
+    && env HOME="${HOME:-/root}" GOTOOLCHAIN=local \
+        go build -o bin/byakugan-parse ./cmd/byakugan-parse ) \
+    || die "failed to build the Byakugan engine's parse binary (equivalent: make -C \"$BYAKUGAN_ROOT/go\" build) — the engine's file ingestion requires go/bin/byakugan-parse."
+[[ -x "$BYAKUGAN_ROOT/go/bin/byakugan-parse" ]] \
+    || die "the engine build reported success but $BYAKUGAN_ROOT/go/bin/byakugan-parse is missing or not executable."
+echo "✅ Byakugan parse binary built: $BYAKUGAN_ROOT/go/bin/byakugan-parse"
 
 ################################################################################
 # Install the collection's pinned Ansible dependencies (requirements.yml — never

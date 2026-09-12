@@ -1,7 +1,17 @@
 """Drive the standalone **Byakugan** engine — DX_DFIR uses it in an automated
 fashion via its CLI, exactly like the PIIAT-Mem lane: the engine stays a
 standalone public project; this module only decides what to run and invokes
-``python -m piiat_mitrecar`` (the package keeps upstream's import name).
+``python -m byakugan`` (the package keeps upstream's import name, which
+upstream renamed from ``piiat_mitrecar`` to ``byakugan``; a forwarding compat
+shim under the old name survives upstream for ONE release, but this lane drives
+the real name so the shim's removal is a no-op here).
+
+The engine's file ingestion additionally requires its Go parse binary,
+``go/bin/byakugan-parse`` in the engine checkout — built by
+scripts/setup-environment.sh (and shipped inside the offline bundle's
+byakugan.tar) with ``make -C <engine root>/go build``. The engine itself is the
+authority on that: it errors with build instructions when the binary is absent,
+so this lane does not second-guess it here.
 
 The engine is an EXTERNAL recursive checkout, not vendored in this repo.
 :func:`engine_root` is the canonical resolver: ``$BYAKUGAN_ROOT`` when set,
@@ -126,15 +136,15 @@ def _run_module(module: str, tool_argv: list[str]) -> subprocess.CompletedProces
 
 
 def run(tool_argv: list[str]) -> subprocess.CompletedProcess:
-    """One ``python -m piiat_mitrecar`` invocation with the given tool argv.
+    """One ``python -m byakugan`` invocation with the given tool argv.
     stdout is the tool's JSON summary (returned, not swallowed)."""
-    return _run_module("piiat_mitrecar", tool_argv)
+    return _run_module("byakugan", tool_argv)
 
 
 def run_timeline(tool_argv: list[str]) -> subprocess.CompletedProcess:
-    """Build the unified CAR timeline (``python -m piiat_mitrecar.timeline``) from
+    """Build the unified CAR timeline (``python -m byakugan.timeline``) from
     a source's car.db + superset.db."""
-    return _run_module("piiat_mitrecar.timeline", tool_argv)
+    return _run_module("byakugan.timeline", tool_argv)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -142,7 +152,7 @@ def main(argv: list[str] | None = None) -> int:
     Byakugan README) — this lane only supplies the engine location.
 
     The one reserved word is the leading ``timeline`` subcommand, which routes to
-    ``piiat_mitrecar.timeline`` so a non-Python front-end can build the unified
+    ``byakugan.timeline`` so a non-Python front-end can build the unified
     CAR timeline as ``python -m get_sybers_dxdfir.mitrecar timeline <car_dir> …``;
     every other invocation flows to the Byakugan build unchanged.
     """

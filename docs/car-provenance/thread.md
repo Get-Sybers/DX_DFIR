@@ -2,7 +2,7 @@
 
 Authoritative "find once, done" map of every canonical `thread` field to every artefact/source
 in this repo that can supply it. Grounded in the pinned CAR data model, the two live CAR engines
-(EVTX/Sysmon lane = `piiat-mitrecar`; memory lane = `piiat-mem`), and the current processed evidence.
+(EVTX/Sysmon lane = `byakugan`; memory lane = `piiat-mem`), and the current processed evidence.
 READ-ONLY analysis.
 
 ## Canonical object (authoritative)
@@ -27,14 +27,14 @@ Semantics that drive the whole catalogue (from `thread.yaml`):
 
 | Lane | Engine | Object/action emitted | Where |
 |---|---|---|---|
-| **Sysmon EID 8 (CreateRemoteThread)** | `piiat-mitrecar` | `thread/remote_create` | `piiat_mitrecar/mappings/sysmon.py` L442-467; source card `sources/evtx_sysmon.yaml` L319-339 |
+| **Sysmon EID 8 (CreateRemoteThread)** | `byakugan` | `thread/remote_create` | `byakugan/byakugan/mappings/sysmon.py` L442-467; source card `sources/evtx_sysmon.yaml` L319-339 |
 | **Memory / Volatility 3** | `piiat-mem` | `thread/create` | plugin `plugins/windows/piiat/threads.py`; map `piiat_mem/mappings.py` L204-222 (+ built-in fallback `windows.thrdscan` L261-272) |
 
 Sysmon EID 8 is the ONLY host/log artefact in the repo that maps to `thread` (all three pinned CAR
 sensor cards — `sysmon_10.4`, `sysmon_11.0`, `sysmon_13` — cover `thread` only via EID 8; no
 osquery/auditd/EDR/ETW thread source exists here). The **Plaso `l2t_winevt` adapter** is an
 *alternate derivation of the same Sysmon EID 8 record* (identical field list —
-`piiat_mitrecar/adapters/winevt.py` L95-98), feeding the same `evtx_sysmon` map; it is not an
+`byakugan/byakugan/adapters/winevt.py` L95-98), feeding the same `evtx_sysmon` map; it is not an
 independent source, so it is folded into the Sysmon column below.
 
 ### Critical honesty note — the raw Sysmon EID 8 event has NO SourceUser and NO source TID
@@ -51,9 +51,9 @@ is the honest one: it maps only what is present, and fills `user`/`hostname` via
 
 ## Per-field provenance — action `remote_create` (Sysmon EID 8)
 
-Map: `piiat_mitrecar/mappings/sysmon.py` L448-467. Owner link = `SourceProcessGuid` (tier-1
-definitive). Enrichment inheritance from the owning **source** process: `piiat_mitrecar/
-relationships.yml` L21-29 (`exe, image_path, command_line, user, sid, fqdn, hostname, ppid`).
+Map: `byakugan/byakugan/mappings/sysmon.py` L448-467. Owner link = `SourceProcessGuid` (tier-1
+definitive). Enrichment inheritance from the owning **source** process:
+`byakugan/byakugan/relationships.yml` L21-29 (`exe, image_path, command_line, user, sid, fqdn, hostname, ppid`).
 
 | field | source → native field | action | currently mapped? (yes+where / NO) | confidence & caveats |
 |---|---|---|---|---|
@@ -74,7 +74,7 @@ relationships.yml` L21-29 (`exe, image_path, command_line, user, sid, fqdn, host
 | user_stack_limit | — | remote_create | **NO** | HONEST NO-SOURCE for EID 8. TEB-only → memory. |
 
 **Bonus / relationship (not a canonical field):** `TargetProcessGuid` is surfaced native
-(sysmon.py L466) and consumed by **R5 thread-injection dual-link** (`piiat_mitrecar/enrich.py`
+(sysmon.py L466) and consumed by **R5 thread-injection dual-link** (`byakugan/byakugan/enrich.py`
 L488-498; `docs/CAR-Relations.md` L154): owner = source process, and
 `_native.target_process_guid` = the injected target (both definitive by ProcessGuid). This is the
 dual-link that makes the injection edge explicit. `TargetImage` stays native (no CAR thread field).
@@ -186,7 +186,7 @@ present. Split by lane:
 
 3. **`thread.uid` is unmapped in the Sysmon lane (asymmetry bug).** The memory lane inherits `uid`
    from the owning process; the Sysmon lane's `from_owning_process` inherit list
-   (`piiat-mitrecar/piiat_mitrecar/relationships.yml` L21-29) carries `sid` (which `thread` lacks)
+   (`byakugan/byakugan/relationships.yml` L21-29) carries `sid` (which `thread` lacks)
    but not `uid`, so `thread.uid` stays null on every Sysmon `remote_create`. Low-effort fix: add
    `uid` to that list, or map the source process SID into the thread `uid`.
 
@@ -208,10 +208,10 @@ present. Split by lane:
 
 - Canonical model: `car_data_model.json` (L337-363);
   `byakugan/third_party/car/data_model/thread.yaml`
-- Sysmon EID 8 map: `byakugan/piiat_mitrecar/mappings/sysmon.py` (L442-467)
+- Sysmon EID 8 map: `byakugan/byakugan/mappings/sysmon.py` (L442-467)
 - Sysmon source card: `byakugan/sources/evtx_sysmon.yaml` (L319-353)
-- Plaso alt-derivation of EID 8: `byakugan/piiat_mitrecar/adapters/winevt.py` (L95-98)
-- Sysmon-lane enrich (inherit + R5 dual-link): `byakugan/piiat_mitrecar/enrich.py` (L257-260, L488-498); rules `byakugan/piiat_mitrecar/relationships.yml` (L21-29)
+- Plaso alt-derivation of EID 8: `byakugan/byakugan/adapters/winevt.py` (L95-98)
+- Sysmon-lane enrich (inherit + R5 dual-link): `byakugan/byakugan/enrich.py` (L257-260, L488-498); rules `byakugan/byakugan/relationships.yml` (L21-29)
 - Memory threads plugin: `third_party/piiat-mem/plugins/windows/piiat/threads.py`
 - Memory CAR map: `third_party/piiat-mem/piiat_mem/mappings.py` (L204-222 piiat.threads, L261-272 thrdscan fallback, L99-104 SUPERSEDES)
 - Memory-lane enrich (host id + inherit): `third_party/piiat-mem/piiat_mem/enrich.py` (L72, L288-291, L309-324, L377-380)

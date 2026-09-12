@@ -59,7 +59,7 @@ def _engine_actions():
     if eng not in sys.path:
         sys.path.insert(0, eng)
     try:
-        from piiat_mitrecar import carmodel
+        from byakugan import carmodel
         m = carmodel.load()
     except Exception:                       # noqa: BLE001 — model source unavailable
         return None

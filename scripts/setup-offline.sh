@@ -96,7 +96,19 @@ if [[ -f "$BUNDLE/byakugan.tar" ]]; then
     echo "🔭 Unpacking the Byakugan engine to $BYAKUGAN_DEST ..."
     mkdir -p "$BYAKUGAN_DEST" || die "could not create $BYAKUGAN_DEST"
     tar -xf "$BUNDLE/byakugan.tar" -C "$BYAKUGAN_DEST" || die "failed to unpack byakugan.tar"
-    echo "✅ Byakugan engine at $BYAKUGAN_DEST (pinned commit recorded in $TARGET/byakugan.ref)"
+    # The engine's file ingestion REQUIRES its Go parse binary, which the bundle
+    # carries prebuilt for this bundle's architecture (package-offline.sh §1c)
+    # precisely because an air-gapped host may have no Go toolchain. Say so here
+    # rather than letting the analyst discover it on their first build-car.
+    if [[ -x "$BYAKUGAN_DEST/go/bin/byakugan-parse" ]]; then
+        echo "✅ Byakugan engine at $BYAKUGAN_DEST (pinned commit recorded in $TARGET/byakugan.ref)"
+    else
+        echo "⚠️  $BYAKUGAN_DEST/go/bin/byakugan-parse is missing or not executable —"
+        echo "    the engine cannot ingest files without it (build-car will fail with"
+        echo "    build instructions). Either this bundle predates the parse binary, or"
+        echo "    it was packaged for another architecture. Rebuild on this host with:"
+        echo "      make -C \"$BYAKUGAN_DEST/go\" build     (needs Go >= 1.24)"
+    fi
 else
     echo "⚠️  No byakugan.tar in the bundle (packaged before the engine shipped) —"
     echo "    the CAR lane (build-car / verify-car) is unavailable offline until a"

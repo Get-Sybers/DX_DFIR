@@ -11,7 +11,7 @@ from get_sybers_dxdfir import mitrecar
 _ENGINE_ROOT = mitrecar.engine_root()
 # the tool AND its nested model submodules (car + attack-datasources) must be
 # present at the resolved engine root — the engine reconstructs its model live
-_HAVE_TOOL = (os.path.isfile(os.path.join(_ENGINE_ROOT, "piiat_mitrecar", "pipeline.py"))
+_HAVE_TOOL = (os.path.isfile(os.path.join(_ENGINE_ROOT, "byakugan", "pipeline.py"))
               and mitrecar._model_sources_present())
 
 

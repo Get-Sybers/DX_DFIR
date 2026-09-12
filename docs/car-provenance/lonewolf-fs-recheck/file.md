@@ -12,7 +12,7 @@ save/open MRU strings.
 Everything is grounded in the REAL plaso output
 `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl`
 (LoneWolf Win10, **4,169,774 rows**, whole-file counts below) and the live maps in
-`byakugan/piiat_mitrecar/mappings/`. READ-ONLY.
+`byakugan/byakugan/mappings/`. READ-ONLY.
 
 ---
 

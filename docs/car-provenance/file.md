@@ -16,28 +16,28 @@ Authoritative "find once, done" map of **every canonical field → every artefac
 
 | # | Source (map key) | Origin | Actions | Map location |
 |---|---|---|---|---|
-| S1 | **l2t_filestat** | disk image — filestat (`fs:stat`, POSIX/$SI stat) | create, delete, modify, read | `piiat_mitrecar/mappings/plaso_linux.py:351` (`_macb_entry`, `posix=True, hashes=True`) |
+| S1 | **l2t_filestat** | disk image — filestat (`fs:stat`, POSIX/$SI stat) | create, delete, modify, read | `byakugan/byakugan/mappings/plaso_linux.py:351` (`_macb_entry`, `posix=True, hashes=True`) |
 | S2 | **l2t_mft** | disk image — NTFS `$MFT` (MFTECmd/plaso `mft`) | create, delete, modify, read | `plaso_linux.py:354` |
 | S3 | **l2t_usnjrnl** | disk image — NTFS `$UsnJrnl:$J` | create (0x100), delete (0x200), modify (default) | `plaso_linux.py:356` |
-| S4 | **l2t_lnk** | disk image — Windows `.lnk` target MAC times | create, modify, read | `piiat_mitrecar/mappings/plaso_artifacts.py:110` |
+| S4 | **l2t_lnk** | disk image — Windows `.lnk` target MAC times | create, modify, read | `byakugan/byakugan/mappings/plaso_artifacts.py:110` |
 | S5 | **l2t_recyclebin** | disk image — `$Recycle.Bin` / INFO2 | delete | `plaso_artifacts.py:120` |
-| S6 | **plaso_shellitem** | disk image — shell items in LNK + shellbags (`windows:shell_item:file_entry`) | create, modify, read | `piiat_mitrecar/mappings/plaso_shellitem.py:97` |
-| S7 | **plaso_pecoff** | disk image — PE binary (`pe_coff:file`) | create (ts=None, off-timeline) | `piiat_mitrecar/mappings/plaso_fs_extra.py:188` |
+| S6 | **plaso_shellitem** | disk image — shell items in LNK + shellbags (`windows:shell_item:file_entry`) | create, modify, read | `byakugan/byakugan/mappings/plaso_shellitem.py:97` |
+| S7 | **plaso_pecoff** | disk image — PE binary (`pe_coff:file`) | create (ts=None, off-timeline) | `byakugan/byakugan/mappings/plaso_fs_extra.py:188` |
 | S8 | **plaso_olecf** | disk image — OLE document `olecf:summary_info` | create, modify | `plaso_fs_extra.py:197` |
 | S9 | **plaso_fseventsd** | disk image — macOS FSEvents journal | modify only | `plaso_fs_extra.py:163` |
-| S10 | **plaso_exec_winreg / amcache_link_time** | disk image — Amcache "Link Time" row | create (ts=None, off-timeline) | `piiat_mitrecar/mappings/plaso_exec.py:244` |
-| S11 | **jlecmd_dest** | disk image — jump-list DestList entry | read | `piiat_mitrecar/mappings/jlecmd.py:25` |
-| S12 | **evtx_sysmon EID 11** (FileCreate) | Sysmon Operational | create | `piiat_mitrecar/mappings/sysmon.py:346` |
+| S10 | **plaso_exec_winreg / amcache_link_time** | disk image — Amcache "Link Time" row | create (ts=None, off-timeline) | `byakugan/byakugan/mappings/plaso_exec.py:244` |
+| S11 | **jlecmd_dest** | disk image — jump-list DestList entry | read | `byakugan/byakugan/mappings/jlecmd.py:25` |
+| S12 | **evtx_sysmon EID 11** (FileCreate) | Sysmon Operational | create | `byakugan/byakugan/mappings/sysmon.py:346` |
 | S13 | **evtx_sysmon EID 23** (FileDelete) | Sysmon Operational | delete | `sysmon.py:369` |
-| S14 | **evtx_more 4907** (SACL change, ObjectType=File) | Security log | acl_modify | `piiat_mitrecar/mappings/evtx_more.py:98` |
-| S15 | **zeek_files** (files.log) | network pcap — Zeek file analyzer | create ("first seen on wire") | `piiat_mitrecar/mappings/zeek_extra.py:67` |
+| S14 | **evtx_more 4907** (SACL change, ObjectType=File) | Security log | acl_modify | `byakugan/byakugan/mappings/evtx_more.py:98` |
+| S15 | **zeek_files** (files.log) | network pcap — Zeek file analyzer | create ("first seen on wire") | `byakugan/byakugan/mappings/zeek_extra.py:67` |
 | S16 | **windows.mftscan.MFTScan** | memory image — Volatility `$MFT` pages (PIIAT-Mem, finished-CAR passthrough) | create | `third_party/piiat-mem/piiat_mem/mappings.py:192` (+ merge `enrich.py:154`) |
 | S17 | **windows.piiat.files** | memory image — handle-enumerated files with owner | (action None — inventory) | `piiat-mem/piiat_mem/mappings.py:236` |
 | S18 | **windows.filescan** | memory image — `FILE_OBJECT` pool scan | (action None — inventory) | `piiat-mem/piiat_mem/mappings.py:300` |
 
 ### Inert / to-be-validated (spec written, NOT wired into the pipeline)
 
-Quarantined in `byakugan/to-be-validated/evtx_audit.yml` (pipeline note: `piiat_mitrecar/pipeline.py:45`). These are schema-grounded but no corpus has the audit subcategory enabled, so they never run.
+Quarantined in `byakugan/to-be-validated/evtx_audit.yml` (pipeline note: `byakugan/byakugan/pipeline.py:45`). These are schema-grounded but no corpus has the audit subcategory enabled, so they never run.
 
 | # | Source | Actions | Spec |
 |---|---|---|---|

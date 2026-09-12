@@ -22,4 +22,4 @@
 # Format: readers take the FIRST non-comment, non-blank line as the ref. Keep
 # it a full 40-hex sha — never a branch or tag — so checkouts are reproducible.
 # ==============================================================================
-0f02ab11ab08b6d8d5ce726f4779768442eb4b36
+494974de0f10f4b217ee0305574bfe42d9d97999

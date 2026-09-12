@@ -7,7 +7,7 @@ backend: the CAR→ECS projection and the Phase-0 proofs it rests on).*
 
 ## 1. What it is
 
-`piiat_mitrecar` (via `get_sybers_dxdfir.mitrecar`) turns each ingested evidence **source** into finished
+`byakugan` (via `get_sybers_dxdfir.mitrecar`) turns each ingested evidence **source** into finished
 **MITRE CAR** — every extractable record becomes a CAR **object** performing an
 **action** at a **timestamp**, carrying that object's canonical **properties** —
 and emits it as **JSON** — one `car_<object>.jsonl` per object, the materialised
@@ -85,7 +85,7 @@ manifest declaring what the source yields and how it was derived.
 
 | module | role |
 |---|---|
-| `piiat_mitrecar/carmodel.py` | the 13 CAR objects, reconstructed live from the `car` submodule |
+| `byakugan/carmodel.py` | the 13 CAR objects, reconstructed live from the `car` submodule |
 | `build_data_model.py` | CAR (13) + the CAR+ATT&CK superset (~38) + the relationship catalogue, from the pinned submodules |
 | `mappings/` | per-artefact declarative maps (one file per family; auto-discovered; shared helpers in `mappings/_common.py`) |
 | `normalize.py` | the marker engine: `normalize(artefact, record) → CAR event`, or `None` if unmapped |

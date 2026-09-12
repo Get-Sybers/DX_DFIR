@@ -9,7 +9,7 @@ depth beyond Firefox" gap (that doc's ranked item #4) in the **real LoneWolf Win
 
 - **Real evidence:** `data_store/processed/log2timeline/jsonl/DESKTOP-PM6C56D.jsonl`
   (LoneWolf `LoneWolf.E01` via Plaso, 6.6 GB). Every count below is a full-file tally.
-- **Engine http maps:** `byakugan/piiat_mitrecar/mappings/plaso_web.py`
+- **Engine http maps:** `byakugan/byakugan/mappings/plaso_web.py`
   (msiecf / firefox_cache / firefox_places / javaidx), `core.py` (zeek), `evtx_extra.py` (BITS).
 - **Routing:** `pipeline.py` `ROUTES` (L49-96) + `adapters/l2t_split.py` `table_name()`.
 

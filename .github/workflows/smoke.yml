@@ -73,6 +73,26 @@ jobs:
           git -C ../byakugan checkout "$ref"
           git -C ../byakugan submodule update --init --recursive
 
+      # The engine's parse binary is Go, and its go.mod floor is 1.24 — pin the
+      # toolchain rather than inherit whatever the runner image ships.
+      - name: Set up Go (for the engine's parse binary)
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: false
+
+      # The engine's file ingestion REQUIRES go/bin/byakugan-parse: without it
+      # `python -m byakugan` refuses to parse and prints build instructions, so
+      # the smoke run would die at the CAR step with a provisioning error rather
+      # than a real regression. Build it right after the checkout, same as
+      # scripts/setup-environment.sh does on a real host (it runs the plain
+      # `go build -o bin/byakugan-parse ./cmd/byakugan-parse` equivalent of this
+      # make target, to avoid depending on make there).
+      - name: Build the engine's Go parse binary
+        run: |
+          make -C ../byakugan/go build
+          test -x ../byakugan/go/bin/byakugan-parse
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
