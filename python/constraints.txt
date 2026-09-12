@@ -15,7 +15,9 @@
 # COLLECTIONS are pinned separately in
 # ansible/collections/get_sybers.dxdfir/requirements.yml.
 #
-# Regenerate after a deliberate dependency bump, then restore this header:
+# Regenerate after a deliberate dependency bump, then restore this header —
+# and run it on the OLDEST interpreter the package supports (the CI version),
+# so the resolution is installable everywhere the lock is consumed:
 #   python3 -m venv /tmp/lock && /tmp/lock/bin/pip install ./python \
 #     && /tmp/lock/bin/pip freeze --exclude-editable > python/constraints.txt
 #
@@ -24,8 +26,13 @@
 # mdurl, Pygments, annotated-doc) left the closure when the legacy Typer CLI
 # was retired — the stix verbs are stdlib argparse now. Surviving pins are
 # unchanged.
+# Regenerated 2026-09-12 on Python 3.11 (the CI interpreter): ansible-core
+# 2.21.3 -> 2.19.13 — ansible-core >= 2.20 declares requires-python >= 3.12,
+# so the 3.13-generated pin made every `pip install -c` on 3.11 fail with
+# ResolutionImpossible. 2.19.x installs on 3.11 through 3.13. Every other
+# pin resolved identically and is unchanged.
 
-ansible-core==2.21.3
+ansible-core==2.19.13
 certifi==2026.7.22
 cffi==2.1.1
 charset-normalizer==3.5.1
