@@ -15,46 +15,28 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/get-sybers/dx_dfir/go/internal/collect"
+	"github.com/get-sybers/dx_dfir/go/internal/collection"
 	"github.com/get-sybers/dx_dfir/go/internal/repo"
 	"github.com/get-sybers/dx_dfir/go/internal/run"
 	"github.com/get-sybers/dx_dfir/go/internal/style"
 	"github.com/get-sybers/dx_dfir/go/internal/tui"
 )
 
-// ---- shared query types (the JSON contract of `python -m ...collection`) ----
+// ---- shared query types ----
+//
+// status / lanes / state are now read natively by internal/collection (no Python
+// round-trip; the registry is read directly and lanes are counted concurrently).
+// These aliases keep the rest of the cli — rendering, process scoping — unchanged.
+// Writes (register/sort/hash/select/unselect/unregister) still shell out via
+// collQuery; see epic #174.
 
-type collSummary struct {
-	Name  string         `json:"name"`
-	Lanes map[string]int `json:"lanes"`
-	Total int            `json:"total"`
-	Sha1  *string        `json:"sha1"`
-}
-
-type collStatus struct {
-	Active       string        `json:"active"`
-	Registered   []collSummary `json:"registered"`
-	Unregistered []collSummary `json:"unregistered"`
-	Candidates   []string      `json:"candidates"`
-}
-
-type collState struct {
-	Name       string `json:"name"`
-	Registered bool   `json:"registered"`
-	Detected   bool   `json:"detected"`
-	Exists     bool   `json:"exists"`
-}
-
-type laneInput struct {
-	Lane  string `json:"lane"`
-	Var   string `json:"var"`
-	Dir   string `json:"dir"`
-	Count int    `json:"count"`
-}
-
-type collLanes struct {
-	Name   string      `json:"name"`
-	Inputs []laneInput `json:"inputs"`
-}
+type (
+	collSummary = collection.Summary
+	collStatus  = collection.Status
+	collState   = collection.State
+	laneInput   = collection.LaneInput
+	collLanes   = collection.Lanes
+)
 
 // collQuery runs a collection subcommand and decodes its stdout JSON into out.
 func collQuery(r *repo.Repo, py string, out any, args ...string) error {
@@ -169,13 +151,9 @@ func newCollectionListCmd(env *Env) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			py, err := repo.Python()
+			st, err := collection.GetStatus(r.Root)
 			if err != nil {
-				return Fail(127, "%v", err)
-			}
-			var st collStatus
-			if err := collQuery(r, py, &st, "status"); err != nil {
-				return err
+				return Fail(2, "collection status: %v", err)
 			}
 			printCollectionList(st)
 			return nil
@@ -371,7 +349,7 @@ func newCollectionSortCmd(env *Env) *cobra.Command {
 				name = args[0]
 			}
 			if name == "" {
-				if name, err = defaultCollection(r, py); err != nil {
+				if name, err = defaultCollection(r); err != nil {
 					return err
 				}
 			}
@@ -395,10 +373,10 @@ func newCollectionSortCmd(env *Env) *cobra.Command {
 }
 
 // defaultCollection returns the active collection, or the only one if unambiguous.
-func defaultCollection(r *repo.Repo, py string) (string, error) {
-	var st collStatus
-	if err := collQuery(r, py, &st, "status"); err != nil {
-		return "", err
+func defaultCollection(r *repo.Repo) (string, error) {
+	st, err := collection.GetStatus(r.Root)
+	if err != nil {
+		return "", Fail(2, "collection status: %v", err)
 	}
 	if st.Active != "" {
 		return st.Active, nil
@@ -425,9 +403,9 @@ func defaultCollection(r *repo.Repo, py string) (string, error) {
 // detected (unregistered but has evidence) → register (prompt when interactive);
 // absent → error.
 func resolveCollection(r *repo.Repo, py, name string, noRegister bool) error {
-	var st collState
-	if err := collQuery(r, py, &st, "state", name); err != nil {
-		return err
+	st, err := collection.GetState(r.Root, name)
+	if err != nil {
+		return Fail(2, "collection state %s: %v", name, err)
 	}
 	if st.Registered {
 		return nil
