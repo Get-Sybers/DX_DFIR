@@ -75,9 +75,17 @@ func checkPython(r *repo.Repo) model.Check {
 		return c
 	}
 	out, _, ok := capture(py, "--version")
+	if !ok {
+		// Found on PATH but it will not even print its version — a wedged or
+		// broken interpreter. Warn (a gate that is not OK blocks READY) rather
+		// than claim the environment is usable.
+		c.State = model.CheckWarn
+		c.Detail = "found at " + py + ", but `python --version` failed or timed out"
+		return c
+	}
 	c.State = model.CheckOK
-	if ver := firstLine(out); ok && ver != "" {
-		c.Detail = strings.TrimSpace(ver) + " (" + py + ")"
+	if ver := strings.TrimSpace(firstLine(out)); ver != "" {
+		c.Detail = ver + " (" + py + ")"
 	} else {
 		c.Detail = py
 	}
@@ -102,10 +110,12 @@ func checkProcessors(r *repo.Repo) model.Check {
 	const script = "import get_sybers_dxdfir as m,sys; sys.stdout.write(getattr(m,'__version__',''))"
 	out, errOut, ok := captureEnv(env, py, "-c", script)
 	if !ok {
+		// Keep the actionable remediation; fold the traceback tail in as context
+		// rather than replacing the hint with it.
 		c.State = model.CheckFail
-		c.Detail = "get_sybers_dxdfir not importable - run scripts/setup-environment.sh (pip install ./python)"
+		c.Detail = "not importable - run scripts/setup-environment.sh (pip install ./python)"
 		if msg := lastMeaningful(errOut); msg != "" {
-			c.Detail = "import failed: " + msg
+			c.Detail = "not importable (" + msg + ") - run scripts/setup-environment.sh (pip install ./python)"
 		}
 		return c
 	}
@@ -127,9 +137,14 @@ func checkAnsible(r *repo.Repo) model.Check {
 		return c
 	}
 	out, _, ok := capture(ap, "--version")
+	if !ok {
+		c.State = model.CheckWarn
+		c.Detail = "found at " + ap + ", but `ansible-playbook --version` failed or timed out"
+		return c
+	}
 	c.State = model.CheckOK
-	if ver := firstLine(out); ok && ver != "" {
-		c.Detail = strings.TrimSpace(ver)
+	if ver := strings.TrimSpace(firstLine(out)); ver != "" {
+		c.Detail = ver
 	} else {
 		c.Detail = ap
 	}

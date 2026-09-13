@@ -101,8 +101,17 @@ func gatherCollections(r *repo.Repo) (colls []model.CollInfo, note, hardErr stri
 		return nil, "", "collection registry unavailable: " + firstNonEmptyLine(msg)
 	}
 	var st collStatus
-	if json.Unmarshal([]byte(stdout), &st) != nil {
-		return nil, "", "collection status could not be parsed"
+	if e := json.Unmarshal([]byte(stdout), &st); e != nil {
+		// Surface what actually came back (a warning printed on stdout, say)
+		// instead of a bare "could not be parsed".
+		hint := firstNonEmptyLine(stdout)
+		if hint == "" {
+			hint = firstNonEmptyLine(stderr)
+		}
+		if hint == "" {
+			hint = e.Error()
+		}
+		return nil, "", "collection status could not be parsed: " + hint
 	}
 
 	for _, c := range st.Registered {

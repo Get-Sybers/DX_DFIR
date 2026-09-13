@@ -23,7 +23,7 @@ install: ## go install as `dxdfir` (into $GOBIN / $GOPATH/bin)
 	$(GO) install ./cmd/dxdfir
 
 link: build ## build, then put a `dxdfir` shortcut on PATH (same layout as setup-environment.sh; uses sudo when not root)
-	$(SUDO) mkdir -p "$(GO_BIN_DIR)"
+	$(SUDO) mkdir -p "$(GO_BIN_DIR)" "$(LINK_DIR)"
 	$(SUDO) install -m0755 "$(BIN)" "$(GO_BIN_DIR)/dxdfir"
 	$(SUDO) ln -sf "$(GO_BIN_DIR)/dxdfir" "$(LINK_DIR)/dxdfir"
 	$(SUDO) install -Dm644 man/dxdfir.1 "$(MAN_DIR)/dxdfir.1" 2>/dev/null \
