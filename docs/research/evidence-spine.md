@@ -3,7 +3,7 @@
 > A design proposal for the **raw-evidence management layer**: how DX_DFIR tracks
 > acquired evidence and its processing, *before* and *separate from* the
 > CAR/analysis engine. The numbered arc in this directory
-> ([01](01-linkage-volume-guid.md)–[09](09-behaviour-sightings.md)) works the
+> ([01](cross-source-linkage/01-linkage-volume-guid.md)–[09](cross-source-linkage/09-behaviour-sightings.md)) works the
 > **analysis** layer — resolving entities across CAR rows and lining detections
 > up against them. This note works the layer *beneath* it: the physical/logical
 > structure of the evidence itself.
@@ -38,7 +38,7 @@ the edge of `raw/`. Concrete failure modes on the raw side:
   container ran on which evidence, so no resumability, no audit, no
   reproducibility.
 
-**Connection to [Step 01](01-linkage-volume-guid.md).** That step had to *mine*
+**Connection to [Step 01](cross-source-linkage/01-linkage-volume-guid.md).** That step had to *mine*
 the volume GUID out of CAR `native` text after the fact, because "the real
 cross-source keys survive only as text inside `native`." The raw-evidence layer
 records the disk serial, volume GUID and host **authoritatively at acquisition**,
@@ -123,7 +123,7 @@ shapes are right.)*
 — that *is* the host ← disk ← volume ← file chain, sitting in the output as
 fields. "Mapping what's clear" is mostly lifting those fields into CASE objects
 and `Contained_Within` relationships. (Device serials survive extraction thanks
-to the REG_BINARY byte-preservation from [Step 04](04-plaso-binary-loss.md).)
+to the REG_BINARY byte-preservation from [Step 04](cross-source-linkage/04-plaso-binary-loss.md).)
 
 ### The collection — the invisible string
 
@@ -207,7 +207,7 @@ redoing the core):**
 
 - memory captures & pcaps as roots — owned by host, not disk→volume→file shaped
   (CASE has facets for these; see the network work in
-  [Step 03](03-network-identity.md));
+  [Step 03](cross-source-linkage/03-network-identity.md));
 - loose / logical acquisitions — files with no volume parent;
 - `pagefile.sys` / `hiberfil.sys` ↔ memory — the state-on-disk bridge
   (`requires` the originating spindle);
@@ -249,9 +249,9 @@ Turn "map now" into a concrete implementation plan against the real files:
   `go/internal/lanes/` (glob-based state),
   `dev-scripts/plaso/l2t_json_dxdfir.py` (emits disk_id / volume_id /
   volume_offset), [`../Dir-Structure.md`](../Dir-Structure.md).
-- Companion analysis arc: [`README.md`](README.md),
-  [Step 01 — Volume GUID](01-linkage-volume-guid.md),
-  [Step 04 — REG_BINARY preservation](04-plaso-binary-loss.md),
-  [Step 06 — behaviour timeline / the layer distinction](06-behaviour-timeline.md).
+- Companion analysis arc: [`README.md`](cross-source-linkage/README.md),
+  [Step 01 — Volume GUID](cross-source-linkage/01-linkage-volume-guid.md),
+  [Step 04 — REG_BINARY preservation](cross-source-linkage/04-plaso-binary-loss.md),
+  [Step 06 — behaviour timeline / the layer distinction](cross-source-linkage/06-behaviour-timeline.md).
 - Standards: CASE/UCO (caseontology.org), The Sleuth Kit database schema,
   X-Ways Forensics volume snapshot.

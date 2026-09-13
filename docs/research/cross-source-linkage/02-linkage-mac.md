@@ -8,7 +8,7 @@
 
 A version-1 GUID (the RFC 4122 time+MAC variant) carries the originating NIC's
 MAC address verbatim in its node bytes. The cross-dataset value hunt
-([`../car-provenance/crosslink/`](../car-provenance/crosslink/)) counted
+([`../../car-provenance/crosslink/`](../../car-provenance/crosslink/)) counted
 **~6,218** MAC-bearing v1 GUIDs in the LoneWolf image alone: the DLT birth-droid
 stamped into every LNK shortcut, and the `-11e2-` / `-11e8-` volume and network-
 interface GUIDs. On top of those sit literal MAC strings, such as the NetworkList
@@ -22,7 +22,7 @@ and being thrown away.
 ## What we found
 
 The node decodes cleanly to real hardware MACs (see
-[`crosslink/guids.md`](../car-provenance/crosslink/guids.md)):
+[`crosslink/guids.md`](../../car-provenance/crosslink/guids.md)):
 
 - **`5c2307d9-3369-11e2-be70-001cc42df40b` → `00:1c:c4:2d:f4:0b`** — the DLT
   birth-droid shared by 96 `windows:lnk:link` rows and 32
@@ -63,7 +63,7 @@ queryable column and a convergence class, alongside the volume GUID from
 ## Follow-ups
 
 Two device-linkage gaps from the same hunt remain (see
-[`crosslink/SUMMARY.md`](../car-provenance/crosslink/SUMMARY.md)):
+[`crosslink/SUMMARY.md`](../../car-provenance/crosslink/SUMMARY.md)):
 - **B4 · plaso data loss** — `MountedDevices` / `DefaultGatewayMac` / device
   bytes are emitted only as `(6 bytes)` / `(224 bytes)` summaries, so the raw
   MAC/serial is dropped by the parser before any normalisation could recover it
