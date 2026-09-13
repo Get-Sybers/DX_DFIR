@@ -1,29 +1,20 @@
 package cli
 
 import (
-	"context"
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
+	"github.com/get-sybers/dx_dfir/go/internal/collection"
 	"github.com/get-sybers/dx_dfir/go/internal/health"
 	"github.com/get-sybers/dx_dfir/go/internal/model"
 	"github.com/get-sybers/dx_dfir/go/internal/plain"
 	"github.com/get-sybers/dx_dfir/go/internal/repo"
-	"github.com/get-sybers/dx_dfir/go/internal/run"
 	"github.com/get-sybers/dx_dfir/go/internal/termdetect"
 	"github.com/get-sybers/dx_dfir/go/internal/tui"
 )
-
-// collBudget bounds the full collection-registry scan. It walks every registered
-// collection to tally lane counts, which is fast on a normal host but slow over a
-// large/networked evidence store; past the budget the dashboard shows an instant
-// directory-name listing instead so it never hangs on the welcome screen.
-const collBudget = 5 * time.Second
 
 // runHome renders the landing dashboard for a bare `dxdfir`: a welcome header,
 // the environment-readiness panel (the checks that must be green before evidence
@@ -68,52 +59,19 @@ func runHome(env *Env, version string) error {
 	return nil
 }
 
-// gatherCollections reads the collection registry the same way `collection list`
-// does, but quietly and within a time budget: any failure is returned as a
-// message for the panel instead of being printed and turned into an error exit.
-// Returns (collections, note, hardErr) — note accompanies a list, hardErr
-// replaces it. When the full scan overruns the budget it degrades to an instant
-// listing of the collection directory names so tracked collections still show.
+// gatherCollections reads the collection registry natively (internal/collection:
+// the SQLite registry + concurrent lane walks — no Python round-trip). Returns
+// (collections, note, hardErr): note accompanies a list, hardErr replaces it. If
+// the native read fails it degrades to an instant listing of the collection
+// directory names so tracked collections still show.
 func gatherCollections(r *repo.Repo) (colls []model.CollInfo, note, hardErr string) {
-	py, err := repo.Python()
+	st, err := collection.GetStatus(r.Root)
 	if err != nil {
 		if fast := fastCollections(r); len(fast) > 0 {
-			return fast, "python unavailable - names only (from data_store/raw/collections/)", ""
+			return fast, "registry unavailable (" + firstNonEmptyLine(err.Error()) + ") - names only; `dxdfir collection list` for detail", ""
 		}
-		return nil, "", "python unavailable - collections cannot be read"
+		return nil, "", "collection registry unavailable: " + firstNonEmptyLine(err.Error())
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), collBudget)
-	defer cancel()
-	full := []string{"-m", "get_sybers_dxdfir.collection", "--repo-root", r.Root, "status"}
-	stdout, stderr, err := run.Capture(ctx, run.Plan{Bin: py, Args: full, Dir: r.Root})
-	if err != nil {
-		// Timed out scanning the evidence store: fall back to instant dir names.
-		if ctx.Err() == context.DeadlineExceeded {
-			if fast := fastCollections(r); len(fast) > 0 {
-				return fast, "registry scan slow over the evidence store - names only; `dxdfir collection list` for counts", ""
-			}
-			return nil, "", "collection registry slow to respond - try `dxdfir collection list`"
-		}
-		msg := strings.TrimSpace(stderr)
-		if msg == "" {
-			msg = err.Error()
-		}
-		return nil, "", "collection registry unavailable: " + firstNonEmptyLine(msg)
-	}
-	var st collStatus
-	if e := json.Unmarshal([]byte(stdout), &st); e != nil {
-		// Surface what actually came back (a warning printed on stdout, say)
-		// instead of a bare "could not be parsed".
-		hint := firstNonEmptyLine(stdout)
-		if hint == "" {
-			hint = firstNonEmptyLine(stderr)
-		}
-		if hint == "" {
-			hint = e.Error()
-		}
-		return nil, "", "collection status could not be parsed: " + hint
-	}
-
 	for _, c := range st.Registered {
 		colls = append(colls, collInfo(c, st.Active, ""))
 	}
@@ -127,9 +85,9 @@ func gatherCollections(r *repo.Repo) (colls []model.CollInfo, note, hardErr stri
 }
 
 // fastCollections lists the collection directory names under
-// data_store/raw/collections/ without descending into them — an instant fallback
-// when the full registry scan is too slow. Names only; no lane counts or active
-// marker (those need the walk the fast path skips).
+// data_store/raw/collections/ without descending into them — the last-resort
+// fallback when the native registry read itself fails. Names only; no lane
+// counts or active marker.
 func fastCollections(r *repo.Repo) []model.CollInfo {
 	entries, err := os.ReadDir(r.Path("data_store", "raw", "collections"))
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	coll "github.com/get-sybers/dx_dfir/go/internal/collection" // aliased: `collection` is a param name here
 	"github.com/get-sybers/dx_dfir/go/internal/lanes"
 	"github.com/get-sybers/dx_dfir/go/internal/repo"
 	"github.com/get-sybers/dx_dfir/go/internal/style"
@@ -69,8 +70,7 @@ func runProcess(env *Env, source, collection, pipeline string, force, noRegister
 
 	// Resolve the collection (explicit arg, else the active one).
 	if collection == "" {
-		var st collStatus
-		if err := collQuery(r, py, &st, "status"); err == nil {
+		if st, err := coll.GetStatus(r.Root); err == nil {
 			collection = st.Active
 		}
 	}
@@ -82,9 +82,9 @@ func runProcess(env *Env, source, collection, pipeline string, force, noRegister
 		if err := resolveCollection(r, py, collection, noRegister); err != nil {
 			return err
 		}
-		var cl collLanes
-		if err := collQuery(r, py, &cl, "lanes", collection); err != nil {
-			return err
+		cl, ok := coll.GetLanes(r.Root, collection)
+		if !ok {
+			return Fail(2, "invalid collection name %q", collection)
 		}
 		for _, in := range cl.Inputs {
 			scopeVars[in.Lane] = append(scopeVars[in.Lane], in.Var+"="+in.Dir)
