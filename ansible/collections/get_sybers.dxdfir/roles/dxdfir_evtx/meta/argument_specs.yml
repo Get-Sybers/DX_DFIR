@@ -10,7 +10,7 @@ argument_specs:
         skipped.
       - >-
         EvtxECmd is supplied one of two ways (dxdfir_evtx_use_bundled_image): the
-        bundled get-sybers/evtxecmd image (third_party/EZTools-Docker/evtxecmd) that bakes the DLL + Maps/, or
+        bundled get-sybers/evtxecmd image (third_party/GoDFIR-toolz/evtxecmd) that bakes the DLL + Maps/, or
         an operator-supplied .NET release mounted into a stock runtime image.
     options:
       dxdfir_evtx_pipeline:
@@ -91,7 +91,7 @@ argument_specs:
         type: str
         required: false
         default: "get-sybers/evtxecmd:latest"
-        description: "The bundled EvtxECmd image tag (built from third_party/EZTools-Docker/evtxecmd)."
+        description: "The bundled EvtxECmd image tag (built from third_party/GoDFIR-toolz/evtxecmd)."
       dxdfir_evtx_image:
         type: str
         required: false

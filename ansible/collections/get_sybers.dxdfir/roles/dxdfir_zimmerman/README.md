@@ -23,9 +23,9 @@ For each disk image, the processor (`get_sybers_dxdfir/zimmerman.py`):
    (registry batch), JLECmd/LECmd (jump lists/lnk), AmcacheParser,
    AppCompatCacheParser, SBECmd (ShellBags), RBCmd (Recycle Bin), MFTECmd (when
    a `$MFT` was extracted). The two Windows-bound EZ tools run through their
-   Linux-native Go substitutes: **SRUM** via `get-sybers/esedump` (`ese_dump` —
+   Linux-native Go substitutes: **SRUM** via `get-sybers/goese` (`goese` —
    SrumECmd is .NET and P/Invokes Windows' ESE engine) and **Prefetch** via
-   `get-sybers/prefetch` (`prefetch_dump` — PECmd refuses off-Windows), each run
+   `get-sybers/goprefetch` (`goprefetch` — PECmd refuses off-Windows), each run
    only when its artefact (`SRUDB.dat` / any `.pf`) was extracted.
 
 Directory-recursive tools (RECmd, JLECmd, LECmd, SBECmd, RBCmd) are pointed at

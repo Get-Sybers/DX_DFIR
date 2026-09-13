@@ -31,12 +31,12 @@ on:
       - "python/get_sybers_dxdfir/carcheck.py"
       - "python/pyproject.toml"
       # EvtxECmd + its image (and the shared hardening playbook) now live in the
-      # EZTools-Docker submodule, and the build wiring lives in the images role —
+      # GoDFIR-toolz submodule, and the build wiring lives in the images role —
       # both are covered by third_party/** and the role path below.
       - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_images/**"
       # an engine bump is a pipeline change: byakugan.ref pins the external
       # Byakugan engine the CAR lane runs, so it must re-run this workflow.
-      # third_party/** covers the piiat-mem AND EZTools-Docker submodules.
+      # third_party/** covers the piiat-mem AND GoDFIR-toolz submodules.
       - "byakugan.ref"
       - ".gitmodules"
       - "third_party/**"
@@ -56,7 +56,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           # Submodules: third_party/piiat-mem (volatility lane) and
-          # third_party/EZTools-Docker (EvtxECmd + the EZ tool family + the
+          # third_party/GoDFIR-toolz (EvtxECmd + the EZ tool family + the
           # canonical hardening playbook). The EvtxECmd image built below comes
           # from the latter, so this MUST be recursive.
           submodules: recursive
@@ -112,7 +112,7 @@ jobs:
       # The evtx lane runs EvtxECmd from the bundled image; build it once here
       # (the smoke test asserts its presence and fails loudly if absent).
       - name: Build the bundled EvtxECmd image
-        run: docker build -t get-sybers/evtxecmd:latest -f third_party/EZTools-Docker/evtxecmd/Dockerfile third_party/EZTools-Docker
+        run: docker build -t get-sybers/evtxecmd:latest -f third_party/GoDFIR-toolz/evtxecmd/Dockerfile third_party/GoDFIR-toolz
 
       - name: Run the pipeline smoke test
         run: ./tests/smoke-test.sh

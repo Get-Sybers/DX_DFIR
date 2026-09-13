@@ -1,6 +1,6 @@
 ---
 # dxdfir_images: build every get-sybers/* tool image from its ansible-hardened
-# Dockerfile (in docker/ or the EZTools-Docker submodule), then VERIFY the
+# Dockerfile (in docker/ or the GoDFIR-toolz submodule), then VERIFY the
 # hardening contract on each. The role GROUPS; the playbook DECIDES which set to
 # build (dxdfir_images_set).
 

@@ -106,7 +106,7 @@ command -v docker >/dev/null 2>&1 || die "docker not found. This test RUNS the p
 docker info >/dev/null 2>&1 || die "docker daemon not reachable."
 command -v python3 >/dev/null 2>&1 || die "python3 not found."
 docker image inspect get-sybers/evtxecmd:latest >/dev/null 2>&1 \
-    || die "image get-sybers/evtxecmd:latest missing — build it: docker build -t get-sybers/evtxecmd:latest -f third_party/EZTools-Docker/evtxecmd/Dockerfile third_party/EZTools-Docker"
+    || die "image get-sybers/evtxecmd:latest missing — build it: docker build -t get-sybers/evtxecmd:latest -f third_party/GoDFIR-toolz/evtxecmd/Dockerfile third_party/GoDFIR-toolz"
 # The CAR lane drives the EXTERNAL Byakugan engine ($BYAKUGAN_ROOT, else the
 # sibling dir of this repo), which rebuilds its model from ITS OWN nested
 # submodules — _model_sources_present() checks the resolved checkout end to end.

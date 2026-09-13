@@ -48,7 +48,7 @@ from .signatures import hayabusa as _hb
 # EvtxECmd's current .NET build targets net9.0, so the runtime must be 9.x — the old
 # sdk:8.0 default silently fails against today's release.
 _DOTNET_IMAGE = "mcr.microsoft.com/dotnet/runtime:9.0"
-# Bundled mode: DX_DFIR's own image (third_party/EZTools-Docker/evtxecmd) with the DLL + Maps/ baked in.
+# Bundled mode: DX_DFIR's own image (third_party/GoDFIR-toolz/evtxecmd) with the DLL + Maps/ baked in.
 _BUNDLED_IMAGE = "get-sybers/evtxecmd:latest"
 # Where the bundled image keeps EvtxECmd.dll (its WORKDIR, alongside Maps/).
 BUNDLED_DLL = "/opt/evtxecmd/EvtxECmd.dll"
@@ -389,7 +389,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--evtxecmd-dir", default="",
         help="operator-supplied EvtxECmd release dir (holds EvtxECmd.dll). Omit to "
-             "use the bundled image (third_party/EZTools-Docker/evtxecmd), which bakes the DLL + Maps/.",
+             "use the bundled image (third_party/GoDFIR-toolz/evtxecmd), which bakes the DLL + Maps/.",
     )
     ap.add_argument(
         "--image", "--dotnet-image", dest="image", default=None,

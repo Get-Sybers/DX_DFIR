@@ -72,7 +72,7 @@ def test_filter_covers_activitiescache_and_srum_and_mft():
 
 
 def test_filter_covers_prefetch():
-    """Prefetch IS extracted here now — prefetch_dump (the Linux-native PECmd
+    """Prefetch IS extracted here now — goprefetch (the Linux-native PECmd
     substitute) parses the .pf; the filter must stage them."""
     paths = _all_paths()
     assert any("Prefetch" in p and ".pf" in p.lower() for p in paths)
@@ -115,7 +115,7 @@ def test_srum_esedump_argv():
     argv = z.srum_esedump_argv("/srum", "/out/srum")
     assert argv[:3] == ["docker", "run", "--rm"]
     assert "/srum:/in:ro" in argv and "/out/srum:/out" in argv
-    tail = argv[argv.index("get-sybers/esedump:latest") + 1:]
+    tail = argv[argv.index("get-sybers/goese:latest") + 1:]
     assert tail == ["-f", "/in/SRUDB.dat", "--json", "/out"]
 
 
@@ -123,7 +123,7 @@ def test_prefetch_argv():
     argv = z.prefetch_argv("/stage", "/out/prefetch")
     assert argv[:3] == ["docker", "run", "--rm"]
     assert "/stage:/in:ro" in argv and "/out/prefetch:/out" in argv
-    tail = argv[argv.index("get-sybers/prefetch:latest") + 1:]
+    tail = argv[argv.index("get-sybers/goprefetch:latest") + 1:]
     assert tail == ["-d", "/in", "--json", "/out"]
 
 
@@ -162,7 +162,7 @@ def test_sbecmd_argv():
 
 def test_rbcmd_argv():
     argv = z.rbcmd_argv("/stage", "/out/rbcmd")
-    tail = argv[argv.index("get-sybers/rbcmd:latest") + 1:]
+    tail = argv[argv.index("get-sybers/gorb:latest") + 1:]
     assert tail == ["-d", "/in", "--csv", "/out", "--csvf", "rbcmd.csv"]
 
 

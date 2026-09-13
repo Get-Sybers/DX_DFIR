@@ -11,10 +11,10 @@ log (+ an `.xml` sidecar, not ingested), grouped by the source sub-dir (host).
 Selected by `dxdfir_evtx_use_bundled_image` (default **bundled**):
 
 - **Bundled (default).** The `get-sybers/evtxecmd` image (built from
-  [`third_party/EZTools-Docker/evtxecmd`](https://github.com/Get-Sybers/EZTools-Docker/tree/main/evtxecmd)) bakes `EvtxECmd.dll` **and `Maps/`** onto a
+  [`third_party/GoDFIR-toolz/evtxecmd`](https://github.com/Get-Sybers/GoDFIR-toolz/tree/main/evtxecmd)) bakes `EvtxECmd.dll` **and `Maps/`** onto a
   .NET runtime. Build it once and forget it — no files to place by hand:
   ```bash
-  docker build -t get-sybers/evtxecmd:latest -f third_party/EZTools-Docker/evtxecmd/Dockerfile third_party/EZTools-Docker
+  docker build -t get-sybers/evtxecmd:latest -f third_party/GoDFIR-toolz/evtxecmd/Dockerfile third_party/GoDFIR-toolz
   ```
 - **Operator-supplied.** Set `dxdfir_evtx_use_bundled_image=false` and drop the .NET
   EvtxECmd release (incl. `Maps/`) under `dxdfir_evtx_evtxecmd_dir`. Download it from
@@ -35,7 +35,7 @@ the MIT-licensed release at build time; the repo ships the recipe, not the binar
 | `dxdfir_evtx_elastic_out_dir` | `<repo>/data_store/processed/windows_logs` | Elastic-path output. |
 | `dxdfir_evtx_sofelk_out_dir` | `<repo>/data_store/processed/sofelk/windows_logs` | SOF-ELK-path output. |
 | `dxdfir_evtx_use_bundled_image` | `true` | Use the bundled `get-sybers/evtxecmd` image; `false` = mount an operator release. |
-| `dxdfir_evtx_bundled_image` | `get-sybers/evtxecmd:latest` | Bundled image tag (built from `third_party/EZTools-Docker/evtxecmd`). |
+| `dxdfir_evtx_bundled_image` | `get-sybers/evtxecmd:latest` | Bundled image tag (built from `third_party/GoDFIR-toolz/evtxecmd`). |
 | `dxdfir_evtx_evtxecmd_dir` | `<repo>/data_store/dependencies/evtxecmd` | Operator-supplied EvtxECmd release (must hold `EvtxECmd.dll`; include `Maps/`). |
 | `dxdfir_evtx_dotnet_image` | `mcr.microsoft.com/dotnet/runtime:9.0` | Operator mode: the .NET **9.x** runtime image the release mounts into. |
 | `dxdfir_evtx_image` | (computed) | The image actually run; override to pin a digest. |

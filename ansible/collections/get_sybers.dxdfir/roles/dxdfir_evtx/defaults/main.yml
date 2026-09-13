@@ -41,9 +41,9 @@ dxdfir_evtx_hayabusa_dir: "{{ dxdfir_evtx_repo_root }}/data_store/dependencies/h
 dxdfir_evtx_hayabusa_rules: ""
 
 # How EvtxECmd is supplied — two modes:
-#   bundled  (default): the get-sybers/evtxecmd image (third_party/EZTools-Docker/evtxecmd) bakes EvtxECmd.dll
+#   bundled  (default): the get-sybers/evtxecmd image (third_party/GoDFIR-toolz/evtxecmd) bakes EvtxECmd.dll
 #            + Maps/. Nothing to place by hand; build it once with
-#            `docker build -t get-sybers/evtxecmd:latest -f third_party/EZTools-Docker/evtxecmd/Dockerfile third_party/EZTools-Docker`.
+#            `docker build -t get-sybers/evtxecmd:latest -f third_party/GoDFIR-toolz/evtxecmd/Dockerfile third_party/GoDFIR-toolz`.
 #   operator: set dxdfir_evtx_use_bundled_image=false and drop the .NET EvtxECmd
 #            release (incl. Maps/) under dxdfir_evtx_evtxecmd_dir. EvtxECmd is MIT but
 #            we don't vendor it; the operator supplies the build.
