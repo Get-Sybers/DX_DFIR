@@ -1,6 +1,7 @@
 package collection
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -101,9 +102,9 @@ func Select(repoRoot, name string) error {
 		return err
 	}
 	ts := now()
-	logEventDB(db, name, ts, "selected")
+	logEventDB(db, name, ts, "selected", nil)
 	if root, ok := collectionDir(repoRoot, name); ok {
-		logEventFile(root, ts, "selected")
+		logEventFile(root, ts, "selected", nil)
 	}
 	return nil
 }
@@ -128,9 +129,9 @@ func Unselect(repoRoot string) (string, error) {
 		return "", err
 	}
 	ts := now()
-	logEventDB(db, prev, ts, "unselected")
+	logEventDB(db, prev, ts, "unselected", nil)
 	if root, ok := collectionDir(repoRoot, prev); ok {
-		logEventFile(root, ts, "unselected")
+		logEventFile(root, ts, "unselected", nil)
 	}
 	return prev, nil
 }
@@ -163,7 +164,7 @@ func Unregister(repoRoot, name string) (bool, error) {
 		return false, nil
 	}
 	ts := now()
-	logEventFile(root, ts, "unregistered")
+	logEventFile(root, ts, "unregistered", nil)
 	if wasInDB {
 		db, err := openWriteDB(repoRoot)
 		if err != nil {
@@ -320,24 +321,62 @@ func importEventLog(db *sql.DB, name, logPath string) {
 	}
 }
 
-// logEventDB appends one detail-less event row; best-effort, like the on-disk log.
-func logEventDB(db *sql.DB, name, ts, event string) {
-	_, _ = db.Exec("INSERT INTO events(name, ts, event, detail) VALUES(?, ?, ?, NULL)", name, ts, event)
+// jsonVal renders a value as JSON the way Python's json.dumps default does — no
+// HTML escaping (Python does not escape <, >, &), scalar form for strings/ints.
+func jsonVal(v any) string {
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	_ = enc.Encode(v)
+	return strings.TrimRight(b.String(), "\n")
+}
+
+// pyObj renders ordered key/value pairs as a JSON object with Python's
+// json.dumps default separators (", " and ": "), key order preserved.
+func pyObj(pairs [][2]any) string {
+	parts := make([]string, len(pairs))
+	for i, kv := range pairs {
+		parts[i] = jsonVal(fmt.Sprint(kv[0])) + ": " + jsonVal(kv[1])
+	}
+	return "{" + strings.Join(parts, ", ") + "}"
+}
+
+// logEventDB appends one event row; detail is a JSON object (Python spacing) or
+// NULL when empty. Best-effort, like the on-disk log.
+func logEventDB(db *sql.DB, name, ts, event string, detail [][2]any) {
+	var d any
+	if len(detail) > 0 {
+		d = pyObj(detail)
+	}
+	_, _ = db.Exec("INSERT INTO events(name, ts, event, detail) VALUES(?, ?, ?, ?)", name, ts, event, d)
 }
 
 // logEventFile appends one JSONL record to the collection's .collection.log,
-// byte-for-byte as the Python's _log_event_file does: json.dumps default
-// separators (a space after ':' and ','), key order ts then event. Best-effort
-// (a read-only symlinked target is silently skipped, matching the Python).
-func logEventFile(root, ts, event string) {
+// byte-for-byte as _log_event_file does: {"ts": .., "event": .., <detail..>}
+// with Python's json.dumps default spacing, key order ts, event, then detail.
+// Best-effort (a read-only symlinked target is silently skipped).
+func logEventFile(root, ts, event string, detail [][2]any) {
 	f, err := os.OpenFile(filepath.Join(root, logName), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return
 	}
 	defer f.Close()
-	tsB, _ := json.Marshal(ts)
-	evB, _ := json.Marshal(event)
-	_, _ = fmt.Fprintf(f, "{\"ts\": %s, \"event\": %s}\n", tsB, evB)
+	pairs := append([][2]any{{"ts", ts}, {"event", event}}, detail...)
+	_, _ = fmt.Fprintln(f, pyObj(pairs))
+}
+
+// logEvent writes an event to BOTH the events table and the on-disk
+// .collection.log (mirrors log_event): the DB is queryable, the JSONL is the
+// forensic shadow.
+func logEvent(db *sql.DB, root, name, ts, event string, detail [][2]any) {
+	logEventDB(db, name, ts, event, detail)
+	logEventFile(root, ts, event, detail)
+}
+
+// registeredIn reports whether name has a row in the given open registry DB.
+func registeredIn(db *sql.DB, name string) bool {
+	var one int
+	return db.QueryRow("SELECT 1 FROM collections WHERE name = ?", name).Scan(&one) == nil
 }
 
 // now is the registry timestamp format: UTC, second precision, trailing Z —
