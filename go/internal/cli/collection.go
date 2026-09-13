@@ -24,9 +24,9 @@ import (
 //
 // The whole collection layer — status/lanes/state reads, select/unselect/
 // unregister/register/sort/promote/link writes, and the SHA-1 hash — is native
-// Go now (internal/collection); nothing shells `python -m
-// get_sybers_dxdfir.collection` (epic #174). These aliases keep the cli's
-// rendering + process-scoping code unchanged.
+// Go now (internal/collection); nothing shells the
+// `python -m get_sybers_dxdfir.collection` module (epic #174). These aliases
+// keep the cli's rendering + process-scoping code unchanged.
 
 type (
 	collSummary = collection.Summary
@@ -378,7 +378,7 @@ func resolveCollection(r *repo.Repo, name string, noRegister bool) error {
 		}
 		if reg {
 			if _, err := collection.Register(r.Root, name, "", "detected", nil); err != nil {
-				return Fail(2, "%v", err)
+				return Fail(2, "register %s: %v", name, err)
 			}
 			fmt.Fprintln(os.Stderr, style.Green(style.GlyphOK+" registered '"+name+"'."))
 		}
