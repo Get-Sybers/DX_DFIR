@@ -27,9 +27,9 @@ func Sanitize(line string) string {
 	return strings.TrimRight(line, " \t")
 }
 
-// Sentinel is a decoded progress line. Fields are optional; a consumer reads the
-// ones relevant to the phase it drives. The schema is shared with the Python
-// helpers (get_sybers_dxdfir.collection --progress).
+// Sentinel is a decoded ::dxdfir:: progress line. Fields are optional; a consumer
+// reads the ones relevant to the phase it drives. (The collection layer that
+// emitted these is native Go now; retained as the shared progress-line schema.)
 type Sentinel struct {
 	Phase      string `json:"phase"`       // "classify" | "move" | "hash" | "summary" | "note"
 	File       string `json:"file"`        // current file basename
