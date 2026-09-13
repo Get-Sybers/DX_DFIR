@@ -11,7 +11,7 @@ CAR's `guid` is the one cross-source join key: it travels to Elastic as ECS
 `LOOKUP JOIN car-detections ON event.id|process.entity_id` is the entire
 convergence contract (`python/get_sybers_dxdfir/detect/rules/car-detections/join-keys.yml`).
 
-The cross-dataset value hunt ([`../car-provenance/crosslink/`](../car-provenance/crosslink/))
+The cross-dataset value hunt ([`../../car-provenance/crosslink/`](../../car-provenance/crosslink/))
 found that key holds **nothing real**. Of **44,327** non-null values across the
 CAR `guid`/`owning_guid`/`parent_guid`/`target_guid` columns, **zero** are
 canonical `{8-4-4-4-12}` GUIDs — every value is a synthetic id the engine mints
@@ -24,7 +24,7 @@ image is the volume GUID (`\\?\Volume{GUID}`), and it was entirely un-mined.
 
 One volume id — `{09931f21-7faf-44a9-81d8-1e73c14b9eaf}`, the LoneWolf main
 system volume, seen **2,208×** — ties **6 data_types** together on real data
-(see [`crosslink/guids.md`](../car-provenance/crosslink/guids.md)):
+(see [`crosslink/guids.md`](../../car-provenance/crosslink/guids.md)):
 
 | data_type | rows |
 |---|---:|
@@ -67,7 +67,7 @@ disk image, previously thrown away.
 ## Follow-ups
 
 The rest of B1 remains open (tracked in
-[`crosslink/SUMMARY.md`](../car-provenance/crosslink/SUMMARY.md)):
+[`crosslink/SUMMARY.md`](../../car-provenance/crosslink/SUMMARY.md)):
 - lift **MachineGuid → `host.id`** and stamp it on every CAR row of the image;
 - in an evtx→CAR projection, map Sysmon **ProcessGuid → `process.entity_id`**
   and **ParentProcessGuid → `parent_guid`**;
