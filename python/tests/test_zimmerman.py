@@ -281,8 +281,11 @@ def test_process_image_no_artefacts_extracted_is_empty_not_failed(tmp_path, monk
     # nothing to find -> the single-file steps report ran=False with a reason
     assert res["steps"]["amcache"] == {"ran": False, "reason": "no Amcache.hve extracted"}
     assert res["steps"]["appcompatcache"] == {"ran": False, "reason": "no SYSTEM hive extracted"}
-    # mftecmd (gomft) is directory-recursive now — it runs and finds nothing,
-    # rather than being gated on a literal $MFT name lookup that missed _MFT
+    # mftecmd (gomft) is directory-recursive now (content-detects the $MFT,
+    # incl. plaso's renamed _MFT) — so it RUNS unconditionally and reports
+    # ok=False when the scan finds no $MFT, rather than being gated on a literal
+    # $MFT name lookup that missed _MFT
+    assert res["steps"]["mftecmd"] == {"ran": True, "ok": False}
     assert res["steps"]["srum"] == {"ran": False, "reason": "no SRUDB.dat extracted"}
     assert res["steps"]["prefetch"] == {"ran": False, "reason": "no .pf extracted"}
 
