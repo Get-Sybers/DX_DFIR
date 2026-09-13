@@ -485,3 +485,123 @@ func TestHashUnregistered(t *testing.T) {
 		t.Errorf("unregistered collection must record no events, got %d", n)
 	}
 }
+
+func TestClassify(t *testing.T) {
+	dir := t.TempDir()
+	mk := func(name string, data []byte) string {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	ewf := append([]byte{0x45, 0x56, 0x46, 0x09, 0x0d, 0x0a, 0xff, 0x00, 0x00}, []byte{0x01, 0x00}...) // EVF hdr + seg=1
+	cases := []struct {
+		file       string
+		data       []byte
+		wantSubdir string
+		wantBy     string
+	}{
+		{"cap.bin", []byte{0xa1, 0xb2, 0xc3, 0xd4, 0x00}, "pcaps", "magic"},   // pcap magic
+		{"img.e01", ewf, "disk_images", "magic"},                              // EWF magic (seg 1)
+		{"vm.kdmv", []byte("KDMV____"), "VM_files", "magic"},                  // VMDK sparse magic
+		{"log.evtx", []byte("ElfFile\x00"), "logs/winevt", "ext"},             // evtx by ext
+		{"dump.mem", []byte("no magic here"), "memory", "ext"},                // memory by ext
+		{"disk.e01x", []byte("no magic"), "", "unknown"},                      // .e01x: no magic, no ext claim
+		{"raw.raw", []byte("headerless"), "", "ambiguous:disk_images,memory"}, // .raw: disk (ext) + memory (ext)
+		{"notes.txt", []byte("hello"), "", "unknown"},                         // nothing recognises it
+	}
+	for _, c := range cases {
+		sub, by := Classify(mk(c.file, c.data))
+		if sub != c.wantSubdir || by != c.wantBy {
+			t.Errorf("Classify(%s) = (%q, %q), want (%q, %q)", c.file, sub, by, c.wantSubdir, c.wantBy)
+		}
+	}
+}
+
+func TestSortRegisterPromoteLink(t *testing.T) {
+	repo := t.TempDir()
+	colls := filepath.Join(repo, "data_store", "raw", "collections")
+	dz := filepath.Join(repo, "data_store", "raw", "sort")
+	stage := func(p string, data []byte) {
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pcap := []byte{0xa1, 0xb2, 0xc3, 0xd4, 0x01, 0x02}
+
+	// --- promote: a dropzone folder with a loose pcap + a hand-staged memory file ---
+	stage(filepath.Join(dz, "promoted", "capture.bin"), pcap)              // loose, classifies to pcaps by magic
+	stage(filepath.Join(dz, "promoted", "memory", "m.mem"), []byte("mem")) // already in a lane
+	rr, err := Register(repo, "promoted", filepath.Join(dz, "promoted"), "manual", nil)
+	if err != nil {
+		t.Fatalf("promote: %v", err)
+	}
+	if !rr.Promoted {
+		t.Error("promote: Promoted=false")
+	}
+	if !isRegularFile(filepath.Join(colls, "promoted", "pcaps", "capture.bin")) {
+		t.Error("promote: loose pcap not moved into pcaps/")
+	}
+	db, _ := sql.Open("sqlite", "file:"+filepath.Join(colls, registryName)+"?mode=ro")
+	assertRow := func(q string, args ...any) int {
+		var n int
+		if err := db.QueryRow(q, args...).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if assertRow("SELECT COUNT(*) FROM collections WHERE name='promoted' AND source='promote'") != 1 {
+		t.Error("promote: no registry row with source=promote")
+	}
+	if assertRow("SELECT COUNT(*) FROM files WHERE collection_name='promoted'") != 2 {
+		t.Error("promote: expected 2 files rows (moved pcap + hand-staged memory)")
+	}
+	if assertRow("SELECT COUNT(*) FROM events WHERE name='promoted' AND event='registered'") != 1 {
+		t.Error("promote: no 'registered' event")
+	}
+	db.Close()
+
+	// --- sort: drop a loose evtx into the dropzone, sort into the registered coll ---
+	stage(filepath.Join(dz, "win.evtx"), []byte("ElfFile\x00"))
+	sr, err := SortInto(repo, "promoted", false, nil)
+	if err != nil {
+		t.Fatalf("sort: %v", err)
+	}
+	if len(sr.Moved["logs/winevt"]) != 1 {
+		t.Errorf("sort: evtx not moved to logs/winevt; moved=%v", sr.Moved)
+	}
+	if !isRegularFile(filepath.Join(colls, "promoted", "logs/winevt", "win.evtx")) {
+		t.Error("sort: evtx not on disk in logs/winevt/")
+	}
+	db, _ = sql.Open("sqlite", "file:"+filepath.Join(colls, registryName)+"?mode=ro")
+	if assertRow("SELECT COUNT(*) FROM events WHERE name='promoted' AND event='sorted'") != 1 {
+		t.Error("sort: no 'sorted' event")
+	}
+	db.Close()
+
+	// --- link: register an external dir via symlink ---
+	ext := filepath.Join(repo, "external_evidence")
+	stage(filepath.Join(ext, "pcaps", "e.pcap"), pcap)
+	if _, err := Register(repo, "linked", ext, "manual", nil); err != nil {
+		t.Fatalf("link: %v", err)
+	}
+	if !isSymlink(filepath.Join(colls, "linked")) {
+		t.Error("link: collections/linked is not a symlink")
+	}
+	db, _ = sql.Open("sqlite", "file:"+filepath.Join(colls, registryName)+"?mode=ro")
+	defer db.Close()
+	var src, target string
+	if err := db.QueryRow("SELECT source, target_path FROM collections WHERE name='linked'").Scan(&src, &target); err != nil {
+		t.Fatal(err)
+	}
+	if src != "link" {
+		t.Errorf("link: source=%q want link", src)
+	}
+	if assertRow("SELECT COUNT(*) FROM files WHERE collection_name='linked'") != 1 {
+		t.Error("link: external evidence not recorded")
+	}
+}
