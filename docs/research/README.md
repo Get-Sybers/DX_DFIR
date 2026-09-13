@@ -56,6 +56,19 @@ raw evidence ─▶ per-source maps ─▶ CAR objects (spindle identity)
         (Steps 5,7,8)                   joined by IP / ProcessGuid / hash / domain
 ```
 
+## Companion strand — the raw-evidence layer
+
+The arc above (01–09) works the **analysis** layer: resolving entities across CAR
+rows and lining detections up against them. A separate design note works the layer
+*beneath* it — how raw evidence is tracked and passed to processing, before CAR:
+
+| Doc | What it proposes |
+|-----|------------------|
+| [Evidence Spine — a raw-evidence ownership graph (CASE/UCO)](evidence-spine.md) | a compact CASE/UCO graph (host → disk → volume → file → extraction) for the raw-data layer; decoupled from `car.db`/`superset.db`, meeting the analysis graph only at the processed artefact |
+
+It is a proposal (no code yet), and it is where the spindle identity the arc above
+*mines out of CAR `native`* would instead be recorded authoritatively at intake.
+
 ## Provenance & scope caveat
 
 The processed corpus is **multi-host** — three collections, different machines:
