@@ -263,3 +263,87 @@ func TestWrites(t *testing.T) {
 		t.Error("Unregister(ghost) should error (no such collection)")
 	}
 }
+
+func containsName(cs []Summary, name string) bool {
+	for _, c := range cs {
+		if c.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// TestSelectMigratesLegacyMarker: a collection present only as a pre-DB
+// .collection marker is migrated into the registry by Select (as Python's _db()
+// does) and then selectable — the regression Copilot flagged.
+func TestSelectMigratesLegacyMarker(t *testing.T) {
+	repo := t.TempDir()
+	colls := filepath.Join(repo, "data_store", "raw", "collections")
+	touch(t, filepath.Join(colls, "other", "pcaps", "o.pcap"))
+	seedRegistry(t, filepath.Join(colls, registryName), map[string]bool{"other": false})
+	// "leg": a marker (with a registered_at) + evidence, but NO registry row.
+	touch(t, filepath.Join(colls, "leg", "memory", "m.raw")) // creates leg/ first
+	if err := os.WriteFile(filepath.Join(colls, "leg", ".collection"),
+		[]byte("name: leg\nregistered_at: 2020-01-02T03:04:05Z\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Precondition: the read path (no migration) sees leg as unregistered.
+	if st, _ := GetStatus(repo); !containsName(st.Unregistered, "leg") {
+		t.Fatal("precondition: leg should read as unregistered before select")
+	}
+	// Select migrates the marker in, then selects it.
+	if err := Select(repo, "leg"); err != nil {
+		t.Fatalf("Select(leg): %v", err)
+	}
+	st, _ := GetStatus(repo)
+	if st.Active != "leg" {
+		t.Errorf("active=%q, want leg", st.Active)
+	}
+	if !containsName(st.Registered, "leg") {
+		t.Errorf("leg should be registered after migrate+select; registered=%+v", st.Registered)
+	}
+	// The migrated row keeps the marker's registered_at and is sourced "migrated".
+	db, _ := sql.Open("sqlite", "file:"+filepath.Join(colls, registryName)+"?mode=ro")
+	defer db.Close()
+	var regAt, source string
+	if err := db.QueryRow("SELECT registered_at, source FROM collections WHERE name='leg'").Scan(&regAt, &source); err != nil {
+		t.Fatal(err)
+	}
+	if regAt != "2020-01-02T03:04:05Z" {
+		t.Errorf("migrated registered_at=%q, want the marker's value", regAt)
+	}
+	if source != "migrated" {
+		t.Errorf("migrated source=%q, want migrated", source)
+	}
+}
+
+// TestSchemaEvolutionAddsSelected: a registry created before the `selected`
+// column exists is evolved by openWriteDB so the UPDATE does not fail with
+// "no such column: selected".
+func TestSchemaEvolutionAddsSelected(t *testing.T) {
+	repo := t.TempDir()
+	colls := filepath.Join(repo, "data_store", "raw", "collections")
+	if err := os.MkdirAll(colls, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("sqlite", "file:"+filepath.Join(colls, registryName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Legacy schema: no `selected` column.
+	if _, err := db.Exec("CREATE TABLE collections(name TEXT PRIMARY KEY, target_path TEXT, registered_at TEXT, source TEXT)"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO collections(name,target_path,registered_at,source) VALUES('old','x','t','create')"); err != nil {
+		t.Fatal(err)
+	}
+	db.Close()
+
+	if err := Select(repo, "old"); err != nil {
+		t.Fatalf("Select(old) on a pre-`selected` registry: %v", err)
+	}
+	if st, _ := GetStatus(repo); st.Active != "old" {
+		t.Errorf("active=%q, want old", st.Active)
+	}
+}
