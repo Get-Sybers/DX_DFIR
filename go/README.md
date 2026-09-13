@@ -19,7 +19,7 @@ The binary never re-implements processing. It shells out to what already exists:
 | `build-docker` | `ansible-playbook … dxdfir-build-images.yml` |
 | `build-car` / `verify-car` / `car-timeline` | `ansible-playbook … dxdfir-{build-car,verify-car,car-timeline}.yml` (the `dxdfir_car` role over the engine + carcheck gate) |
 | `verify-images` | `ansible-playbook … dxdfir-verify-images.yml` |
-| `register` / `collection …` | `python -m get_sybers_dxdfir.collection …` (magic-byte classify + SHA-1 stay the Python detectors) |
+| `register` / `collection …` | native Go (`internal/collection`: the SQLite registry, magic-byte classify, sort/promote/link, and the SHA-1 manifest — no subprocess) |
 | `stix …` | `python -m get_sybers_dxdfir.stix …` (data → stdout, summary → stderr) |
 | `stack …` | `ansible-playbook … dxdfir-stack-<action>.yml` (the `dxdfir_stack` role) |
 | `cleanup …` | `ansible-playbook … dxdfir-cleanup.yml` (`--dry-run` maps to `--check`) |

@@ -63,10 +63,6 @@ func runProcess(env *Env, source, collection, pipeline string, force, noRegister
 	if err != nil {
 		return Fail(127, "%v", err)
 	}
-	py, err := repo.Python()
-	if err != nil {
-		return Fail(127, "%v", err)
-	}
 
 	// Resolve the collection (explicit arg, else the active one).
 	if collection == "" {
@@ -79,7 +75,7 @@ func runProcess(env *Env, source, collection, pipeline string, force, noRegister
 	scopeDirs := map[string][]string{}
 	counts := map[string]int{}
 	if collection != "" {
-		if err := resolveCollection(r, py, collection, noRegister); err != nil {
+		if err := resolveCollection(r, collection, noRegister); err != nil {
 			return err
 		}
 		cl, ok := coll.GetLanes(r.Root, collection)

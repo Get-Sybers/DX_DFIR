@@ -23,9 +23,8 @@ const tailCap = 300
 
 // Runner drives one collection operation and streams its progress.
 type Runner struct {
-	Repo   *repo.Repo
-	Python string
-	Title  string
+	Repo  *repo.Repo
+	Title string
 }
 
 type state struct {

@@ -3,7 +3,6 @@ package cli
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -17,19 +16,17 @@ import (
 	"github.com/get-sybers/dx_dfir/go/internal/collect"
 	"github.com/get-sybers/dx_dfir/go/internal/collection"
 	"github.com/get-sybers/dx_dfir/go/internal/repo"
-	"github.com/get-sybers/dx_dfir/go/internal/run"
 	"github.com/get-sybers/dx_dfir/go/internal/style"
 	"github.com/get-sybers/dx_dfir/go/internal/tui"
 )
 
 // ---- shared query types ----
 //
-// status / lanes / state are read natively by internal/collection (no Python
-// round-trip; the registry is read directly and lanes are counted concurrently),
-// and the registry-mutating writes select / unselect / unregister are native too.
-// These aliases keep the rest of the cli — rendering, process scoping — unchanged.
-// Only register/sort/hash still shell out via collQuery / collect.Runner; see
-// epic #174.
+// The whole collection layer — status/lanes/state reads, select/unselect/
+// unregister/register/sort/promote/link writes, and the SHA-1 hash — is native
+// Go now (internal/collection); nothing shells `python -m
+// get_sybers_dxdfir.collection` (epic #174). These aliases keep the cli's
+// rendering + process-scoping code unchanged.
 
 type (
 	collSummary = collection.Summary
@@ -38,23 +35,6 @@ type (
 	laneInput   = collection.LaneInput
 	collLanes   = collection.Lanes
 )
-
-// collQuery runs a collection subcommand and decodes its stdout JSON into out.
-func collQuery(r *repo.Repo, py string, out any, args ...string) error {
-	full := append([]string{"-m", "get_sybers_dxdfir.collection", "--repo-root", r.Root}, args...)
-	stdout, stderr, err := run.Capture(context.Background(), run.Plan{Bin: py, Args: full, Dir: r.Root})
-	if err != nil {
-		msg := strings.TrimSpace(stderr)
-		if msg == "" {
-			msg = err.Error()
-		}
-		return Fail(2, "collection %s: %s", strings.Join(args, " "), msg)
-	}
-	if out == nil {
-		return nil
-	}
-	return json.Unmarshal([]byte(stdout), out)
-}
 
 // ---- signal context shared by the progress-driving verbs ----
 
@@ -103,10 +83,6 @@ func runRegister(env *Env, name, fromExplicit string, doHash bool) error {
 	if err != nil {
 		return err
 	}
-	py, err := repo.Python()
-	if err != nil {
-		return Fail(127, "%v", err)
-	}
 	fromPath := fromExplicit
 	if fromPath == "" {
 		dz := r.Path("data_store", "raw", "sort", name)
@@ -120,7 +96,7 @@ func runRegister(env *Env, name, fromExplicit string, doHash bool) error {
 	}
 	ctx, cancel := signalCtx()
 	defer cancel()
-	runner := &collect.Runner{Repo: r, Python: py, Title: title}
+	runner := &collect.Runner{Repo: r, Title: title}
 	updates := runner.Register(ctx, name, fromPath, doHash)
 	return exitFromErr(present(env, tui.NewCollection(), updates, cancel))
 }
@@ -325,10 +301,6 @@ func newCollectionSortCmd(env *Env) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			py, err := repo.Python()
-			if err != nil {
-				return Fail(127, "%v", err)
-			}
 			name := ""
 			if len(args) == 1 {
 				name = args[0]
@@ -339,14 +311,14 @@ func newCollectionSortCmd(env *Env) *cobra.Command {
 				}
 			}
 			if !dryRun {
-				if err := resolveCollection(r, py, name, noRegister); err != nil {
+				if err := resolveCollection(r, name, noRegister); err != nil {
 					return err
 				}
 			}
 			title := "sort -> " + name
 			ctx, cancel := signalCtx()
 			defer cancel()
-			runner := &collect.Runner{Repo: r, Python: py, Title: title}
+			runner := &collect.Runner{Repo: r, Title: title}
 			updates := runner.Sort(ctx, name, dryRun, !noHash)
 			return exitFromErr(present(env, tui.NewCollection(), updates, cancel))
 		},
@@ -387,7 +359,7 @@ func defaultCollection(r *repo.Repo) (string, error) {
 // resolveCollection makes a collection usable before sort/process: registered → ok;
 // detected (unregistered but has evidence) → register (prompt when interactive);
 // absent → error.
-func resolveCollection(r *repo.Repo, py, name string, noRegister bool) error {
+func resolveCollection(r *repo.Repo, name string, noRegister bool) error {
 	st, err := collection.GetState(r.Root, name)
 	if err != nil {
 		return Fail(2, "collection state %s: %v", name, err)
@@ -405,8 +377,8 @@ func resolveCollection(r *repo.Repo, py, name string, noRegister bool) error {
 			reg = confirm("Detected unregistered collection '" + name + "'. Register it to keep a processing record?")
 		}
 		if reg {
-			if err := collQuery(r, py, nil, "register", name, "--source", "detected"); err != nil {
-				return err
+			if _, err := collection.Register(r.Root, name, "", "detected", nil); err != nil {
+				return Fail(2, "%v", err)
 			}
 			fmt.Fprintln(os.Stderr, style.Green(style.GlyphOK+" registered '"+name+"'."))
 		}
