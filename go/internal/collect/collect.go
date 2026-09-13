@@ -1,8 +1,9 @@
-// Package collect drives the collection-creation flows by shelling
-// `python -m get_sybers_dxdfir.collection` (the magic-byte classify + SHA-1 hash
-// stay the Python detectors, the source of truth) and translating its
-// ::dxdfir:: progress sentinels into the shared model.Update stream both
-// presenters consume.
+// Package collect drives the collection-creation flows. The classify phase
+// (register/sort) still shells `python -m get_sybers_dxdfir.collection` — the
+// magic-byte detectors are the source of truth — and its ::dxdfir:: progress
+// sentinels are folded into the shared model.Update stream. The SHA-1 hash
+// phase is now native Go (internal/collection, epic #174 phase 3): its progress
+// callbacks feed the SAME stream, so both presenters render identically.
 package collect
 
 import (
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/get-sybers/dx_dfir/go/internal/collection"
 	"github.com/get-sybers/dx_dfir/go/internal/model"
 	"github.com/get-sybers/dx_dfir/go/internal/repo"
 	"github.com/get-sybers/dx_dfir/go/internal/run"
@@ -71,7 +73,7 @@ func (r *Runner) Sort(ctx context.Context, name string, dryRun, doHash bool) <-c
 		moved := jsonInt(sortRes, "moved_count")
 		if doHash && !dryRun && moved > 0 {
 			st.phase = "hash"
-			hashRes, err = r.streamOp(ctx, updates, st, []string{"hash", name, "--progress"})
+			hashRes, err = r.hashNative(ctx, updates, st, name)
 		}
 		r.finish(ctx, updates, st, r.sortSummary(sortRes, hashRes, dryRun), err)
 	}()
@@ -98,7 +100,7 @@ func (r *Runner) Register(ctx context.Context, name, fromPath string, doHash boo
 		var hashRes map[string]any
 		if doHash {
 			st.phase = "hash"
-			hashRes, err = r.streamOp(ctx, updates, st, []string{"hash", name, "--progress"})
+			hashRes, err = r.hashNative(ctx, updates, st, name)
 		}
 		r.finish(ctx, updates, st, r.registerSummary(regRes, hashRes), err)
 	}()
@@ -127,6 +129,49 @@ func (r *Runner) streamOp(ctx context.Context, updates chan<- model.Update, st *
 		}
 	}
 	return result, <-done
+}
+
+// hashNative runs the SHA-1 manifest hash in-process (internal/collection —
+// epic #174 phase 3) instead of shelling `collection hash`, folding the native
+// progress callbacks into the SAME model.Update stream the ::dxdfir:: hash
+// sentinels used to drive, so both presenters render identically. Returns the
+// {sha1, files, bytes} map the summary builders expect (files/bytes as float64,
+// matching the JSON the subprocess used to return).
+func (r *Runner) hashNative(ctx context.Context, updates chan<- model.Update, st *state, name string) (map[string]any, error) {
+	var emitted int64
+	prog := collection.HashProgress{
+		OnStart: func(files int, total int64) {
+			st.hFileN = files
+			st.hTotal = total
+			st.send(ctx, updates)
+		},
+		OnFile: func(rel string, _ int64, idx, _ int) {
+			st.hFileIdx = idx + 1
+			if rel != "" && rel != st.hCur {
+				st.hCur = rel
+				st.files = appendCap(st.files, "RUN  "+rel)
+			}
+			st.send(ctx, updates)
+		},
+		OnChunk: func(n int64) {
+			st.hDone += n
+			// Throttle snapshots to ~8 MiB of progress (same cadence the Python
+			// --progress sentinels used), so a large file doesn't flood the channel.
+			if st.hDone-emitted >= (8 << 20) {
+				emitted = st.hDone
+				st.send(ctx, updates)
+			}
+		},
+	}
+	rollup, files, total, err := collection.WriteManifest(r.Repo.Root, name, prog)
+	if err != nil {
+		return nil, err
+	}
+	// One truthful terminal snapshot: hashing complete (done == total, all files).
+	st.hDone = total
+	st.hFileIdx = files
+	st.send(ctx, updates)
+	return map[string]any{"sha1": rollup, "files": float64(files), "bytes": float64(total)}, nil
 }
 
 func (st *state) fold(s run.Sentinel) {

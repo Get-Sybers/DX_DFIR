@@ -1,9 +1,12 @@
 package collection
 
 import (
+	"crypto/sha1"
 	"database/sql"
+	"encoding/hex"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -345,5 +348,140 @@ func TestSchemaEvolutionAddsSelected(t *testing.T) {
 	}
 	if st, _ := GetStatus(repo); st.Active != "old" {
 		t.Errorf("active=%q, want old", st.Active)
+	}
+}
+
+func TestHash(t *testing.T) {
+	repo := t.TempDir()
+	colls := filepath.Join(repo, "data_store", "raw", "collections")
+	write := func(rel string, data []byte) {
+		p := filepath.Join(colls, "h", rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("pcaps/a.pcap", []byte("AAAA"))     // 4 bytes
+	write("memory/m.raw", []byte("BBBBBB"))   // 6 bytes
+	write(".collection", []byte("name: h\n")) // control file — must NOT be hashed
+	seedRegistry(t, filepath.Join(colls, registryName), map[string]bool{"h": true})
+
+	sh := func(b []byte) string { s := sha1.Sum(b); return hex.EncodeToString(s[:]) }
+	hA, hM := sh([]byte("AAAA")), sh([]byte("BBBBBB"))
+	ds := []string{hA, hM}
+	sort.Strings(ds)
+	rr := sha1.Sum([]byte(strings.Join(ds, "")))
+	wantRollup := hex.EncodeToString(rr[:])
+
+	var startedTotal, chunkSum int64
+	var startedFiles, onFileCalls int
+	prog := HashProgress{
+		OnStart: func(files int, total int64) { startedFiles, startedTotal = files, total },
+		OnFile:  func(rel string, size int64, idx, total int) { onFileCalls++ },
+		OnChunk: func(n int64) { chunkSum += n },
+	}
+	rollup, files, total, err := WriteManifest(repo, "h", prog)
+	if err != nil {
+		t.Fatalf("WriteManifest: %v", err)
+	}
+	if rollup != wantRollup {
+		t.Errorf("rollup=%s want %s", rollup, wantRollup)
+	}
+	if files != 2 || total != 10 {
+		t.Errorf("files=%d total=%d want 2/10", files, total)
+	}
+	if startedFiles != 2 || startedTotal != 10 || onFileCalls != 2 || chunkSum != 10 {
+		t.Errorf("progress: start(%d,%d) onFile=%d chunkSum=%d want 2/10/2/10", startedFiles, startedTotal, onFileCalls, chunkSum)
+	}
+
+	man, _ := os.ReadFile(filepath.Join(colls, "h", manifestName))
+	ms := string(man)
+	for _, want := range []string{
+		"# DX_DFIR collection manifest\n", "# collection: h\n",
+		"# collection_sha1: " + wantRollup + "\n", "# files: 2\n", "# columns: sha1  path\n",
+	} {
+		if !strings.Contains(ms, want) {
+			t.Errorf("manifest missing %q", want)
+		}
+	}
+	// body is path-sorted (memory/m.raw < pcaps/a.pcap) as "sha1  path"
+	wantBody := hM + "  memory/m.raw\n" + hA + "  pcaps/a.pcap\n"
+	if !strings.HasSuffix(ms, wantBody) {
+		t.Errorf("manifest body mismatch:\n%q\nwant suffix:\n%q", ms, wantBody)
+	}
+	if strings.Contains(ms, "  .collection\n") {
+		t.Error(".collection control file must not be hashed into the manifest")
+	}
+	if r := manifestRollup(filepath.Join(colls, "h")); r == nil || *r != wantRollup {
+		t.Errorf("manifestRollup reader = %v, want %s", r, wantRollup)
+	}
+
+	db, _ := sql.Open("sqlite", "file:"+filepath.Join(colls, registryName)+"?mode=ro")
+	defer db.Close()
+	var dsha string
+	var dfiles int
+	if err := db.QueryRow("SELECT sha1, files FROM collections WHERE name='h'").Scan(&dsha, &dfiles); err != nil {
+		t.Fatal(err)
+	}
+	if dsha != wantRollup || dfiles != 2 {
+		t.Errorf("collections row: sha1=%s files=%d", dsha, dfiles)
+	}
+	var lane string
+	if err := db.QueryRow("SELECT lane FROM files WHERE collection_name='h' AND path='pcaps/a.pcap'").Scan(&lane); err != nil {
+		t.Fatalf("files row for pcaps/a.pcap missing: %v", err)
+	}
+	if lane != "pcaps" {
+		t.Errorf("pcaps/a.pcap lane=%q want pcaps", lane)
+	}
+	var detail string
+	if err := db.QueryRow("SELECT detail FROM events WHERE name='h' AND event='hashed'").Scan(&detail); err != nil {
+		t.Fatalf("no hashed event: %v", err)
+	}
+	if !strings.Contains(detail, `"collection_sha1": "`+wantRollup+`"`) || !strings.Contains(detail, `"files": 2`) {
+		t.Errorf("hashed event detail=%s", detail)
+	}
+	logb, _ := os.ReadFile(filepath.Join(colls, "h", logName))
+	if !strings.Contains(string(logb), `"event": "hashed"`) || !strings.Contains(string(logb), `"files": 2}`) {
+		t.Errorf("log missing well-formed hashed event: %s", logb)
+	}
+}
+
+// TestHashUnregistered: hashing a collection not in the registry writes the
+// manifest but records NO files rows and NO "hashed" event (mirrors the
+// _record_file_hash / write_manifest guards).
+func TestHashUnregistered(t *testing.T) {
+	repo := t.TempDir()
+	colls := filepath.Join(repo, "data_store", "raw", "collections")
+	p := filepath.Join(colls, "u", "pcaps", "x.pcap")
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte("zzz"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	seedRegistry(t, filepath.Join(colls, registryName), map[string]bool{}) // DB exists, "u" not in it
+
+	rollup, files, _, err := WriteManifest(repo, "u", HashProgress{})
+	if err != nil {
+		t.Fatalf("WriteManifest(unregistered): %v", err)
+	}
+	if files != 1 || rollup == "" {
+		t.Errorf("files=%d rollup=%q", files, rollup)
+	}
+	if !isRegularFile(filepath.Join(colls, "u", manifestName)) {
+		t.Error("manifest should still be written for an unregistered collection")
+	}
+	db, _ := sql.Open("sqlite", "file:"+filepath.Join(colls, registryName)+"?mode=ro")
+	defer db.Close()
+	var n int
+	db.QueryRow("SELECT COUNT(*) FROM files WHERE collection_name='u'").Scan(&n)
+	if n != 0 {
+		t.Errorf("unregistered collection must record no files rows, got %d", n)
+	}
+	db.QueryRow("SELECT COUNT(*) FROM events WHERE name='u'").Scan(&n)
+	if n != 0 {
+		t.Errorf("unregistered collection must record no events, got %d", n)
 	}
 }
