@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -162,5 +163,103 @@ func TestNoRegistry(t *testing.T) {
 	}
 	if len(st.Unregistered) != 1 || st.Unregistered[0].Name != "hand" {
 		t.Errorf("unregistered = %+v, want [hand]", st.Unregistered)
+	}
+}
+
+// eventCount returns the number of rows in the events table for name/event.
+func eventCount(t *testing.T, repo, name, event string) int {
+	t.Helper()
+	db, err := sql.Open("sqlite", "file:"+filepath.Join(repo, "data_store", "raw", "collections", registryName)+"?mode=ro")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var n int
+	if err := db.QueryRow("SELECT COUNT(*) FROM events WHERE name=? AND event=?", name, event).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func TestWrites(t *testing.T) {
+	repo := t.TempDir()
+	colls := filepath.Join(repo, "data_store", "raw", "collections")
+	for _, n := range []string{"a", "b"} {
+		touch(t, filepath.Join(colls, n, ".collection"))     // marker shadow
+		touch(t, filepath.Join(colls, n, "pcaps", "x.pcap")) // evidence
+	}
+	// "a" starts selected, "b" not.
+	seedRegistry(t, filepath.Join(colls, registryName), map[string]bool{"a": true, "b": false})
+
+	// --- Select ---
+	if err := Select(repo, "b"); err != nil {
+		t.Fatalf("Select(b): %v", err)
+	}
+	if st, _ := GetStatus(repo); st.Active != "b" {
+		t.Errorf("after Select(b) active=%q, want b", st.Active)
+	}
+	// The on-disk log line must match the Python json.dumps spacing exactly.
+	logB, _ := os.ReadFile(filepath.Join(colls, "b", ".collection.log"))
+	if !strings.Contains(string(logB), `, "event": "selected"}`) {
+		t.Errorf("b .collection.log missing well-formed selected event: %q", logB)
+	}
+	if eventCount(t, repo, "b", "selected") != 1 {
+		t.Errorf("events table: want 1 'selected' row for b, got %d", eventCount(t, repo, "b", "selected"))
+	}
+	// Selecting an unregistered name is an error.
+	if err := Select(repo, "nope"); err == nil {
+		t.Error("Select(nope) should error (not registered)")
+	}
+
+	// --- Unselect ---
+	prev, err := Unselect(repo)
+	if err != nil {
+		t.Fatalf("Unselect: %v", err)
+	}
+	if prev != "b" {
+		t.Errorf("Unselect prev=%q, want b", prev)
+	}
+	if st, _ := GetStatus(repo); st.Active != "" {
+		t.Errorf("after Unselect active=%q, want empty", st.Active)
+	}
+	if eventCount(t, repo, "b", "unselected") != 1 {
+		t.Error("events table: want 1 'unselected' row for b")
+	}
+	// Unselect with nothing active is a no-op returning "".
+	if p, err := Unselect(repo); err != nil || p != "" {
+		t.Errorf("Unselect(none) = (%q, %v), want (\"\", nil)", p, err)
+	}
+
+	// --- Unregister ---
+	removed, err := Unregister(repo, "a")
+	if err != nil {
+		t.Fatalf("Unregister(a): %v", err)
+	}
+	if !removed {
+		t.Error("Unregister(a) removed=false, want true")
+	}
+	s, _ := GetState(repo, "a")
+	if s.Registered {
+		t.Error("a still registered after Unregister")
+	}
+	if !s.Exists || !s.Detected {
+		t.Errorf("a after Unregister: exists=%v detected=%v, want both true (dir+evidence remain)", s.Exists, s.Detected)
+	}
+	if isRegularFile(filepath.Join(colls, "a", ".collection")) {
+		t.Error("a .collection marker should be removed")
+	}
+	if !isRegularFile(filepath.Join(colls, "a", ".collection.log")) {
+		t.Error("a .collection.log should be preserved")
+	}
+	if !isRegularFile(filepath.Join(colls, "a", "pcaps", "x.pcap")) {
+		t.Error("a evidence should be preserved")
+	}
+	// Second unregister: no row, no marker => false, no error.
+	if r2, err := Unregister(repo, "a"); err != nil || r2 {
+		t.Errorf("second Unregister(a) = (%v, %v), want (false, nil)", r2, err)
+	}
+	// Unregister a non-existent folder is an error.
+	if _, err := Unregister(repo, "ghost"); err == nil {
+		t.Error("Unregister(ghost) should error (no such collection)")
 	}
 }
