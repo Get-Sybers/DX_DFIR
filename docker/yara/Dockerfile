@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1
 #
-# dxdfir/yara — minimal hardened YARA. The image is stripped to yara + its
+# get-sybers/yara — minimal hardened YARA. The image is stripped to yara + its
 # per-file scan loop; ansible (the build-time hardener) and python are removed
 # from the final image. A shell REMAINS only because the scan loop needs it —
 # it is the tool's own invocation, not a general-purpose interpreter — and it
 # is the pinned ENTRYPOINT (docker/yara/scan-list.sh, reads /list.txt).
 #
-#   docker build -t dxdfir/yara:latest -f docker/yara/Dockerfile docker
+#   docker build -t get-sybers/yara:latest -f docker/yara/Dockerfile docker
 ARG BASE=debian:trixie-slim
 
 FROM ${BASE} AS hardened
@@ -33,6 +33,6 @@ ARG DFIR_UID=2000
 ARG DFIR_GID=2000
 USER ${DFIR_UID}:${DFIR_GID}
 ENTRYPOINT ["/opt/dxdfir/scan-list.sh"]
-LABEL org.opencontainers.image.title="dxdfir/yara" \
+LABEL org.opencontainers.image.title="get-sybers/yara" \
       org.opencontainers.image.description="Minimal hardened YARA for the DX_DFIR signatures lane: uid0 renamed+locked, no ansible/apt/pip/sudo/setuid, no python, runs as a fixed non-root uid (default 2000); sh kept only for the tool's own scan loop." \
       com.get-sybers.hardened="true"

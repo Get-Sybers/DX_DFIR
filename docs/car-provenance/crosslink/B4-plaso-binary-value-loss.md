@@ -77,7 +77,7 @@ come back as their full byte streams (device-instance / volume-serial bytes), wh
 
 ## The fix
 
-`python/get_sybers_dxdfir/plaso.py` — add `--extract_winreg_binary` to the `log2timeline`
+`python/get_sybers_get-sybers/plaso.py` — add `--extract_winreg_binary` to the `log2timeline`
 argv in `run_plaso`. One option, no new dependency, no plaso patch. Covered by
 `python/tests/test_plaso.py::test_run_plaso_log2timeline_extracts_winreg_binary`.
 

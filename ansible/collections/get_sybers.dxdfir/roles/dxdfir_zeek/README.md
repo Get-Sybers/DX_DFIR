@@ -12,7 +12,7 @@ per capture happens inside Python). One folder of `*.json` per capture.
 | `dxdfir_zeek_pcap_dir` | `<repo>/data_store/raw/pcaps` | Capture tree to process (recursed). |
 | `dxdfir_zeek_elastic_out_dir` | `<repo>/data_store/processed/zeek` | Elastic-path output. |
 | `dxdfir_zeek_sofelk_out_dir` | `<repo>/data_store/processed/sofelk/zeek` | SOF-ELK-path output. |
-| `dxdfir_zeek_image` | `dxdfir/zeek:latest` | The hardened in-repo Zeek image (`playbooks/dxdfir-build-images.yml`). |
+| `dxdfir_zeek_image` | `get-sybers/zeek:latest` | The hardened in-repo Zeek image (`playbooks/dxdfir-build-images.yml`). |
 | `dxdfir_zeek_python_path` | `<repo>/python` | PYTHONPATH to `get_sybers_dxdfir` (in-repo runs). |
 | `dxdfir_zeek_force` | `false` | Reprocess captures that already have output. |
 
@@ -29,4 +29,4 @@ ansible-playbook playbooks/dxdfir-process-zeek.yml -e dxdfir_zeek_pipeline=elast
 ## Testing
 `molecule test` — converges against a fixture capture, converges again asserting
 zero changes (idempotence), and verifies a `conn.json` was produced. Needs Docker
-and the `dxdfir/zeek` image (built by `dxdfir_images`).
+and the `get-sybers/zeek` image (built by `dxdfir_images`).

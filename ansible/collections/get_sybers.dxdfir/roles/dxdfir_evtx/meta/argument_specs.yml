@@ -10,7 +10,7 @@ argument_specs:
         skipped.
       - >-
         EvtxECmd is supplied one of two ways (dxdfir_evtx_use_bundled_image): the
-        bundled dxdfir/evtxecmd image (docker/evtxecmd) that bakes the DLL + Maps/, or
+        bundled get-sybers/evtxecmd image (third_party/EZTools-Docker/evtxecmd) that bakes the DLL + Maps/, or
         an operator-supplied .NET release mounted into a stock runtime image.
     options:
       dxdfir_evtx_pipeline:
@@ -47,7 +47,7 @@ argument_specs:
       dxdfir_evtx_plaso_image:
         type: str
         required: false
-        default: "dxdfir/plaso:latest"
+        default: "get-sybers/plaso:latest"
         description: "Container providing image_export.py for disk-image extraction."
       dxdfir_evtx_hayabusa:
         type: bool
@@ -85,13 +85,13 @@ argument_specs:
         required: false
         default: true
         description: >-
-          Use the bundled dxdfir/evtxecmd image (DLL + Maps/ baked in). When false,
+          Use the bundled get-sybers/evtxecmd image (DLL + Maps/ baked in). When false,
           mount an operator-supplied release from dxdfir_evtx_evtxecmd_dir instead.
       dxdfir_evtx_bundled_image:
         type: str
         required: false
-        default: "dxdfir/evtxecmd:latest"
-        description: "The bundled EvtxECmd image tag (built from docker/evtxecmd)."
+        default: "get-sybers/evtxecmd:latest"
+        description: "The bundled EvtxECmd image tag (built from third_party/EZTools-Docker/evtxecmd)."
       dxdfir_evtx_image:
         type: str
         required: false

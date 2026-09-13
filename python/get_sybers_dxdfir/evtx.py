@@ -48,8 +48,8 @@ from .signatures import hayabusa as _hb
 # EvtxECmd's current .NET build targets net9.0, so the runtime must be 9.x — the old
 # sdk:8.0 default silently fails against today's release.
 _DOTNET_IMAGE = "mcr.microsoft.com/dotnet/runtime:9.0"
-# Bundled mode: DX_DFIR's own image (docker/evtxecmd) with the DLL + Maps/ baked in.
-_BUNDLED_IMAGE = "dxdfir/evtxecmd:latest"
+# Bundled mode: DX_DFIR's own image (third_party/EZTools-Docker/evtxecmd) with the DLL + Maps/ baked in.
+_BUNDLED_IMAGE = "get-sybers/evtxecmd:latest"
 # Where the bundled image keeps EvtxECmd.dll (its WORKDIR, alongside Maps/).
 BUNDLED_DLL = "/opt/evtxecmd/EvtxECmd.dll"
 
@@ -104,7 +104,7 @@ def evtxecmd_argv(evtx_file, dest_dir, json_out, xml_out, image, *,
                   evtxecmd_dir=None, dll_rel=None, bundled_dll=BUNDLED_DLL):
     """The `docker run` argv for one EvtxECmd container run. Two modes:
 
-    - bundled image (``evtxecmd_dir`` falsy): the minimal dxdfir/evtxecmd image
+    - bundled image (``evtxecmd_dir`` falsy): the minimal get-sybers/evtxecmd image
       whose ENTRYPOINT is ``dotnet /opt/evtxecmd/EvtxECmd.dll`` (DLL + Maps/
       baked in), so only the flags are passed.
     - operator-supplied (``evtxecmd_dir`` given): mount the release read-only at
@@ -189,7 +189,7 @@ def process(evtx_dir, out_dir, evtxecmd_dir=None, image=None, force=False) -> di
 
     - given -> operator-supplied release: locate EvtxECmd.dll under it and mount it
       into a stock .NET runtime ``image`` (defaults to ``_DOTNET_IMAGE``).
-    - falsy -> the bundled dxdfir/evtxecmd image (DLL + Maps/ baked in); no release dir
+    - falsy -> the bundled get-sybers/evtxecmd image (DLL + Maps/ baked in); no release dir
       is needed and none is looked for. ``image`` defaults to ``_BUNDLED_IMAGE``.
 
     Pass ``image`` to override either default.
@@ -389,11 +389,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--evtxecmd-dir", default="",
         help="operator-supplied EvtxECmd release dir (holds EvtxECmd.dll). Omit to "
-             "use the bundled image (docker/evtxecmd), which bakes the DLL + Maps/.",
+             "use the bundled image (third_party/EZTools-Docker/evtxecmd), which bakes the DLL + Maps/.",
     )
     ap.add_argument(
         "--image", "--dotnet-image", dest="image", default=None,
-        help="container image: the bundled dxdfir/evtxecmd (default when --evtxecmd-dir "
+        help="container image: the bundled get-sybers/evtxecmd (default when --evtxecmd-dir "
              "is omitted) or a stock .NET runtime that mounts the operator release.",
     )
     ap.add_argument("--force", action="store_true", help="reparse logs that already have output")

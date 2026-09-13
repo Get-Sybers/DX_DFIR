@@ -17,7 +17,7 @@ the durable `.plaso` storage db and a per-image log.
 | `dxdfir_plaso_elastic_out_dir` | `<repo>/data_store/processed/log2timeline` | Elastic-path output (`jsonl/`, `plaso/`, `logs/`). |
 | `dxdfir_plaso_sofelk_out_dir` | `<repo>/data_store/processed/sofelk/log2timeline` | SOF-ELK-path output. |
 | `dxdfir_plaso_module` | `<repo>/dev-scripts/plaso/l2t_json_dxdfir.py` | Custom psort output module. |
-| `dxdfir_plaso_image` | `dxdfir/plaso:latest` | The hardened in-repo Plaso image (`playbooks/dxdfir-build-images.yml`). |
+| `dxdfir_plaso_image` | `get-sybers/plaso:latest` | The hardened in-repo Plaso image (`playbooks/dxdfir-build-images.yml`). |
 | `dxdfir_plaso_python_path` | `<repo>/python` | PYTHONPATH to `get_sybers_dxdfir` (in-repo runs). |
 | `dxdfir_plaso_force` | `false` | Reprocess images that already have output. |
 

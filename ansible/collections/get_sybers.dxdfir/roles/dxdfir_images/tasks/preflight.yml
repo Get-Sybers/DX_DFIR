@@ -4,16 +4,35 @@
   register: dxdfir_images_docker
   changed_when: false
 
-- name: "images-preflight | stat the shared hardening playbook"
+# The hardening playbook has ONE canonical home: the EZTools-Docker submodule.
+# EvtxECmd, the EZ tool family and the two Go substitutes build straight from
+# the submodule (context = submodule root), so they use it directly. DX_DFIR's
+# own images (yara/suricata/zeek/plaso) build from the docker/ context and
+# cannot reach outside it, so we SYNC the canonical file into docker/hardening/
+# here (it is git-ignored + generated, never hand-edited). A checkout that
+# skipped submodules has no source to sync — fail early and clearly.
+- name: "images-preflight | stat the canonical hardening playbook (EZTools-Docker submodule)"
   ansible.builtin.stat:
-    path: "{{ dxdfir_images_context }}/hardening/harden.yml"
-  register: dxdfir_images_harden_stat
+    path: "{{ dxdfir_images_eztools_context }}/hardening/harden.yml"
+  register: dxdfir_images_eztools_harden_stat
 
-- name: "images-preflight | the shared hardening playbook exists"
+- name: "images-preflight | the EZTools-Docker submodule is checked out"
   ansible.builtin.assert:
     that:
-      - dxdfir_images_harden_stat.stat.exists
+      - dxdfir_images_eztools_harden_stat.stat.exists
     fail_msg: >-
-      {{ dxdfir_images_context }}/hardening/harden.yml is missing — every image
-      build runs it; nothing can be built without it.
+      {{ dxdfir_images_eztools_context }}/hardening/harden.yml is missing — the
+      EZTools-Docker submodule (the canonical home of the hardening playbook) is
+      not checked out. Run:
+      git submodule update --init third_party/EZTools-Docker
     quiet: true
+
+- name: "images-preflight | sync the canonical hardening playbook into the docker/ context"
+  ansible.builtin.copy:
+    src: "{{ dxdfir_images_eztools_context }}/hardening/harden.yml"
+    dest: "{{ dxdfir_images_context }}/hardening/harden.yml"
+    mode: "0644"
+    remote_src: true
+  # The docker/ context copy is a generated mirror; syncing it is not a
+  # meaningful change to report on re-runs beyond content drift.
+  register: dxdfir_images_harden_sync

@@ -40,7 +40,7 @@ import sys
 
 from . import container
 
-_IMAGE = "dxdfir/plaso:latest"
+_IMAGE = "get-sybers/plaso:latest"
 
 # psort runs through the image's BAKED wrapper (/opt/dxdfir/psort_wrapper.py —
 # the only python entry the hardened plaso image allow-lists): it imports the
@@ -484,7 +484,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out-dir", required=True, help="output dir (jsonl/, plaso/, logs/ created within)")
     ap.add_argument("--module", required=True, help="path to the l2t_json_dxdfir.py output module")
     ap.add_argument("--image", default=_IMAGE,
-                    help="plaso container image (default: the hardened dxdfir/plaso:latest — "
+                    help="plaso container image (default: the hardened get-sybers/plaso:latest — "
                          "build with the dxdfir-build-images playbook)")
     ap.add_argument("--force", action="store_true", help="reprocess images that already have output")
     args = ap.parse_args(argv)

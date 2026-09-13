@@ -20,7 +20,7 @@ dxdfir_plaso_out_dir: "{{ dxdfir_plaso_elastic_out_dir if dxdfir_plaso_pipeline 
 # The custom psort output module lives in the repo (dev-scripts), mounted into psort.
 dxdfir_plaso_module: "{{ dxdfir_plaso_repo_root }}/dev-scripts/plaso/l2t_json_dxdfir.py"
 # The hardened in-repo image (build with playbooks/dxdfir-build-images.yml).
-dxdfir_plaso_image: "dxdfir/plaso:latest"
+dxdfir_plaso_image: "get-sybers/plaso:latest"
 # In-repo runs use PYTHONPATH; a deployed run installs the package instead.
 dxdfir_plaso_python_path: "{{ dxdfir_plaso_repo_root }}/python"
 dxdfir_plaso_force: false

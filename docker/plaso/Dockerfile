@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1
 #
-# dxdfir/plaso — minimal hardened Plaso (pinned PyPI, libyal built from source).
+# get-sybers/plaso — minimal hardened Plaso (pinned PyPI, libyal built from source).
 # Plaso IS python and has three entry tools (log2timeline.py, psort.py,
 # image_export.py) plus the psort wrapper, so python and a shell remain and
 # there is no single ENTRYPOINT — the caller passes the full tool argv. ansible
 # (the build-time hardener) is removed.
 #
-#   docker build -t dxdfir/plaso:latest -f docker/plaso/Dockerfile docker
+#   docker build -t get-sybers/plaso:latest -f docker/plaso/Dockerfile docker
 ARG BASE=python:3.12-slim
 ARG PLASO_VERSION=20260720
 
@@ -54,6 +54,6 @@ ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin \
 ARG DFIR_UID=2000
 ARG DFIR_GID=2000
 USER ${DFIR_UID}:${DFIR_GID}
-LABEL org.opencontainers.image.title="dxdfir/plaso" \
+LABEL org.opencontainers.image.title="get-sybers/plaso" \
       org.opencontainers.image.description="Minimal hardened Plaso (pinned PyPI, libyal from source) for the DX_DFIR plaso/evtx-extraction lanes: uid0 renamed+locked, no ansible/apt/pip/sudo/setuid, runs as a fixed non-root uid (default 2000) (python+sh irreducible; three entry tools, no single ENTRYPOINT)." \
       com.get-sybers.hardened="true"

@@ -36,7 +36,7 @@ import tempfile
 from .. import container
 from . import clean_name
 
-_SURICATA_IMAGE = "dxdfir/suricata:latest"
+_SURICATA_IMAGE = "get-sybers/suricata:latest"
 _WANTED = {"alert", "anomaly", "http", "dns", "tls", "fileinfo", "flow"}
 
 # Ranges that count as "home" when auto-deriving HOME_NET: RFC1918 + CGNAT +
@@ -453,7 +453,7 @@ def discover(pcap_dir: str) -> list[str]:
 
 def suricata_argv(pcap, out_dir, rules_dir, rules_file, image, sets=None):
     """The ``docker run`` argv for one offline Suricata pass on the hardened
-    dxdfir/suricata image (ansible-only execution, allow-listed argv, no caps, no
+    get-sybers/suricata image (ansible-only execution, allow-listed argv, no caps, no
     network — offline replay needs none). ``sets`` are Suricata ``--set
     key=value`` tuning entries (HOME_NET etc. from ``var_sets``). Pure."""
     args = ["-r", f"/pcaps/{os.path.basename(pcap)}", "-l", "/out", "-k", "none"]

@@ -50,7 +50,7 @@ The suppressed-as-noise classes are documented explicitly with **no rules**
 `806e6f6e6963` synthetic-MAC placeholder), so the omission is a decision on the
 record rather than an oversight.
 
-The ruleset compiles clean against **YARA 4.5.2** (the `dxdfir/yara` image).
+The ruleset compiles clean against **YARA 4.5.2** (the `get-sybers/yara` image).
 
 **Copilot fixes (PR #154):**
 

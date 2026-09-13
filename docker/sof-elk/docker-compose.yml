@@ -32,7 +32,7 @@ services:
       args:
         ELASTIC_VERSION: "${ELASTIC_VERSION:-9.4.3}"
         SOFELK_REF: "${SOFELK_REF:-main}"
-    image: "dxdfir/sof-elk:${ELASTIC_VERSION:-9.4.3}"
+    image: "get-sybers/sof-elk:${ELASTIC_VERSION:-9.4.3}"
     environment:
       - ES_HOSTS=elasticsearch:9200
     depends_on:

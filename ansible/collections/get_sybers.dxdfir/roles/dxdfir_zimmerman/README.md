@@ -54,7 +54,7 @@ EZ-Tool, and a combined `zimmerman.log`.
 | `dxdfir_zimmerman_vm_dir` | `<repo>/data_store/raw/VM_files` | VMware VM export folders (one per VM); optional. |
 | `dxdfir_zimmerman_elastic_out_dir` | `<repo>/data_store/processed/zimmerman` | Elastic-path output. |
 | `dxdfir_zimmerman_sofelk_out_dir` | `<repo>/data_store/processed/sofelk/zimmerman` | SOF-ELK-path output. |
-| `dxdfir_zimmerman_plaso_image` | `dxdfir/plaso:latest` | Used for both artefact extraction and the SRUM two-step. |
+| `dxdfir_zimmerman_plaso_image` | `get-sybers/plaso:latest` | Used for both artefact extraction and the SRUM two-step. |
 | `dxdfir_zimmerman_vss` | `false` | Also extract from Volume Shadow Copies. |
 | `dxdfir_zimmerman_python_path` | `<repo>/python` | PYTHONPATH to `get_sybers_dxdfir` (in-repo runs). |
 | `dxdfir_zimmerman_force` | `false` | Reprocess hosts that already have output. |
@@ -99,5 +99,5 @@ molecule test -- -e molecule_sample_image=/path/tiny.raw
 This lane's build + unit tests are complete, but a full end-to-end run against a
 real disk image is deliberately deferred to issue #88 (see the epic). Treat the
 container argv as *proven-by-recipe* (each was independently confirmed against
-the built `dxdfir/plaso` and EZ-Tools images this session — see the module
+the built `get-sybers/plaso` and EZ-Tools images this session — see the module
 docstrings) rather than validated end-to-end.

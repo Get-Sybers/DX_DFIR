@@ -1,3 +1,6 @@
 [submodule "third_party/piiat-mem"]
 	path = third_party/piiat-mem
 	url = https://github.com/Get-Sybers/PIIAT-Mem.git
+[submodule "third_party/EZTools-Docker"]
+	path = third_party/EZTools-Docker
+	url = https://github.com/Get-Sybers/EZTools-Docker.git

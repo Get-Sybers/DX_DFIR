@@ -37,7 +37,7 @@ to normalize.
 ## The fix
 
 **PR #153** added the `--extract_winreg_binary` flag to the `log2timeline`
-invocation in `run_plaso` (`python/get_sybers_dxdfir/plaso.py`). With the flag
+invocation in `run_plaso` (`python/get_sybers_get-sybers/plaso.py`). With the flag
 set, `log2timeline` retains the raw bytes, and because the JSON output module
 already base64url-encodes `bytes` values, the bytes now survive intact through
 to the JSON we ingest.

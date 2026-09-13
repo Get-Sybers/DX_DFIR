@@ -623,10 +623,10 @@ def test_require_refuses_unknown_dxdfir_image(monkeypatch):
     # a non-dxdfir image is out of scope, never inspected
     monkeypatch.setattr(images, "_inspect", lambda i: (_ for _ in ()).throw(AssertionError("inspected")))
     images.require("mcr.microsoft.com/dotnet/runtime:9.0")
-    # an unknown dxdfir/* repo is refused before inspection
+    # an unknown get-sybers/* repo is refused before inspection
     import pytest
     with pytest.raises(RuntimeError, match="not a known DX_DFIR tool image"):
-        images.require("dxdfir/evil:latest")
+        images.require("get-sybers/evil:latest")
 
 
 def test_require_refuses_unhardened_known_image(monkeypatch):
@@ -635,7 +635,7 @@ def test_require_refuses_unhardened_known_image(monkeypatch):
                         lambda i: {"User": "0:0", "Labels": {}})
     import pytest
     with pytest.raises(RuntimeError, match="not hardened"):
-        images.require("dxdfir/zeek:latest")
+        images.require("get-sybers/zeek:latest")
 
 
 def test_require_passes_hardened_known_image(monkeypatch):
@@ -643,7 +643,7 @@ def test_require_passes_hardened_known_image(monkeypatch):
     monkeypatch.setattr(images, "_inspect",
                         lambda i: {"User": "2000:2000",
                                    "Labels": {"com.get-sybers.hardened": "true"}})
-    images.require("dxdfir/zeek:latest")   # no raise
+    images.require("get-sybers/zeek:latest")   # no raise
 
 
 def test_audit_flags_unexpected_and_missing(monkeypatch):
@@ -653,10 +653,10 @@ def test_audit_flags_unexpected_and_missing(monkeypatch):
     # host has all expected + a rogue dfir image + an allowed non-tool one
     monkeypatch.setattr(images, "_list_dxdfir_images",
                         lambda: list(images.HARDENED_IMAGES)
-                        + ["dxdfir/rogue:latest", "dxdfir/sof-elk:test"])
+                        + ["get-sybers/rogue:latest", "get-sybers/sof-elk:test"])
     result = images.audit()
     assert not result["ok"]
-    assert any("dxdfir/rogue" in v and "unexpected" in v for v in result["violations"])
+    assert any("get-sybers/rogue" in v and "unexpected" in v for v in result["violations"])
     assert not any("sof-elk" in v for v in result["violations"])   # allow-listed
 
 

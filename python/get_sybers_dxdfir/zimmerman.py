@@ -11,7 +11,7 @@ json_line, exactly the l2t two-step in ``plaso.py``, just scoped to one file).
 
 Extraction uses a plaso **YAML** collection filter (``plaso.engine.yaml_filter_file``),
 NOT ``--artifact_filters`` (the WindowsEventLogs artifact set the evtx lane uses) —
-verified against the built ``dxdfir/plaso`` image: ANY file passed to ``-f`` is parsed
+verified against the built ``get-sybers/plaso`` image: ANY file passed to ``-f`` is parsed
 as YAML unconditionally (``engine.BuildCollectionFilters`` always builds a
 ``YAMLFilterFile``), so the plain-text "one path per line" format the ``--help``
 text describes is not actually reachable through this flag on this plaso version.
@@ -55,17 +55,17 @@ import yaml
 from . import container, imageexport
 
 PLASO_IMAGE = imageexport.PLASO_IMAGE
-_RECMD_IMAGE = "dxdfir/recmd:latest"
-_JLECMD_IMAGE = "dxdfir/jlecmd:latest"
-_LECMD_IMAGE = "dxdfir/lecmd:latest"
-_AMCACHEPARSER_IMAGE = "dxdfir/amcacheparser:latest"
-_APPCOMPATCACHEPARSER_IMAGE = "dxdfir/appcompatcacheparser:latest"
-_SBECMD_IMAGE = "dxdfir/sbecmd:latest"
-_RBCMD_IMAGE = "dxdfir/rbcmd:latest"
-_MFTECMD_IMAGE = "dxdfir/mftecmd:latest"
-_WXTCMD_IMAGE = "dxdfir/wxtcmd:latest"  # TODO(#88): built but not invoked — see wxtcmd_argv()
+_RECMD_IMAGE = "get-sybers/recmd:latest"
+_JLECMD_IMAGE = "get-sybers/jlecmd:latest"
+_LECMD_IMAGE = "get-sybers/lecmd:latest"
+_AMCACHEPARSER_IMAGE = "get-sybers/amcacheparser:latest"
+_APPCOMPATCACHEPARSER_IMAGE = "get-sybers/appcompatcacheparser:latest"
+_SBECMD_IMAGE = "get-sybers/sbecmd:latest"
+_RBCMD_IMAGE = "get-sybers/rbcmd:latest"
+_MFTECMD_IMAGE = "get-sybers/mftecmd:latest"
+_WXTCMD_IMAGE = "get-sybers/wxtcmd:latest"  # TODO(#88): built but not invoked — see wxtcmd_argv()
 
-# Baked into the dxdfir/recmd image (docker/recmd) — Eric Zimmerman's own curated
+# Baked into the get-sybers/recmd image (docker/recmd) — Eric Zimmerman's own curated
 # batch definition; not something the operator needs to supply.
 _RECMD_BATCH_FILE = "/opt/eztool/BatchExamples/Kroll_Batch.reb"
 

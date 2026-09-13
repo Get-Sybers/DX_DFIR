@@ -74,7 +74,7 @@ def _already_done(output_dir: str) -> bool:
 
 def zeek_argv(pcap_dir: str, rel: str, temp_dir: str, image: str) -> list[str]:
     """The ``docker run`` argv for one zeek pass on the minimal hardened
-    dxdfir/zeek image (zeek is the ENTRYPOINT; no caps, no network, read-only
+    get-sybers/zeek image (zeek is the ENTRYPOINT; no caps, no network, read-only
     rootfs); zeek writes its logs to the mounted /logs working dir. Pure."""
     return container.run(
         image,
@@ -107,7 +107,7 @@ def _collect(temp_dir: str, output_dir: str) -> list[str]:
     return outputs
 
 
-def process(pcap_dir: str, out_dir: str, image: str = "dxdfir/zeek:latest", force: bool = False) -> dict:
+def process(pcap_dir: str, out_dir: str, image: str = "get-sybers/zeek:latest", force: bool = False) -> dict:
     """Process every capture under pcap_dir into out_dir/<capture>/. Idempotent."""
     pcap_dir = os.path.realpath(pcap_dir)
     out_dir = os.path.realpath(out_dir)
@@ -151,8 +151,8 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="get_sybers_dxdfir.zeek", description="PCAPs -> Zeek JSON logs")
     ap.add_argument("--pcap-dir", required=True, help="directory tree of captures to process")
     ap.add_argument("--out-dir", required=True, help="output dir; one folder per capture is created")
-    ap.add_argument("--image", default="dxdfir/zeek:latest",
-                    help="zeek container image (default: the hardened dxdfir/zeek:latest — "
+    ap.add_argument("--image", default="get-sybers/zeek:latest",
+                    help="zeek container image (default: the hardened get-sybers/zeek:latest — "
                          "build with the dxdfir-build-images playbook)")
     ap.add_argument("--force", action="store_true", help="reprocess captures that already have output")
     args = ap.parse_args(argv)

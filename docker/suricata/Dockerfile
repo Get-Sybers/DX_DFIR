@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1
 #
-# dxdfir/suricata — minimal hardened Suricata for OFFLINE pcap replay. Stripped
+# get-sybers/suricata — minimal hardened Suricata for OFFLINE pcap replay. Stripped
 # to the suricata binary; ansible (build-time hardener), python and every shell
 # removed from the final image. suricata is the pinned ENTRYPOINT. Runs with no
 # network and every capability dropped — offline replay needs neither.
 #
-#   docker build -t dxdfir/suricata:latest -f docker/suricata/Dockerfile docker
+#   docker build -t get-sybers/suricata:latest -f docker/suricata/Dockerfile docker
 ARG BASE=debian:trixie-slim
 
 FROM ${BASE} AS hardened
@@ -30,6 +30,6 @@ ARG DFIR_UID=2000
 ARG DFIR_GID=2000
 USER ${DFIR_UID}:${DFIR_GID}
 ENTRYPOINT ["suricata"]
-LABEL org.opencontainers.image.title="dxdfir/suricata" \
+LABEL org.opencontainers.image.title="get-sybers/suricata" \
       org.opencontainers.image.description="Minimal hardened Suricata (offline pcap replay) for the DX_DFIR signatures lane: uid0 renamed+locked, no ansible/apt/pip/sudo/setuid, no shell, no python, runs as a fixed non-root uid (default 2000)." \
       com.get-sybers.hardened="true"

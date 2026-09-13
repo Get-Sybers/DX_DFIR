@@ -2,7 +2,7 @@
 # Lane-specific evtx preflight, included by dxdfir_lane's shared preflight (after
 # the docker + input-dir checks, before the module/image guards). EvtxECmd is
 # supplied one of two ways (dxdfir_evtx_use_bundled_image):
-#   bundled  — the dxdfir/evtxecmd image bakes the DLL + Maps/; it must exist.
+#   bundled  — the get-sybers/evtxecmd image bakes the DLL + Maps/; it must exist.
 #   operator — a .NET EvtxECmd release dir (with EvtxECmd.dll) must be in place.
 
 - name: "evtx-preflight | bundled EvtxECmd image is present"

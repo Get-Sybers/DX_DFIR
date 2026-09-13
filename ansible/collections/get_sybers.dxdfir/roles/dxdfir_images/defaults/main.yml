@@ -3,25 +3,37 @@
 # (roles/dxdfir_images -> get_sybers.dxdfir -> collections -> ansible -> repo).
 dxdfir_images_repo_root: "{{ role_path }}/../../../../.."
 
+# The get_sybers image namespace: every built tool image is tagged
+# <namespace>/<name>:latest (e.g. get-sybers/plaso:latest). One knob renames
+# the whole family; the build contract asserts against it too.
+dxdfir_images_namespace: get-sybers
+
 # Run-as uid/gid baked into every built image's USER. dxdfir_runtime_uid/gid is the
 # single override knob — set it via extra-var or inventory (e.g.
 # -e dxdfir_runtime_uid=3000) to move all images + their runs off 2000; unset, it
 # defaults to 2000 here. Passed as build args to each Dockerfile and asserted in
-# the build contract, so the build and the runtime share one uid. (dxdfir/volatility
+# the build contract, so the build and the runtime share one uid. (get-sybers/volatility
 # is built from the third_party/piiat-mem submodule — Get-Sybers/PIIAT-Mem#2.)
 dxdfir_images_uid: "{{ dxdfir_runtime_uid | default(2000) }}"
 # gid follows the uid unless explicitly set, so setting only dxdfir_runtime_uid
 # still yields a matched USER <uid>:<uid>, never <uid>:2000.
 dxdfir_images_gid: "{{ dxdfir_runtime_gid | default(dxdfir_runtime_uid | default(2000)) }}"
 
-# The docker/ build context — every Dockerfile COPYs the shared ansible
-# hardening playbook (docker/hardening/harden.yml) from here.
+# DX_DFIR's own docker/ build context (yara, suricata, zeek, plaso) — each
+# Dockerfile COPYs the shared ansible hardening playbook
+# (docker/hardening/harden.yml) from here.
 dxdfir_images_context: "{{ dxdfir_images_repo_root }}/docker"
 
+# The EZTools-Docker submodule root. EvtxECmd, the whole Eric Zimmerman tool
+# family, and the two Go substitutes (prefetch, esedump) build from here; the
+# submodule carries its own hardening/harden.yml (COPYd by its Dockerfiles).
+dxdfir_images_eztools_context: "{{ dxdfir_images_repo_root }}/third_party/EZTools-Docker"
+
 # The build-it-yourself image set. Every runtime tool container is built from
-# an in-repo, ansible-hardened Dockerfile — nothing is pulled from a third
-# party at runtime. Each entry: name (dir under docker/ AND the dxdfir/<name>
-# tag) — the build is verified against the hardening contract afterwards.
+# an in-repo (or submodule), ansible-hardened Dockerfile — nothing is pulled
+# from a third party at runtime. Each entry: name (the <namespace>/<name> tag,
+# and — for the docker/ context — the dir under docker/) — the build is verified
+# against the hardening contract afterwards.
 dxdfir_images_set:
   - yara
   - suricata
@@ -30,13 +42,8 @@ dxdfir_images_set:
   - plaso
   - evtxecmd
   # The Eric Zimmerman tool family — all built from the ONE parameterized
-  # docker/eztool/Dockerfile (same recipe as evtxecmd), tool selected per image
-  # via build args (see dxdfir_images_build_overrides). SrumECmd and PECmd are
-  # deliberately ABSENT (Linux-container-first rule applied and exhausted):
-  # SrumECmd P/Invokes Windows' native ESE engine (esent.dll); PECmd carries a
-  # blanket non-Windows startup guard (verified: aborts even on uncompressed
-  # XP prefetch). Their artefacts are parsed by dxdfir/plaso instead
-  # (esedb/srum via libesedb; prefetch via libscca).
+  # eztool/Dockerfile in the EZTools-Docker submodule (same recipe as evtxecmd),
+  # tool selected per image via build args (see dxdfir_images_build_overrides).
   - recmd
   - mftecmd
   - amcacheparser
@@ -47,23 +54,38 @@ dxdfir_images_set:
   - sqlecmd
   - rbcmd
   - wxtcmd
+  # Linux-native Go substitutes for the three Windows-bound EZ tools, also from
+  # the submodule (each FROM scratch: no shell, no python, just the static Go
+  # binary). PECmd/SrumECmd/SumECmd cannot parse on Linux (PECmd's non-Windows
+  # startup guard; SrumECmd/SumECmd P/Invoke Windows' native ESE engine), so:
+  #   prefetch (prefetch_dump) replaces PECmd — parses XP->Win11 .pf, MAM-compressed included
+  #   esedump  (ese_dump)      replaces SrumECmd/SumECmd — SRUDB.dat / SUM Current.mdb
+  - prefetch
+  - esedump
 
 # Rebuild even when an image already exists (docker build cache still applies).
 dxdfir_images_force: false
 
-# Per-image build context/dockerfile overrides. volatility is sourced from the
-# PIIAT-Mem submodule (its own docker/ context carries the shared harden.yml).
+# Per-image build context/dockerfile overrides.
+#   - volatility: the PIIAT-Mem submodule (its own docker/ context carries harden.yml).
+#   - evtxecmd + the EZ family: the EZTools-Docker submodule root (context = the
+#     submodule root so the Dockerfiles reach its hardening/harden.yml).
+#   - prefetch, esedump: FROM scratch, so each context is its OWN subdir under the
+#     submodule (go.mod/go.sum/main.go live there); esedump is built from srum/.
 dxdfir_images_build_overrides:
   volatility:
     context: "{{ dxdfir_images_repo_root }}/third_party/piiat-mem/docker"
     dockerfile: "Dockerfile"
-  recmd: {dockerfile: "eztool/Dockerfile", args: {EZTOOL: "RECmd"}}
-  mftecmd: {dockerfile: "eztool/Dockerfile", args: {EZTOOL: "MFTECmd"}}
-  amcacheparser: {dockerfile: "eztool/Dockerfile", args: {EZTOOL: "AmcacheParser"}}
-  appcompatcacheparser: {dockerfile: "eztool/Dockerfile", args: {EZTOOL: "AppCompatCacheParser"}}
-  lecmd: {dockerfile: "eztool/Dockerfile", args: {EZTOOL: "LECmd"}}
-  jlecmd: {dockerfile: "eztool/Dockerfile", args: {EZTOOL: "JLECmd"}}
-  sbecmd: {dockerfile: "eztool/Dockerfile", args: {EZTOOL: "SBECmd"}}
-  sqlecmd: {dockerfile: "eztool/Dockerfile", args: {EZTOOL: "SQLECmd"}}
-  rbcmd: {dockerfile: "eztool/Dockerfile", args: {EZTOOL: "RBCmd"}}
-  wxtcmd: {dockerfile: "eztool/Dockerfile", args: {EZTOOL: "WxTCmd"}}
+  evtxecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "evtxecmd/Dockerfile"}
+  recmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "RECmd"}}
+  mftecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "MFTECmd"}}
+  amcacheparser: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "AmcacheParser"}}
+  appcompatcacheparser: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "AppCompatCacheParser"}}
+  lecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "LECmd"}}
+  jlecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "JLECmd"}}
+  sbecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "SBECmd"}}
+  sqlecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "SQLECmd"}}
+  rbcmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "RBCmd"}}
+  wxtcmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "WxTCmd"}}
+  prefetch: {context: "{{ dxdfir_images_eztools_context }}/prefetch", dockerfile: "Dockerfile"}
+  esedump: {context: "{{ dxdfir_images_eztools_context }}/srum", dockerfile: "Dockerfile"}

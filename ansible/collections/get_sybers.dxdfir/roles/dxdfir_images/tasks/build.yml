@@ -5,9 +5,9 @@
 # `docker export` scan proving the escalation/installer binaries and (for the
 # tool-only images) the shell and python are actually absent.
 
-- name: "images-build | build the hardened image dxdfir/{{ dxdfir_images_name }}"
+- name: "images-build | build the hardened image {{ dxdfir_images_namespace }}/{{ dxdfir_images_name }}"
   community.docker.docker_image:
-    name: "dxdfir/{{ dxdfir_images_name }}"
+    name: "{{ dxdfir_images_namespace }}/{{ dxdfir_images_name }}"
     tag: latest
     source: build
     force_source: "{{ dxdfir_images_force | bool }}"
@@ -23,19 +23,19 @@
       args: "{{ ((dxdfir_images_build_overrides[dxdfir_images_name] | default({})).args | default({}))
                 | combine({'DFIR_UID': dxdfir_images_uid | string, 'DFIR_GID': dxdfir_images_gid | string}) }}"
 
-- name: "images-build | inspect dxdfir/{{ dxdfir_images_name }}"
+- name: "images-build | inspect {{ dxdfir_images_namespace }}/{{ dxdfir_images_name }}"
   community.docker.docker_image_info:
-    name: "dxdfir/{{ dxdfir_images_name }}:latest"
+    name: "{{ dxdfir_images_namespace }}/{{ dxdfir_images_name }}:latest"
   register: dxdfir_images_inspect
 
-- name: "images-build | assert the static contract on dxdfir/{{ dxdfir_images_name }}"
+- name: "images-build | assert the static contract on {{ dxdfir_images_namespace }}/{{ dxdfir_images_name }}"
   ansible.builtin.assert:
     that:
       - dxdfir_images_inspect.images | length == 1
       - dxdfir_images_inspect.images[0].Config.User == (dxdfir_images_uid | string) ~ ':' ~ (dxdfir_images_gid | string)
       - (dxdfir_images_inspect.images[0].Config.Labels or {})['com.get-sybers.hardened'] | default('') == 'true'
     fail_msg: >-
-      dxdfir/{{ dxdfir_images_name }} fails the static contract (USER
+      {{ dxdfir_images_namespace }}/{{ dxdfir_images_name }} fails the static contract (USER
       {{ dxdfir_images_uid }}:{{ dxdfir_images_gid }} + com.get-sybers.hardened label).
     quiet: true
 
@@ -43,13 +43,13 @@
 # tar and list the member paths. The removed binaries must be absent; ansible
 # must be gone from every image; the tool-only images must also have no shell
 # or python.
-- name: "images-build | export the filesystem listing of dxdfir/{{ dxdfir_images_name }}"
+- name: "images-build | export the filesystem listing of {{ dxdfir_images_namespace }}/{{ dxdfir_images_name }}"
   ansible.builtin.shell:
     cmd: >-
       set -o pipefail;
       # a never-executed command token, so `create` also works for the images
       that have no ENTRYPOINT (plaso); the container is only exported, never run
-      cid=$(docker create dxdfir/{{ dxdfir_images_name }}:latest __export_only__);
+      cid=$(docker create {{ dxdfir_images_namespace }}/{{ dxdfir_images_name }}:latest __export_only__);
       docker export "$cid" | tar -t;
       docker rm -f "$cid" >/dev/null
   args:
@@ -57,7 +57,7 @@
   register: dxdfir_images_fs
   changed_when: false
 
-- name: "images-build | assert the removed surface is absent from dxdfir/{{ dxdfir_images_name }}"
+- name: "images-build | assert the removed surface is absent from {{ dxdfir_images_namespace }}/{{ dxdfir_images_name }}"
   ansible.builtin.assert:
     that:
       - "'usr/bin/apt-get' not in dxdfir_images_fs.stdout"
@@ -66,7 +66,7 @@
       - dxdfir_images_fs.stdout is not search('bin/pip[0-9.]*$', multiline=True)
       - dxdfir_images_fs.stdout is not search('/ansible[-/]', multiline=True)
     fail_msg: >-
-      dxdfir/{{ dxdfir_images_name }} still ships a removed binary
+      {{ dxdfir_images_namespace }}/{{ dxdfir_images_name }} still ships a removed binary
       (apt-get/dpkg/sudo/pip) or ansible.
     quiet: true
 
@@ -76,10 +76,11 @@
       - dxdfir_images_fs.stdout is not search('bin/(sh|bash|dash)$', multiline=True)
       - dxdfir_images_fs.stdout is not search('bin/python3(\.[0-9]+)?$', multiline=True)
     fail_msg: >-
-      dxdfir/{{ dxdfir_images_name }} still carries a shell or python though its tool
+      {{ dxdfir_images_namespace }}/{{ dxdfir_images_name }} still carries a shell or python though its tool
       needs neither.
     quiet: true
   when: dxdfir_images_name in ['suricata', 'zeek', 'evtxecmd',
                              'recmd', 'mftecmd',
                              'amcacheparser', 'appcompatcacheparser', 'lecmd',
-                             'jlecmd', 'sbecmd', 'sqlecmd', 'rbcmd', 'wxtcmd']
+                             'jlecmd', 'sbecmd', 'sqlecmd', 'rbcmd', 'wxtcmd',
+                             'prefetch', 'esedump']

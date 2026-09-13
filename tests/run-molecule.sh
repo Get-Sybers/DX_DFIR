@@ -30,7 +30,7 @@ set -o pipefail
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 REPO_ROOT="$(realpath "$SCRIPT_DIR/..")"
 ROLES_DIR="$REPO_ROOT/ansible/collections/get_sybers.dxdfir/roles"
-IMAGE="${MOLECULE_IMAGE:-dxdfir/molecule:latest}"
+IMAGE="${MOLECULE_IMAGE:-get-sybers/molecule:latest}"
 
 # Roles whose scenarios validate real behaviour. dxdfir_velociraptor's scenario
 # is layout-only (no engine) and is excluded from the default set — pass it
