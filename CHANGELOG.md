@@ -7,6 +7,24 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Changed
+- **Container images renamed to the `get-sybers/` namespace** (was `dxdfir/`) and
+  the **[EZTools-Docker](https://github.com/Get-Sybers/EZTools-Docker) repo added
+  as a submodule** (`third_party/EZTools-Docker/`) — the single source for the
+  Eric Zimmerman container family. EvtxECmd, the EZ tool family (recmd, mftecmd,
+  amcacheparser, appcompatcacheparser, lecmd, jlecmd, sbecmd, sqlecmd, rbcmd,
+  wxtcmd) and the two Linux-native Go substitutes now build from the submodule;
+  DX_DFIR's duplicated `docker/eztool` + `docker/evtxecmd` were removed. yara,
+  suricata, zeek, plaso stay in `docker/`; volatility from PIIAT-Mem.
+- **Two new Go substitute images** for the Windows-bound EZ tools, built into the
+  image set: `get-sybers/prefetch` (`prefetch_dump`, replaces PECmd) and
+  `get-sybers/esedump` (`ese_dump`, replaces SrumECmd/SumECmd) — both `FROM
+  scratch`, no shell/python. (Wiring the zimmerman lane onto them is a follow-up.)
+- **The hardening playbook has one canonical home** — the EZTools-Docker
+  submodule (`hardening/harden.yml`). The submodule's images use it directly; the
+  image role's preflight syncs it into `docker/hardening/harden.yml` (now
+  generated + git-ignored) so DX_DFIR's own images can `COPY` it.
+
 ### Added
 - **A Go/[termui](https://github.com/gizak/termui) front-end for `dxdfir`** (`go/`),
   replacing the Python Typer CLI as the user-facing entry point while keeping the

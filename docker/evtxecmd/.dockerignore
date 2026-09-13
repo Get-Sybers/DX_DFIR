@@ -1,4 +1,0 @@
-# Build context is just the Dockerfile — everything EvtxECmd needs is fetched at
-# build time. Keep the context tiny.
-*
-!Dockerfile

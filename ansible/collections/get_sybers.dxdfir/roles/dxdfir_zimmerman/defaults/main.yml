@@ -19,7 +19,7 @@ dxdfir_zimmerman_sofelk_out_dir: "{{ dxdfir_zimmerman_repo_root }}/data_store/pr
 dxdfir_zimmerman_out_dir: "{{ dxdfir_zimmerman_elastic_out_dir if dxdfir_zimmerman_pipeline == 'elastic' else dxdfir_zimmerman_sofelk_out_dir }}"
 # The hardened in-repo Plaso image, used for artefact extraction (image_export.py)
 # and the SRUM two-step (log2timeline.py/psort.py) — build with dxdfir-build-images.
-dxdfir_zimmerman_plaso_image: "dxdfir/plaso:latest"
+dxdfir_zimmerman_plaso_image: "get-sybers/plaso:latest"
 # Also extract from Volume Shadow Copies during artefact extraction.
 dxdfir_zimmerman_vss: false
 # In-repo runs use PYTHONPATH; a deployed run installs the package instead.

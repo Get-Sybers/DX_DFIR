@@ -40,8 +40,8 @@ import tempfile
 from .. import container
 from . import clean_name, have_fuse, list_images
 
-_YARA_IMAGE = "dxdfir/yara:latest"
-_VOL_IMAGE = "dxdfir/volatility:latest"
+_YARA_IMAGE = "get-sybers/yara:latest"
+_VOL_IMAGE = "get-sybers/volatility:latest"
 _STRING_RE = re.compile(r"^0x([0-9a-fA-F]+):(\$[^:]*):\s?(.*)$")
 
 
@@ -187,7 +187,7 @@ def unmount_image(state: list[tuple[str, str]], mount_dir: str) -> None:
 
 # --- memory source: Volatility 3 windows.vadyarascan -------------------------
 
-# vadyarascan runs on the hardened dxdfir/volatility image through its BAKED
+# vadyarascan runs on the hardened get-sybers/volatility image through its BAKED
 # wrapper (/opt/dfir/vol_wrapper.py — the only python entry the image
 # allow-lists), which imports the mounted jsonl_dfir renderer then hands the
 # CLI the remaining argv verbatim.
@@ -197,7 +197,7 @@ def vadyarascan_argv(mem: str, symbols_dir: str, renderer: str, rules_file: str,
                      vol_image: str = _VOL_IMAGE,
                      symbols_online: bool = False) -> list[str]:
     """The ``docker run`` argv for one vadyarascan pass over one memory image on
-    the minimal hardened dxdfir/volatility image (the baked wrapper is the
+    the minimal hardened get-sybers/volatility image (the baked wrapper is the
     ENTRYPOINT; no caps, read-only rootfs, no network unless ``symbols_online``).
     The scan's JSONL goes to stdout. Pure (no I/O beyond path normalisation)."""
     return container.run(
@@ -260,7 +260,7 @@ def _scan_dir(scan_dir, rules_dir, index_path, source, base, image) -> list[dict
         listf.close()
         # NamedTemporaryFile is 0600; the container reads it as uid 2000
         os.chmod(listf.name, 0o644)
-        # The minimal dxdfir/yara image's ENTRYPOINT is the baked per-file scan
+        # The minimal get-sybers/yara image's ENTRYPOINT is the baked per-file scan
         # loop (/opt/dxdfir/scan-list.sh); it reads the mounted list + index and
         # prints matches to stdout (captured here) — no shell command is
         # injected from here.
@@ -303,7 +303,7 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
     symbols_dir = symbols_dir or os.path.join(ds, "dependencies", "volatility3-symbols")
     # The jsonl_dfir renderer is owned by the vendored PIIAT-Mem tool (the same
     # renderer the volatility PROCESSOR drives through `python -m piiat_mem`); the
-    # memory scan bind-mounts it into the hardened dxdfir/volatility image, whose
+    # memory scan bind-mounts it into the hardened get-sybers/volatility image, whose
     # baked wrapper (/opt/dfir/vol_wrapper.py) loads it. It lives in the submodule,
     # not in a dev-scripts/ tree.
     renderer = renderer or os.path.join(

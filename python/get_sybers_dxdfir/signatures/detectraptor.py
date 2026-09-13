@@ -80,7 +80,7 @@ _MERGED_NAME = "detectraptor.yar"
 _RULE_START = re.compile(r"(?m)^(?:private\s+)?rule\s+([A-Za-z0-9_]+)")
 _IMPORT = re.compile(r'(?m)^import\s+"([^"]+)"\s*$')
 
-# Module features the lane's yara build (dxdfir/yara, Debian libyara) does not
+# Module features the lane's yara build (get-sybers/yara, Debian libyara) does not
 # have; a rule using one fails the WHOLE single-index compile, so drop it at
 # merge time and count it. telfhash needs a tlsh-enabled build.
 _INCOMPATIBLE = ("telfhash",)

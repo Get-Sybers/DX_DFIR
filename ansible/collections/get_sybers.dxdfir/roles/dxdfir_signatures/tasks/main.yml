@@ -33,7 +33,7 @@
     dxdfir_lane_name: signatures
     dxdfir_lane_module: get_sybers_dxdfir.signatures
     dxdfir_lane_python_path: "{{ dxdfir_signatures_python_path }}"
-    dxdfir_lane_images: ["dxdfir/yara:latest", "dxdfir/suricata:latest"]
+    dxdfir_lane_images: ["get-sybers/yara:latest", "get-sybers/suricata:latest"]
     dxdfir_lane_input_checks:
       - name: data_store anchor
         path: "{{ dxdfir_signatures_repo_root }}/data_store"

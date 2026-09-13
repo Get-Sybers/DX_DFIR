@@ -1,6 +1,6 @@
 """Emerging Threats Open ruleset provisioning for the Suricata lane.
 
-The suricata lane needs rules to alert; the hardened dxdfir/suricata image ships
+The suricata lane needs rules to alert; the hardened get-sybers/suricata image ships
 none. This module fetches the free **ET Open** ruleset and concatenates its
 ``*.rules`` into one ``<rules-dir>/suricata.rules`` — the file
 :func:`suricata.run` looks for and mounts. The yara lane's ``--fetch`` provisions
@@ -32,7 +32,7 @@ import urllib.request
 # Pinned upstream addressing: ET Open, by Suricata engine version. ET publishes a
 # rolling tarball per version; we pin the VERSION path (stable), not the content
 # (it rolls daily — see the module docstring). To advance: bump _SURICATA_VER to
-# match the dxdfir/suricata image's engine.
+# match the get-sybers/suricata image's engine.
 _SURICATA_VER = "7.0.3"
 _ET_OPEN_URL = f"https://rules.emergingthreats.net/open/suricata-{_SURICATA_VER}/emerging.rules.tar.gz"
 _RULES_FILE = "suricata.rules"

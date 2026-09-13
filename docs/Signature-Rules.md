@@ -24,7 +24,7 @@ disable it without deleting it.
 **How they're loaded:** the lane generates an index file of
 `include "/rules/<relative-path>"` lines — one per discovered rule file — and
 compiles that single index. Your rules directory is bind-mounted **read-only**
-at `/rules` inside the hardened `dxdfir/yara` container, so nested layouts survive
+at `/rules` inside the hardened `get-sybers/yara` container, so nested layouts survive
 intact; the index itself goes to a temp file outside the tree, so the rules
 directory may be read-only.
 
@@ -68,7 +68,7 @@ into `yara-rules/detectraptor/detectraptor.yar` (~10,700 rules). The merge is
 required: upstream publishes each set for a separate Velociraptor artifact and
 freely repeats rule identifiers across files, but this lane compiles one index —
 so duplicates are dropped first-wins, and rules needing module features the
-`dxdfir/yara` build lacks (`telfhash`) are skipped. Per-rule `meta` blocks
+`get-sybers/yara` build lacks (`telfhash`) are skipped. Per-rule `meta` blocks
 (author, `source_url`, `license_url`) are kept byte-for-byte.
 
 - **Idempotent** — an existing `detectraptor.yar` is left alone; delete it or
@@ -102,7 +102,7 @@ EICAR-style test file there to prove a rule fires.
   discarded — you just get 0 matches). Pre-check a new rule:
   ```bash
   docker run --rm -v "$PWD/data_store/dependencies/yara-rules":/rules:ro \
-      dxdfir/yara:latest -e '{"dxdfir_run_argv": ["yara", "/rules/mine/my_malware.yar", "/dev/null"]}'
+      get-sybers/yara:latest -e '{"dxdfir_run_argv": ["yara", "/rules/mine/my_malware.yar", "/dev/null"]}'
   ```
 - Duplicate rule identifiers across files are a compile error (memory source) —
   namespace your rule names.
@@ -120,7 +120,7 @@ takes the *first* one it finds — keep it shallow.
 **How it's loaded:** the rules directory is mounted read-only at `/rules` and the
 file is passed with `suricata -S`, which loads it **exclusively** — the container
 image's bundled rules are ignored. If no `suricata.rules` exists, the lane falls
-back to the `dxdfir/suricata` package defaults and says so.
+back to the `get-sybers/suricata` package defaults and says so.
 
 Multiple rule sources therefore have to be merged into that one file:
 
@@ -151,7 +151,7 @@ jq -r 'select(.event_type=="alert") | .alert.signature' \
   output or silent zero alerts. Test first:
   ```bash
   docker run --rm -v "$PWD/data_store/dependencies/suricata-rules":/rules:ro \
-      dxdfir/suricata:latest -e '{"dxdfir_run_argv": ["suricata", "-T", "-S", "/rules/suricata.rules"]}'
+      get-sybers/suricata:latest -e '{"dxdfir_run_argv": ["suricata", "-T", "-S", "/rules/suricata.rules"]}'
   ```
 - Every rule needs a **unique `sid`** (use ≥ 1000000 for local rules) —
   duplicates are rejected at load.

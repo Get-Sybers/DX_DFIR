@@ -20,7 +20,7 @@ dxdfir_volatility_symbols_dir: "{{ dxdfir_volatility_repo_root }}/data_store/dep
 # path is put on PYTHONPATH so `python -m piiat_mem` resolves (preflight guard).
 dxdfir_volatility_piiat_mem_dir: "{{ dxdfir_volatility_repo_root }}/third_party/piiat-mem"
 # The hardened in-repo image (build with playbooks/dxdfir-build-images.yml).
-dxdfir_volatility_image: "dxdfir/volatility:latest"
+dxdfir_volatility_image: "get-sybers/volatility:latest"
 # Allow the container network access for ISF symbol fetch — the ONE legitimate
 # network need; default fully offline (pre-seed the symbols dir instead).
 dxdfir_volatility_symbols_online: false

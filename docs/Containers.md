@@ -14,12 +14,12 @@ ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-im
 
 | Image | Tool | Source |
 |---|---|---|
-| `dxdfir/zeek` | PCAP → Zeek JSON | Zeek LTS from the project's OBS Debian repo (`docker/zeek/`) |
-| `dxdfir/suricata` | signatures — Suricata (offline replay) | Debian package (`docker/suricata/`) |
-| `dxdfir/yara` | signatures — YARA | Debian package (`docker/yara/`) |
-| `dxdfir/volatility` | memory (Volatility 3) + `vadyarascan` | pinned PyPI (`docker/volatility/`) |
-| `dxdfir/plaso` | Plaso timelining + `image_export` (dfVFS) | GIFT stable PPA (`docker/plaso/`) |
-| `dxdfir/evtxecmd` | Windows Event Logs (EvtxECmd) | fetched EZ release, baked (`docker/evtxecmd/`) |
+| `get-sybers/zeek` | PCAP → Zeek JSON | Zeek LTS from the project's OBS Debian repo (`docker/zeek/`) |
+| `get-sybers/suricata` | signatures — Suricata (offline replay) | Debian package (`docker/suricata/`) |
+| `get-sybers/yara` | signatures — YARA | Debian package (`docker/yara/`) |
+| `get-sybers/volatility` | memory (Volatility 3) + `vadyarascan` | pinned PyPI (`docker/volatility/`) |
+| `get-sybers/plaso` | Plaso timelining + `image_export` (dfVFS) | GIFT stable PPA (`docker/plaso/`) |
+| `get-sybers/evtxecmd` | Windows Event Logs (EvtxECmd) | fetched EZ release, baked (`third_party/EZTools-Docker/evtxecmd/`) |
 
 The `dxdfir_images` role builds each one and **verifies the minimal-posture
 contract** per build — the static image config plus a shell-free
@@ -47,9 +47,9 @@ it never ships at runtime.
   suite are removed; every setuid/setgid bit is stripped
 - **no package manager, no pip** — nothing installable at runtime
 - **no shell and no python** except where the tool irreducibly needs them:
-  `dxdfir/yara` keeps `sh` (its per-file scan loop *is* a shell script);
-  `dxdfir/volatility` and `dxdfir/plaso` keep python (the tools *are* python).
-  `dxdfir/zeek`, `dxdfir/suricata`, `dxdfir/evtxecmd` carry neither.
+  `get-sybers/yara` keeps `sh` (its per-file scan loop *is* a shell script);
+  `get-sybers/volatility` and `get-sybers/plaso` keep python (the tools *are* python).
+  `get-sybers/zeek`, `get-sybers/suricata`, `get-sybers/evtxecmd` carry neither.
 - the tool runs as the fixed unprivileged user (`USER 2000:2000`)
 
 Runtime confinement is what actually contains both threats (an attacker with

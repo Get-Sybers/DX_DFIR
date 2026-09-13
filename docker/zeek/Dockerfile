@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1
 #
-# dxdfir/zeek — minimal hardened Zeek LTS for OFFLINE capture parsing. Stripped to
+# get-sybers/zeek — minimal hardened Zeek LTS for OFFLINE capture parsing. Stripped to
 # the zeek binary + its scripts; ansible (build-time hardener), python and every
 # shell removed from the final image; zkg/zeekctl stripped. zeek is the pinned
 # ENTRYPOINT.
 #
-#   docker build -t dxdfir/zeek:latest -f docker/zeek/Dockerfile docker
+#   docker build -t get-sybers/zeek:latest -f docker/zeek/Dockerfile docker
 ARG BASE=debian:trixie-slim
 ARG ZEEK_PACKAGE=zeek-lts
 
@@ -39,6 +39,6 @@ ARG DFIR_UID=2000
 ARG DFIR_GID=2000
 USER ${DFIR_UID}:${DFIR_GID}
 ENTRYPOINT ["zeek"]
-LABEL org.opencontainers.image.title="dxdfir/zeek" \
+LABEL org.opencontainers.image.title="get-sybers/zeek" \
       org.opencontainers.image.description="Minimal hardened Zeek LTS (offline pcap parsing) for the DX_DFIR zeek lane: uid0 renamed+locked, no ansible/apt/pip/sudo/setuid, no shell, no python, no zkg/zeekctl, runs as a fixed non-root uid (default 2000)." \
       com.get-sybers.hardened="true"

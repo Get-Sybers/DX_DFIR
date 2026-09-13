@@ -15,7 +15,7 @@ Grounding: `byakugan/third_party/car/data_model/driver.yaml`, `car_data_model.js
 | Src key | Artefact / tool | Event / plugin | Emits object | In pipeline? | File |
 |---|---|---|---|---|---|
 | **S1** | Sysmon (EvtxECmd, `Microsoft-Windows-Sysmon/Operational`) | **EID 6 DriverLoad** | `driver`/`load` | **YES (mapped)** | `mappings/sysmon.py:432` |
-| **S2** | Memory image, Volatility 3 (PIIAT-Mem) | **`windows.modules`** (PsActiveModuleList walk) | `driver`/`load` | **YES (mapped)** | `piiat-mem/piiat_mem/mappings.py:286`; plugin driver `python/get_sybers_dxdfir/volatility.py:58` |
+| **S2** | Memory image, Volatility 3 (PIIAT-Mem) | **`windows.modules`** (PsActiveModuleList walk) | `driver`/`load` | **YES (mapped)** | `piiat-mem/piiat_mem/mappings.py:286`; plugin driver `python/get_sybers_get-sybers/volatility.py:58` |
 | S3 | Memory image, Volatility 3 | `windows.dumpfiles` / `moddump` + hasher | (would feed driver hashes) | **NO** (not in `DEFAULT_PLUGINS`) | — |
 | S4 | Windows Event Log | **System 7045** (SCM service install, kernel-mode driver) | currently `service`/`create` | mapped as **service, not driver** | `mappings/evtx_windows.py:180` (`_SVC_*`), `sources/evtx_services.yaml` |
 | S5 | Windows Event Log | **System 20003** (UserPnp driver-service registration, `DriverFileName`) | currently `service`/`create` | mapped as **service, not driver** | `mappings/evtx_more.py` (header §20003) |

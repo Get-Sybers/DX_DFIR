@@ -1,7 +1,8 @@
 ---
-# dxdfir_images: build every dxdfir/* tool image from its in-repo, ansible-hardened
-# Dockerfile, then VERIFY the hardening contract on each. The role GROUPS; the
-# playbook DECIDES which set to build (dxdfir_images_set).
+# dxdfir_images: build every get-sybers/* tool image from its ansible-hardened
+# Dockerfile (in docker/ or the EZTools-Docker submodule), then VERIFY the
+# hardening contract on each. The role GROUPS; the playbook DECIDES which set to
+# build (dxdfir_images_set).
 
 - name: "images | assert inputs"
   ansible.builtin.assert:

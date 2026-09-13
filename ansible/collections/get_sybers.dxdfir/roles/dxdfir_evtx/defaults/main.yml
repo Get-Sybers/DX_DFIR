@@ -28,7 +28,7 @@ dxdfir_evtx_stage_dir: "{{ dxdfir_evtx_repo_root }}/data_store/processed/windows
 dxdfir_evtx_vss: false
 # Container providing image_export.py for disk-image extraction (already shipped for
 # the disk/signature lanes).
-dxdfir_evtx_plaso_image: "dxdfir/plaso:latest"
+dxdfir_evtx_plaso_image: "get-sybers/plaso:latest"
 
 # Hayabusa (Sigma detection) over the same .evtx this lane collects — loose or
 # image-extracted. Enrichment: a missing binary or zero detections is a note, not a
@@ -41,14 +41,14 @@ dxdfir_evtx_hayabusa_dir: "{{ dxdfir_evtx_repo_root }}/data_store/dependencies/h
 dxdfir_evtx_hayabusa_rules: ""
 
 # How EvtxECmd is supplied — two modes:
-#   bundled  (default): the dxdfir/evtxecmd image (docker/evtxecmd) bakes EvtxECmd.dll
+#   bundled  (default): the get-sybers/evtxecmd image (third_party/EZTools-Docker/evtxecmd) bakes EvtxECmd.dll
 #            + Maps/. Nothing to place by hand; build it once with
-#            `docker build -t dxdfir/evtxecmd:latest -f docker/evtxecmd/Dockerfile docker`.
+#            `docker build -t get-sybers/evtxecmd:latest -f third_party/EZTools-Docker/evtxecmd/Dockerfile third_party/EZTools-Docker`.
 #   operator: set dxdfir_evtx_use_bundled_image=false and drop the .NET EvtxECmd
 #            release (incl. Maps/) under dxdfir_evtx_evtxecmd_dir. EvtxECmd is MIT but
 #            we don't vendor it; the operator supplies the build.
 dxdfir_evtx_use_bundled_image: true
-dxdfir_evtx_bundled_image: "dxdfir/evtxecmd:latest"
+dxdfir_evtx_bundled_image: "get-sybers/evtxecmd:latest"
 # Operator-supplied mode only: the release dir, and the stock .NET runtime image
 # that mounts it. EvtxECmd's current build targets net9.0, so the runtime is 9.x
 # (the old sdk:8.0 default silently fails against today's release).

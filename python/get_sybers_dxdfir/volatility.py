@@ -36,7 +36,7 @@ import os
 import subprocess
 import sys
 
-_IMAGE = "dxdfir/volatility:latest"
+_IMAGE = "get-sybers/volatility:latest"
 
 # The vendored PIIAT-Mem submodule — invoked as `python -m piiat_mem`. Its path is
 # put on the child's PYTHONPATH (not this process's import graph): we use the tool,

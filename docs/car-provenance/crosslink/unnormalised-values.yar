@@ -38,7 +38,7 @@
    Scan targets that carry the most yield: the plaso JSONL timelines, EvtxECmd /
    hayabusa JSON, Volatility piiat.* plugin JSONL, and raw registry/LNK text.
 
-   Compile-checked with YARA 4.5.2 (the dxdfir/yara image). Rule identifiers
+   Compile-checked with YARA 4.5.2 (the get-sybers/yara image). Rule identifiers
    are globally unique (the lane merges every file into one include index).
 
    Noise classes — intentionally NOT ruled (documented linkage noise)

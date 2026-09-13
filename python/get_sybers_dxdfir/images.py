@@ -1,5 +1,5 @@
 """Tool-image inventory guard — refuse to run against anything but the known,
-hardened dxdfir/* images, and flag anything added to that namespace that should
+hardened get-sybers/* images, and flag anything added to that namespace that should
 not be there.
 
 Two checks:
@@ -7,11 +7,11 @@ Two checks:
 - ``require(image)`` — run at the START of every processor (its role preflight):
   the exact image the lane is about to run must exist, carry the
   ``com.get-sybers.hardened`` label, and run as uid 2000. A substituted or
-  un-hardened dxdfir/* image stops the run before any evidence is touched.
+  un-hardened get-sybers/* image stops the run before any evidence is touched.
 - ``audit()`` — the full inventory: every expected hardened image must be
-  present and compliant, and **no other ``dxdfir/*`` image may exist on the host**
+  present and compliant, and **no other ``get-sybers/*`` image may exist on the host**
   except the curated non-tool ones (the SOF-ELK stack, the molecule harness). An
-  unexpected ``dxdfir/<x>`` image is something added that should not be — a
+  unexpected ``get-sybers/<x>`` image is something added that should not be — a
   supply-chain red flag — and the audit fails on it.
 
 ``docker image inspect`` is the trust anchor; the checks are pure over its JSON
@@ -25,29 +25,34 @@ import sys
 
 # The tool images the pipeline runs. Each MUST be hardened (label + uid 2000).
 HARDENED_IMAGES = (
-    "dxdfir/yara:latest",
-    "dxdfir/suricata:latest",
-    "dxdfir/zeek:latest",
-    "dxdfir/volatility:latest",
-    "dxdfir/plaso:latest",
-    "dxdfir/evtxecmd:latest",
+    "get-sybers/yara:latest",
+    "get-sybers/suricata:latest",
+    "get-sybers/zeek:latest",
+    "get-sybers/volatility:latest",
+    "get-sybers/plaso:latest",
+    "get-sybers/evtxecmd:latest",
     # The Eric Zimmerman tool family (dxdfir_zimmerman lane) — all built from the
-    # one parameterized docker/eztool/Dockerfile (see dxdfir_images_set).
-    "dxdfir/recmd:latest",
-    "dxdfir/mftecmd:latest",
-    "dxdfir/amcacheparser:latest",
-    "dxdfir/appcompatcacheparser:latest",
-    "dxdfir/lecmd:latest",
-    "dxdfir/jlecmd:latest",
-    "dxdfir/sbecmd:latest",
-    "dxdfir/sqlecmd:latest",
-    "dxdfir/rbcmd:latest",
-    "dxdfir/wxtcmd:latest",
+    # one parameterized third_party/EZTools-Docker/eztool/Dockerfile (see dxdfir_images_set).
+    "get-sybers/recmd:latest",
+    "get-sybers/mftecmd:latest",
+    "get-sybers/amcacheparser:latest",
+    "get-sybers/appcompatcacheparser:latest",
+    "get-sybers/lecmd:latest",
+    "get-sybers/jlecmd:latest",
+    "get-sybers/sbecmd:latest",
+    "get-sybers/sqlecmd:latest",
+    "get-sybers/rbcmd:latest",
+    "get-sybers/wxtcmd:latest",
+    # Linux-native Go substitutes for the Windows-bound EZ tools (FROM scratch;
+    # built from the EZTools-Docker submodule's prefetch/ and srum/ contexts):
+    # prefetch_dump replaces PECmd, ese_dump replaces SrumECmd/SumECmd.
+    "get-sybers/prefetch:latest",
+    "get-sybers/esedump:latest",
 )
-# Other dxdfir/* images that legitimately exist but are not tool containers, so
+# Other get-sybers/* images that legitimately exist but are not tool containers, so
 # they are exempt from the hardened-tool contract (but still allow-listed, so
 # they don't trip the "unexpected image" audit). Tags are matched by repo.
-ALLOWED_NON_TOOL_REPOS = ("dxdfir/sof-elk", "dxdfir/molecule")
+ALLOWED_NON_TOOL_REPOS = ("get-sybers/sof-elk", "get-sybers/molecule")
 
 HARDENED_LABEL = "com.get-sybers.hardened"
 REQUIRED_USER = "2000:2000"
@@ -86,11 +91,11 @@ def _repo(image: str) -> str:
 
 
 def require(image: str) -> None:
-    """Assert one image is a known hardened dxdfir/* tool image before the lane
+    """Assert one image is a known hardened get-sybers/* tool image before the lane
     runs it. Raises RuntimeError with the reason otherwise. A non-dxdfir image
     (the documented operator-supplied .NET runtime) is out of scope and passes
     untouched."""
-    if not image.startswith("dxdfir/"):
+    if not image.startswith("get-sybers/"):
         return
     repo = _repo(image)
     tool_repos = {_repo(i) for i in HARDENED_IMAGES}
@@ -111,13 +116,13 @@ def _list_dxdfir_images() -> list[str]:
         capture_output=True, text=True, check=False,
     )
     return [ln for ln in proc.stdout.splitlines()
-            if ln.startswith("dxdfir/") and not ln.endswith(":<none>")]
+            if ln.startswith("get-sybers/") and not ln.endswith(":<none>")]
 
 
 def audit() -> dict:
     """Full inventory audit. Returns {ok, violations:[...]}:
       - every HARDENED_IMAGES entry present + compliant
-      - no unexpected ``dxdfir/*`` image on the host (allow-list = the hardened
+      - no unexpected ``get-sybers/*`` image on the host (allow-list = the hardened
         tool images + ALLOWED_NON_TOOL_REPOS)."""
     violations = []
     for image in HARDENED_IMAGES:
@@ -129,9 +134,9 @@ def audit() -> dict:
         if present in allowed:
             continue
         if _repo(present) in allowed_repos:
-            continue           # e.g. dxdfir/sof-elk:test, dxdfir/molecule:latest
+            continue           # e.g. get-sybers/sof-elk:test, get-sybers/molecule:latest
         violations.append(
-            f"{present}: unexpected dxdfir/* image — not a known DX_DFIR image "
+            f"{present}: unexpected get-sybers/* image — not a known DX_DFIR image "
             "(something was added to the namespace that should not be)")
     return {"ok": not violations, "violations": violations,
             "checked": list(HARDENED_IMAGES)}
@@ -141,11 +146,11 @@ def main(argv: list[str] | None = None) -> int:
     import argparse
     ap = argparse.ArgumentParser(
         prog="get_sybers_dxdfir.images",
-        description="Guard the hardened dxdfir/* tool-image inventory.")
+        description="Guard the hardened get-sybers/* tool-image inventory.")
     ap.add_argument("--require", metavar="IMAGE",
                     help="assert one image is a known hardened tool image (start-time gate)")
     ap.add_argument("--audit", action="store_true",
-                    help="audit the whole dxdfir/* inventory for missing/unhardened/unexpected images")
+                    help="audit the whole get-sybers/* inventory for missing/unhardened/unexpected images")
     args = ap.parse_args(argv)
     if args.require:
         try:

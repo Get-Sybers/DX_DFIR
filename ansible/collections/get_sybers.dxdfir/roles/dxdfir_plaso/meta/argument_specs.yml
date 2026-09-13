@@ -53,7 +53,7 @@ argument_specs:
       dxdfir_plaso_image:
         type: str
         required: false
-        default: "dxdfir/plaso:latest"
+        default: "get-sybers/plaso:latest"
         description: "The hardened in-repo Plaso image (build with playbooks/dxdfir-build-images.yml)."
       dxdfir_plaso_python_path:
         type: str

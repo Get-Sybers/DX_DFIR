@@ -39,14 +39,14 @@
     dxdfir_lane_python_path: "{{ dxdfir_zimmerman_python_path }}"
     dxdfir_lane_images:
       - "{{ dxdfir_zimmerman_plaso_image }}"
-      - "dxdfir/recmd:latest"
-      - "dxdfir/jlecmd:latest"
-      - "dxdfir/lecmd:latest"
-      - "dxdfir/amcacheparser:latest"
-      - "dxdfir/appcompatcacheparser:latest"
-      - "dxdfir/sbecmd:latest"
-      - "dxdfir/rbcmd:latest"
-      - "dxdfir/mftecmd:latest"
+      - "get-sybers/recmd:latest"
+      - "get-sybers/jlecmd:latest"
+      - "get-sybers/lecmd:latest"
+      - "get-sybers/amcacheparser:latest"
+      - "get-sybers/appcompatcacheparser:latest"
+      - "get-sybers/sbecmd:latest"
+      - "get-sybers/rbcmd:latest"
+      - "get-sybers/mftecmd:latest"
     dxdfir_lane_input_checks:
       - name: disk-image input dir
         path: "{{ dxdfir_zimmerman_input_dir }}"

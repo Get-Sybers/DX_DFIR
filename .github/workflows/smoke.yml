@@ -30,11 +30,13 @@ on:
       - "python/get_sybers_dxdfir/mitrecar.py"
       - "python/get_sybers_dxdfir/carcheck.py"
       - "python/pyproject.toml"
-      - "docker/evtxecmd/**"
-      - "docker/hardening/**"
+      # EvtxECmd + its image (and the shared hardening playbook) now live in the
+      # EZTools-Docker submodule, and the build wiring lives in the images role —
+      # both are covered by third_party/** and the role path below.
+      - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_images/**"
       # an engine bump is a pipeline change: byakugan.ref pins the external
       # Byakugan engine the CAR lane runs, so it must re-run this workflow.
-      # third_party/** stays for the remaining piiat-mem submodule.
+      # third_party/** covers the piiat-mem AND EZTools-Docker submodules.
       - "byakugan.ref"
       - ".gitmodules"
       - "third_party/**"
@@ -53,9 +55,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # the only remaining submodule is third_party/piiat-mem (the
-          # volatility lane). Smoke never touches it, but recursive is harmless
-          # here and keeps this checkout identical to a provisioned host.
+          # Submodules: third_party/piiat-mem (volatility lane) and
+          # third_party/EZTools-Docker (EvtxECmd + the EZ tool family + the
+          # canonical hardening playbook). The EvtxECmd image built below comes
+          # from the latter, so this MUST be recursive.
           submodules: recursive
 
       # The CAR lane (get_sybers_dxdfir.mitrecar) drives the EXTERNAL Byakugan
@@ -109,7 +112,7 @@ jobs:
       # The evtx lane runs EvtxECmd from the bundled image; build it once here
       # (the smoke test asserts its presence and fails loudly if absent).
       - name: Build the bundled EvtxECmd image
-        run: docker build -t dxdfir/evtxecmd:latest -f docker/evtxecmd/Dockerfile docker
+        run: docker build -t get-sybers/evtxecmd:latest -f third_party/EZTools-Docker/evtxecmd/Dockerfile third_party/EZTools-Docker
 
       - name: Run the pipeline smoke test
         run: ./tests/smoke-test.sh

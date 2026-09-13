@@ -46,7 +46,7 @@ argument_specs:
       dxdfir_volatility_image:
         type: str
         required: false
-        default: "dxdfir/volatility:latest"
+        default: "get-sybers/volatility:latest"
         description: "Volatility 3 container image."
       dxdfir_volatility_python_path:
         type: str

@@ -100,12 +100,12 @@ def test_argv_operator_mode_mounts_release():
 
 
 def test_argv_bundled_mode_passes_only_flags():
-    """The minimal dxdfir/evtxecmd image's ENTRYPOINT is `dotnet <dll>`, so the
+    """The minimal get-sybers/evtxecmd image's ENTRYPOINT is `dotnet <dll>`, so the
     bundled invocation passes ONLY the flags (no dotnet/dll, no release mount)."""
     argv = evtx.evtxecmd_argv(
         "/raw/HOST01/Security.evtx", "/out/HOST01",
         "Security_EvtxECmd_Output.json", "Security_EvtxECmd_Output.xml",
-        "dxdfir/evtxecmd:latest",
+        "get-sybers/evtxecmd:latest",
     )
     assert argv[:3] == ["docker", "run", "--rm"]
     for flag in ("--cap-drop", "--security-opt", "--read-only", "--network"):
@@ -114,7 +114,7 @@ def test_argv_bundled_mode_passes_only_flags():
     assert not any(str(a).endswith(":/evtxecmd:ro") for a in argv)
     assert "/raw/HOST01:/input:ro" in argv and "/out/HOST01:/output" in argv
     # the image name is followed by the tool flags
-    tail = argv[argv.index("dxdfir/evtxecmd:latest") + 1:]
+    tail = argv[argv.index("get-sybers/evtxecmd:latest") + 1:]
     assert tail[:2] == ["-f", "/input/Security.evtx"]
     assert "--jsonf" in tail
 
@@ -167,7 +167,7 @@ def test_process_counts_empty_log_apart_from_failed(tmp_path, monkeypatch):
             [], 0, stdout=b"Total event log records found: 0", stderr=b"")
 
     monkeypatch.setattr(evtx, "_run_evtxecmd", fake_run)
-    s = evtx.process(str(evtx_dir), str(tmp_path / "out"), image="dxdfir/evtxecmd:latest")
+    s = evtx.process(str(evtx_dir), str(tmp_path / "out"), image="get-sybers/evtxecmd:latest")
     assert s["empty"] == 1
     assert s["failed"] == 0            # an empty log is not a failure
     assert s["processed"] == 0
@@ -187,7 +187,7 @@ def test_process_counts_unreadable_log_as_failed(tmp_path, monkeypatch):
             [], 0, stdout=b"/input/Locked.evtx does not exist! Exiting", stderr=b"")
 
     monkeypatch.setattr(evtx, "_run_evtxecmd", fake_run)
-    s = evtx.process(str(evtx_dir), str(tmp_path / "out"), image="dxdfir/evtxecmd:latest")
+    s = evtx.process(str(evtx_dir), str(tmp_path / "out"), image="get-sybers/evtxecmd:latest")
     assert s["failed"] == 1        # a log EvtxECmd could not read is a failure...
     assert s["empty"] == 0         # ...not a benign empty
     assert s["processed"] == 0
@@ -206,7 +206,7 @@ def test_process_nonzero_tally_but_no_output_is_failed(tmp_path, monkeypatch):
             [], 0, stdout=b"Total event log records found: 1,234", stderr=b"")
 
     monkeypatch.setattr(evtx, "_run_evtxecmd", fake_run)
-    s = evtx.process(str(evtx_dir), str(tmp_path / "out"), image="dxdfir/evtxecmd:latest")
+    s = evtx.process(str(evtx_dir), str(tmp_path / "out"), image="get-sybers/evtxecmd:latest")
     assert s["failed"] == 1        # records found but none written is a failure...
     assert s["empty"] == 0         # ...not a benign empty
     assert s["processed"] == 0
@@ -228,14 +228,14 @@ def test_process_bundled_mode_needs_no_dll(tmp_path, monkeypatch):
             f.write('{"EventId":1}\n')
 
     monkeypatch.setattr(evtx, "_run_evtxecmd", fake_run)
-    s = evtx.process(str(evtx_dir), str(tmp_path / "out"), image="dxdfir/evtxecmd:latest")
+    s = evtx.process(str(evtx_dir), str(tmp_path / "out"), image="get-sybers/evtxecmd:latest")
     assert s["bundled"] is True
     assert s.get("error") is None
     assert s["evtxecmd_dll"] == evtx.BUNDLED_DLL
     assert s["processed"] == 1
     # bundled mode passes no release dir down to the runner
     assert calls["kw"].get("evtxecmd_dir") in (None, "")
-    assert calls["image"] == "dxdfir/evtxecmd:latest"
+    assert calls["image"] == "get-sybers/evtxecmd:latest"
 
 
 def test_extract_images_reuses_existing(tmp_path, monkeypatch):

@@ -46,7 +46,7 @@ argument_specs:
       dxdfir_zimmerman_plaso_image:
         type: str
         required: false
-        default: "dxdfir/plaso:latest"
+        default: "get-sybers/plaso:latest"
         description: >-
           The hardened in-repo Plaso image, used both for artefact extraction
           (image_export.py against a YAML collection filter) and the SRUM

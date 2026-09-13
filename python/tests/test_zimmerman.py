@@ -106,7 +106,7 @@ def test_recmd_argv():
     argv = z.recmd_argv("/stage", "/out/recmd")
     assert argv[:3] == ["docker", "run", "--rm"]
     assert "/stage:/in:ro" in argv and "/out/recmd:/out" in argv
-    tail = argv[argv.index("dxdfir/recmd:latest") + 1:]
+    tail = argv[argv.index("get-sybers/recmd:latest") + 1:]
     assert tail == ["-d", "/in", "--bn", z._RECMD_BATCH_FILE,
                     "--json", "/out", "--jsonf", "recmd_batch.json", "--nl"]
 
@@ -114,27 +114,27 @@ def test_recmd_argv():
 def test_srum_two_step_argv():
     l2t = z.srum_l2t_argv("/srum", "/out/srum")
     assert "/srum:/in:ro" in l2t and "/out/srum:/out" in l2t
-    tail = l2t[l2t.index("dxdfir/plaso:latest") + 1:]
+    tail = l2t[l2t.index("get-sybers/plaso:latest") + 1:]
     assert tail == ["log2timeline.py", "--status_view", "none", "--parsers", "esedb/srum",
                     "--storage-file", "/out/srum.plaso", "/in/SRUDB.dat"]
 
     psort = z.srum_psort_argv("/out/srum")
     assert "/out/srum:/out" in psort
-    tail2 = psort[psort.index("dxdfir/plaso:latest") + 1:]
+    tail2 = psort[psort.index("get-sybers/plaso:latest") + 1:]
     assert tail2 == ["psort.py", "--status_view", "none", "-o", "json_line",
                      "-w", "/out/srum.jsonl", "/out/srum.plaso"]
 
 
 def test_jlecmd_argv():
     argv = z.jlecmd_argv("/stage", "/out/jlecmd")
-    tail = argv[argv.index("dxdfir/jlecmd:latest") + 1:]
+    tail = argv[argv.index("get-sybers/jlecmd:latest") + 1:]
     assert tail == ["-d", "/in", "--json", "/out", "--jsonf", "jlecmd.json"]
 
 
 def test_lecmd_argv_has_no_q_flag():
     """The exact proven recipe: LECmd runs WITHOUT -q (unlike its siblings)."""
     argv = z.lecmd_argv("/stage", "/out/lecmd")
-    tail = argv[argv.index("dxdfir/lecmd:latest") + 1:]
+    tail = argv[argv.index("get-sybers/lecmd:latest") + 1:]
     assert tail == ["-d", "/in", "--json", "/out"]
     assert "-q" not in tail
 
@@ -142,31 +142,31 @@ def test_lecmd_argv_has_no_q_flag():
 def test_amcacheparser_argv():
     argv = z.amcacheparser_argv("/amcache", "/out/amcache")
     assert "/amcache:/in:ro" in argv
-    tail = argv[argv.index("dxdfir/amcacheparser:latest") + 1:]
+    tail = argv[argv.index("get-sybers/amcacheparser:latest") + 1:]
     assert tail == ["-f", "/in/Amcache.hve", "--csv", "/out", "--csvf", "amcache.csv", "-i"]
 
 
 def test_appcompatcacheparser_argv():
     argv = z.appcompatcacheparser_argv("/sys", "/out/appcompat")
-    tail = argv[argv.index("dxdfir/appcompatcacheparser:latest") + 1:]
+    tail = argv[argv.index("get-sybers/appcompatcacheparser:latest") + 1:]
     assert tail == ["-f", "/in/SYSTEM", "--csv", "/out", "--csvf", "appcompatcache.csv"]
 
 
 def test_sbecmd_argv():
     argv = z.sbecmd_argv("/stage", "/out/sbecmd")
-    tail = argv[argv.index("dxdfir/sbecmd:latest") + 1:]
+    tail = argv[argv.index("get-sybers/sbecmd:latest") + 1:]
     assert tail == ["-d", "/in", "--json", "/out", "--jsonf", "sbecmd.json"]
 
 
 def test_rbcmd_argv():
     argv = z.rbcmd_argv("/stage", "/out/rbcmd")
-    tail = argv[argv.index("dxdfir/rbcmd:latest") + 1:]
+    tail = argv[argv.index("get-sybers/rbcmd:latest") + 1:]
     assert tail == ["-d", "/in", "--csv", "/out", "--csvf", "rbcmd.csv"]
 
 
 def test_mftecmd_argv():
     argv = z.mftecmd_argv("/mft", "/out/mftecmd")
-    tail = argv[argv.index("dxdfir/mftecmd:latest") + 1:]
+    tail = argv[argv.index("get-sybers/mftecmd:latest") + 1:]
     assert tail == ["-f", "/in/$MFT", "--json", "/out", "--jsonf", "mftecmd.json"]
 
 
@@ -176,7 +176,7 @@ def test_wxtcmd_argv_adds_writable_opt_eztool_tmpfs():
     argv = z.wxtcmd_argv("/wxt", "/out/wxt")
     assert "--tmpfs" in argv
     assert "/opt/eztool:rw,nosuid,nodev,exec,size=256m,uid=2000,gid=2000" in argv
-    tail = argv[argv.index("dxdfir/wxtcmd:latest") + 1:]
+    tail = argv[argv.index("get-sybers/wxtcmd:latest") + 1:]
     assert tail == ["-f", "/in/ActivitiesCache.db", "--csv", "/out"]
 
 
@@ -310,7 +310,7 @@ def test_process_image_gates_amcache_on_extracted_file_presence(tmp_path, monkey
     res = z.process_image("/img/LoneWolf.E01", str(host_dir))
     assert res["steps"]["amcache"]["ran"] is True
     assert res["steps"]["amcache"]["ok"] is True
-    amcache_calls = [a for a in seen_argvs if "dxdfir/amcacheparser:latest" in a]
+    amcache_calls = [a for a in seen_argvs if "get-sybers/amcacheparser:latest" in a]
     assert len(amcache_calls) == 1
     assert amcache_calls[0][amcache_calls[0].index("-f") + 1] == "/in/Amcache.hve"
 
@@ -324,7 +324,7 @@ def test_process_image_wxtcmd_is_never_invoked(tmp_path, monkeypatch):
                         lambda image, stage_dir, **kw: os.makedirs(stage_dir, exist_ok=True) or [])
 
     def fail_if_wxtcmd(argv, log_path):
-        assert "dxdfir/wxtcmd:latest" not in argv
+        assert "get-sybers/wxtcmd:latest" not in argv
         return True
 
     monkeypatch.setattr(z, "_run", fail_if_wxtcmd)

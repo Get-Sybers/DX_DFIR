@@ -1,8 +1,8 @@
 # EvtxECmd
 
 > **You usually don't need this directory.** The `dxdfir_evtx` role defaults to the
-> **bundled** [`dxdfir/evtxecmd`](/docker/evtxecmd) image, which bakes `EvtxECmd.dll`
-> + `Maps/` for you — `docker build -t dxdfir/evtxecmd:latest -f docker/evtxecmd/Dockerfile docker`. This
+> **bundled** [`get-sybers/evtxecmd`](/third_party/EZTools-Docker/evtxecmd) image, which bakes `EvtxECmd.dll`
+> + `Maps/` for you — `docker build -t get-sybers/evtxecmd:latest -f third_party/EZTools-Docker/evtxecmd/Dockerfile third_party/EZTools-Docker`. This
 > dir is the **operator-supplied** fallback, used only when you run with
 > `dxdfir_evtx_use_bundled_image=false`.
 

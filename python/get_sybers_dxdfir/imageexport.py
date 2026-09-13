@@ -9,7 +9,7 @@ never the whole filesystem.
 It ports ``sig_extract_artifacts`` from the retired shell lane library
 (``scripts/signatures/lib/disk-image.sh``, the Hayabusa lane's extractor) — same
 container, same flags — so the evtx and signature lanes source disk-image EVTX the
-one proven way. Reusing the pipeline's own hardened ``dxdfir/plaso`` image keeps the
+one proven way. Reusing the pipeline's own hardened ``get-sybers/plaso`` image keeps the
 .NET evtxecmd image free of a dfVFS/pytsk3 stack.
 
 ``image_export_argv`` is pure (no I/O) so the container invocation is unit-testable
@@ -23,7 +23,7 @@ import subprocess
 from . import container
 
 # The pipeline's own hardened plaso image (built by the dxdfir-build-images playbook).
-PLASO_IMAGE = "dxdfir/plaso:latest"
+PLASO_IMAGE = "get-sybers/plaso:latest"
 
 # Formats dfVFS can open. Supersets the retired disk-image.sh's sig_list_images()
 # with the VHD/VHDX/QCOW2 formats the plaso processor also accepts, so every image
@@ -55,7 +55,7 @@ def image_export_argv(image, out_dir, *, artifact_filters=("WindowsEventLogs",),
     ``--partitions all`` so a multi-partition Windows image is fully searched;
     ``--vss_stores none`` by default (skip shadow copies — set ``vss`` to include them).
 
-    Runs on the minimal hardened dxdfir/plaso image (no caps, no network,
+    Runs on the minimal hardened get-sybers/plaso image (no caps, no network,
     read-only rootfs); image_export.py is the tool argv (plaso has no single
     ENTRYPOINT). Pure (no I/O).
     """

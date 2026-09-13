@@ -105,14 +105,14 @@ section "Preflight (fail loudly — never skip)"
 command -v docker >/dev/null 2>&1 || die "docker not found. This test RUNS the pipeline; it cannot be skipped."
 docker info >/dev/null 2>&1 || die "docker daemon not reachable."
 command -v python3 >/dev/null 2>&1 || die "python3 not found."
-docker image inspect dxdfir/evtxecmd:latest >/dev/null 2>&1 \
-    || die "image dxdfir/evtxecmd:latest missing — build it: docker build -t dxdfir/evtxecmd:latest -f docker/evtxecmd/Dockerfile docker"
+docker image inspect get-sybers/evtxecmd:latest >/dev/null 2>&1 \
+    || die "image get-sybers/evtxecmd:latest missing — build it: docker build -t get-sybers/evtxecmd:latest -f third_party/EZTools-Docker/evtxecmd/Dockerfile third_party/EZTools-Docker"
 # The CAR lane drives the EXTERNAL Byakugan engine ($BYAKUGAN_ROOT, else the
 # sibling dir of this repo), which rebuilds its model from ITS OWN nested
 # submodules — _model_sources_present() checks the resolved checkout end to end.
 python3 -c 'import sys; from get_sybers_dxdfir import mitrecar; sys.exit(0 if mitrecar._model_sources_present() else 1)' 2>/dev/null \
     || die "the Byakugan engine (or its model sources) is missing — provision it at the byakugan.ref pin: run scripts/setup-environment.sh, or manually: git clone --recurse-submodules https://github.com/Get-Sybers/byakugan <root> && git -C <root> checkout <ref from byakugan.ref> && git -C <root> submodule update --init --recursive"
-pass "docker, python3, dxdfir/evtxecmd:latest and the external Byakugan engine present"
+pass "docker, python3, get-sybers/evtxecmd:latest and the external Byakugan engine present"
 
 # =============================================================================
 section "Fixtures (sha256-pinned Sysmon .evtx)"
