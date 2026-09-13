@@ -66,7 +66,7 @@ _AMCACHEPARSER_IMAGE = "get-sybers/amcacheparser:latest"
 _APPCOMPATCACHEPARSER_IMAGE = "get-sybers/appcompatcacheparser:latest"
 _SBECMD_IMAGE = "get-sybers/sbecmd:latest"
 _RBCMD_IMAGE = "get-sybers/gorb:latest"
-_MFTECMD_IMAGE = "get-sybers/mftecmd:latest"
+_MFTECMD_IMAGE = "get-sybers/gomft:latest"
 _WXTCMD_IMAGE = "get-sybers/wxtcmd:latest"  # TODO(#88): built but not invoked — see wxtcmd_argv()
 # The Linux-native Go substitutes for the Windows-bound EZ tools
 # (Get-Sybers/GoDFIR-toolz): goese parses SRUDB.dat where SrumECmd (.NET,
@@ -174,7 +174,7 @@ ARTIFACT_GROUPS: list[dict] = [
         ],
     },
     {
-        "description": "Master File Table, when resident (MFTECmd input)",
+        "description": "Master File Table, when resident (gomft input)",
         "type": "include",
         "path_separator": "/",
         "paths": [
@@ -379,14 +379,16 @@ def rbcmd_argv(recyclebin_dir, out_dir) -> list[str]:
     )
 
 
-def mftecmd_argv(mft_dir, out_dir) -> list[str]:
-    """``mft_dir`` must hold a file literally named ``$MFT`` — located by
-    ``find_file(stage_dir, "$MFT")``. Only run when a resident $MFT was
-    actually extracted (most images won't have one at the root)."""
+def mftecmd_argv(scan_dir, out_dir) -> list[str]:
+    """gomft's ``-d`` finds the $MFT by its ``FILE`` record signature anywhere
+    under ``scan_dir`` — so it picks up Plaso's renamed ``_MFT`` (image_export
+    maps ``$`` -> ``_``), which a literal ``$MFT`` name lookup misses. Point it at
+    the whole extraction root (only the filtered artefact set lives there); a
+    host with no $MFT just yields nothing."""
     return container.run(
         _MFTECMD_IMAGE,
-        ["-f", "/in/$MFT", "--json", "/out", "--jsonf", "mftecmd.json"],
-        mounts=[f"{mft_dir}:/in:ro", f"{out_dir}:/out"],
+        ["-d", "/in", "--json", "/out", "--jsonf", "mftecmd.json"],
+        mounts=[f"{scan_dir}:/in:ro", f"{out_dir}:/out"],
     )
 
 
@@ -532,13 +534,12 @@ def process_image(image, host_out_dir, *, plaso_image=PLASO_IMAGE, force=False,
     else:
         result["steps"]["appcompatcache"] = {"ran": False, "reason": "no SYSTEM hive extracted"}
 
-    mft = find_file(stage_dir, "$MFT")
-    if mft:
-        mftecmd_out = os.path.join(host_out_dir, "mftecmd")
-        result["steps"]["mftecmd"] = _run_step(
-            mftecmd_argv(os.path.dirname(mft), mftecmd_out), mftecmd_out, log_path)
-    else:
-        result["steps"]["mftecmd"] = {"ran": False, "reason": "no $MFT extracted"}
+    # MFT: gomft -d content-detects the $MFT by header (Plaso renames $MFT ->
+    # _MFT, which a name lookup would miss), so run it over the extraction root
+    # like the other directory-recursive tools — it yields nothing when absent.
+    mftecmd_out = os.path.join(host_out_dir, "mftecmd")
+    result["steps"]["mftecmd"] = _run_step(
+        mftecmd_argv(stage_dir, mftecmd_out), mftecmd_out, log_path)
 
     # WxTCmd — TODO(#88): needs a writable /opt/eztool tmpfs; not run here. See
     # wxtcmd_argv()'s docstring for why, and what would need verifying first.

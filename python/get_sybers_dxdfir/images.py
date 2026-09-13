@@ -34,7 +34,6 @@ HARDENED_IMAGES = (
     # The Eric Zimmerman tool family (dxdfir_zimmerman lane) — all built from the
     # one parameterized third_party/GoDFIR-toolz/eztool/Dockerfile (see dxdfir_images_set).
     "get-sybers/recmd:latest",
-    "get-sybers/mftecmd:latest",
     "get-sybers/amcacheparser:latest",
     "get-sybers/appcompatcacheparser:latest",
     "get-sybers/lecmd:latest",
@@ -43,11 +42,12 @@ HARDENED_IMAGES = (
     "get-sybers/sqlecmd:latest",
     "get-sybers/gorb:latest",
     "get-sybers/wxtcmd:latest",
-    # Linux-native Go substitutes for the Windows-bound EZ tools (FROM scratch;
-    # built from the GoDFIR-toolz submodule's prefetch/ and srum/ contexts):
-    # goprefetch replaces PECmd, goese replaces SrumECmd/SumECmd.
+    # GoDFIR Go tools (FROM scratch; each built from its own subdir in the
+    # GoDFIR-toolz submodule): goprefetch replaces PECmd, goese replaces
+    # SrumECmd/SumECmd, gomft replaces MFTECmd (on go-ntfs).
     "get-sybers/goprefetch:latest",
     "get-sybers/goese:latest",
+    "get-sybers/gomft:latest",
 )
 # Other get-sybers/* images that legitimately exist but are not tool containers, so
 # they are exempt from the hardened-tool contract (but still allow-listed, so
