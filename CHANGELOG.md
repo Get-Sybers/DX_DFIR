@@ -12,7 +12,7 @@ is `0`, anything may change without notice.
   substitutes** instead of Plaso: SRUM via `get-sybers/goese` (`goese`,
   replacing the old plaso `esedb/srum` two-step) and a new Prefetch pass via
   `get-sybers/goprefetch` (`goprefetch`). The Byakugan engine gains two new
-  MITRE data sources (`esedump_srum`, `goprefetch`) that normalise the tools'
+  MITRE data sources (`esedump_srum`, `prefetch_dump`) that normalise the tools'
   JSONL into the same CAR objects (SRUM→flow/process, Prefetch→process/create)
   with their own identity, coexisting with Plaso's coverage; the Go tools keep
   higher fidelity (second-precision timestamps, decoded device paths/SIDs).

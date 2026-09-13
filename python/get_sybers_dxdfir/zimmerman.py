@@ -9,7 +9,7 @@ Windows-bound EZ tools run through their Linux-native Go substitutes instead:
 SRUM via ``get-sybers/goese`` (``goese`` on go-ese — SrumECmd is .NET and
 P/Invokes the Windows ESE engine) and Prefetch via ``get-sybers/goprefetch``
 (``goprefetch`` on go-prefetch — PECmd refuses off-Windows). byakugan's
-``esedump_srum`` / ``goprefetch`` maps normalise their JSONL into CAR as their
+``esedump_srum`` / ``prefetch_dump`` maps normalise their JSONL into CAR as their
 own MITRE data sources.
 
 Extraction uses a plaso **YAML** collection filter (``plaso.engine.yaml_filter_file``),
@@ -26,7 +26,7 @@ resolves to the right dfVFS ``location_regex`` segments).
 
 SRUM and Prefetch are extracted by the SAME filter and parsed by the Go
 substitutes above. They are their own CAR data sources (byakugan
-``esedump_srum`` / ``goprefetch``), distinct from — and coexisting with — the
+``esedump_srum`` / ``prefetch_dump``), distinct from — and coexisting with — the
 main log2timeline lane's own SRUM/prefetch coverage; the Go tools keep higher
 fidelity (goese's second-precision timestamps, decoded device paths/SIDs).
 
@@ -71,7 +71,7 @@ _WXTCMD_IMAGE = "get-sybers/wxtcmd:latest"  # TODO(#88): built but not invoked �
 # The Linux-native Go substitutes for the Windows-bound EZ tools
 # (Get-Sybers/GoDFIR-toolz): goese parses SRUDB.dat where SrumECmd (.NET,
 # P/Invokes the Windows ESE engine) cannot; goprefetch parses .pf where PECmd
-# refuses off-Windows. byakugan's esedump_srum / goprefetch maps normalise
+# refuses off-Windows. byakugan's esedump_srum / prefetch_dump maps normalise
 # their JSONL into CAR (their own MITRE data sources).
 _ESEDUMP_IMAGE = "get-sybers/goese:latest"
 _PREFETCH_IMAGE = "get-sybers/goprefetch:latest"
@@ -306,7 +306,7 @@ def prefetch_argv(scan_dir, out_dir) -> list[str]:
     Linux-native ``goprefetch`` (get-sybers/goprefetch, Go on go-prefetch)
     parses ``.pf`` instead. ``-d`` walks ``scan_dir`` recursively for every
     ``.pf`` (the extraction root holds only the filtered artefact set), writing
-    one ``PrefetchDump_Output.jsonl``. byakugan's ``goprefetch`` map routes it
+    one ``PrefetchDump_Output.jsonl``. byakugan's ``prefetch_dump`` map routes it
     to process/create."""
     return container.run(
         _PREFETCH_IMAGE,
