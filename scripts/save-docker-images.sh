@@ -42,7 +42,7 @@ BUILT_IMAGES=(
     "get-sybers/evtxecmd:latest"
     # Eric Zimmerman tool family (GoDFIR-toolz submodule, eztool/Dockerfile).
     "get-sybers/recmd:latest"
-    "get-sybers/mftecmd:latest"
+    "get-sybers/gomft:latest"
     "get-sybers/amcacheparser:latest"
     "get-sybers/appcompatcacheparser:latest"
     "get-sybers/lecmd:latest"

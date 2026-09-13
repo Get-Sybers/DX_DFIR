@@ -167,9 +167,9 @@ def test_rbcmd_argv():
 
 
 def test_mftecmd_argv():
-    argv = z.mftecmd_argv("/mft", "/out/mftecmd")
-    tail = argv[argv.index("get-sybers/mftecmd:latest") + 1:]
-    assert tail == ["-f", "/in/$MFT", "--json", "/out", "--jsonf", "mftecmd.json"]
+    argv = z.mftecmd_argv("/stage", "/out/mftecmd")
+    tail = argv[argv.index("get-sybers/gomft:latest") + 1:]
+    assert tail == ["-d", "/in", "--json", "/out", "--jsonf", "mftecmd.json"]
 
 
 def test_wxtcmd_argv_adds_writable_opt_eztool_tmpfs():
@@ -265,8 +265,8 @@ def test_process_image_force_reprocesses_even_with_existing_output(tmp_path, mon
     res = z.process_image("/img/LoneWolf.E01", str(host_dir), force=True)
     assert res["skipped"] is False
     assert calls["extract"] == 1
-    # every directory-recursive step (recmd/jlecmd/lecmd/sbecmd/rbcmd) ran
-    assert calls["run"] == 5
+    # every directory-recursive step (recmd/jlecmd/lecmd/sbecmd/rbcmd/mftecmd) ran
+    assert calls["run"] == 6
     assert res["extracted_files"] == 0
 
 
@@ -281,7 +281,8 @@ def test_process_image_no_artefacts_extracted_is_empty_not_failed(tmp_path, monk
     # nothing to find -> the single-file steps report ran=False with a reason
     assert res["steps"]["amcache"] == {"ran": False, "reason": "no Amcache.hve extracted"}
     assert res["steps"]["appcompatcache"] == {"ran": False, "reason": "no SYSTEM hive extracted"}
-    assert res["steps"]["mftecmd"] == {"ran": False, "reason": "no $MFT extracted"}
+    # mftecmd (gomft) is directory-recursive now — it runs and finds nothing,
+    # rather than being gated on a literal $MFT name lookup that missed _MFT
     assert res["steps"]["srum"] == {"ran": False, "reason": "no SRUDB.dat extracted"}
     assert res["steps"]["prefetch"] == {"ran": False, "reason": "no .pf extracted"}
 
