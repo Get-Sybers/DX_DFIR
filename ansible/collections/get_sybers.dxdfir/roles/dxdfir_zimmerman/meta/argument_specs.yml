@@ -50,8 +50,8 @@ argument_specs:
         description: >-
           The hardened in-repo Plaso image, used for artefact EXTRACTION only
           (image_export.py against a YAML collection filter). SRUM and Prefetch
-          are parsed by the Linux-native Go substitutes (get-sybers/esedump,
-          get-sybers/prefetch), not Plaso.
+          are parsed by the Linux-native Go substitutes (get-sybers/goese,
+          get-sybers/goprefetch), not Plaso.
       dxdfir_zimmerman_vss:
         type: bool
         required: false

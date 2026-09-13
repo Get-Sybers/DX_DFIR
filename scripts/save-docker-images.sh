@@ -31,7 +31,7 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 REPO_ROOT_DIR="$(realpath "$SCRIPT_DIR/..")"
 DOCKER_TAR_DIR="${DXDFIR_IMAGE_DIR:-$REPO_ROOT_DIR/data_store/docker_images}"
 
-# Runtime tool images — BUILT in-repo (or from the EZTools-Docker submodule),
+# Runtime tool images — BUILT in-repo (or from the GoDFIR-toolz submodule),
 # never pulled. Keep in sync with dxdfir_images_set (the image-build role).
 BUILT_IMAGES=(
     "get-sybers/yara:latest"
@@ -40,7 +40,7 @@ BUILT_IMAGES=(
     "get-sybers/volatility:latest"
     "get-sybers/plaso:latest"
     "get-sybers/evtxecmd:latest"
-    # Eric Zimmerman tool family (EZTools-Docker submodule, eztool/Dockerfile).
+    # Eric Zimmerman tool family (GoDFIR-toolz submodule, eztool/Dockerfile).
     "get-sybers/recmd:latest"
     "get-sybers/mftecmd:latest"
     "get-sybers/amcacheparser:latest"
@@ -49,11 +49,11 @@ BUILT_IMAGES=(
     "get-sybers/jlecmd:latest"
     "get-sybers/sbecmd:latest"
     "get-sybers/sqlecmd:latest"
-    "get-sybers/rbcmd:latest"
+    "get-sybers/gorb:latest"
     "get-sybers/wxtcmd:latest"
     # Linux-native Go substitutes for the Windows-bound EZ tools.
-    "get-sybers/prefetch:latest"
-    "get-sybers/esedump:latest"
+    "get-sybers/goprefetch:latest"
+    "get-sybers/goese:latest"
 )
 # Unbuildable images — pulled from a registry (online side only).
 PULL_IMAGES=(

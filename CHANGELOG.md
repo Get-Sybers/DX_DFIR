@@ -9,27 +9,27 @@ is `0`, anything may change without notice.
 
 ### Changed
 - **The zimmerman lane's SRUM and Prefetch now run through the Linux-native Go
-  substitutes** instead of Plaso: SRUM via `get-sybers/esedump` (`ese_dump`,
+  substitutes** instead of Plaso: SRUM via `get-sybers/goese` (`goese`,
   replacing the old plaso `esedb/srum` two-step) and a new Prefetch pass via
-  `get-sybers/prefetch` (`prefetch_dump`). The Byakugan engine gains two new
+  `get-sybers/goprefetch` (`goprefetch`). The Byakugan engine gains two new
   MITRE data sources (`esedump_srum`, `prefetch_dump`) that normalise the tools'
   JSONL into the same CAR objects (SRUM→flow/process, Prefetch→process/create)
   with their own identity, coexisting with Plaso's coverage; the Go tools keep
   higher fidelity (second-precision timestamps, decoded device paths/SIDs).
   `byakugan.ref` bumped to the engine commit carrying those maps.
 - **Container images renamed to the `get-sybers/` namespace** (was `dxdfir/`) and
-  the **[EZTools-Docker](https://github.com/Get-Sybers/EZTools-Docker) repo added
-  as a submodule** (`third_party/EZTools-Docker/`) — the single source for the
+  the **[GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) repo added
+  as a submodule** (`third_party/GoDFIR-toolz/`) — the single source for the
   Eric Zimmerman container family. EvtxECmd, the EZ tool family (recmd, mftecmd,
   amcacheparser, appcompatcacheparser, lecmd, jlecmd, sbecmd, sqlecmd, rbcmd,
   wxtcmd) and the two Linux-native Go substitutes now build from the submodule;
   DX_DFIR's duplicated `docker/eztool` + `docker/evtxecmd` were removed. yara,
   suricata, zeek, plaso stay in `docker/`; volatility from PIIAT-Mem.
 - **Two new Go substitute images** for the Windows-bound EZ tools, built into the
-  image set: `get-sybers/prefetch` (`prefetch_dump`, replaces PECmd) and
-  `get-sybers/esedump` (`ese_dump`, replaces SrumECmd/SumECmd) — both `FROM
+  image set: `get-sybers/goprefetch` (`goprefetch`, replaces PECmd) and
+  `get-sybers/goese` (`goese`, replaces SrumECmd/SumECmd) — both `FROM
   scratch`, no shell/python. (Wiring the zimmerman lane onto them is a follow-up.)
-- **The hardening playbook has one canonical home** — the EZTools-Docker
+- **The hardening playbook has one canonical home** — the GoDFIR-toolz
   submodule (`hardening/harden.yml`). The submodule's images use it directly; the
   image role's preflight syncs it into `docker/hardening/harden.yml` (now
   generated + git-ignored) so DX_DFIR's own images can `COPY` it.

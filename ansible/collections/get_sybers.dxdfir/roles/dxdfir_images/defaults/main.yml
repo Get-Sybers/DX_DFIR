@@ -24,10 +24,10 @@ dxdfir_images_gid: "{{ dxdfir_runtime_gid | default(dxdfir_runtime_uid | default
 # (docker/hardening/harden.yml) from here.
 dxdfir_images_context: "{{ dxdfir_images_repo_root }}/docker"
 
-# The EZTools-Docker submodule root. EvtxECmd, the whole Eric Zimmerman tool
+# The GoDFIR-toolz submodule root. EvtxECmd, the whole Eric Zimmerman tool
 # family, and the two Go substitutes (prefetch, esedump) build from here; the
 # submodule carries its own hardening/harden.yml (COPYd by its Dockerfiles).
-dxdfir_images_eztools_context: "{{ dxdfir_images_repo_root }}/third_party/EZTools-Docker"
+dxdfir_images_eztools_context: "{{ dxdfir_images_repo_root }}/third_party/GoDFIR-toolz"
 
 # The build-it-yourself image set. Every runtime tool container is built from
 # an in-repo (or submodule), ansible-hardened Dockerfile — nothing is pulled
@@ -42,7 +42,7 @@ dxdfir_images_set:
   - plaso
   - evtxecmd
   # The Eric Zimmerman tool family — all built from the ONE parameterized
-  # eztool/Dockerfile in the EZTools-Docker submodule (same recipe as evtxecmd),
+  # eztool/Dockerfile in the GoDFIR-toolz submodule (same recipe as evtxecmd),
   # tool selected per image via build args (see dxdfir_images_build_overrides).
   - recmd
   - mftecmd
@@ -52,26 +52,25 @@ dxdfir_images_set:
   - jlecmd
   - sbecmd
   - sqlecmd
-  - rbcmd
   - wxtcmd
-  # Linux-native Go substitutes for the three Windows-bound EZ tools, also from
-  # the submodule (each FROM scratch: no shell, no python, just the static Go
-  # binary). PECmd/SrumECmd/SumECmd cannot parse on Linux (PECmd's non-Windows
-  # startup guard; SrumECmd/SumECmd P/Invoke Windows' native ESE engine), so:
-  #   prefetch (prefetch_dump) replaces PECmd — parses XP->Win11 .pf, MAM-compressed included
-  #   esedump  (ese_dump)      replaces SrumECmd/SumECmd — SRUDB.dat / SUM Current.mdb
-  - prefetch
-  - esedump
+  # GoDFIR Go tools, each FROM scratch (no shell, no python, just the static Go
+  # binary) from its OWN subdir in the submodule:
+  #   goprefetch replaces PECmd            — XP->Win11 .pf, MAM-compressed included
+  #   goese      replaces SrumECmd/SumECmd — SRUDB.dat / SUM Current.mdb
+  #   gorb       replaces RBCmd (drops .NET) — Recycle Bin $I records
+  - goprefetch
+  - goese
+  - gorb
 
 # Rebuild even when an image already exists (docker build cache still applies).
 dxdfir_images_force: false
 
 # Per-image build context/dockerfile overrides.
 #   - volatility: the PIIAT-Mem submodule (its own docker/ context carries harden.yml).
-#   - evtxecmd + the EZ family: the EZTools-Docker submodule root (context = the
+#   - evtxecmd + the EZ family: the GoDFIR-toolz submodule root (context = the
 #     submodule root so the Dockerfiles reach its hardening/harden.yml).
-#   - prefetch, esedump: FROM scratch, so each context is its OWN subdir under the
-#     submodule (go.mod/go.sum/main.go live there); esedump is built from srum/.
+#   - goprefetch, goese, gorb: FROM scratch, so each context is its OWN subdir
+#     under the submodule (go.mod/main.go live there).
 dxdfir_images_build_overrides:
   volatility:
     context: "{{ dxdfir_images_repo_root }}/third_party/piiat-mem/docker"
@@ -85,7 +84,7 @@ dxdfir_images_build_overrides:
   jlecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "JLECmd"}}
   sbecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "SBECmd"}}
   sqlecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "SQLECmd"}}
-  rbcmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "RBCmd"}}
   wxtcmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "WxTCmd"}}
-  prefetch: {context: "{{ dxdfir_images_eztools_context }}/prefetch", dockerfile: "Dockerfile"}
-  esedump: {context: "{{ dxdfir_images_eztools_context }}/srum", dockerfile: "Dockerfile"}
+  goprefetch: {context: "{{ dxdfir_images_eztools_context }}/goprefetch", dockerfile: "Dockerfile"}
+  goese: {context: "{{ dxdfir_images_eztools_context }}/goese", dockerfile: "Dockerfile"}
+  gorb: {context: "{{ dxdfir_images_eztools_context }}/gorb", dockerfile: "Dockerfile"}

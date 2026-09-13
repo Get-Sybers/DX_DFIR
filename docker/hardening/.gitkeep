@@ -1,3 +1,3 @@
 # The hardening playbook is generated here by the dxdfir_images preflight,
-# synced from the canonical third_party/EZTools-Docker/hardening/harden.yml.
+# synced from the canonical third_party/GoDFIR-toolz/hardening/harden.yml.
 # This .gitkeep keeps the directory present in a fresh checkout.

@@ -19,7 +19,7 @@ ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-im
 | `get-sybers/yara` | signatures — YARA | Debian package (`docker/yara/`) |
 | `get-sybers/volatility` | memory (Volatility 3) + `vadyarascan` | pinned PyPI (`docker/volatility/`) |
 | `get-sybers/plaso` | Plaso timelining + `image_export` (dfVFS) | GIFT stable PPA (`docker/plaso/`) |
-| `get-sybers/evtxecmd` | Windows Event Logs (EvtxECmd) | fetched EZ release, baked (`third_party/EZTools-Docker/evtxecmd/`) |
+| `get-sybers/evtxecmd` | Windows Event Logs (EvtxECmd) | fetched EZ release, baked (`third_party/GoDFIR-toolz/evtxecmd/`) |
 
 The `dxdfir_images` role builds each one and **verifies the minimal-posture
 contract** per build — the static image config plus a shell-free

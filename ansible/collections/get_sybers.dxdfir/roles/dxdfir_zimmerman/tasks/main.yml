@@ -45,7 +45,7 @@
       - "get-sybers/amcacheparser:latest"
       - "get-sybers/appcompatcacheparser:latest"
       - "get-sybers/sbecmd:latest"
-      - "get-sybers/rbcmd:latest"
+      - "get-sybers/gorb:latest"
       - "get-sybers/mftecmd:latest"
     dxdfir_lane_input_checks:
       - name: disk-image input dir

@@ -6,9 +6,9 @@ artefact set Eric Zimmerman's tools (RECmd, JLECmd, LECmd, AmcacheParser,
 AppCompatCacheParser, SBECmd, RBCmd, MFTECmd) understand, then runs each
 hardened ``get-sybers/<tool>`` container over what was pulled out. The two
 Windows-bound EZ tools run through their Linux-native Go substitutes instead:
-SRUM via ``get-sybers/esedump`` (``ese_dump`` on go-ese — SrumECmd is .NET and
-P/Invokes the Windows ESE engine) and Prefetch via ``get-sybers/prefetch``
-(``prefetch_dump`` on go-prefetch — PECmd refuses off-Windows). byakugan's
+SRUM via ``get-sybers/goese`` (``goese`` on go-ese — SrumECmd is .NET and
+P/Invokes the Windows ESE engine) and Prefetch via ``get-sybers/goprefetch``
+(``goprefetch`` on go-prefetch — PECmd refuses off-Windows). byakugan's
 ``esedump_srum`` / ``prefetch_dump`` maps normalise their JSONL into CAR as their
 own MITRE data sources.
 
@@ -28,7 +28,7 @@ SRUM and Prefetch are extracted by the SAME filter and parsed by the Go
 substitutes above. They are their own CAR data sources (byakugan
 ``esedump_srum`` / ``prefetch_dump``), distinct from — and coexisting with — the
 main log2timeline lane's own SRUM/prefetch coverage; the Go tools keep higher
-fidelity (ese_dump's second-precision timestamps, decoded device paths/SIDs).
+fidelity (goese's second-precision timestamps, decoded device paths/SIDs).
 
 Output isolation follows the CAR pipeline's rule (docs/CAR-Pipeline.md §2 — "one
 source, one database"): each image gets its OWN
@@ -65,16 +65,16 @@ _LECMD_IMAGE = "get-sybers/lecmd:latest"
 _AMCACHEPARSER_IMAGE = "get-sybers/amcacheparser:latest"
 _APPCOMPATCACHEPARSER_IMAGE = "get-sybers/appcompatcacheparser:latest"
 _SBECMD_IMAGE = "get-sybers/sbecmd:latest"
-_RBCMD_IMAGE = "get-sybers/rbcmd:latest"
+_RBCMD_IMAGE = "get-sybers/gorb:latest"
 _MFTECMD_IMAGE = "get-sybers/mftecmd:latest"
 _WXTCMD_IMAGE = "get-sybers/wxtcmd:latest"  # TODO(#88): built but not invoked — see wxtcmd_argv()
 # The Linux-native Go substitutes for the Windows-bound EZ tools
-# (Get-Sybers/EZTools-Docker): ese_dump parses SRUDB.dat where SrumECmd (.NET,
-# P/Invokes the Windows ESE engine) cannot; prefetch_dump parses .pf where PECmd
+# (Get-Sybers/GoDFIR-toolz): goese parses SRUDB.dat where SrumECmd (.NET,
+# P/Invokes the Windows ESE engine) cannot; goprefetch parses .pf where PECmd
 # refuses off-Windows. byakugan's esedump_srum / prefetch_dump maps normalise
 # their JSONL into CAR (their own MITRE data sources).
-_ESEDUMP_IMAGE = "get-sybers/esedump:latest"
-_PREFETCH_IMAGE = "get-sybers/prefetch:latest"
+_ESEDUMP_IMAGE = "get-sybers/goese:latest"
+_PREFETCH_IMAGE = "get-sybers/goprefetch:latest"
 
 # Baked into the get-sybers/recmd image (docker/recmd) — Eric Zimmerman's own curated
 # batch definition; not something the operator needs to supply.
@@ -166,7 +166,7 @@ ARTIFACT_GROUPS: list[dict] = [
         ],
     },
     {
-        "description": "Windows Prefetch (.pf) — prefetch_dump input",
+        "description": "Windows Prefetch (.pf) — goprefetch input",
         "type": "include",
         "path_separator": "/",
         "paths": [
@@ -289,7 +289,7 @@ def recmd_argv(hives_dir, out_dir) -> list[str]:
 
 def srum_esedump_argv(srudb_dir, out_dir) -> list[str]:
     """SRUM: SrumECmd is Windows-only (.NET, P/Invokes the Windows ESE engine),
-    so the Linux-native ``ese_dump`` (get-sybers/esedump, Go on go-ese) parses
+    so the Linux-native ``goese`` (get-sybers/goese, Go on go-ese) parses
     ``SRUDB.dat`` instead — one JSONL file per SRUM provider table
     (NetworkDataUsage.jsonl, ApplicationResourceUsage.jsonl, …). byakugan's
     ``esedump_srum`` map routes the Network/Application usage tables to CAR
@@ -303,7 +303,7 @@ def srum_esedump_argv(srudb_dir, out_dir) -> list[str]:
 
 def prefetch_argv(scan_dir, out_dir) -> list[str]:
     """Prefetch: PECmd carries a blanket non-Windows startup guard, so the
-    Linux-native ``prefetch_dump`` (get-sybers/prefetch, Go on go-prefetch)
+    Linux-native ``goprefetch`` (get-sybers/goprefetch, Go on go-prefetch)
     parses ``.pf`` instead. ``-d`` walks ``scan_dir`` recursively for every
     ``.pf`` (the extraction root holds only the filtered artefact set), writing
     one ``PrefetchDump_Output.jsonl``. byakugan's ``prefetch_dump`` map routes it
@@ -496,7 +496,7 @@ def process_image(image, host_out_dir, *, plaso_image=PLASO_IMAGE, force=False,
     rbcmd_out = os.path.join(host_out_dir, "rbcmd")
     result["steps"]["rbcmd"] = _run_step(rbcmd_argv(stage_dir, rbcmd_out), rbcmd_out, log_path)
 
-    # SRUM (ese_dump) — only when SRUDB.dat was actually extracted.
+    # SRUM (goese) — only when SRUDB.dat was actually extracted.
     srudb = find_file(stage_dir, "SRUDB.dat")
     if srudb:
         srum_out = os.path.join(host_out_dir, "srum")
@@ -505,7 +505,7 @@ def process_image(image, host_out_dir, *, plaso_image=PLASO_IMAGE, force=False,
     else:
         result["steps"]["srum"] = {"ran": False, "reason": "no SRUDB.dat extracted"}
 
-    # Prefetch (prefetch_dump) — only when at least one .pf was extracted.
+    # Prefetch (goprefetch) — only when at least one .pf was extracted.
     pf = find_file_ext(stage_dir, ".pf")
     if pf:
         prefetch_out = os.path.join(host_out_dir, "prefetch")
