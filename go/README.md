@@ -60,9 +60,18 @@ honest progress signal without un-swallowing the tools' firehose of output.
 ```sh
 cd go
 make            # build ./dxdfir
+make link       # build + put a `dxdfir` shortcut on PATH (rebuild-after-edit; uses sudo when not root)
 make install    # go install to $GOBIN / $GOPATH/bin as `dxdfir`
 make check      # gofmt -l, go vet, go build
 ```
+
+`make link` is the quick way to rebuild after a code change and have `dxdfir`
+runnable anywhere without the full filepath: it builds, installs the binary to
+`/opt/dxdfir/bin/dxdfir`, and symlinks `/usr/local/bin/dxdfir` to it — the exact
+layout `scripts/setup-environment.sh` provisions, so it reuses (or creates) the
+same shortcut. Override the destinations with `make link GO_BIN_DIR=… LINK_DIR=…`.
+(`make install` uses `go install`, which lands in `$GOBIN`/`$GOPATH/bin` and only
+works as a shortcut if that directory is already on your `PATH`.)
 
 Requires Go ≥ 1.24. Dependencies (termui, cobra, go-ansible) are pinned in `go.mod`.
 
