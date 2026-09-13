@@ -53,10 +53,23 @@ func NewRootCmd(version string) *cobra.Command {
 		Long: "DX_DFIR forensic processing pipeline — process evidence, build + verify CAR, validate.\n\n" +
 			"A Go/termui front-end over the get_sybers.dxdfir Ansible collection and the\n" +
 			"get_sybers_dxdfir Python processors. Long-running processing and collection\n" +
-			"creation render a live dashboard on a terminal; output stays plain when piped.",
+			"creation render a live dashboard on a terminal; output stays plain when piped.\n\n" +
+			"Run `dxdfir` with no command for a landing dashboard: environment readiness\n" +
+			"(the checks that must be green before processing), tracked collections, and\n" +
+			"staged evidence.",
 		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		// A bare `dxdfir` (no subcommand) renders the landing dashboard: version,
+		// environment readiness, tracked collections, staged evidence. An unknown
+		// verb still errors as before rather than silently opening the dashboard.
+		Args: cobra.ArbitraryArgs,
+		RunE: func(_ *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return Fail(2, "unknown command %q for dxdfir — see `dxdfir --help`", args[0])
+			}
+			return runHome(env, version)
+		},
 		// Make the get_sybers_dxdfir package importable by every child python we
 		// shell out to, from a bare checkout as well as an installed environment:
 		// prepend <repo>/python to PYTHONPATH once, before any verb runs. Silent
