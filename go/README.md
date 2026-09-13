@@ -105,9 +105,10 @@ internal/
   cli/                 cobra verb tree, one file per verb group
   model/               shared types (Update/Snapshot/Lane) + the Presenter interface
   repo/                repo + interpreter/tool discovery
-  run/                 subprocess engine (passthrough, stream, capture, sentinels)
+  run/                 subprocess engine (passthrough, stream, capture)
   lanes/               `process` orchestration: lane specs, output-glob watching, the Job
-  collect/             collection orchestration: drives `python -m …collection`, parses sentinels
+  collect/             collection orchestration: native register/sort/promote/link + SHA-1 hash (internal/collection), no subprocess
+  collection/          native collection layer: SQLite registry, classify, sort/register, hashing
   tui/                 termui presenter (process + collection dashboards, event loop)
   plain/               non-TTY presenter (same channel contract)
   termdetect/          TTY detection + opt-outs
