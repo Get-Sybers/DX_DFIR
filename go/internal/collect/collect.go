@@ -1,15 +1,15 @@
-// Package collect drives the collection-creation flows. The classify phase
-// (register/sort) still shells `python -m get_sybers_dxdfir.collection` — the
-// magic-byte detectors are the source of truth — and its ::dxdfir:: progress
-// sentinels are folded into the shared model.Update stream. The SHA-1 hash
-// phase is now native Go (internal/collection, epic #174 phase 3): its progress
-// callbacks feed the SAME stream, so both presenters render identically.
+// Package collect drives the collection-creation flows (register / promote /
+// link / sort, then the SHA-1 hash) entirely in native Go via internal/collection
+// (epic #174 phases 1-4) — no `python -m get_sybers_dxdfir.collection` subprocess.
+// Each op's progress callbacks are folded into the shared model.Update stream, so
+// the termui and plain presenters render identically.
 package collect
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -17,7 +17,6 @@ import (
 	"github.com/get-sybers/dx_dfir/go/internal/collection"
 	"github.com/get-sybers/dx_dfir/go/internal/model"
 	"github.com/get-sybers/dx_dfir/go/internal/repo"
-	"github.com/get-sybers/dx_dfir/go/internal/run"
 )
 
 const tailCap = 300
@@ -52,35 +51,38 @@ func newState(title string) *state {
 	return &state{title: title, start: time.Now(), tally: map[string]int{}}
 }
 
-// Sort runs `collection sort` (classify phase), then hashes when asked.
+// Sort classifies the dropzone into the collection's lanes (native), then hashes.
 func (r *Runner) Sort(ctx context.Context, name string, dryRun, doHash bool) <-chan model.Update {
 	updates := make(chan model.Update, 64)
 	go func() {
 		defer close(updates)
 		st := newState(r.Title)
 		st.phase = "classify"
-		st.send(ctx, updates)
-		args := []string{"sort", name, "--progress"}
-		if dryRun {
-			args = append(args, "--dry-run")
+		// denominator: the loose (non-dot) entries in the dropzone.
+		if entries, err := os.ReadDir(filepath.Join(r.Repo.Root, "data_store", "raw", "sort")); err == nil {
+			for _, e := range entries {
+				if !strings.HasPrefix(e.Name(), ".") {
+					st.cTotal++
+				}
+			}
 		}
-		sortRes, err := r.streamOp(ctx, updates, st, args)
+		st.send(ctx, updates)
+		sr, err := collection.SortInto(r.Repo.Root, name, dryRun, r.classifyItem(ctx, updates, st))
 		if err != nil {
-			r.finish(ctx, updates, st, r.sortSummary(sortRes, nil, dryRun), err)
+			r.finish(ctx, updates, st, r.sortSummary(sr, nil, dryRun), err)
 			return
 		}
 		var hashRes map[string]any
-		moved := jsonInt(sortRes, "moved_count")
-		if doHash && !dryRun && moved > 0 {
+		if doHash && !dryRun && sr.MovedCount() > 0 {
 			st.phase = "hash"
 			hashRes, err = r.hashNative(ctx, updates, st, name)
 		}
-		r.finish(ctx, updates, st, r.sortSummary(sortRes, hashRes, dryRun), err)
+		r.finish(ctx, updates, st, r.sortSummary(sr, hashRes, dryRun), err)
 	}()
 	return updates
 }
 
-// Register runs `collection register` (create/promote), then hashes when asked.
+// Register creates/promotes/links the collection (native), then hashes.
 func (r *Runner) Register(ctx context.Context, name, fromPath string, doHash bool) <-chan model.Update {
 	updates := make(chan model.Update, 64)
 	go func() {
@@ -88,13 +90,10 @@ func (r *Runner) Register(ctx context.Context, name, fromPath string, doHash boo
 		st := newState(r.Title)
 		st.phase = "classify"
 		st.send(ctx, updates)
-		args := []string{"register", name, "--progress"}
-		if fromPath != "" {
-			args = append(args, "--from", fromPath)
-		}
-		regRes, err := r.streamOp(ctx, updates, st, args)
+		// "manual" matches the retired CLI's --source default for a plain register.
+		rr, err := collection.Register(r.Repo.Root, name, fromPath, "manual", r.classifyItem(ctx, updates, st))
 		if err != nil {
-			r.finish(ctx, updates, st, r.registerSummary(regRes, nil), err)
+			r.finish(ctx, updates, st, r.registerSummary(rr, nil), err)
 			return
 		}
 		var hashRes map[string]any
@@ -102,33 +101,29 @@ func (r *Runner) Register(ctx context.Context, name, fromPath string, doHash boo
 			st.phase = "hash"
 			hashRes, err = r.hashNative(ctx, updates, st, name)
 		}
-		r.finish(ctx, updates, st, r.registerSummary(regRes, hashRes), err)
+		r.finish(ctx, updates, st, r.registerSummary(rr, hashRes), err)
 	}()
 	return updates
 }
 
-// streamOp runs one collection subcommand, folds its sentinels into st (emitting
-// a snapshot per sentinel), and returns the final JSON result printed on stdout.
-func (r *Runner) streamOp(ctx context.Context, updates chan<- model.Update, st *state, args []string) (map[string]any, error) {
-	full := append([]string{"-m", "get_sybers_dxdfir.collection", "--repo-root", r.Repo.Root}, args...)
-	plan := run.Plan{Bin: r.Python, Args: full, Dir: r.Repo.Root}
-	lines, done := run.Stream(ctx, plan)
-
-	var result map[string]any
-	for ln := range lines {
-		if s, ok := run.ParseSentinel(ln.Text); ok {
-			st.fold(s)
-			st.send(ctx, updates)
-			continue
-		}
-		if ln.Stream == "out" {
-			var m map[string]any
-			if json.Unmarshal([]byte(strings.TrimSpace(ln.Text)), &m) == nil {
-				result = m
+// classifyItem folds one native classify decision into st and emits a snapshot —
+// the same shape the retired ::dxdfir:: classify sentinels produced, so the
+// presenters render identically.
+func (r *Runner) classifyItem(ctx context.Context, updates chan<- model.Update, st *state) collection.ItemFn {
+	return func(item, subdir, how, action string) {
+		st.cDone++
+		if action == "moved" {
+			if _, seen := st.tally[subdir]; !seen {
+				st.tallyOrder = append(st.tallyOrder, subdir)
 			}
+			st.tally[subdir]++
+			st.decisions = appendCap(st.decisions, item+"  -> "+subdir+"/   ["+how+"]")
+		} else {
+			st.skips++
+			st.decisions = appendCap(st.decisions, item+"  -> SKIP   ("+how+")")
 		}
+		st.send(ctx, updates)
 	}
-	return result, <-done
 }
 
 // hashNative runs the SHA-1 manifest hash in-process (internal/collection —
@@ -172,47 +167,6 @@ func (r *Runner) hashNative(ctx context.Context, updates chan<- model.Update, st
 	st.hFileIdx = files
 	st.send(ctx, updates)
 	return map[string]any{"sha1": rollup, "files": float64(files), "bytes": float64(total)}, nil
-}
-
-func (st *state) fold(s run.Sentinel) {
-	switch s.Phase {
-	case "classify":
-		if s.Total > 0 {
-			st.cTotal = s.Total
-		}
-		if s.Action != "" {
-			st.cDone = s.Done
-			line := s.File + "  -> "
-			if s.Action == "moved" {
-				line += s.Lane + "/   [" + s.How + "]"
-				if _, seen := st.tally[s.Lane]; !seen {
-					st.tallyOrder = append(st.tallyOrder, s.Lane)
-				}
-				st.tally[s.Lane]++
-			} else {
-				st.skips++
-				line += "SKIP   (" + s.How + ")"
-			}
-			st.decisions = appendCap(st.decisions, line)
-		}
-	case "hash":
-		if s.TotalBytes > 0 {
-			st.hTotal = s.TotalBytes
-		}
-		if s.FileTotal > 0 {
-			st.hFileN = s.FileTotal
-		}
-		if s.DoneBytes > 0 {
-			st.hDone = s.DoneBytes
-		}
-		if s.File != "" && s.FileDone > 0 {
-			st.hFileIdx = s.FileDone
-			if s.File != st.hCur {
-				st.hCur = s.File
-				st.files = appendCap(st.files, fmt.Sprintf("RUN  %s", s.File))
-			}
-		}
-	}
 }
 
 func (st *state) send(ctx context.Context, updates chan<- model.Update) {
@@ -267,44 +221,36 @@ func (r *Runner) finish(ctx context.Context, updates chan<- model.Update, st *st
 	sendUpdate(ctx, updates, model.Update{Snapshot: final, Done: true, Err: err})
 }
 
-func (r *Runner) sortSummary(sortRes, hashRes map[string]any, dryRun bool) []string {
+func (r *Runner) sortSummary(sr collection.SortResult, hashRes map[string]any, dryRun bool) []string {
 	var b []string
 	verb := "moved"
 	if dryRun {
 		verb = "would move"
 	}
 	b = append(b, fmt.Sprintf("-- %s --", r.Title))
-	if sortRes != nil {
-		if moved, ok := sortRes["moved"].(map[string]any); ok && len(moved) > 0 {
-			b = append(b, fmt.Sprintf("  %s:", verb))
-			for _, lane := range sortedKeys(moved) {
-				if arr, ok := moved[lane].([]any); ok {
-					b = append(b, fmt.Sprintf("    %-14s %d file(s)", lane, len(arr)))
-				}
-			}
-		} else {
-			b = append(b, "  nothing to sort (dropzone empty or all skipped)")
+	if sr.MovedCount() > 0 {
+		b = append(b, fmt.Sprintf("  %s:", verb))
+		for _, lane := range sortedKeysSS(sr.Moved) {
+			b = append(b, fmt.Sprintf("    %-14s %d file(s)", lane, len(sr.Moved[lane])))
 		}
-		if sk, ok := sortRes["skipped"].([]any); ok && len(sk) > 0 {
-			b = append(b, fmt.Sprintf("  skipped in dropzone (%d):", len(sk)))
-			for _, e := range sk {
-				if pair, ok := e.([]any); ok && len(pair) == 2 {
-					b = append(b, fmt.Sprintf("    %v  (%v)", pair[0], pair[1]))
-				}
-			}
+	} else {
+		b = append(b, "  nothing to sort (dropzone empty or all skipped)")
+	}
+	if len(sr.Skipped) > 0 {
+		b = append(b, fmt.Sprintf("  skipped in dropzone (%d):", len(sr.Skipped)))
+		for _, sk := range sr.Skipped {
+			b = append(b, fmt.Sprintf("    %s  (%s)", sk[0], sk[1]))
 		}
 	}
 	b = append(b, hashLine(hashRes)...)
 	return b
 }
 
-func (r *Runner) registerSummary(regRes, hashRes map[string]any) []string {
+func (r *Runner) registerSummary(rr collection.RegisterResult, hashRes map[string]any) []string {
 	var b []string
 	b = append(b, fmt.Sprintf("-- %s --", r.Title))
-	if regRes != nil {
-		if root, ok := regRes["root"].(string); ok {
-			b = append(b, "  registered at "+root)
-		}
+	if rr.Root != "" {
+		b = append(b, "  registered at "+rr.Root)
 	}
 	b = append(b, hashLine(hashRes)...)
 	return b
@@ -348,7 +294,7 @@ func tailOf(s []string) []string {
 	return append([]string(nil), s...)
 }
 
-func sortedKeys(m map[string]any) []string {
+func sortedKeysSS(m map[string][]string) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {
 		out = append(out, k)
