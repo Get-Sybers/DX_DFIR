@@ -4,10 +4,13 @@ The evtx/plaso lanes get their bytes straight off the image via Plaso's
 ``image_export.py`` (see ``imageexport``); this lane does the same for the
 artefact set Eric Zimmerman's tools (RECmd, JLECmd, LECmd, AmcacheParser,
 AppCompatCacheParser, SBECmd, RBCmd, MFTECmd) understand, then runs each
-hardened ``dxdfir/<tool>`` container over what was pulled out. SRUM has no
-Windows-only dependency here: SrumECmd is .NET-only, so plaso's own
-``esedb/srum`` plugin parses ``SRUDB.dat`` instead (log2timeline -> psort
-json_line, exactly the l2t two-step in ``plaso.py``, just scoped to one file).
+hardened ``get-sybers/<tool>`` container over what was pulled out. The two
+Windows-bound EZ tools run through their Linux-native Go substitutes instead:
+SRUM via ``get-sybers/esedump`` (``ese_dump`` on go-ese — SrumECmd is .NET and
+P/Invokes the Windows ESE engine) and Prefetch via ``get-sybers/prefetch``
+(``prefetch_dump`` on go-prefetch — PECmd refuses off-Windows). byakugan's
+``esedump_srum`` / ``prefetch_dump`` maps normalise their JSONL into CAR as their
+own MITRE data sources.
 
 Extraction uses a plaso **YAML** collection filter (``plaso.engine.yaml_filter_file``),
 NOT ``--artifact_filters`` (the WindowsEventLogs artifact set the evtx lane uses) —
@@ -21,10 +24,11 @@ path string itself needs no ``%SystemRoot%``-style expansion, which is an
 ``--artifact_filters``-only mechanism; a plain absolute path split on '/' already
 resolves to the right dfVFS ``location_regex`` segments).
 
-Prefetch is deliberately NOT extracted or duplicated here: PECmd is Windows-only
-(.NET) and the main log2timeline lane already parses ``.pf`` files inline as part
-of the normal disk-image timeline — a second, EZ-Tools-only prefetch pass would
-just be redundant CAR input for the same object.
+SRUM and Prefetch are extracted by the SAME filter and parsed by the Go
+substitutes above. They are their own CAR data sources (byakugan
+``esedump_srum`` / ``prefetch_dump``), distinct from — and coexisting with — the
+main log2timeline lane's own SRUM/prefetch coverage; the Go tools keep higher
+fidelity (ese_dump's second-precision timestamps, decoded device paths/SIDs).
 
 Output isolation follows the CAR pipeline's rule (docs/CAR-Pipeline.md §2 — "one
 source, one database"): each image gets its OWN
@@ -64,6 +68,13 @@ _SBECMD_IMAGE = "get-sybers/sbecmd:latest"
 _RBCMD_IMAGE = "get-sybers/rbcmd:latest"
 _MFTECMD_IMAGE = "get-sybers/mftecmd:latest"
 _WXTCMD_IMAGE = "get-sybers/wxtcmd:latest"  # TODO(#88): built but not invoked — see wxtcmd_argv()
+# The Linux-native Go substitutes for the Windows-bound EZ tools
+# (Get-Sybers/EZTools-Docker): ese_dump parses SRUDB.dat where SrumECmd (.NET,
+# P/Invokes the Windows ESE engine) cannot; prefetch_dump parses .pf where PECmd
+# refuses off-Windows. byakugan's esedump_srum / prefetch_dump maps normalise
+# their JSONL into CAR (their own MITRE data sources).
+_ESEDUMP_IMAGE = "get-sybers/esedump:latest"
+_PREFETCH_IMAGE = "get-sybers/prefetch:latest"
 
 # Baked into the get-sybers/recmd image (docker/recmd) — Eric Zimmerman's own curated
 # batch definition; not something the operator needs to supply.
@@ -152,6 +163,14 @@ ARTIFACT_GROUPS: list[dict] = [
         "path_separator": "/",
         "paths": [
             r"/Windows/System32/sru/SRUDB\.dat",
+        ],
+    },
+    {
+        "description": "Windows Prefetch (.pf) — prefetch_dump input",
+        "type": "include",
+        "path_separator": "/",
+        "paths": [
+            r"/Windows/Prefetch/.*\.pf",
         ],
     },
     {
@@ -245,6 +264,16 @@ def find_file(root: str, name: str) -> str | None:
     return sorted(matches)[0] if matches else None
 
 
+def find_file_ext(root: str, ext: str) -> str | None:
+    """First file under ``root`` (any depth) whose extension matches ``ext``
+    (with the leading dot, case-insensitively) — the presence probe for a whole
+    class of files (e.g. any ``.pf``). None if absent."""
+    target = ext.lower()
+    matches = [os.path.join(cur, f) for cur, _dirs, files in os.walk(root)
+               for f in files if os.path.splitext(f)[1].lower() == target]
+    return sorted(matches)[0] if matches else None
+
+
 # ---- per-tool container argv builders (pure — no I/O, no docker) ------------
 def recmd_argv(hives_dir, out_dir) -> list[str]:
     """RECmd's ``-d`` recurses the whole directory looking for hives, so pointing
@@ -258,29 +287,31 @@ def recmd_argv(hives_dir, out_dir) -> list[str]:
     )
 
 
-def srum_l2t_argv(srudb_dir, out_dir, *, plaso_image=PLASO_IMAGE) -> list[str]:
-    """SRUM step 1/2: SrumECmd is Windows-only (.NET), so plaso's own
-    ``esedb/srum`` plugin parses the ESE database into a durable .plaso store —
-    the same log2timeline half of the two-step ``plaso.py`` runs, scoped to one file."""
+def srum_esedump_argv(srudb_dir, out_dir) -> list[str]:
+    """SRUM: SrumECmd is Windows-only (.NET, P/Invokes the Windows ESE engine),
+    so the Linux-native ``ese_dump`` (get-sybers/esedump, Go on go-ese) parses
+    ``SRUDB.dat`` instead — one JSONL file per SRUM provider table
+    (NetworkDataUsage.jsonl, ApplicationResourceUsage.jsonl, …). byakugan's
+    ``esedump_srum`` map routes the Network/Application usage tables to CAR
+    (flow/message + process/create); the rest stay raw."""
     return container.run(
-        plaso_image,
-        ["log2timeline.py", "--status_view", "none", "--parsers", "esedb/srum",
-         "--storage-file", "/out/srum.plaso", "/in/SRUDB.dat"],
+        _ESEDUMP_IMAGE,
+        ["-f", "/in/SRUDB.dat", "--json", "/out"],
         mounts=[f"{srudb_dir}:/in:ro", f"{out_dir}:/out"],
-        workdir="/tmp",
     )
 
 
-def srum_psort_argv(out_dir, *, plaso_image=PLASO_IMAGE) -> list[str]:
-    """SRUM step 2/2: render the .plaso store to json_line. MUST be named
-    ``.jsonl`` — the CAR lane's raw-l2t source detector (mitrecar/sources.py)
-    keys off that extension."""
+def prefetch_argv(scan_dir, out_dir) -> list[str]:
+    """Prefetch: PECmd carries a blanket non-Windows startup guard, so the
+    Linux-native ``prefetch_dump`` (get-sybers/prefetch, Go on go-prefetch)
+    parses ``.pf`` instead. ``-d`` walks ``scan_dir`` recursively for every
+    ``.pf`` (the extraction root holds only the filtered artefact set), writing
+    one ``PrefetchDump_Output.jsonl``. byakugan's ``prefetch_dump`` map routes it
+    to process/create."""
     return container.run(
-        plaso_image,
-        ["psort.py", "--status_view", "none", "-o", "json_line",
-         "-w", "/out/srum.jsonl", "/out/srum.plaso"],
-        mounts=[f"{out_dir}:/out"],
-        workdir="/tmp",
+        _PREFETCH_IMAGE,
+        ["-d", "/in", "--json", "/out"],
+        mounts=[f"{scan_dir}:/in:ro", f"{out_dir}:/out"],
     )
 
 
@@ -465,20 +496,23 @@ def process_image(image, host_out_dir, *, plaso_image=PLASO_IMAGE, force=False,
     rbcmd_out = os.path.join(host_out_dir, "rbcmd")
     result["steps"]["rbcmd"] = _run_step(rbcmd_argv(stage_dir, rbcmd_out), rbcmd_out, log_path)
 
-    # SRUM (two-step plaso run) — only when SRUDB.dat was actually extracted.
+    # SRUM (ese_dump) — only when SRUDB.dat was actually extracted.
     srudb = find_file(stage_dir, "SRUDB.dat")
     if srudb:
         srum_out = os.path.join(host_out_dir, "srum")
-        os.makedirs(srum_out, exist_ok=True)
-        try:
-            os.chmod(srum_out, 0o777)
-        except OSError:
-            pass
-        ok1 = _run(srum_l2t_argv(os.path.dirname(srudb), srum_out, plaso_image=plaso_image), log_path)
-        ok2 = ok1 and _run(srum_psort_argv(srum_out, plaso_image=plaso_image), log_path)
-        result["steps"]["srum"] = {"ran": True, "ok": ok2 and _nonempty(os.path.join(srum_out, "srum.jsonl"))}
+        result["steps"]["srum"] = _run_step(
+            srum_esedump_argv(os.path.dirname(srudb), srum_out), srum_out, log_path)
     else:
         result["steps"]["srum"] = {"ran": False, "reason": "no SRUDB.dat extracted"}
+
+    # Prefetch (prefetch_dump) — only when at least one .pf was extracted.
+    pf = find_file_ext(stage_dir, ".pf")
+    if pf:
+        prefetch_out = os.path.join(host_out_dir, "prefetch")
+        result["steps"]["prefetch"] = _run_step(
+            prefetch_argv(stage_dir, prefetch_out), prefetch_out, log_path)
+    else:
+        result["steps"]["prefetch"] = {"ran": False, "reason": "no .pf extracted"}
 
     # Single-file tools — only when their specific file was actually extracted.
     amcache_hive = find_file(stage_dir, "Amcache.hve")
