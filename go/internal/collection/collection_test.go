@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -162,5 +163,187 @@ func TestNoRegistry(t *testing.T) {
 	}
 	if len(st.Unregistered) != 1 || st.Unregistered[0].Name != "hand" {
 		t.Errorf("unregistered = %+v, want [hand]", st.Unregistered)
+	}
+}
+
+// eventCount returns the number of rows in the events table for name/event.
+func eventCount(t *testing.T, repo, name, event string) int {
+	t.Helper()
+	db, err := sql.Open("sqlite", "file:"+filepath.Join(repo, "data_store", "raw", "collections", registryName)+"?mode=ro")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var n int
+	if err := db.QueryRow("SELECT COUNT(*) FROM events WHERE name=? AND event=?", name, event).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func TestWrites(t *testing.T) {
+	repo := t.TempDir()
+	colls := filepath.Join(repo, "data_store", "raw", "collections")
+	for _, n := range []string{"a", "b"} {
+		touch(t, filepath.Join(colls, n, ".collection"))     // marker shadow
+		touch(t, filepath.Join(colls, n, "pcaps", "x.pcap")) // evidence
+	}
+	// "a" starts selected, "b" not.
+	seedRegistry(t, filepath.Join(colls, registryName), map[string]bool{"a": true, "b": false})
+
+	// --- Select ---
+	if err := Select(repo, "b"); err != nil {
+		t.Fatalf("Select(b): %v", err)
+	}
+	if st, _ := GetStatus(repo); st.Active != "b" {
+		t.Errorf("after Select(b) active=%q, want b", st.Active)
+	}
+	// The on-disk log line must match the Python json.dumps spacing exactly.
+	logB, _ := os.ReadFile(filepath.Join(colls, "b", ".collection.log"))
+	if !strings.Contains(string(logB), `, "event": "selected"}`) {
+		t.Errorf("b .collection.log missing well-formed selected event: %q", logB)
+	}
+	if eventCount(t, repo, "b", "selected") != 1 {
+		t.Errorf("events table: want 1 'selected' row for b, got %d", eventCount(t, repo, "b", "selected"))
+	}
+	// Selecting an unregistered name is an error.
+	if err := Select(repo, "nope"); err == nil {
+		t.Error("Select(nope) should error (not registered)")
+	}
+
+	// --- Unselect ---
+	prev, err := Unselect(repo)
+	if err != nil {
+		t.Fatalf("Unselect: %v", err)
+	}
+	if prev != "b" {
+		t.Errorf("Unselect prev=%q, want b", prev)
+	}
+	if st, _ := GetStatus(repo); st.Active != "" {
+		t.Errorf("after Unselect active=%q, want empty", st.Active)
+	}
+	if eventCount(t, repo, "b", "unselected") != 1 {
+		t.Error("events table: want 1 'unselected' row for b")
+	}
+	// Unselect with nothing active is a no-op returning "".
+	if p, err := Unselect(repo); err != nil || p != "" {
+		t.Errorf("Unselect(none) = (%q, %v), want (\"\", nil)", p, err)
+	}
+
+	// --- Unregister ---
+	removed, err := Unregister(repo, "a")
+	if err != nil {
+		t.Fatalf("Unregister(a): %v", err)
+	}
+	if !removed {
+		t.Error("Unregister(a) removed=false, want true")
+	}
+	s, _ := GetState(repo, "a")
+	if s.Registered {
+		t.Error("a still registered after Unregister")
+	}
+	if !s.Exists || !s.Detected {
+		t.Errorf("a after Unregister: exists=%v detected=%v, want both true (dir+evidence remain)", s.Exists, s.Detected)
+	}
+	if isRegularFile(filepath.Join(colls, "a", ".collection")) {
+		t.Error("a .collection marker should be removed")
+	}
+	if !isRegularFile(filepath.Join(colls, "a", ".collection.log")) {
+		t.Error("a .collection.log should be preserved")
+	}
+	if !isRegularFile(filepath.Join(colls, "a", "pcaps", "x.pcap")) {
+		t.Error("a evidence should be preserved")
+	}
+	// Second unregister: no row, no marker => false, no error.
+	if r2, err := Unregister(repo, "a"); err != nil || r2 {
+		t.Errorf("second Unregister(a) = (%v, %v), want (false, nil)", r2, err)
+	}
+	// Unregister a non-existent folder is an error.
+	if _, err := Unregister(repo, "ghost"); err == nil {
+		t.Error("Unregister(ghost) should error (no such collection)")
+	}
+}
+
+func containsName(cs []Summary, name string) bool {
+	for _, c := range cs {
+		if c.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// TestSelectMigratesLegacyMarker: a collection present only as a pre-DB
+// .collection marker is migrated into the registry by Select (as Python's _db()
+// does) and then selectable — the regression Copilot flagged.
+func TestSelectMigratesLegacyMarker(t *testing.T) {
+	repo := t.TempDir()
+	colls := filepath.Join(repo, "data_store", "raw", "collections")
+	touch(t, filepath.Join(colls, "other", "pcaps", "o.pcap"))
+	seedRegistry(t, filepath.Join(colls, registryName), map[string]bool{"other": false})
+	// "leg": a marker (with a registered_at) + evidence, but NO registry row.
+	touch(t, filepath.Join(colls, "leg", "memory", "m.raw")) // creates leg/ first
+	if err := os.WriteFile(filepath.Join(colls, "leg", ".collection"),
+		[]byte("name: leg\nregistered_at: 2020-01-02T03:04:05Z\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Precondition: the read path (no migration) sees leg as unregistered.
+	if st, _ := GetStatus(repo); !containsName(st.Unregistered, "leg") {
+		t.Fatal("precondition: leg should read as unregistered before select")
+	}
+	// Select migrates the marker in, then selects it.
+	if err := Select(repo, "leg"); err != nil {
+		t.Fatalf("Select(leg): %v", err)
+	}
+	st, _ := GetStatus(repo)
+	if st.Active != "leg" {
+		t.Errorf("active=%q, want leg", st.Active)
+	}
+	if !containsName(st.Registered, "leg") {
+		t.Errorf("leg should be registered after migrate+select; registered=%+v", st.Registered)
+	}
+	// The migrated row keeps the marker's registered_at and is sourced "migrated".
+	db, _ := sql.Open("sqlite", "file:"+filepath.Join(colls, registryName)+"?mode=ro")
+	defer db.Close()
+	var regAt, source string
+	if err := db.QueryRow("SELECT registered_at, source FROM collections WHERE name='leg'").Scan(&regAt, &source); err != nil {
+		t.Fatal(err)
+	}
+	if regAt != "2020-01-02T03:04:05Z" {
+		t.Errorf("migrated registered_at=%q, want the marker's value", regAt)
+	}
+	if source != "migrated" {
+		t.Errorf("migrated source=%q, want migrated", source)
+	}
+}
+
+// TestSchemaEvolutionAddsSelected: a registry created before the `selected`
+// column exists is evolved by openWriteDB so the UPDATE does not fail with
+// "no such column: selected".
+func TestSchemaEvolutionAddsSelected(t *testing.T) {
+	repo := t.TempDir()
+	colls := filepath.Join(repo, "data_store", "raw", "collections")
+	if err := os.MkdirAll(colls, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("sqlite", "file:"+filepath.Join(colls, registryName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Legacy schema: no `selected` column.
+	if _, err := db.Exec("CREATE TABLE collections(name TEXT PRIMARY KEY, target_path TEXT, registered_at TEXT, source TEXT)"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO collections(name,target_path,registered_at,source) VALUES('old','x','t','create')"); err != nil {
+		t.Fatal(err)
+	}
+	db.Close()
+
+	if err := Select(repo, "old"); err != nil {
+		t.Fatalf("Select(old) on a pre-`selected` registry: %v", err)
+	}
+	if st, _ := GetStatus(repo); st.Active != "old" {
+		t.Errorf("active=%q, want old", st.Active)
 	}
 }

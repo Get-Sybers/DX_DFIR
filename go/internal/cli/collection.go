@@ -24,11 +24,12 @@ import (
 
 // ---- shared query types ----
 //
-// status / lanes / state are now read natively by internal/collection (no Python
-// round-trip; the registry is read directly and lanes are counted concurrently).
+// status / lanes / state are read natively by internal/collection (no Python
+// round-trip; the registry is read directly and lanes are counted concurrently),
+// and the registry-mutating writes select / unselect / unregister are native too.
 // These aliases keep the rest of the cli — rendering, process scoping — unchanged.
-// Writes (register/sort/hash/select/unselect/unregister) still shell out via
-// collQuery; see epic #174.
+// Only register/sort/hash still shell out via collQuery / collect.Runner; see
+// epic #174.
 
 type (
 	collSummary = collection.Summary
@@ -257,17 +258,11 @@ func newCollectionUnregisterCmd(env *Env) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			py, err := repo.Python()
+			removed, err := collection.Unregister(r.Root, args[0])
 			if err != nil {
-				return Fail(127, "%v", err)
+				return Fail(2, "%v", err)
 			}
-			var res struct {
-				Removed bool `json:"removed"`
-			}
-			if err := collQuery(r, py, &res, "unregister", args[0]); err != nil {
-				return err
-			}
-			if res.Removed {
+			if removed {
 				fmt.Println(style.Green(style.GlyphOK + " unregistered '" + args[0] + "' — evidence + log untouched."))
 			} else {
 				fmt.Println(style.Yellow(style.GlyphInfo + " '" + args[0] + "' was not registered — nothing to do."))
@@ -287,12 +282,8 @@ func newCollectionSelectCmd(env *Env) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			py, err := repo.Python()
-			if err != nil {
-				return Fail(127, "%v", err)
-			}
-			if err := collQuery(r, py, nil, "select", args[0]); err != nil {
-				return err
+			if err := collection.Select(r.Root, args[0]); err != nil {
+				return Fail(2, "%v", err)
 			}
 			fmt.Println(style.Yellow(style.GlyphStar + " active collection is now '" + args[0] + "'"))
 			return nil
@@ -309,20 +300,14 @@ func newCollectionUnselectCmd(env *Env) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			py, err := repo.Python()
+			prev, err := collection.Unselect(r.Root)
 			if err != nil {
-				return Fail(127, "%v", err)
+				return Fail(2, "%v", err)
 			}
-			var res struct {
-				Previous *string `json:"previous"`
-			}
-			if err := collQuery(r, py, &res, "unselect"); err != nil {
-				return err
-			}
-			if res.Previous == nil {
+			if prev == "" {
 				fmt.Println("no active collection was set.")
 			} else {
-				fmt.Println(style.Green(style.GlyphOK + " cleared active collection (was '" + *res.Previous + "')"))
+				fmt.Println(style.Green(style.GlyphOK + " cleared active collection (was '" + prev + "')"))
 			}
 			return nil
 		},
