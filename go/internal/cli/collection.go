@@ -24,11 +24,12 @@ import (
 
 // ---- shared query types ----
 //
-// status / lanes / state are now read natively by internal/collection (no Python
-// round-trip; the registry is read directly and lanes are counted concurrently).
+// status / lanes / state are read natively by internal/collection (no Python
+// round-trip; the registry is read directly and lanes are counted concurrently),
+// and the registry-mutating writes select / unselect / unregister are native too.
 // These aliases keep the rest of the cli — rendering, process scoping — unchanged.
-// Writes (register/sort/hash/select/unselect/unregister) still shell out via
-// collQuery; see epic #174.
+// Only register/sort/hash still shell out via collQuery / collect.Runner; see
+// epic #174.
 
 type (
 	collSummary = collection.Summary
