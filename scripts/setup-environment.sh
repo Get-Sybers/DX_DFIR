@@ -511,47 +511,37 @@ fi
 echo "🐹 Building the dxdfir Go front-end ($(go version 2>/dev/null | awk '{print $3}')) ..."
 $SUDO mkdir -p "$GO_BIN_DIR"
 
-# Persist the Go module + build caches OUTSIDE any single user's $HOME, so a
-# re-run (an UPDATE) reuses what it already fetched instead of re-downloading,
-# and the cache survives whoever happens to run the script. The front-end now
-# pulls a real dependency set — modernc.org/sqlite, for the native collection
-# registry reader — so a warmed, persistent cache turns an update into a
-# near-no-op fetch. Override GO_CACHE_DIR / GO_MOD_CACHE_DIR to relocate them.
-GO_CACHE_DIR="${GO_CACHE_DIR:-/opt/dxdfir/cache/go-build}"
-GO_MOD_CACHE_DIR="${GO_MOD_CACHE_DIR:-/opt/dxdfir/cache/go-mod}"
-$SUDO mkdir -p "$GO_CACHE_DIR" "$GO_MOD_CACHE_DIR"
-# Shared build env. GOTOOLCHAIN=local NEVER auto-downloads a newer Go: go.mod's
-# dependency set is deliberately held at the go 1.24 floor (e.g. modernc.org/
-# sqlite is pinned to its last go-1.24-compatible release), so a build must
-# succeed on the pinned toolchain or fail loudly — never silently pull go 1.25.
-_goenv=( PATH="$PATH" HOME="${HOME:-/root}" GOTOOLCHAIN=local
-         GOCACHE="$GO_CACHE_DIR" GOMODCACHE="$GO_MOD_CACHE_DIR" )
-
-_dxdfir_build() {  # $1: module mode flag (-mod=vendor | -mod=mod)
-    ( cd "$REPO_ROOT_DIR/go" \
-        && $SUDO env "${_goenv[@]}" go build "$1" -o "$GO_BIN_DIR/dxdfir" ./cmd/dxdfir )
-}
-
-if [[ -f "$REPO_ROOT_DIR/go/vendor/modules.txt" ]]; then
-    # Air-gapped install: build from the in-tree vendor/ (packaged by
-    # scripts/package-offline.sh). If it is stale — a bundle captured before a
-    # dependency changed — fall back to the module proxy so an UPDATE is not
-    # wedged by an out-of-date vendor tree.
-    if _dxdfir_build "-mod=vendor"; then
-        echo "   built from vendored modules (go/vendor)."
+# Build from a CLEAN, EPHEMERAL cache — a throwaway dir (module cache, build
+# cache and HOME all inside it) removed as soon as the build finishes. Every run
+# therefore resolves the dependency set from a SOURCE OF TRUTH — the in-tree
+# go/vendor/ (air-gapped installs, packaged by scripts/package-offline.sh), else
+# the module proxy — instead of trusting whatever a previous run left on disk.
+# A rebuild is honest (it never silently depends on stale cached modules) and
+# nothing is cached under the install prefix or the invoking user's ~/go; the
+# cost is a cold module fetch each run, which is the intent. GOTOOLCHAIN=local
+# keeps the pinned Go from auto-upgrading (go.mod's deps are held at the go 1.24
+# floor on purpose — e.g. modernc.org/sqlite is pinned to its last 1.24 tag).
+_gotmp="$(mktemp -d)"
+_goclean() { [[ -n "$_gotmp" ]] && { $SUDO chmod -R u+w "$_gotmp" 2>/dev/null; $SUDO rm -rf "$_gotmp"; }; }
+_goenv=( PATH="$PATH" HOME="$_gotmp" GOTOOLCHAIN=local
+         GOCACHE="$_gotmp/build" GOMODCACHE="$_gotmp/mod" )
+_gomod="-mod=mod"
+[[ -f "$REPO_ROOT_DIR/go/vendor/modules.txt" ]] && _gomod="-mod=vendor"
+if ! ( cd "$REPO_ROOT_DIR/go" \
+        && $SUDO env "${_goenv[@]}" go build "$_gomod" -o "$GO_BIN_DIR/dxdfir" ./cmd/dxdfir ); then
+    if [[ "$_gomod" == "-mod=vendor" ]]; then
+        # A vendored tree captured before a dependency changed would fail an
+        # update; fall back to the proxy rather than wedge on stale vendoring.
+        echo "⚠️  Vendored modules look stale — fetching through the module proxy instead."
+        ( cd "$REPO_ROOT_DIR/go" \
+            && $SUDO env "${_goenv[@]}" go build -mod=mod -o "$GO_BIN_DIR/dxdfir" ./cmd/dxdfir ) \
+            || { _goclean; die "Failed to build the dxdfir Go front-end (module proxy unreachable? re-vendor on a networked host: 'cd go && go mod vendor')."; }
     else
-        echo "⚠️  Vendored modules look stale (a dependency changed since packaging) — fetching through the module proxy instead."
-        ( cd "$REPO_ROOT_DIR/go" && $SUDO env "${_goenv[@]}" go mod download ) \
-            || die "Vendored modules are stale and the module proxy is unreachable — re-vendor on a networked host ('cd go && go mod vendor') or re-package the offline bundle."
-        _dxdfir_build "-mod=mod" || die "Failed to build the dxdfir Go front-end."
+        _goclean
+        die "Failed to build the dxdfir Go front-end (need network for the module proxy, or vendor the modules for an air-gapped install: 'cd go && go mod vendor')."
     fi
-else
-    # Networked install: warm the persistent module cache first (a clear failure
-    # point if the proxy is unreachable), then build from it.
-    ( cd "$REPO_ROOT_DIR/go" && $SUDO env "${_goenv[@]}" go mod download ) \
-        || die "Failed to download Go modules for the dxdfir front-end (need network access, or vendor the modules for an air-gapped install: 'cd go && go mod vendor')."
-    _dxdfir_build "-mod=mod" || die "Failed to build the dxdfir Go front-end."
 fi
+_goclean
 $SUDO ln -sf "$GO_BIN_DIR/dxdfir" /usr/local/bin/dxdfir
 # `man dxdfir` (README / Get-Started) must work on a provisioned host, so the
 # manual installs beside the binary. Best-effort: no man tree is not fatal.
