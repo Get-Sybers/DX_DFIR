@@ -80,7 +80,7 @@ func checkPython(r *repo.Repo) model.Check {
 		// broken interpreter. Warn (a gate that is not OK blocks READY) rather
 		// than claim the environment is usable.
 		c.State = model.CheckWarn
-		c.Detail = "found at " + py + ", but `python --version` failed or timed out"
+		c.Detail = "found at " + py + ", but `" + filepath.Base(py) + " --version` failed or timed out"
 		return c
 	}
 	c.State = model.CheckOK
