@@ -71,11 +71,11 @@ def test_filter_covers_activitiescache_and_srum_and_mft():
     assert any(p == r"/\$MFT" for p in paths)
 
 
-def test_filter_does_not_duplicate_prefetch():
-    """Prefetch is deliberately NOT extracted here — the main log2timeline lane
-    already parses .pf files; the zimmerman lane must not fetch them a second time."""
+def test_filter_covers_prefetch():
+    """Prefetch IS extracted here now — prefetch_dump (the Linux-native PECmd
+    substitute) parses the .pf; the filter must stage them."""
     paths = _all_paths()
-    assert not any(".pf" in p.lower() or "prefetch" in p.lower() for p in paths)
+    assert any("Prefetch" in p and ".pf" in p.lower() for p in paths)
 
 
 # ---- extraction argv (image_export.py, YAML filter file — not --artifact_filters) --
@@ -111,18 +111,20 @@ def test_recmd_argv():
                     "--json", "/out", "--jsonf", "recmd_batch.json", "--nl"]
 
 
-def test_srum_two_step_argv():
-    l2t = z.srum_l2t_argv("/srum", "/out/srum")
-    assert "/srum:/in:ro" in l2t and "/out/srum:/out" in l2t
-    tail = l2t[l2t.index("get-sybers/plaso:latest") + 1:]
-    assert tail == ["log2timeline.py", "--status_view", "none", "--parsers", "esedb/srum",
-                    "--storage-file", "/out/srum.plaso", "/in/SRUDB.dat"]
+def test_srum_esedump_argv():
+    argv = z.srum_esedump_argv("/srum", "/out/srum")
+    assert argv[:3] == ["docker", "run", "--rm"]
+    assert "/srum:/in:ro" in argv and "/out/srum:/out" in argv
+    tail = argv[argv.index("get-sybers/esedump:latest") + 1:]
+    assert tail == ["-f", "/in/SRUDB.dat", "--json", "/out"]
 
-    psort = z.srum_psort_argv("/out/srum")
-    assert "/out/srum:/out" in psort
-    tail2 = psort[psort.index("get-sybers/plaso:latest") + 1:]
-    assert tail2 == ["psort.py", "--status_view", "none", "-o", "json_line",
-                     "-w", "/out/srum.jsonl", "/out/srum.plaso"]
+
+def test_prefetch_argv():
+    argv = z.prefetch_argv("/stage", "/out/prefetch")
+    assert argv[:3] == ["docker", "run", "--rm"]
+    assert "/stage:/in:ro" in argv and "/out/prefetch:/out" in argv
+    tail = argv[argv.index("get-sybers/prefetch:latest") + 1:]
+    assert tail == ["-d", "/in", "--json", "/out"]
 
 
 def test_jlecmd_argv():
@@ -183,8 +185,8 @@ def test_wxtcmd_argv_adds_writable_opt_eztool_tmpfs():
 def test_every_tool_argv_is_hardened():
     builders = [
         z.recmd_argv("/a", "/b"),
-        z.srum_l2t_argv("/a", "/b"),
-        z.srum_psort_argv("/b"),
+        z.srum_esedump_argv("/a", "/b"),
+        z.prefetch_argv("/a", "/b"),
         z.jlecmd_argv("/a", "/b"),
         z.lecmd_argv("/a", "/b"),
         z.amcacheparser_argv("/a", "/b"),
@@ -281,6 +283,7 @@ def test_process_image_no_artefacts_extracted_is_empty_not_failed(tmp_path, monk
     assert res["steps"]["appcompatcache"] == {"ran": False, "reason": "no SYSTEM hive extracted"}
     assert res["steps"]["mftecmd"] == {"ran": False, "reason": "no $MFT extracted"}
     assert res["steps"]["srum"] == {"ran": False, "reason": "no SRUDB.dat extracted"}
+    assert res["steps"]["prefetch"] == {"ran": False, "reason": "no .pf extracted"}
 
 
 def test_process_image_gates_amcache_on_extracted_file_presence(tmp_path, monkeypatch):

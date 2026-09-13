@@ -8,6 +8,15 @@ is `0`, anything may change without notice.
 ## [Unreleased]
 
 ### Changed
+- **The zimmerman lane's SRUM and Prefetch now run through the Linux-native Go
+  substitutes** instead of Plaso: SRUM via `get-sybers/esedump` (`ese_dump`,
+  replacing the old plaso `esedb/srum` two-step) and a new Prefetch pass via
+  `get-sybers/prefetch` (`prefetch_dump`). The Byakugan engine gains two new
+  MITRE data sources (`esedump_srum`, `prefetch_dump`) that normalise the tools'
+  JSONL into the same CAR objects (SRUM→flow/process, Prefetch→process/create)
+  with their own identity, coexisting with Plaso's coverage; the Go tools keep
+  higher fidelity (second-precision timestamps, decoded device paths/SIDs).
+  `byakugan.ref` bumped to the engine commit carrying those maps.
 - **Container images renamed to the `get-sybers/` namespace** (was `dxdfir/`) and
   the **[EZTools-Docker](https://github.com/Get-Sybers/EZTools-Docker) repo added
   as a submodule** (`third_party/EZTools-Docker/`) — the single source for the

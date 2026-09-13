@@ -22,10 +22,11 @@ For each disk image, the processor (`get_sybers_dxdfir/zimmerman.py`):
 2. Runs the hardened EZ-Tools containers over what was pulled out: RECmd
    (registry batch), JLECmd/LECmd (jump lists/lnk), AmcacheParser,
    AppCompatCacheParser, SBECmd (ShellBags), RBCmd (Recycle Bin), MFTECmd (when
-   a `$MFT` was extracted). SRUM has no EZ-Tool here — SrumECmd is .NET-only
-   (P/Invokes Windows' ESE engine), so plaso's own `esedb/srum` parser runs the
-   same log2timeline → psort two-step `plaso.py` uses for full images, scoped to
-   the one `SRUDB.dat` file.
+   a `$MFT` was extracted). The two Windows-bound EZ tools run through their
+   Linux-native Go substitutes: **SRUM** via `get-sybers/esedump` (`ese_dump` —
+   SrumECmd is .NET and P/Invokes Windows' ESE engine) and **Prefetch** via
+   `get-sybers/prefetch` (`prefetch_dump` — PECmd refuses off-Windows), each run
+   only when its artefact (`SRUDB.dat` / any `.pf`) was extracted.
 
 Directory-recursive tools (RECmd, JLECmd, LECmd, SBECmd, RBCmd) are pointed at
 the **whole per-image extraction root**, not a hand-picked sub-directory: that
@@ -85,10 +86,10 @@ ansible-playbook playbooks/dxdfir-process-zimmerman.yml -e dxdfir_zimmerman_pipe
 
 ## Testing
 Python unit tests (`python/tests/test_zimmerman.py`) cover the pure logic: the
-YAML filter's shape and artefact coverage (including the deliberate prefetch
-exclusion), every container argv builder's exact flags/mounts, discovery,
-host-level idempotent skip, per-artefact gating (amcache/appcompatcache/mftecmd/
-srum only run when their file was extracted), and one-host-one-dir naming —
+YAML filter's shape and artefact coverage (including prefetch), every container
+argv builder's exact flags/mounts, discovery, host-level idempotent skip,
+per-artefact gating (amcache/appcompatcache/mftecmd/srum/prefetch only run when
+their file was extracted), and one-host-one-dir naming —
 all with docker mocked out. The **Molecule** scenario needs a small parseable
 image (large/binary — not shipped):
 ```bash
