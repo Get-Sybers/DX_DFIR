@@ -117,6 +117,43 @@ confirm() {
     [[ "$reply" =~ ^[Yy]$ ]]
 }
 
+# Run a long command while keeping the terminal informed, so a multi-minute step
+# is not a dead prompt. The command runs in the background; this prints a live
+# elapsed-time heartbeat — a redrawn spinner on a TTY, a line every 10s when
+# output is piped to a log. Returns the command's exit code, so callers keep
+# their `|| echo ...` fallbacks. Sudo credentials are refreshed up front (a
+# no-op when $SUDO is empty or already primed) so the backgrounded privileged
+# command never blocks on a password prompt it cannot display. The spinner is
+# deliberately ASCII: braille/unicode frames break ${#var}/substring math under
+# a C/POSIX locale, exactly the clean-machine case this script targets.
+run_with_progress() {
+    local label="$1"; shift
+    [[ -n "$SUDO" ]] && $SUDO -v 2>/dev/null
+    "$@" &
+    local pid=$! start=$SECONDS last=-1 elapsed
+    local frames='|/-\' nframes i=0
+    nframes=${#frames}
+    while kill -0 "$pid" 2>/dev/null; do
+        elapsed=$((SECONDS - start))
+        if [[ -t 1 ]]; then
+            printf '\r%s %s  %ds ' "$label" "${frames:i%nframes:1}" "$elapsed"
+            i=$((i + 1))
+        elif (( elapsed >= 10 && elapsed != last && elapsed % 10 == 0 )); then
+            printf '%s … still working (%ds elapsed)\n' "$label" "$elapsed"
+            last=$elapsed
+        fi
+        sleep 1
+    done
+    wait "$pid"; local rc=$?
+    elapsed=$((SECONDS - start))
+    if [[ -t 1 ]]; then
+        printf '\r%s … done in %ds%*s\n' "$label" "$elapsed" 12 ''
+    else
+        printf '%s … done in %ds\n' "$label" "$elapsed"
+    fi
+    return "$rc"
+}
+
 ################################################################################
 echo ""
 echo " ██████╗ ███████╗████████╗   ███████╗██╗   ██╗██████╗ ███████╗██████╗ ███████╗"
@@ -357,10 +394,14 @@ echo "✅ Byakugan engine provisioned: $BYAKUGAN_ROOT @ $BYAKUGAN_REF"
 # The old `chmod -R 744` cleared group execute on directories and locked the
 # docker group out of the tree the script had just handed it.
 echo "🔧 Setting ownership to $RUN_USER:docker and permissions on the repository..."
+echo "   Recursive over the whole checkout; a populated data_store/ makes this a"
+echo "   large walk that can take a while — live progress is shown below."
 if [[ -d "$REPO_ROOT_DIR" ]]; then
-    $SUDO chown -R "$RUN_USER:docker" "$REPO_ROOT_DIR" \
+    run_with_progress "   → ownership  ($RUN_USER:docker)" \
+        $SUDO chown -R "$RUN_USER:docker" "$REPO_ROOT_DIR" \
         || echo "⚠️  Some ownership changes were skipped"
-    $SUDO chmod -R u=rwX,g=rX,o= "$REPO_ROOT_DIR" \
+    run_with_progress "   → permissions (u=rwX,g=rX,o=)" \
+        $SUDO chmod -R u=rwX,g=rX,o= "$REPO_ROOT_DIR" \
         || echo "⚠️  Some permission changes were skipped"
 fi
 
@@ -443,10 +484,24 @@ if (( ! _go_ok )); then
         || die "Failed to download the Go toolchain (${_gotar})."
     # Supply-chain: verify the tarball against Go's published SHA-256 BEFORE
     # extracting it as root over /usr/local/go. Refuse to install on a mismatch.
-    _gosha="$(curl -fsSL "https://go.dev/dl/${_gotar}.sha256")" \
-        || die "Failed to fetch the Go toolchain checksum (${_gotar}.sha256)."
-    echo "${_gosha}  /tmp/${_gotar}" | sha256sum -c - \
+    #
+    # The checksum comes from the go.dev release index (?mode=json), the canonical
+    # machine-readable source. The old per-file "<tarball>.sha256" sidecar URLs
+    # were retired: go.dev now answers them with an HTTP 200 HTML redirect page,
+    # so `curl -f` succeeded, the HTML landed in $_gosha, and sha256sum died with
+    # "no properly formatted checksum lines found" — surfacing as a bogus checksum
+    # mismatch on every run. python3 is guaranteed here (a REQUIRED_CMD installed
+    # above), so parse the JSON with it rather than a format-fragile grep;
+    # include=all so a pinned older release is covered, not just the latest few.
+    _gosha="$(curl -fsSL "https://go.dev/dl/?mode=json&include=all" \
+        | python3 -c 'import sys, json; d = json.load(sys.stdin); print(next((f["sha256"] for v in d for f in v["files"] if f.get("filename") == sys.argv[1]), ""))' \
+            "${_gotar}")" \
+        || die "Failed to fetch the Go toolchain checksum from the go.dev release index."
+    [[ "$_gosha" =~ ^[0-9a-f]{64}$ ]] \
+        || die "No SHA-256 for ${_gotar} in the go.dev release index (looked up go${GO_VERSION}) — check the pinned GO_VERSION names a real release."
+    printf '%s  %s\n' "$_gosha" "/tmp/${_gotar}" | sha256sum -c --status - \
         || die "Go toolchain checksum mismatch for ${_gotar} — refusing to install."
+    echo "   🔒 Verified go${GO_VERSION} (${_garch}) against the go.dev published SHA-256."
     $SUDO rm -rf /usr/local/go
     $SUDO tar -C /usr/local -xzf "/tmp/${_gotar}" || die "Failed to extract the Go toolchain."
     rm -f "/tmp/${_gotar}"
