@@ -11,7 +11,7 @@ log (+ an `.xml` sidecar, not ingested), grouped by the source sub-dir (host).
 Selected by `dxdfir_evtx_use_bundled_image` (default **bundled**):
 
 - **Bundled (default).** The `get-sybers/evtxecmd` image (built from
-  [`third_party/EZTools-Docker/evtxecmd`](/third_party/EZTools-Docker/evtxecmd)) bakes `EvtxECmd.dll` **and `Maps/`** onto a
+  [`third_party/EZTools-Docker/evtxecmd`](https://github.com/Get-Sybers/EZTools-Docker/tree/main/evtxecmd)) bakes `EvtxECmd.dll` **and `Maps/`** onto a
   .NET runtime. Build it once and forget it — no files to place by hand:
   ```bash
   docker build -t get-sybers/evtxecmd:latest -f third_party/EZTools-Docker/evtxecmd/Dockerfile third_party/EZTools-Docker

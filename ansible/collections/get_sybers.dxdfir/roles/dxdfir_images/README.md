@@ -31,7 +31,7 @@ supply-chain-compromised tool: each image is **stripped to the tool itself** and
 every run is confined hard. ansible does the hardening *at build time* and is
 then **removed from the final image** — it never ships at runtime. The hardening
 playbook has ONE canonical home,
-[`third_party/EZTools-Docker/hardening/harden.yml`](/third_party/EZTools-Docker/hardening/harden.yml):
+[`third_party/EZTools-Docker/hardening/harden.yml`](https://github.com/Get-Sybers/EZTools-Docker/blob/main/hardening/harden.yml):
 the submodule's images use it directly, and this role's preflight syncs it into
 `docker/hardening/harden.yml` (git-ignored, generated) so DX_DFIR's own images
 can `COPY` it from their build context.
