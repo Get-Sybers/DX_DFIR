@@ -1,4 +1,17 @@
-package collection
+// Package identify determines the TYPE of an evidence file from its bytes
+// (magic-first, extension-fallback) — the "what kind of file is this" sense of
+// file(1)/libmagic, deliberately NOT "detect" (which in this project means
+// threat detections).
+//
+// It is the single home for the pipeline's content typers, lifted out of the
+// collection classifier (epic #174, phase 4) so both the sort-time classifier
+// AND any lane that walks its own inputs reuse the exact same detectors instead
+// of re-implementing them: pcap magic (zeek), disk-image/VM magic + extension
+// (the plaso module's detect_format/ext_format — pure header/extension sniffing,
+// NOT the log2timeline PROCESSOR, which stays in Docker/Ansible), memory-dump and
+// EVTX extensions. Content beats extension, so a mislabelled image is filed by
+// its real type.
+package identify
 
 import (
 	"os"
@@ -7,14 +20,6 @@ import (
 	"sort"
 	"strings"
 )
-
-// This file ports the collection classifier (epic #174, phase 4): where a raw
-// evidence file sorts to, magic-first, reusing the processors' own detectors —
-// pcap magic (zeek), disk-image/VM magic + extension (the plaso module's
-// detect_format/ext_format, which are pure header/extension sniffing, NOT the
-// log2timeline PROCESSOR, which stays in Docker/Ansible), memory-dump and
-// EVTX extensions. Content beats extension, so a mislabelled image is filed by
-// its real type.
 
 // pcapMagic mirrors zeek._PCAP_MAGIC (4-byte header hex).
 var pcapMagic = map[string]bool{
@@ -31,6 +36,10 @@ var diskFormats = map[string]bool{"ewf1": true, "ewf2": true, "ewf-cont": true, 
 var vmFormats = map[string]bool{"vmdk": true, "vmdk-extent": true, "vhd": true, "vhdx": true}
 
 var vmdkExtentRe = regexp.MustCompile(`-flat\.vmdk$|-delta\.vmdk$|-s[0-9]+\.vmdk$`)
+
+// ewfContRe matches an EWF continuation-segment name (.e02…). Compiled once at
+// package load, not per ExtFormat call.
+var ewfContRe = regexp.MustCompile(`\.e[0-9][0-9]$`)
 
 // headHex reads the first n bytes of a file and returns them lower-hex.
 func headHex(path string, n int) string {
@@ -54,8 +63,8 @@ func hexLower(b []byte) string {
 	return string(out)
 }
 
-// isPcap mirrors zeek.is_pcap: content magic first, extension fallback.
-func isPcap(path string) bool {
+// IsPcap mirrors zeek.is_pcap: content magic first, extension fallback.
+func IsPcap(path string) bool {
 	if pcapMagic[headHex(path, 4)] {
 		return true
 	}
@@ -68,8 +77,8 @@ func isPcap(path string) bool {
 	return false
 }
 
-// isMemoryImage mirrors volatility.is_memory_image (extension-based).
-func isMemoryImage(name string) bool {
+// IsMemoryImage mirrors volatility.is_memory_image (extension-based).
+func IsMemoryImage(name string) bool {
 	low := strings.ToLower(name)
 	for _, e := range memoryExts {
 		if strings.HasSuffix(low, e) {
@@ -79,10 +88,10 @@ func isMemoryImage(name string) bool {
 	return strings.HasSuffix(low, "dramimage")
 }
 
-// detectFormat mirrors plaso.detect_format: identify a disk-image/VM file by
+// DetectFormat mirrors plaso.detect_format: identify a disk-image/VM file by
 // content (a few header bytes + a VHD footer) → ewf1|ewf-cont|ewf2|vmdk|qcow2|
 // vhdx|vhd, "" when no signature matches.
-func detectFormat(path string) string {
+func DetectFormat(path string) string {
 	fi, err := os.Stat(path)
 	if err != nil || fi.IsDir() {
 		return ""
@@ -137,15 +146,15 @@ func detectFormat(path string) string {
 	return ""
 }
 
-// extFormat mirrors plaso.ext_format: the format implied by the file name.
-func extFormat(name string) string {
+// ExtFormat mirrors plaso.ext_format: the format implied by the file name.
+func ExtFormat(name string) string {
 	n := strings.ToLower(filepath.Base(name))
 	switch {
 	case vmdkExtentRe.MatchString(n):
 		return "vmdk-extent"
 	case strings.HasSuffix(n, ".e01"):
 		return "ewf1"
-	case regexp.MustCompile(`\.e[0-9][0-9]$`).MatchString(n):
+	case ewfContRe.MatchString(n):
 		return "ewf-cont"
 	case strings.HasSuffix(n, ".vmdk"):
 		return "vmdk"
@@ -166,7 +175,7 @@ func contentSubdir(path string) string {
 	if pcapMagic[headHex(path, 4)] {
 		return "pcaps"
 	}
-	switch f := detectFormat(path); {
+	switch f := DetectFormat(path); {
 	case diskFormats[f]:
 		return "disk_images"
 	case vmFormats[f]:
@@ -178,16 +187,16 @@ func contentSubdir(path string) string {
 // extSubdirs mirrors _ext_subdirs: the lane subdirs claiming a file by name.
 func extSubdirs(path string) map[string]bool {
 	claims := map[string]bool{}
-	if isPcap(path) {
+	if IsPcap(path) {
 		claims["pcaps"] = true
 	}
-	switch f := extFormat(path); {
+	switch f := ExtFormat(path); {
 	case diskFormats[f]:
 		claims["disk_images"] = true
 	case vmFormats[f]:
 		claims["VM_files"] = true
 	}
-	if isMemoryImage(filepath.Base(path)) {
+	if IsMemoryImage(filepath.Base(path)) {
 		claims["memory"] = true
 	}
 	if strings.HasSuffix(strings.ToLower(filepath.Base(path)), ".evtx") {

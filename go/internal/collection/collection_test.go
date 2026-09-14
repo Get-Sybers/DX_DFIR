@@ -486,38 +486,7 @@ func TestHashUnregistered(t *testing.T) {
 	}
 }
 
-func TestClassify(t *testing.T) {
-	dir := t.TempDir()
-	mk := func(name string, data []byte) string {
-		p := filepath.Join(dir, name)
-		if err := os.WriteFile(p, data, 0o644); err != nil {
-			t.Fatal(err)
-		}
-		return p
-	}
-	ewf := append([]byte{0x45, 0x56, 0x46, 0x09, 0x0d, 0x0a, 0xff, 0x00, 0x00}, []byte{0x01, 0x00}...) // EVF hdr + seg=1
-	cases := []struct {
-		file       string
-		data       []byte
-		wantSubdir string
-		wantBy     string
-	}{
-		{"cap.bin", []byte{0xa1, 0xb2, 0xc3, 0xd4, 0x00}, "pcaps", "magic"},   // pcap magic
-		{"img.e01", ewf, "disk_images", "magic"},                              // EWF magic (seg 1)
-		{"vm.kdmv", []byte("KDMV____"), "VM_files", "magic"},                  // VMDK sparse magic
-		{"log.evtx", []byte("ElfFile\x00"), "logs/winevt", "ext"},             // evtx by ext
-		{"dump.mem", []byte("no magic here"), "memory", "ext"},                // memory by ext
-		{"disk.e01x", []byte("no magic"), "", "unknown"},                      // .e01x: no magic, no ext claim
-		{"raw.raw", []byte("headerless"), "", "ambiguous:disk_images,memory"}, // .raw: disk (ext) + memory (ext)
-		{"notes.txt", []byte("hello"), "", "unknown"},                         // nothing recognises it
-	}
-	for _, c := range cases {
-		sub, by := Classify(mk(c.file, c.data))
-		if sub != c.wantSubdir || by != c.wantBy {
-			t.Errorf("Classify(%s) = (%q, %q), want (%q, %q)", c.file, sub, by, c.wantSubdir, c.wantBy)
-		}
-	}
-}
+// TestClassify moved to internal/identify with the classifier (package identify).
 
 func TestSortRegisterPromoteLink(t *testing.T) {
 	repo := t.TempDir()
