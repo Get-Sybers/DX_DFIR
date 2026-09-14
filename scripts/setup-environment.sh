@@ -38,7 +38,7 @@
 #   - unzip is installed, not merely hoped for. the velociraptor lane hard
 #     exits without it and the old script never mentioned it.
 #
-# Usage: scripts/setup-environment.sh [--yes] [--help]
+# Usage: scripts/setup-environment.sh [--yes] [--no-color] [--help]
 # ==============================================================================
 
 set -o pipefail
@@ -57,18 +57,78 @@ REQUIRED_CMDS=(curl git python3 unzip tar realpath readlink)
 
 ASSUME_YES=false
 
+# ------------------------------------------------------------------------------
+# Output styling — the DX_DFIR "Sunset" palette in ANSI, matching the dxdfir TUI.
+# Colour is applied ONLY on a real terminal; piped/logged output, NO_COLOR, a
+# dumb TERM, or --no-color all fall back to plain ASCII, so the script stays bare
+# bones and its logs stay greppable. Status markers are ASCII (no emoji, no
+# Unicode) for the same reason the progress spinner is: they must survive a
+# C/POSIX locale on a clean machine.
+# ------------------------------------------------------------------------------
+USE_COLOR=true
+setup_colors() {
+    if [[ "$USE_COLOR" == true && -t 1 && -z "${NO_COLOR:-}" && "${TERM:-dumb}" != dumb ]]; then
+        local e=$'\033'
+        C_RESET="${e}[0m"; C_BOLD="${e}[1m"
+        C_ACCENT="${e}[38;5;214m" # marigold  — actions / commands / focus
+        C_OK="${e}[38;5;172m"     # amber     — done / present
+        C_WARN="${e}[38;5;173m"   # ochre     — warning
+        C_FAIL="${e}[38;5;167m"   # vermilion — failure
+        C_TITLE="${e}[38;5;230m"  # cream     — headings
+        C_FRAME="${e}[38;5;94m"   # bronze    — brackets / rules
+        C_DIM="${e}[38;5;245m"    # grey      — secondary detail
+    else
+        C_RESET= C_BOLD= C_ACCENT= C_OK= C_WARN= C_FAIL= C_TITLE= C_FRAME= C_DIM=
+    fi
+}
+setup_colors
+
+# _status COLOUR TAG MESSAGE… — an aligned "[ tag ]" (bronze brackets, coloured
+# 4-char tag) then the message. ok/step/info → stdout; warn/fail → stderr.
+_status() { local c="$1" t="$2"; shift 2; printf '%s[%s%s%s]%s %s\n' "$C_FRAME" "$c" "$t" "$C_FRAME" "$C_RESET" "$*"; }
+ok()   { _status "$C_OK"     " ok " "$@"; }
+step() { _status "$C_ACCENT" " >> " "$@"; }
+info() { _status "$C_DIM"    " .. " "$@"; }
+warn() { _status "$C_WARN"   "warn" "$@" >&2; }
+fail() { _status "$C_FAIL"   "fail" "$@" >&2; }
+
+# detail — a dimmed continuation line, indented under the [tag].
+detail() { printf '       %s%s%s\n' "$C_DIM" "$*" "$C_RESET"; }
+
+# section — a cream heading over a bronze rule.
+section() {
+    printf '\n%s%s%s%s\n%s%s%s\n\n' \
+        "$C_BOLD" "$C_TITLE" "$1" "$C_RESET" \
+        "$C_FRAME" "----------------------------------------------------" "$C_RESET"
+}
+
+# banner — the GE-SYBERS wordmark as a warm sunset gradient (marigold → crimson),
+# echoing the TUI; plain when colour is off.
+banner() {
+    _band() { if [[ -n "$C_RESET" ]]; then printf '\033[38;5;%sm%s\033[0m\n' "$1" "$2"; else printf '%s\n' "$2"; fi; }
+    printf '\n'
+    _band 214 ' ██████╗ ███████╗████████╗   ███████╗██╗   ██╗██████╗ ███████╗██████╗ ███████╗'
+    _band 214 '██╔════╝ ██╔════╝╚══██╔══╝   ██╔════╝╚██╗ ██╔╝██╔══██╗██╔════╝██╔══██╗██╔════╝'
+    _band 172 '██║  ███╗█████╗     ██║█████╗███████╗ ╚████╔╝ ██████╔╝█████╗  ██████╔╝███████╗'
+    _band 173 '██║   ██║██╔══╝     ██║╚════╝╚════██║  ╚██╔╝  ██╔══██╗██╔══╝  ██╔══██╗╚════██║'
+    _band 167 '╚██████╔╝███████╗   ██║      ███████║   ██║   ██████╔╝███████╗██║  ██║███████║'
+    _band 160 ' ╚═════╝ ╚══════╝   ╚═╝      ╚══════╝   ╚═╝   ╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝'
+    printf '\n'
+}
+
 ################################################################################
 # Argument parsing
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -y|--yes) ASSUME_YES=true ;;
+        --no-color|--no-colour) USE_COLOR=false; setup_colors ;;
         -h|--help)
             sed -n '2,42p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *)
-            echo "❌ Unknown option: $1"
-            echo "   Usage: $0 [--yes] [--help]"
+            fail "Unknown option: $1"
+            detail "Usage: $0 [--yes] [--no-color] [--help]"
             exit 1
             ;;
     esac
@@ -78,11 +138,11 @@ done
 # A non-interactive run cannot answer a prompt, so it takes the documented
 # defaults rather than failing every `read` and pretending that was a choice.
 if [[ ! -t 0 ]] && [[ "$ASSUME_YES" != true ]]; then
-    echo "ℹ️  stdin is not a TTY — running non-interactively (implies --yes)."
+    info "stdin is not a TTY — running non-interactively (implies --yes)."
     ASSUME_YES=true
 fi
 
-die() { echo "❌ $*" >&2; exit 1; }
+die() { fail "$*"; exit 1; }
 
 # Build invocation-scoped safe.directory flags (into GIT_SAFE_FLAGS) trusting
 # ONE checkout root — never `git config --global`, which would be a persistent,
@@ -108,11 +168,11 @@ git_safe_flags() {
 confirm() {
     local prompt="$1"
     if [[ "$ASSUME_YES" == true ]]; then
-        echo "➡️  $prompt [assuming yes]"
+        info "$prompt [assuming yes]"
         return 0
     fi
     local reply
-    read -r -p "$prompt (y/n) " reply
+    read -r -p "$(printf '%s?%s %s (y/n) ' "$C_ACCENT" "$C_RESET" "$prompt")" reply
     echo
     [[ "$reply" =~ ^[Yy]$ ]]
 }
@@ -155,15 +215,8 @@ run_with_progress() {
 }
 
 ################################################################################
-echo ""
-echo " ██████╗ ███████╗████████╗   ███████╗██╗   ██╗██████╗ ███████╗██████╗ ███████╗"
-echo "██╔════╝ ██╔════╝╚══██╔══╝   ██╔════╝╚██╗ ██╔╝██╔══██╗██╔════╝██╔══██╗██╔════╝"
-echo "██║  ███╗█████╗     ██║█████╗███████╗ ╚████╔╝ ██████╔╝█████╗  ██████╔╝███████╗"
-echo "██║   ██║██╔══╝     ██║╚════╝╚════██║  ╚██╔╝  ██╔══██╗██╔══╝  ██╔══██╗╚════██║"
-echo "╚██████╔╝███████╗   ██║      ███████║   ██║   ██████╔╝███████╗██║  ██║███████║"
-echo " ╚═════╝ ╚══════╝   ╚═╝      ╚══════╝   ╚═╝   ╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝"
-echo ""
-echo "📂 Repository: $REPO_ROOT_DIR"
+banner
+info "Repository: $REPO_ROOT_DIR"
 
 ################################################################################
 # Resolve the privilege prefix ONCE.
@@ -185,11 +238,11 @@ if [[ "$EUID" -eq 0 ]]; then
         ⠀⠈⢿⣧⠀⢀⡿⠛⠛⠃⠀⠀⠀⠀⠀⠀⠀⠘⠿⠟⠛⠂⠀⣼⡟⠀
         ⠀⠀⠀⠙⢿⣮⣅⣀⣀⣀⣀⣀⠀⠀⠀⠀⢀⣀⣀⣠⣤⣴⡾⠋⠀⠀
 
-       🤨  RUNNING AS ROOT
-       ⚠️   Normal in a container, worth a second look on a workstation —
-            the final step rewrites ownership across the repository.
-
 EOF
+    warn "RUNNING AS ROOT"
+    detail "Normal in a container, worth a second look on a workstation —"
+    detail "the final step rewrites ownership across the repository."
+    echo
     confirm "Continue as root?" || die "Aborted at the root check."
 elif command -v sudo >/dev/null 2>&1; then
     SUDO="sudo"
@@ -201,8 +254,9 @@ fi
 # Install Docker if not already installed
 DOCKER_WAS_INSTALLED=true
 
+section "Docker engine"
 if ! command -v docker >/dev/null 2>&1; then
-    echo "❌ Docker not found. Installing Docker..."
+    step "Docker not found — installing the Docker engine ..."
     DOCKER_WAS_INSTALLED=false
 
     # Derive the Docker apt repo from the running distro. Derivatives (Mint,
@@ -221,7 +275,7 @@ if ! command -v docker >/dev/null 2>&1; then
     esac
     DOCKER_CODENAME="${UBUNTU_CODENAME:-$VERSION_CODENAME}"
     [[ -n "$DOCKER_CODENAME" ]] || die "Could not determine the distro codename from /etc/os-release."
-    echo "   Using Docker repository for $DOCKER_DISTRO/$DOCKER_CODENAME"
+    detail "Using the Docker repository for $DOCKER_DISTRO/$DOCKER_CODENAME"
 
     $SUDO apt-get update || die "apt-get update failed."
     $SUDO apt-get install -y "${APT_DEPS[@]}" || die "Failed to install prerequisites."
@@ -238,9 +292,9 @@ if ! command -v docker >/dev/null 2>&1; then
     $SUDO apt-get install -y docker-ce docker-ce-cli containerd.io \
         docker-buildx-plugin docker-compose-plugin || die "Docker installation failed."
 
-    echo "✅ Docker installed successfully!"
+    ok "Docker engine installed."
 else
-    echo "✅ Docker already installed: $(docker --version)"
+    ok "Docker already installed: $(docker --version)"
 fi
 
 ################################################################################
@@ -254,12 +308,14 @@ for cmd in "${REQUIRED_CMDS[@]}"; do
     command -v "$cmd" >/dev/null 2>&1 || MISSING_DEPS+=("$cmd")
 done
 
+section "Userland tools"
 if [[ ${#MISSING_DEPS[@]} -gt 0 ]]; then
-    echo "🔧 Installing missing tools: ${MISSING_DEPS[*]}"
+    step "Installing missing tools: ${MISSING_DEPS[*]}"
     $SUDO apt-get update || die "apt-get update failed."
     $SUDO apt-get install -y "${APT_DEPS[@]}" || die "Failed to install: ${MISSING_DEPS[*]}"
+    ok "Userland tools installed."
 else
-    echo "✅ Required tools present: ${REQUIRED_CMDS[*]}"
+    ok "Required tools present: ${REQUIRED_CMDS[*]}"
 fi
 
 ################################################################################
@@ -273,25 +329,25 @@ if ! getent group docker > /dev/null; then
 fi
 
 if id -nG "$RUN_USER" | tr ' ' '\n' | grep -qx docker; then
-    echo "✅ $RUN_USER is already in the docker group"
+    ok "$RUN_USER is already in the docker group."
 else
     $SUDO usermod -aG docker "$RUN_USER" && \
-        echo "✅ Added $RUN_USER to the docker group"
+        ok "Added $RUN_USER to the docker group."
 fi
 
 ################################################################################
 # Present user with what this script will do
-echo -e "\n================== Setup Actions ==================\n"
-echo "1. ✅ Check and install Docker (completed)"
-echo "2. ✅ Install required userland tools (completed)"
-echo "3. ✅ Set up Docker group permissions (completed)"
-echo "4. 🔧 Initialise the git submodules (recursively)"
-echo "5. 🔧 Provision the external Byakugan engine at its pinned commit"
-echo "     (and build its Go parse binary, once the Go toolchain is in place)"
-echo "6. 🔧 Set ownership and permissions on the DX_DFIR repository"
-echo -e "\n==================================================\n"
+section "Setup plan"
+ok   "1. Check and install Docker"
+ok   "2. Install required userland tools"
+ok   "3. Set up Docker group permissions"
+step "4. Initialise the git submodules (recursively)"
+step "5. Provision the external Byakugan engine at its pinned commit"
+detail "and build its Go parse binary, once the Go toolchain is in place"
+step "6. Set ownership and permissions on the DX_DFIR repository"
+echo
 
-confirm "Do you wish to proceed?" || { echo "Setup cancelled."; exit 1; }
+confirm "Do you wish to proceed?" || { info "Setup cancelled."; exit 1; }
 
 ################################################################################
 # Pull the git submodules — RECURSIVELY.
@@ -304,8 +360,9 @@ confirm "Do you wish to proceed?" || { echo "Setup cancelled."; exit 1; }
 # was vendored here. (The Byakugan engine is no longer a submodule; it is
 # provisioned as an external checkout in the next step.) Runs before the
 # chown/chmod below so the freshly checked-out files inherit them too.
+section "Git submodules"
 if [[ -f "$REPO_ROOT_DIR/.gitmodules" ]]; then
-    echo "🔗 Initialising git submodules (recursive)..."
+    step "Initialising git submodules (recursive) ..."
     # safe.directory is scoped to THIS invocation with `-c` (the repo may be owned
     # by a different user until the chown below); git_safe_flags trusts the repo
     # root — and, on git >= 2.46, only the paths beneath it.
@@ -314,9 +371,9 @@ if [[ -f "$REPO_ROOT_DIR/.gitmodules" ]]; then
     git "${GIT_SAFE[@]}" -C "$REPO_ROOT_DIR" submodule sync --recursive >/dev/null 2>&1 || true
     git "${GIT_SAFE[@]}" -C "$REPO_ROOT_DIR" submodule update --init --recursive \
         || die "Failed to initialise git submodules recursively (need network + git access)."
-    echo "✅ Submodules checked out (third_party/piiat-mem)."
+    ok "Submodules checked out (third_party/piiat-mem)."
 else
-    echo "ℹ️  No .gitmodules found — skipping submodule init."
+    info "No .gitmodules found — skipping submodule init."
 fi
 
 ################################################################################
@@ -337,6 +394,7 @@ fi
 # invoking user's space, and the repo-scoped chown below does not cover it —
 # a root-owned sibling checkout would be exactly the permissions trap the
 # chown exists to avoid.
+section "Byakugan engine"
 BYAKUGAN_ROOT="${BYAKUGAN_ROOT:-$(dirname "$REPO_ROOT_DIR")/byakugan}"
 BYAKUGAN_URL="https://github.com/Get-Sybers/byakugan"
 # Same scoped safe.directory guard as the submodule step above: a re-run under
@@ -360,9 +418,9 @@ if [[ -e "$BYAKUGAN_ROOT/.git" ]]; then
     if [[ "$("${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" rev-parse HEAD 2>/dev/null)" == "$BYAKUGAN_REF" ]]; then
         # Already on the pin: skip the fetch so a re-run works offline; the
         # submodule update below is then a local no-op (or a first init).
-        echo "🔭 Byakugan engine already at the pinned commit ($BYAKUGAN_ROOT)."
+        ok "Byakugan engine already at the pinned commit ($BYAKUGAN_ROOT)."
     else
-        echo "🔭 Updating the Byakugan engine at $BYAKUGAN_ROOT to the pinned commit ..."
+        step "Updating the Byakugan engine at $BYAKUGAN_ROOT to the pinned commit ..."
         "${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" fetch origin \
             || die "failed to fetch the Byakugan engine (need network + git access)."
         "${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" checkout --quiet "$BYAKUGAN_REF" \
@@ -373,7 +431,7 @@ if [[ -e "$BYAKUGAN_ROOT/.git" ]]; then
 elif [[ -e "$BYAKUGAN_ROOT" ]]; then
     die "$BYAKUGAN_ROOT exists but is not a git checkout — move it aside, or point \$BYAKUGAN_ROOT at the real engine checkout."
 else
-    echo "🔭 Cloning the Byakugan engine to $BYAKUGAN_ROOT ..."
+    step "Cloning the Byakugan engine to $BYAKUGAN_ROOT ..."
     git clone "$BYAKUGAN_URL" "$BYAKUGAN_ROOT" \
         || die "failed to clone the Byakugan engine (need network + git access)."
     "${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" checkout --quiet "$BYAKUGAN_REF" \
@@ -381,7 +439,7 @@ else
     "${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" submodule update --init --recursive \
         || die "failed to initialise the engine's nested submodules (car + attack-datasources)."
 fi
-echo "✅ Byakugan engine provisioned: $BYAKUGAN_ROOT @ $BYAKUGAN_REF"
+ok "Byakugan engine provisioned: $BYAKUGAN_ROOT @ $BYAKUGAN_REF"
 # NOTE: the engine's Go parse binary (go/bin/byakugan-parse) is built further
 # down, AFTER the Go toolchain section — `go` is not guaranteed on PATH here.
 
@@ -393,16 +451,17 @@ echo "✅ Byakugan engine provisioned: $BYAKUGAN_ROOT @ $BYAKUGAN_REF"
 # and the .sh files stay runnable, while evidence files are left non-executable.
 # The old `chmod -R 744` cleared group execute on directories and locked the
 # docker group out of the tree the script had just handed it.
-echo "🔧 Setting ownership to $RUN_USER:docker and permissions on the repository..."
-echo "   Recursive over the whole checkout; a populated data_store/ makes this a"
-echo "   large walk that can take a while — live progress is shown below."
+section "Repository ownership + permissions"
+step "Setting ownership to $RUN_USER:docker and permissions on the repository ..."
+detail "Recursive over the whole checkout; a populated data_store/ makes this a"
+detail "large walk that can take a while — live progress is shown below."
 if [[ -d "$REPO_ROOT_DIR" ]]; then
-    run_with_progress "   → ownership  ($RUN_USER:docker)" \
+    run_with_progress "   -> ownership  ($RUN_USER:docker)" \
         $SUDO chown -R "$RUN_USER:docker" "$REPO_ROOT_DIR" \
-        || echo "⚠️  Some ownership changes were skipped"
-    run_with_progress "   → permissions (u=rwX,g=rX,o=)" \
+        || warn "Some ownership changes were skipped"
+    run_with_progress "   -> permissions (u=rwX,g=rX,o=)" \
         $SUDO chmod -R u=rwX,g=rX,o= "$REPO_ROOT_DIR" \
-        || echo "⚠️  Some permission changes were skipped"
+        || warn "Some permission changes were skipped"
 fi
 
 ################################################################################
@@ -425,8 +484,9 @@ fi
 # engine default degrades to a path nothing provisioned. Editable keeps the
 # installed module IN the repo tree, so every _REPO_ROOT-relative path resolves.
 ################################################################################
+section "Python package + Ansible"
 DXDFIR_VENV="${DXDFIR_VENV:-/opt/dxdfir/venv}"
-echo "🐍 Installing the get_sybers_dxdfir package (+ ansible) into $DXDFIR_VENV ..."
+step "Installing the get_sybers_dxdfir package (+ ansible) into $DXDFIR_VENV ..."
 $SUDO python3 -m venv "$DXDFIR_VENV" || die "Failed to create the venv (need python3-venv)."
 $SUDO "$DXDFIR_VENV/bin/pip" install --quiet --upgrade pip || die "pip upgrade in the venv failed."
 # --constraint pins the exact, tested dependency versions from python/constraints.txt
@@ -450,7 +510,7 @@ for _ans in ansible ansible-playbook ansible-galaxy; do
     $SUDO ln -sf "$DXDFIR_VENV/bin/$_ans" "/usr/local/bin/$_ans" \
         || die "Failed to expose $_ans on PATH (/usr/local/bin)."
 done
-echo "✅ ansible on PATH: $(/usr/local/bin/ansible-playbook --version 2>/dev/null | head -1 || echo 'ansible-playbook')"
+ok "ansible on PATH: $(/usr/local/bin/ansible-playbook --version 2>/dev/null | head -1 || echo 'ansible-playbook')"
 
 ################################################################################
 # Build + install the Go/termui `dxdfir` front-end (go/). It is the primary
@@ -462,6 +522,7 @@ echo "✅ ansible on PATH: $(/usr/local/bin/ansible-playbook --version 2>/dev/nu
 # auto-upgrades, so a host provisioned by an earlier release of this script
 # (which pinned 1.22.x) must be re-provisioned here rather than fail the build.
 ################################################################################
+section "Go toolchain + dxdfir front-end"
 GO_VERSION="${GO_VERSION:-1.24.7}"
 GO_MIN_MINOR=24
 GO_BIN_DIR="${GO_BIN_DIR:-/opt/dxdfir/bin}"
@@ -472,8 +533,8 @@ if command -v go >/dev/null 2>&1; then
 fi
 if (( ! _go_ok )); then
     command -v go >/dev/null 2>&1 \
-        && echo "🐹 Found Go $(go version 2>/dev/null | awk '{print $3}') — older than go.mod's 1.${GO_MIN_MINOR} floor; replacing it."
-    echo "🐹 Installing the Go toolchain ($GO_VERSION) ..."
+        && info "Found Go $(go version 2>/dev/null | awk '{print $3}') — older than go.mod's 1.${GO_MIN_MINOR} floor; replacing it."
+    step "Installing the Go toolchain ($GO_VERSION) ..."
     case "$(uname -m)" in
         x86_64)        _garch=amd64 ;;
         aarch64|arm64) _garch=arm64 ;;
@@ -501,14 +562,14 @@ if (( ! _go_ok )); then
         || die "No SHA-256 for ${_gotar} in the go.dev release index (looked up go${GO_VERSION}) — check the pinned GO_VERSION names a real release."
     printf '%s  %s\n' "$_gosha" "/tmp/${_gotar}" | sha256sum -c --status - \
         || die "Go toolchain checksum mismatch for ${_gotar} — refusing to install."
-    echo "   🔒 Verified go${GO_VERSION} (${_garch}) against the go.dev published SHA-256."
+    detail "Verified go${GO_VERSION} (${_garch}) against the go.dev published SHA-256."
     $SUDO rm -rf /usr/local/go
     $SUDO tar -C /usr/local -xzf "/tmp/${_gotar}" || die "Failed to extract the Go toolchain."
     rm -f "/tmp/${_gotar}"
     $SUDO ln -sf /usr/local/go/bin/go /usr/local/bin/go
     export PATH="/usr/local/go/bin:$PATH"
 fi
-echo "🐹 Building the dxdfir Go front-end ($(go version 2>/dev/null | awk '{print $3}')) ..."
+step "Building the dxdfir Go front-end ($(go version 2>/dev/null | awk '{print $3}')) ..."
 $SUDO mkdir -p "$GO_BIN_DIR"
 
 # Build from a CLEAN, EPHEMERAL cache — a throwaway dir (module cache, build
@@ -532,7 +593,7 @@ if ! ( cd "$REPO_ROOT_DIR/go" \
     if [[ "$_gomod" == "-mod=vendor" ]]; then
         # A vendored tree captured before a dependency changed would fail an
         # update; fall back to the proxy rather than wedge on stale vendoring.
-        echo "⚠️  Vendored modules look stale — fetching through the module proxy instead."
+        warn "Vendored modules look stale — fetching through the module proxy instead."
         ( cd "$REPO_ROOT_DIR/go" \
             && $SUDO env "${_goenv[@]}" go build -mod=mod -o "$GO_BIN_DIR/dxdfir" ./cmd/dxdfir ) \
             || { _goclean; die "Failed to build the dxdfir Go front-end (module proxy unreachable? re-vendor on a networked host: 'cd go && go mod vendor')."; }
@@ -546,8 +607,8 @@ $SUDO ln -sf "$GO_BIN_DIR/dxdfir" /usr/local/bin/dxdfir
 # `man dxdfir` (README / Get-Started) must work on a provisioned host, so the
 # manual installs beside the binary. Best-effort: no man tree is not fatal.
 $SUDO install -Dm644 "$REPO_ROOT_DIR/go/man/dxdfir.1" /usr/local/share/man/man1/dxdfir.1 2>/dev/null \
-    || echo "⚠️  Could not install the man page — read it in-tree: man ./go/man/dxdfir.1"
-echo "✅ dxdfir (Go front-end) installed: $(/usr/local/bin/dxdfir --version 2>/dev/null || echo "$GO_BIN_DIR/dxdfir")"
+    || warn "Could not install the man page — read it in-tree: man ./go/man/dxdfir.1"
+ok "dxdfir (Go front-end) installed: $(/usr/local/bin/dxdfir --version 2>/dev/null || echo "$GO_BIN_DIR/dxdfir")"
 
 ################################################################################
 # Build the Byakugan engine's OWN Go parse binary (go/bin/byakugan-parse).
@@ -573,7 +634,7 @@ echo "✅ dxdfir (Go front-end) installed: $(/usr/local/bin/dxdfir --version 2>/
 ################################################################################
 [[ -d "$BYAKUGAN_ROOT/go" ]] \
     || die "the Byakugan engine at $BYAKUGAN_ROOT has no go/ directory — the pinned commit ($BYAKUGAN_REF) predates the Go parse binary, or the checkout is incomplete. Bump byakugan.ref, or re-provision the engine."
-echo "🐹 Building the Byakugan engine's Go parse binary ($(go version 2>/dev/null | awk '{print $3}')) ..."
+step "Building the Byakugan engine's Go parse binary ($(go version 2>/dev/null | awk '{print $3}')) ..."
 # HOME="${HOME:-/root}" for the same reason the front-end build above sets it:
 # `go build` needs a writable HOME for its build cache and dies without one.
 ( cd "$BYAKUGAN_ROOT/go" \
@@ -582,7 +643,7 @@ echo "🐹 Building the Byakugan engine's Go parse binary ($(go version 2>/dev/n
     || die "failed to build the Byakugan engine's parse binary (equivalent: make -C \"$BYAKUGAN_ROOT/go\" build) — the engine's file ingestion requires go/bin/byakugan-parse."
 [[ -x "$BYAKUGAN_ROOT/go/bin/byakugan-parse" ]] \
     || die "the engine build reported success but $BYAKUGAN_ROOT/go/bin/byakugan-parse is missing or not executable."
-echo "✅ Byakugan parse binary built: $BYAKUGAN_ROOT/go/bin/byakugan-parse"
+ok "Byakugan parse binary built: $BYAKUGAN_ROOT/go/bin/byakugan-parse"
 
 ################################################################################
 # Install the collection's pinned Ansible dependencies (requirements.yml — never
@@ -591,30 +652,34 @@ echo "✅ Byakugan parse binary built: $BYAKUGAN_ROOT/go/bin/byakugan-parse"
 # pinned versions: community.docker (the deploy roles) and ansible.posix (the
 # profile_tasks audit-timing callback).
 ################################################################################
+section "Ansible collections"
 DXDFIR_COLLECTIONS="${DXDFIR_COLLECTIONS:-/opt/dxdfir/collections}"
-echo "📚 Installing pinned Ansible collections into $DXDFIR_COLLECTIONS ..."
+step "Installing pinned Ansible collections into $DXDFIR_COLLECTIONS ..."
 $SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install \
     -r "$REPO_ROOT_DIR/ansible/collections/get_sybers.dxdfir/requirements.yml" \
     -p "$DXDFIR_COLLECTIONS" --force \
     || die "Failed to install the pinned Ansible collections (requirements.yml)."
-echo "✅ Collections installed: $("$DXDFIR_VENV/bin/ansible-galaxy" collection list -p "$DXDFIR_COLLECTIONS" 2>/dev/null | grep -cE '^[a-z]' || echo '?') pinned"
+ok "Collections installed: $("$DXDFIR_VENV/bin/ansible-galaxy" collection list -p "$DXDFIR_COLLECTIONS" 2>/dev/null | grep -cE '^[a-z]' || echo '?') pinned"
 
 ################################################################################
-echo ""
-echo "🎉 Setup complete!"
-echo ""
+# cmd — a marigold command line, indented under a step, with a dim aside.
+cmd() { printf '       %s%s%s  %s%s%s\n' "$C_ACCENT" "$1" "$C_RESET" "$C_DIM" "${2:-}" "$C_RESET"; }
+
+section "Setup complete"
 if [[ "$DOCKER_WAS_INSTALLED" == false ]]; then
-    echo "⚠️  IMPORTANT: Please log out and back in for Docker group changes to take effect."
+    warn "Log out and back in for the Docker group change to take effect."
 else
-    echo "✅ Docker group permissions should already be active."
+    ok "Docker group permissions are already active."
 fi
-echo ""
-echo "🐳 Build the hardened tool containers (everything the pipeline runs):"
-echo "     ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml"
-echo ""
-echo "📦 To pre-seed the analysis images as tarballs for an offline host, run:"
-echo "     scripts/save-docker-images.sh          (online host: pull + save)"
-echo "     scripts/save-docker-images.sh --load   (offline host: load tarballs)"
-echo ""
-echo "🚀 You can now run DX_DFIR — try:  dxdfir --help"
-echo "   (process evidence, build + verify CAR, bring up docker/elastic — see README.md)"
+echo
+
+step "Build the hardened tool containers (everything the pipeline runs):"
+cmd "ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml"
+echo
+step "Pre-seed the analysis images as tarballs for an offline host:"
+cmd "scripts/save-docker-images.sh" "(online host: pull + save)"
+cmd "scripts/save-docker-images.sh --load" "(offline host: load tarballs)"
+echo
+step "Run DX_DFIR:"
+cmd "dxdfir --help" "(process evidence, build + verify CAR, bring up docker/elastic — see README.md)"
+echo
