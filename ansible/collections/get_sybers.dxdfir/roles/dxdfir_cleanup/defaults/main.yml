@@ -12,7 +12,8 @@ dxdfir_cleanup_processed_dir: "{{ dxdfir_cleanup_repo_root }}/data_store/process
 dxdfir_cleanup_car_dir: "{{ dxdfir_cleanup_repo_root }}/data_store/processed/car"
 dxdfir_cleanup_python_path: "{{ dxdfir_cleanup_repo_root }}/python"
 
-# docker: also prune dangling layers; and target EVERY dxdfir/* image rather than
-# only the hardened tool set (the source of truth is get_sybers_dxdfir.images).
+# docker: also prune dangling layers; and target EVERY get-sybers/* image rather
+# than only the hardened tool set (which is selected by the
+# com.get-sybers.hardened=true label the build stamps on each tool image).
 dxdfir_cleanup_dangling: false
 dxdfir_cleanup_all_dxdfir: false
