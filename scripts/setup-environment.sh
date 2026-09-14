@@ -128,7 +128,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             fail "Unknown option: $1"
-            detail "Usage: $0 [--yes] [--no-color] [--help]"
+            detail "Usage: $0 [--yes] [--no-color] [--help]" >&2
             exit 1
             ;;
     esac
@@ -240,8 +240,8 @@ if [[ "$EUID" -eq 0 ]]; then
 
 EOF
     warn "RUNNING AS ROOT"
-    detail "Normal in a container, worth a second look on a workstation —"
-    detail "the final step rewrites ownership across the repository."
+    detail "Normal in a container, worth a second look on a workstation —" >&2
+    detail "the final step rewrites ownership across the repository." >&2
     echo
     confirm "Continue as root?" || die "Aborted at the root check."
 elif command -v sudo >/dev/null 2>&1; then
