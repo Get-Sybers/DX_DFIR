@@ -6,10 +6,8 @@
     dxdfir_evtx_pipeline: elastic
     dxdfir_evtx_evtx_dir: /tmp/dxdfir_evtx_molecule/in
     dxdfir_evtx_elastic_out_dir: /tmp/dxdfir_evtx_molecule/out
-    # This scenario supplies an EvtxECmd release, so it exercises the
-    # operator-supplied path (not the bundled image, which it doesn't build).
-    dxdfir_evtx_use_bundled_image: false
-    dxdfir_evtx_evtxecmd_dir: "{{ molecule_evtxecmd_dir | default(lookup('env', 'EVTXECMD_DIR')) }}"
+    # Uses the default goevtx image (get-sybers/goevtx); build it first with
+    # playbooks/dxdfir-build-images.yml.
   tasks:
     - name: "converge | run dxdfir_evtx (elastic)"
       ansible.builtin.include_role:

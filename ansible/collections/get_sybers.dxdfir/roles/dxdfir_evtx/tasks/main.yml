@@ -10,17 +10,14 @@
       - dxdfir_evtx_pipeline in ['elastic', 'sofelk']
       # At least one input source: loose .evtx (evtx_dir) or disk images (image_src).
       - (dxdfir_evtx_evtx_dir | length > 0) or (dxdfir_evtx_image_src | length > 0)
-      # A release dir is required only in operator mode; bundled mode bakes it in.
-      - dxdfir_evtx_use_bundled_image | bool or dxdfir_evtx_evtxecmd_dir | length > 0
     fail_msg: >-
-      dxdfir_evtx needs dxdfir_evtx_pipeline (elastic|sofelk), an input source
-      (dxdfir_evtx_evtx_dir or dxdfir_evtx_image_src), and (in operator mode)
-      dxdfir_evtx_evtxecmd_dir.
+      dxdfir_evtx needs dxdfir_evtx_pipeline (elastic|sofelk) and an input source
+      (dxdfir_evtx_evtx_dir or dxdfir_evtx_image_src).
     quiet: true
   tags: [always]
 
 # role_path resolves to THIS role here — capture the lane-specific preflight file
-# so dxdfir_lane includes evtx's checks (bundled/operator EvtxECmd), not its own.
+# so dxdfir_lane includes evtx's check (the goevtx image is present), not its own.
 - name: "evtx | resolve lane-specific task paths"
   ansible.builtin.set_fact:
     dxdfir_evtx_preflight_extra: "{{ role_path }}/tasks/preflight_extra.yml"

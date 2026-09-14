@@ -1,9 +1,7 @@
 ---
-# EvtxECmd is operator-supplied (not redistributable) and a .evtx is binary, so no
-# fixture ships in-repo. Point these at a sample log and an EvtxECmd release to run
-# the scenario:
-#   molecule test -- -e molecule_sample_evtx=/path/Security.evtx \
-#                     -e molecule_evtxecmd_dir=/path/to/evtxecmd
+# A .evtx is binary, so no fixture ships in-repo. Point this at a sample log to run
+# the scenario (goevtx is the bundled image — no EvtxECmd release needed):
+#   molecule test -- -e molecule_sample_evtx=/path/Security.evtx
 - name: Prepare
   hosts: localhost
   gather_facts: false
@@ -11,16 +9,13 @@
     molecule_evtx_in: /tmp/dxdfir_evtx_molecule/in
     molecule_out: /tmp/dxdfir_evtx_molecule/out
     molecule_sample_evtx: ""
-    molecule_evtxecmd_dir: ""
   tasks:
     - name: "molecule-prepare | require a sample .evtx and an EvtxECmd release"
       ansible.builtin.assert:
         that:
           - molecule_sample_evtx | length > 0
-          - molecule_evtxecmd_dir | length > 0
         fail_msg: >-
-          Provide -e molecule_sample_evtx=<path/to/*.evtx> and
-          -e molecule_evtxecmd_dir=<path/to/evtxecmd> (operator-supplied; not shipped).
+          Provide -e molecule_sample_evtx=<path/to/*.evtx> (binary; not shipped).
         quiet: true
 
     - name: "molecule-prepare | start from a clean output dir"

@@ -1,54 +1,22 @@
-# EvtxECmd
+# EvtxECmd — no longer needed (replaced by goevtx)
 
-> **You usually don't need this directory.** The `dxdfir_evtx` role defaults to the
-> **bundled** [`get-sybers/evtxecmd`](https://github.com/Get-Sybers/GoDFIR-toolz/tree/main/evtxecmd) image, which bakes `EvtxECmd.dll`
-> + `Maps/` for you — `docker build -t get-sybers/evtxecmd:latest -f third_party/GoDFIR-toolz/evtxecmd/Dockerfile third_party/GoDFIR-toolz`. This
-> dir is the **operator-supplied** fallback, used only when you run with
-> `dxdfir_evtx_use_bundled_image=false`.
+> **This directory is obsolete.** The `dxdfir_evtx` lane no longer runs EvtxECmd
+> (.NET). Windows Event Logs are parsed by **goevtx** — a static-Go EvtxECmd
+> substitute on Velociraptor's go-evtx, built `FROM scratch` as
+> [`get-sybers/goevtx`](https://github.com/Get-Sybers/GoDFIR-toolz/tree/main/goevtx).
+> There is no `EvtxECmd.dll` to download and nothing to place here.
 
-Extract the published EvtxECmd release here for the operator-supplied path. The
-`get_sybers_dxdfir.evtx` processor mounts it read-only into a stock .NET runtime
-container to turn raw `.evtx` into normalised JSON.
+Build the image once (the `dxdfir_images` role does this for you):
 
-## Get it
-
-- <https://github.com/EricZimmerman/evtx/releases>
-- or <https://ericzimmerman.github.io/>
-
-Take the **.NET** build — it runs on Linux inside a
-`mcr.microsoft.com/dotnet/runtime:9.0` container (EvtxECmd's current build targets
-net9.0), so `EvtxECmd.dll` is what's needed, not `EvtxECmd.exe`.
-
-Expected layout (either works):
-
-```
-data_store/dependencies/evtxecmd/
-├── EvtxECmd.dll
-├── EvtxECmd.deps.json
-├── EvtxECmd.runtimeconfig.json
-└── Maps/
-    └── *.map
+```bash
+docker build -t get-sybers/goevtx:latest \
+  -f third_party/GoDFIR-toolz/goevtx/Dockerfile third_party/GoDFIR-toolz/goevtx
 ```
 
-## Include `Maps/`
+goevtx emits the same `*_EvtxECmd_Output.json` shape the CAR lane consumes
+(EventId, Provider, Channel, Computer, EventRecordId, TimeCreated, and the raw
+EventData in Payload). It does not reproduce EvtxECmd's Maps layer
+(`MapDescription` / `PayloadData1-6`) — byakugan reads the raw EventData, not
+those derived columns.
 
-Without the `Maps/` folder EvtxECmd still parses, but `MapDescription` comes out
-empty — and that field is what `EvtxECmd_App` uses to populate CIM's
-`signature`. You lose the human-readable "what this event means" summary.
-
-Update the maps with `EvtxECmd.dll --sync` (needs network).
-
-## Licence
-
-**MIT** — Copyright (c) 2019 Eric Zimmerman.
-
-Worth noting explicitly: EvtxECmd carries **no restriction on commercial
-use** — one reason this project standardises on the EZ Tools (here directly,
-and via the planned Velociraptor offline collectors) rather than KAPE, whose
-Solo Edition EULA forbids business use. See
-[THIRD_PARTY_NOTICES.md](/THIRD_PARTY_NOTICES.md).
-
-It is not vendored here for the same reason nothing else is: this project does
-not redistribute other people's builds.
-
-Binaries in this directory are gitignored. Only this README is tracked.
+The directory is kept only so existing references resolve; it holds no binaries.

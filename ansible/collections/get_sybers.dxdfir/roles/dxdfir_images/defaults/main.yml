@@ -25,7 +25,8 @@ dxdfir_images_gid: "{{ dxdfir_runtime_gid | default(dxdfir_runtime_uid | default
 dxdfir_images_context: "{{ dxdfir_images_repo_root }}/docker"
 
 # The GoDFIR-toolz submodule root. EvtxECmd, the whole Eric Zimmerman tool
-# family, and the two Go substitutes (prefetch, esedump) build from here; the
+# family, and the GoDFIR Go tools (goevtx/gomft/gorb/goprefetch/goese/
+# goamcache/goappcompat) build from here; the
 # submodule carries its own hardening/harden.yml (COPYd by its Dockerfiles).
 dxdfir_images_eztools_context: "{{ dxdfir_images_repo_root }}/third_party/GoDFIR-toolz"
 
@@ -40,9 +41,8 @@ dxdfir_images_set:
   - zeek
   - volatility
   - plaso
-  - evtxecmd
-  # The Eric Zimmerman tool family — all built from the ONE parameterized
-  # eztool/Dockerfile in the GoDFIR-toolz submodule (same recipe as evtxecmd),
+  # The still-.NET Eric Zimmerman tools — all built from the ONE parameterized
+  # eztool/Dockerfile in the GoDFIR-toolz submodule,
   # tool selected per image via build args (see dxdfir_images_build_overrides).
   - recmd
   - lecmd
@@ -56,11 +56,13 @@ dxdfir_images_set:
   #   goese      replaces SrumECmd/SumECmd — SRUDB.dat / SUM Current.mdb
   #   gorb       replaces RBCmd (drops .NET) — Recycle Bin $I records
   #   gomft      replaces MFTECmd (drops .NET, on go-ntfs) — $MFT
+  #   goevtx     replaces EvtxECmd (drops .NET, on go-evtx) — .evtx
   #   goamcache/goappcompat replace AmcacheParser/AppCompatCacheParser (regparser)
   - goprefetch
   - goese
   - gorb
   - gomft
+  - goevtx
   - goamcache
   - goappcompat
 
@@ -69,7 +71,7 @@ dxdfir_images_force: false
 
 # Per-image build context/dockerfile overrides.
 #   - volatility: the PIIAT-Mem submodule (its own docker/ context carries harden.yml).
-#   - evtxecmd + the EZ family: the GoDFIR-toolz submodule root (context = the
+#   - the .NET EZ family: the GoDFIR-toolz submodule root (context = the
 #     submodule root so the Dockerfiles reach its hardening/harden.yml).
 #   - goprefetch, goese, gorb: FROM scratch, so each context is its OWN subdir
 #     under the submodule (go.mod/main.go live there).
@@ -77,7 +79,6 @@ dxdfir_images_build_overrides:
   volatility:
     context: "{{ dxdfir_images_repo_root }}/third_party/piiat-mem/docker"
     dockerfile: "Dockerfile"
-  evtxecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "evtxecmd/Dockerfile"}
   recmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "RECmd"}}
   lecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "LECmd"}}
   jlecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "JLECmd"}}
@@ -88,5 +89,6 @@ dxdfir_images_build_overrides:
   goese: {context: "{{ dxdfir_images_eztools_context }}/goese", dockerfile: "Dockerfile"}
   gorb: {context: "{{ dxdfir_images_eztools_context }}/gorb", dockerfile: "Dockerfile"}
   gomft: {context: "{{ dxdfir_images_eztools_context }}/gomft", dockerfile: "Dockerfile"}
+  goevtx: {context: "{{ dxdfir_images_eztools_context }}/goevtx", dockerfile: "Dockerfile"}
   goamcache: {context: "{{ dxdfir_images_eztools_context }}/goamcache", dockerfile: "Dockerfile"}
   goappcompat: {context: "{{ dxdfir_images_eztools_context }}/goappcompat", dockerfile: "Dockerfile"}

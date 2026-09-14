@@ -18,7 +18,6 @@
 # Operator-supplied fixtures (large/binary; not shipped) come from env vars —
 # a scenario whose fixture is absent is SKIPPED with a note, not failed:
 #   MOLECULE_SAMPLE_EVTX      .evtx log            (dxdfir_evtx)
-#   MOLECULE_EVTXECMD_DIR     EvtxECmd release dir (dxdfir_evtx)
 #   MOLECULE_SAMPLE_IMAGE     raw/E01 disk image   (dxdfir_plaso)
 #   MOLECULE_SAMPLE_MEMORY    memory image         (dxdfir_volatility)
 #
@@ -59,8 +58,8 @@ fi
 extra_args() { # role -> ansible -e args for its operator-supplied fixtures, or rc 1 to skip
     case "$1" in
         dxdfir_evtx)
-            [[ -f "${MOLECULE_SAMPLE_EVTX:-}" && -d "${MOLECULE_EVTXECMD_DIR:-}" ]] || return 1
-            echo "-e molecule_sample_evtx=$MOLECULE_SAMPLE_EVTX -e molecule_evtxecmd_dir=$MOLECULE_EVTXECMD_DIR" ;;
+            [[ -f "${MOLECULE_SAMPLE_EVTX:-}" ]] || return 1
+            echo "-e molecule_sample_evtx=$MOLECULE_SAMPLE_EVTX" ;;
         dxdfir_plaso)
             [[ -f "${MOLECULE_SAMPLE_IMAGE:-}" ]] || return 1
             echo "-e molecule_sample_image=$MOLECULE_SAMPLE_IMAGE" ;;

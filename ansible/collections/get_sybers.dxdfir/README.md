@@ -70,10 +70,9 @@ installing molecule on the host via the containerised harness:
 ./tests/run-molecule.sh dxdfir_zeek          # one role
 ```
 
-Scenarios that need operator-supplied fixtures (a sample `.evtx` + EvtxECmd
-release, a disk image, a memory image) read them from `MOLECULE_SAMPLE_*` /
-`MOLECULE_EVTXECMD_DIR` env vars and are skipped with a note when absent —
-see the script header for the full list.
+Scenarios that need operator-supplied fixtures (a sample `.evtx`, a disk image,
+a memory image) read them from `MOLECULE_SAMPLE_*` env vars and are skipped with
+a note when absent — see the script header for the full list.
 
 ## Standards alignment
 

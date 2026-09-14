@@ -39,7 +39,7 @@ BUILT_IMAGES=(
     "get-sybers/zeek:latest"
     "get-sybers/volatility:latest"
     "get-sybers/plaso:latest"
-    "get-sybers/evtxecmd:latest"
+    "get-sybers/goevtx:latest"
     # Eric Zimmerman lane: recmd/lecmd/jlecmd/sbecmd/sqlecmd/wxtcmd (eztool/Dockerfile)
     # + the Go ports gomft/goamcache/goappcompat/gorb (their own GoDFIR-toolz subdirs).
     "get-sybers/recmd:latest"

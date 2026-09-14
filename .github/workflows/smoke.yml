@@ -109,10 +109,10 @@ jobs:
       - name: Install the dxdfir package
         run: python -m pip install --quiet --constraint python/constraints.txt ./python
 
-      # The evtx lane runs EvtxECmd from the bundled image; build it once here
-      # (the smoke test asserts its presence and fails loudly if absent).
-      - name: Build the bundled EvtxECmd image
-        run: docker build -t get-sybers/evtxecmd:latest -f third_party/GoDFIR-toolz/evtxecmd/Dockerfile third_party/GoDFIR-toolz
+      # The evtx lane runs goevtx (static-Go EvtxECmd substitute); build it once
+      # here (the smoke test asserts its presence and fails loudly if absent).
+      - name: Build the goevtx image
+        run: docker build -t get-sybers/goevtx:latest -f third_party/GoDFIR-toolz/goevtx/Dockerfile third_party/GoDFIR-toolz/goevtx
 
       - name: Run the pipeline smoke test
         run: ./tests/smoke-test.sh

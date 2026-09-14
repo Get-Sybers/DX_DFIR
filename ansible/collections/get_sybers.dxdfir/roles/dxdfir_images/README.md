@@ -44,7 +44,7 @@ can `COPY` it from their build context.
 - **no shell and no python** except where the tool needs them: `get-sybers/yara`
   keeps `sh` (its scan loop is a shell script), `get-sybers/volatility` and
   `get-sybers/plaso` keep python (the tools are python); `get-sybers/zeek`,
-  `get-sybers/suricata`, `get-sybers/evtxecmd` carry neither
+  `get-sybers/suricata`, and the GoDFIR Go tools carry neither
 - the tool runs as **uid 2000**
 
 The role verifies this twice per image: the static image config (USER, hardened
@@ -70,7 +70,7 @@ and locked; the tool runs as uid 2000.
 **Kept only where the tool needs it**: `get-sybers/yara` keeps `sh` (its per-file
 scan loop is a shell script — the image ENTRYPOINT); `get-sybers/volatility` and
 `get-sybers/plaso` keep `python3` (the tools *are* python). `get-sybers/zeek`,
-`get-sybers/suricata` and `get-sybers/evtxecmd` carry **no shell and no python** at all.
+`get-sybers/suricata` and the GoDFIR Go tools (goevtx/gomft/…) carry **no shell and no python** at all.
 
 Why not strip the shell from *every* image on instinct? Removing it does not
 stop an attacker who already has code execution — the premise of a compromised
