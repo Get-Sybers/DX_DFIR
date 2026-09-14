@@ -5,7 +5,7 @@ galaxy_info:
   author: Get-Sybers
   description: >-
     Shared skeleton for the hardened DFIR tool lanes: preflight (docker reachable,
-    declared input dirs exist, the processor module imports, every dxdfir/* tool image
+    declared input dirs exist, the processor module imports, every get-sybers/* tool image
     passes the hardened supply-chain guard) and the process block/rescue (run the
     processor, verify output on disk, gate on its JSON summary). Consumed via
     include_role by the per-tool lane roles so the skeleton lives once, not six times.

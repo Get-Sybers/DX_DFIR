@@ -50,10 +50,11 @@
   changed_when: false
 
 # Supply-chain guard: refuse to start unless every tool image about to run is a
-# KNOWN hardened dxdfir/* image (label + uid + expected name). A substituted or
-# un-hardened image stops the lane before any evidence is touched. A non-dxdfir
-# image (e.g. an operator-supplied .NET runtime) is out of scope and passes.
-- name: "preflight | tool images are known hardened dxdfir/* images | {{ dxdfir_lane_name }}"
+# KNOWN hardened get-sybers/* image (label + uid + expected name). A substituted
+# or un-hardened image stops the lane before any evidence is touched. A
+# non-get-sybers image (e.g. an operator-supplied .NET runtime) is out of scope
+# and passes (require() itself no-ops on it — see images.py).
+- name: "preflight | tool images are known hardened get-sybers/* images | {{ dxdfir_lane_name }}"
   ansible.builtin.command:
     argv: ["python3", "-m", "get_sybers_dxdfir.images", "--require", "{{ item }}"]
   environment:
@@ -61,4 +62,4 @@
   loop: "{{ dxdfir_lane_images }}"
   register: dxdfir_lane_image_guard
   changed_when: false
-  when: item is match('^dxdfir/')
+  when: item is match('^get-sybers/')
