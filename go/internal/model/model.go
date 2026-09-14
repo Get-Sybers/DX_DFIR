@@ -142,11 +142,12 @@ type Update struct {
 	Err      error
 }
 
-// ProgressEvent is one line of the `--progress=json` stream: a job's update
-// serialized so a parent dxdfir (the interactive shell) can render it as live
-// widgets rather than scraping plain text. Exactly one of Snapshot/Log is set
-// per event, plus a final {Done:true} carrying any error text. The shell decodes
-// each stdout line straight back into this type.
+// ProgressEvent is one line of the JSON progress stream (activated by the child
+// with DXDFIR_PROGRESS=json): a job's update serialized so a parent dxdfir (the
+// interactive shell) can render it as live widgets rather than scraping plain
+// text. Exactly one of Snapshot/Log is set per event, plus a final {Done:true}
+// carrying any error text. The shell decodes each stdout line straight back into
+// this type.
 type ProgressEvent struct {
 	Snapshot *Snapshot `json:"snapshot,omitempty"`
 	Log      string    `json:"log,omitempty"`
