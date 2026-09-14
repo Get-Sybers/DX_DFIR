@@ -6,7 +6,7 @@ argument_specs:
       - >-
         Runs the invariant lane skeleton so it lives once instead of copy-pasted per
         tool: preflight (docker reachable, each declared input dir exists, the
-        processor module imports, every dxdfir/* tool image passes the hardened
+        processor module imports, every get-sybers/* tool image passes the hardened
         supply-chain guard) and the process block/rescue (run the processor argv,
         verify output on disk, assert failed==0 plus the lane's own gate, and on any
         failure surface the processor's JSON summary + stderr as one diagnostic).
@@ -32,7 +32,7 @@ argument_specs:
         elements: str
         required: false
         default: []
-        description: "Tool images to require via the hardened supply-chain guard (only dxdfir/* are checked)."
+        description: "Tool images to require via the hardened supply-chain guard (only get-sybers/* are checked)."
       dxdfir_lane_input_checks:
         type: list
         elements: dict

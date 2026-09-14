@@ -5,6 +5,10 @@ root [CHANGELOG.md](../../../CHANGELOG.md).
 
 ## [Unreleased]
 
+### Fixed
+
+- The lane preflight **supply-chain guard was a dead no-op**: its `when: item is match('^dxdfir/')` filter predated the `dxdfir/* → get-sybers/*` image rename, so it matched no image and `images.require()` never ran for any lane — the hardened-image gate silently passed everything. Corrected to `^get-sybers/` (require() already no-ops on non-get-sybers images) and refreshed the stale `dxdfir/*` wording in the guard's comments/specs. Also added the two images the `dxdfir_zimmerman` lane actually drives but had omitted from its guard list — `get-sybers/goese` (SRUM) and `get-sybers/goprefetch` (Prefetch) — so all eleven images the processor can run are now guarded (gowxt stays out, deferred #88).
+
 ### Removed
 
 - The Kusto/ADX layer — the `dxdfir_deploy_adx`, `dxdfir_ingest_adx` and `dxdfir_detect_adx` roles (with their molecule scenarios) and the `dxdfir-deploy-adx` / `dxdfir-ingest-adx` / `dxdfir-detect-adx` playbooks. The Elastic-native path (`docker/elastic`, the ES|QL/EQL rules-as-code, the CAR->ECS projection) supersedes the emulator; detection is no longer a role.

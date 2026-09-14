@@ -10,7 +10,7 @@ dxdfir_lane_name: lane
 dxdfir_lane_module: ""
 # PYTHONPATH for the in-repo processor run + module import (a deployed install drops it).
 dxdfir_lane_python_path: ""
-# Tool images the supply-chain guard requires (only dxdfir/* are checked).
+# Tool images the supply-chain guard requires (only get-sybers/* are checked).
 dxdfir_lane_images: []
 # Input dirs that must exist before processing: [{name, path}].
 dxdfir_lane_input_checks: []

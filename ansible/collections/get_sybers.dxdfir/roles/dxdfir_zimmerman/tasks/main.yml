@@ -27,9 +27,12 @@
 
 # The pipeline decision (elastic|sofelk) is carried by the resolved
 # dxdfir_zimmerman_out_dir default — the shared tasks are pipeline-agnostic. This
-# lane drives NINE dxdfir/* images (plaso for extraction/SRUM, plus the eight
-# EZ-Tools containers) — every one is supply-chain-guarded. dxdfir_zimmerman_vm_dir
-# is optional (the processor tolerates its absence) so it is not an input check.
+# lane drives ELEVEN get-sybers/* images (plaso for extraction, plus the ten Go
+# EZ-Tools/substitute containers the processor can run — including goese for SRUM
+# and goprefetch for Prefetch) — every one is supply-chain-guarded. gowxt is built
+# but deliberately not run yet (#88), so it is intentionally not in this list.
+# dxdfir_zimmerman_vm_dir is optional (the processor tolerates its absence) so it
+# is not an input check.
 - name: "zimmerman | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
     name: dxdfir_lane
@@ -47,6 +50,8 @@
       - "get-sybers/gosbe:latest"
       - "get-sybers/gorb:latest"
       - "get-sybers/gomft:latest"
+      - "get-sybers/goese:latest"
+      - "get-sybers/goprefetch:latest"
     dxdfir_lane_input_checks:
       - name: disk-image input dir
         path: "{{ dxdfir_zimmerman_input_dir }}"

@@ -28,7 +28,7 @@ argument_specs:
         type: list
         elements: str
         required: false
-        description: "Images to build (dir under docker/ = dxdfir/<name> tag). Default: the full runtime set."
+        description: "Bare image names to build; each builds the get-sybers/<name>:latest tag. Default: the full runtime set."
       dxdfir_images_force:
         type: bool
         required: false

@@ -90,7 +90,17 @@ def check_config(config: dict | None) -> list[str]:
 
 
 def _repo(image: str) -> str:
-    return image.rsplit(":", 1)[0]
+    """The repo (``registry[:port]/name``) of an image ref, with any ``:tag`` and
+    any ``@sha256:...`` digest stripped. A digest-pinned override (a documented
+    way to pin a tool image, e.g. ``get-sybers/goevtx@sha256:...``) must resolve
+    to the same known repo as its ``:latest`` tag, or the supply-chain guard
+    would reject it. The last ``:`` is a tag only when it comes after the last
+    ``/`` — a ``:`` before that is a registry port, which is kept."""
+    ref = image.split("@", 1)[0]          # drop an @sha256:... digest first
+    colon = ref.rfind(":")
+    if colon > ref.rfind("/"):            # a ':' after the last '/' is a tag
+        ref = ref[:colon]
+    return ref
 
 
 def require(image: str) -> None:
