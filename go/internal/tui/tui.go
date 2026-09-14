@@ -11,6 +11,7 @@ import (
 	"errors"
 	"os"
 	"strings"
+	"sync"
 	"unicode"
 
 	ui "github.com/gizak/termui/v3"
@@ -55,10 +56,19 @@ var frameModes = map[string]ui.Color{
 	"driftwood": ui.Color(137), // #af875f tan         — softest (leans toward grey)
 }
 
-// initTheme paints termui's shared Theme in the Sunset palette. ui.Theme is read
-// at widget CONSTRUCTION, so this MUST run after ui.Init() and BEFORE any view is
-// built. Text (including titles) may be near-white; non-text chrome (borders,
-// tabs, gauge bars) is warm, never near-white.
+var themeOnce sync.Once
+
+// ensureTheme applies the Sunset theme exactly once per process, BEFORE any widget
+// is constructed. termui widgets copy ui.Theme at construction, so every view
+// constructor calls this as its first statement — the ui.Init() call is unrelated
+// (it sets up termbox; ui.Theme is just a package var), so this is safe to run
+// before or after Init.
+func ensureTheme() { themeOnce.Do(initTheme) }
+
+// initTheme paints termui's shared Theme in the Sunset palette. It is applied via
+// ensureTheme (once, before any widget is built). Text (including titles) may be
+// near-white; non-text chrome (borders, tabs, gauge bars) is warm, never
+// near-white.
 func initTheme() {
 	if c, ok := frameModes[strings.ToLower(strings.TrimSpace(os.Getenv("DXDFIR_THEME")))]; ok {
 		colBorder = c

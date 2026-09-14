@@ -19,7 +19,6 @@ func RunHome(h model.Home) (retErr error) {
 	if err := ui.Init(); err != nil {
 		return ErrNoTTY
 	}
-	initTheme() // Sunset theme, before the view's widgets copy ui.Theme
 	closed := false
 	closeUI := func() {
 		if !closed {
@@ -81,6 +80,7 @@ type homeView struct {
 }
 
 func newHomeView(h model.Home) *homeView {
+	ensureTheme() // apply the Sunset theme before these widgets copy ui.Theme
 	v := &homeView{
 		header: widgets.NewParagraph(),
 		banner: widgets.NewParagraph(),

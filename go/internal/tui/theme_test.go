@@ -4,6 +4,9 @@ import (
 	"testing"
 
 	ui "github.com/gizak/termui/v3"
+	"github.com/gizak/termui/v3/widgets"
+
+	"github.com/get-sybers/dx_dfir/go/internal/model"
 )
 
 func TestFrameModeSelection(t *testing.T) {
@@ -45,6 +48,32 @@ func TestInitThemeNoNearWhiteChrome(t *testing.T) {
 	// Titles are text, so cream is allowed and expected.
 	if ui.Theme.Block.Title.Fg != colTitle {
 		t.Errorf("title should be cream %d, got %d", colTitle, ui.Theme.Block.Title.Fg)
+	}
+}
+
+// TestPipelineGaugeBarColor guards the progress-gauge state keying: it must not
+// turn "done" green when Lanes is empty (a job that reports Overall.Pct but no
+// lanes, e.g. collection hashing) — it should read running until it truly settles.
+func TestPipelineGaugeBarColor(t *testing.T) {
+	build := func(snap *model.Snapshot) ui.Color {
+		v := &shellView{gauge: widgets.NewGauge(), snap: snap}
+		v.buildGauge()
+		return v.gauge.BarColor
+	}
+	cases := []struct {
+		name string
+		snap *model.Snapshot
+		want ui.Color
+	}{
+		{"empty lanes stays running", &model.Snapshot{Overall: model.Overall{Pct: 50}}, colBlue},
+		{"running lanes", &model.Snapshot{Lanes: []model.Lane{{State: model.Running}, {State: model.Queued}}}, colBlue},
+		{"all settled → done", &model.Snapshot{Lanes: []model.Lane{{State: model.Done}, {State: model.Skipped}}}, colGreen},
+		{"any failed → failed", &model.Snapshot{Lanes: []model.Lane{{State: model.Done}, {State: model.Failed}}}, colRed},
+	}
+	for _, c := range cases {
+		if got := build(c.snap); got != c.want {
+			t.Errorf("%s: BarColor = %d, want %d", c.name, got, c.want)
+		}
 	}
 }
 

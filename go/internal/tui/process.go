@@ -27,6 +27,7 @@ type processView struct {
 }
 
 func newProcessView() *processView {
+	ensureTheme() // apply the Sunset theme before these widgets copy ui.Theme
 	v := &processView{
 		header:  widgets.NewParagraph(),
 		gauge:   widgets.NewGauge(),

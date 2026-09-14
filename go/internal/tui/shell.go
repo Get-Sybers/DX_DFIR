@@ -101,6 +101,7 @@ type shellView struct {
 }
 
 func newShellView(self, repoRoot string) *shellView {
+	ensureTheme() // Sunset theme must be set before any widget below copies ui.Theme
 	tp := newSunsetTabs(shellTabs...)
 	tp.Border = true
 	v := &shellView{
@@ -278,20 +279,20 @@ func (v *shellView) buildGauge() {
 	// Progress bar keys to job STATE, never ramped by fill — a full bar is good
 	// news, so it must not turn crimson. Failed if any lane failed; done when all
 	// lanes have settled; else running (the marigold accent).
-	v.gauge.BarColor = colBlue // running
-	settled := true
+	v.gauge.BarColor = colBlue       // running
+	allDone := len(v.snap.Lanes) > 0 // no lanes → can't conclude "done"; stay running
 	for _, l := range v.snap.Lanes {
 		if l.State == model.Failed {
 			v.gauge.BarColor = colRed
-			settled = false
+			allDone = false
 			break
 		}
 		if l.State != model.Done && l.State != model.Skipped {
-			settled = false
+			allDone = false
 		}
 	}
-	if settled && v.gauge.BarColor != colRed {
-		v.gauge.BarColor = colGreen // all lanes done
+	if allDone {
+		v.gauge.BarColor = colGreen // every lane settled
 	}
 	label := fmt.Sprintf("%d%%  %d/%d lanes", pct, o.LanesDone, o.LanesTotal)
 	if o.Detail != "" {
@@ -480,7 +481,6 @@ func (s *Shell) Run() (retErr error) {
 	if err := ui.Init(); err != nil {
 		return ErrNoTTY
 	}
-	initTheme() // paint the Sunset theme before any widget copies ui.Theme
 	closed := false
 	closeUI := func() {
 		if !closed {
