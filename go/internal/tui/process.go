@@ -55,6 +55,9 @@ func newProcessView() *processView {
 
 func (v *processView) final() model.Snapshot { return v.snap }
 
+// hint sets the footer to a one-line prompt (e.g. the dismiss prompt on finish).
+func (v *processView) hint(s string) { v.footer.Text = sanitize(s) }
+
 func (v *processView) apply(u model.Update) {
 	if v.start.IsZero() {
 		v.start = time.Now()

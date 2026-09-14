@@ -47,6 +47,9 @@ func newCollectionView() *collectionView {
 
 func (v *collectionView) final() model.Snapshot { return v.snap }
 
+// hint sets the footer to a one-line prompt (e.g. the dismiss prompt on finish).
+func (v *collectionView) hint(s string) { v.footer.Text = sanitize(s) }
+
 func (v *collectionView) apply(u model.Update) {
 	if v.start.IsZero() {
 		v.start = time.Now()

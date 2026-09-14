@@ -153,16 +153,27 @@ func subdirCounts(root string) map[string]int {
 	return counts
 }
 
-// countFiles counts regular, non-symlink files anywhere beneath dir. WalkDir
-// does not follow symlinks (a symlinked dir is a non-dir entry, so it is never
-// descended), matching Python's os.walk(followlinks=False) + is_symlink skip.
+// isEvidenceFile reports whether a walked entry counts as staged evidence: a
+// regular file that is not a dotfile. Dotfiles are placeholders or control, never
+// evidence — the `.gitkeep` that keeps an empty lane subdir in git, and the
+// collection's own `.collection` / `.collection.log` / `.collection.hashes`. Not
+// filtering `.gitkeep` made an empty lane count as one file, so a lane with no
+// real evidence showed a phantom "0/1" instead of "0/0".
+func isEvidenceFile(d fs.DirEntry) bool {
+	return d.Type().IsRegular() && !strings.HasPrefix(d.Name(), ".")
+}
+
+// countFiles counts evidence files anywhere beneath dir (dotfiles skipped — see
+// isEvidenceFile). WalkDir does not follow symlinks (a symlinked dir is a non-dir
+// entry, so it is never descended), matching Python's os.walk(followlinks=False)
+// + is_symlink skip.
 func countFiles(dir string) int {
 	n := 0
 	_ = filepath.WalkDir(dir, func(_ string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil // unreadable path: skip, like the Python walk
 		}
-		if d.Type().IsRegular() {
+		if isEvidenceFile(d) {
 			n++
 		}
 		return nil
@@ -171,26 +182,24 @@ func countFiles(dir string) int {
 }
 
 // hasEvidence reports whether a collection dir holds at least one evidence file
-// (any regular file except the control files), mirroring _has_evidence. The root
-// symlink is resolved first: an external `--from` collection is a symlink to its
-// real tree, and WalkDir (unlike Python's os.walk on a symlinked root) will not
-// descend a symlink entry. Inner symlinks are still never followed.
+// (a regular non-dotfile; the control files and lane-subdir `.gitkeep`s are
+// dotfiles, so they do not count). The root symlink is resolved first: an
+// external `--from` collection is a symlink to its real tree, and WalkDir (unlike
+// Python's os.walk on a symlinked root) will not descend a symlink entry. Inner
+// symlinks are still never followed.
 func hasEvidence(root string) bool {
 	walkRoot := root
 	if resolved, err := filepath.EvalSymlinks(root); err == nil {
 		walkRoot = resolved
 	}
-	control := map[string]bool{markerName: true, logName: true, manifestName: true}
 	found := false
-	_ = filepath.WalkDir(walkRoot, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(walkRoot, func(_ string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
-		if d.Type().IsRegular() {
-			if !(filepath.Dir(path) == walkRoot && control[d.Name()]) {
-				found = true
-				return filepath.SkipAll
-			}
+		if isEvidenceFile(d) {
+			found = true
+			return filepath.SkipAll
 		}
 		return nil
 	})
