@@ -30,18 +30,15 @@ HARDENED_IMAGES = (
     "get-sybers/zeek:latest",
     "get-sybers/volatility:latest",
     "get-sybers/plaso:latest",
-    # The still-.NET Eric Zimmerman tools (dxdfir_zimmerman lane) — built from the
-    # one parameterized third_party/GoDFIR-toolz/eztool/Dockerfile. The Go ports
-    # (gorb/gomft/goamcache/goappcompat) live in the GoDFIR block below.
-    "get-sybers/recmd:latest",
-    "get-sybers/lecmd:latest",
-    "get-sybers/jlecmd:latest",
-    "get-sybers/sbecmd:latest",
+    # The last still-.NET Eric Zimmerman tool (dxdfir_zimmerman lane) — built from
+    # the one parameterized third_party/GoDFIR-toolz/eztool/Dockerfile. Every other
+    # EZ tool has been ported to a Go substitute in the GoDFIR block below.
     "get-sybers/sqlecmd:latest",
-    "get-sybers/wxtcmd:latest",
     # GoDFIR Go tools (FROM scratch; each built from its own subdir in the
     # GoDFIR-toolz submodule): gorb (RBCmd), goprefetch/goese/gomft
-    # (PECmd/SrumECmd/MFTECmd), goamcache/goappcompat (Amcache/AppCompatCache).
+    # (PECmd/SrumECmd/MFTECmd), goevtx (EvtxECmd), goamcache/goappcompat
+    # (Amcache/AppCompatCache), gore/gosbe (RECmd/SBECmd — registry .LOG replay),
+    # gole/gojle (LECmd/JLECmd), gowxt (WxTCmd — built, deferred #88).
     "get-sybers/gorb:latest",
     "get-sybers/goprefetch:latest",
     "get-sybers/goese:latest",
@@ -49,6 +46,11 @@ HARDENED_IMAGES = (
     "get-sybers/goevtx:latest",
     "get-sybers/goamcache:latest",
     "get-sybers/goappcompat:latest",
+    "get-sybers/gore:latest",
+    "get-sybers/gosbe:latest",
+    "get-sybers/gole:latest",
+    "get-sybers/gojle:latest",
+    "get-sybers/gowxt:latest",
 )
 # Other get-sybers/* images that legitimately exist but are not tool containers, so
 # they are exempt from the hardened-tool contract (but still allow-listed, so

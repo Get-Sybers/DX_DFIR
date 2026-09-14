@@ -41,15 +41,10 @@ dxdfir_images_set:
   - zeek
   - volatility
   - plaso
-  # The still-.NET Eric Zimmerman tools — all built from the ONE parameterized
-  # eztool/Dockerfile in the GoDFIR-toolz submodule,
-  # tool selected per image via build args (see dxdfir_images_build_overrides).
-  - recmd
-  - lecmd
-  - jlecmd
-  - sbecmd
+  # The last still-.NET Eric Zimmerman tool — built from the ONE parameterized
+  # eztool/Dockerfile in the GoDFIR-toolz submodule, tool selected via build args
+  # (see dxdfir_images_build_overrides). Every other EZ tool is now a Go substitute.
   - sqlecmd
-  - wxtcmd
   # GoDFIR Go tools, each FROM scratch (no shell, no python, just the static Go
   # binary) from its OWN subdir in the submodule:
   #   goprefetch replaces PECmd            — XP->Win11 .pf, MAM-compressed included
@@ -58,6 +53,9 @@ dxdfir_images_set:
   #   gomft      replaces MFTECmd (drops .NET, on go-ntfs) — $MFT
   #   goevtx     replaces EvtxECmd (drops .NET, on go-evtx) — .evtx
   #   goamcache/goappcompat replace AmcacheParser/AppCompatCacheParser (regparser)
+  #   gore/gosbe replace RECmd/SBECmd (regparser, dirty-hive .LOG replay)
+  #   gole/gojle replace LECmd/JLECmd (golnk/mscfb) — .lnk / jump lists
+  #   gowxt      replaces WxTCmd (modernc sqlite) — ActivitiesCache.db (built, #88)
   - goprefetch
   - goese
   - gorb
@@ -65,26 +63,26 @@ dxdfir_images_set:
   - goevtx
   - goamcache
   - goappcompat
+  - gore
+  - gosbe
+  - gole
+  - gojle
+  - gowxt
 
 # Rebuild even when an image already exists (docker build cache still applies).
 dxdfir_images_force: false
 
 # Per-image build context/dockerfile overrides.
 #   - volatility: the PIIAT-Mem submodule (its own docker/ context carries harden.yml).
-#   - the .NET EZ family: the GoDFIR-toolz submodule root (context = the
-#     submodule root so the Dockerfiles reach its hardening/harden.yml).
-#   - goprefetch, goese, gorb: FROM scratch, so each context is its OWN subdir
-#     under the submodule (go.mod/main.go live there).
+#   - sqlecmd (the last .NET EZ tool): the GoDFIR-toolz submodule root (context =
+#     the submodule root so eztool/Dockerfile reaches its hardening/harden.yml).
+#   - every goX tool: FROM scratch, so each context is its OWN subdir under the
+#     submodule (go.mod/main.go live there).
 dxdfir_images_build_overrides:
   volatility:
     context: "{{ dxdfir_images_repo_root }}/third_party/piiat-mem/docker"
     dockerfile: "Dockerfile"
-  recmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "RECmd"}}
-  lecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "LECmd"}}
-  jlecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "JLECmd"}}
-  sbecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "SBECmd"}}
   sqlecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "SQLECmd"}}
-  wxtcmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "WxTCmd"}}
   goprefetch: {context: "{{ dxdfir_images_eztools_context }}/goprefetch", dockerfile: "Dockerfile"}
   goese: {context: "{{ dxdfir_images_eztools_context }}/goese", dockerfile: "Dockerfile"}
   gorb: {context: "{{ dxdfir_images_eztools_context }}/gorb", dockerfile: "Dockerfile"}
@@ -92,3 +90,8 @@ dxdfir_images_build_overrides:
   goevtx: {context: "{{ dxdfir_images_eztools_context }}/goevtx", dockerfile: "Dockerfile"}
   goamcache: {context: "{{ dxdfir_images_eztools_context }}/goamcache", dockerfile: "Dockerfile"}
   goappcompat: {context: "{{ dxdfir_images_eztools_context }}/goappcompat", dockerfile: "Dockerfile"}
+  gore: {context: "{{ dxdfir_images_eztools_context }}/gore", dockerfile: "Dockerfile"}
+  gosbe: {context: "{{ dxdfir_images_eztools_context }}/gosbe", dockerfile: "Dockerfile"}
+  gole: {context: "{{ dxdfir_images_eztools_context }}/gole", dockerfile: "Dockerfile"}
+  gojle: {context: "{{ dxdfir_images_eztools_context }}/gojle", dockerfile: "Dockerfile"}
+  gowxt: {context: "{{ dxdfir_images_eztools_context }}/gowxt", dockerfile: "Dockerfile"}

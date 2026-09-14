@@ -2,15 +2,20 @@
 
 The evtx/plaso lanes get their bytes straight off the image via Plaso's
 ``image_export.py`` (see ``imageexport``); this lane does the same for the
-artefact set Eric Zimmerman's tools (RECmd, JLECmd, LECmd, AmcacheParser,
-AppCompatCacheParser, SBECmd, RBCmd, MFTECmd) understand, then runs each
-hardened ``get-sybers/<tool>`` container over what was pulled out. The two
-Windows-bound EZ tools run through their Linux-native Go substitutes instead:
-SRUM via ``get-sybers/goese`` (``goese`` on go-ese — SrumECmd is .NET and
-P/Invokes the Windows ESE engine) and Prefetch via ``get-sybers/goprefetch``
-(``goprefetch`` on go-prefetch — PECmd refuses off-Windows). byakugan's
-``esedump_srum`` / ``prefetch_dump`` maps normalise their JSONL into CAR as their
-own MITRE data sources.
+artefact set Eric Zimmerman's EZ Tools understand, then runs a hardened
+``get-sybers/<tool>`` container over what was pulled out. Every tool is now a
+Linux-native, static-Go ``FROM scratch`` substitute (Get-Sybers/GoDFIR-toolz),
+not .NET: registry batch via ``gore`` (RECmd), jump lists via ``gojle``
+(JLECmd), ``.lnk`` via ``gole`` (LECmd), Amcache via ``goamcache``,
+AppCompatCache via ``goappcompat``, ShellBags via ``gosbe`` (SBECmd), Recycle
+Bin via ``gorb`` (RBCmd), MFT via ``gomft`` (MFTECmd), plus the two
+Windows-bound tools that were never Linux-viable under .NET at all: SRUM via
+``goese`` (SrumECmd P/Invokes the Windows ESE engine) and Prefetch via
+``goprefetch`` (PECmd refuses off-Windows). The registry-family tools
+(gore/gosbe/goamcache/goappcompat) replay each hive's .LOG1/.LOG2 dirty-hive
+transaction logs to match .NET fidelity. byakugan's ``esedump_srum`` /
+``prefetch_dump`` maps normalise the SRUM/Prefetch JSONL into CAR as their own
+MITRE data sources.
 
 Extraction uses a plaso **YAML** collection filter (``plaso.engine.yaml_filter_file``),
 NOT ``--artifact_filters`` (the WindowsEventLogs artifact set the evtx lane uses) —
@@ -59,15 +64,15 @@ import yaml
 from . import container, imageexport
 
 PLASO_IMAGE = imageexport.PLASO_IMAGE
-_RECMD_IMAGE = "get-sybers/recmd:latest"
-_JLECMD_IMAGE = "get-sybers/jlecmd:latest"
-_LECMD_IMAGE = "get-sybers/lecmd:latest"
+_RECMD_IMAGE = "get-sybers/gore:latest"
+_JLECMD_IMAGE = "get-sybers/gojle:latest"
+_LECMD_IMAGE = "get-sybers/gole:latest"
 _AMCACHEPARSER_IMAGE = "get-sybers/goamcache:latest"
 _APPCOMPATCACHEPARSER_IMAGE = "get-sybers/goappcompat:latest"
-_SBECMD_IMAGE = "get-sybers/sbecmd:latest"
+_SBECMD_IMAGE = "get-sybers/gosbe:latest"
 _RBCMD_IMAGE = "get-sybers/gorb:latest"
 _MFTECMD_IMAGE = "get-sybers/gomft:latest"
-_WXTCMD_IMAGE = "get-sybers/wxtcmd:latest"  # TODO(#88): built but not invoked — see wxtcmd_argv()
+_WXTCMD_IMAGE = "get-sybers/gowxt:latest"  # TODO(#88): built but not invoked — see wxtcmd_argv()
 # The Linux-native Go substitutes for the Windows-bound EZ tools
 # (Get-Sybers/GoDFIR-toolz): goese parses SRUDB.dat where SrumECmd (.NET,
 # P/Invokes the Windows ESE engine) cannot; goprefetch parses .pf where PECmd
@@ -76,9 +81,9 @@ _WXTCMD_IMAGE = "get-sybers/wxtcmd:latest"  # TODO(#88): built but not invoked �
 _ESEDUMP_IMAGE = "get-sybers/goese:latest"
 _PREFETCH_IMAGE = "get-sybers/goprefetch:latest"
 
-# Baked into the get-sybers/recmd image (docker/recmd) — Eric Zimmerman's own curated
-# batch definition; not something the operator needs to supply.
-_RECMD_BATCH_FILE = "/opt/eztool/BatchExamples/Kroll_Batch.reb"
+# gore bakes its OWN curated forensic-key batch at /batch/default.reb (its --bn
+# default) — a redistributable substitute for Eric Zimmerman's Kroll_Batch.reb
+# (not redistributable), so the lane no longer supplies a batch path at all.
 
 
 # ---- the artefact filter (plaso yaml_filter_file format, NOT --artifact_filters) --
@@ -276,14 +281,21 @@ def find_file_ext(root: str, ext: str) -> str | None:
 
 # ---- per-tool container argv builders (pure — no I/O, no docker) ------------
 def recmd_argv(hives_dir, out_dir) -> list[str]:
-    """RECmd's ``-d`` recurses the whole directory looking for hives, so pointing
-    it at the FULL extraction root processes every system + per-user hive (with
-    its .LOG1/.LOG2) in one batch pass — no per-hive invocation needed."""
+    """gore's ``-d`` recurses the whole directory looking for hives (content-detected
+    by the ``regf`` header), so pointing it at the FULL extraction root processes
+    every system + per-user hive in one batch pass against its baked
+    ``/batch/default.reb`` — no per-hive invocation and no ``--bn`` needed.
+
+    Dirty-hive replay matches .NET RECmd fidelity: gore replays each hive's
+    sibling .LOG1/.LOG2 (regparser.RecoverHive) by default (no ``--nl``), writing
+    the recovered copy under ``--work-dir`` — a writable tmpfs, since the rootfs
+    is read-only — and falling back to the committed hive when logs are absent."""
     return container.run(
         _RECMD_IMAGE,
-        ["-d", "/in", "--bn", _RECMD_BATCH_FILE, "--json", "/out",
-         "--jsonf", "recmd_batch.json", "--nl"],
+        ["-d", "/in", "--json", "/out", "--jsonf", "recmd_batch.json",
+         "--work-dir", "/work"],
         mounts=[f"{hives_dir}:/in:ro", f"{out_dir}:/out"],
+        tmpfs=("/work:rw,nosuid,nodev,size=256m,uid=2000,gid=2000",),
     )
 
 
@@ -316,9 +328,11 @@ def prefetch_argv(scan_dir, out_dir) -> list[str]:
 
 
 def jlecmd_argv(recent_dir, out_dir) -> list[str]:
-    """JLECmd's ``-d`` recurses; pointing it at the whole extraction root is safe
+    """gojle's ``-d`` recurses; pointing it at the whole extraction root is safe
     (that tree holds only the filtered artefact set, never the rest of the
-    filesystem) and needs no per-user Recent-folder lookup."""
+    filesystem) and needs no per-user Recent-folder lookup. It reads the
+    AutomaticDestinations jump lists (an OLE compound file) and their DestList
+    stream, emitting the JLECmd shape byakugan's ``jlecmd_dest`` map consumes."""
     return container.run(
         _JLECMD_IMAGE,
         ["-d", "/in", "--json", "/out", "--jsonf", "jlecmd.json"],
@@ -327,9 +341,9 @@ def jlecmd_argv(recent_dir, out_dir) -> list[str]:
 
 
 def lecmd_argv(recent_dir, out_dir) -> list[str]:
-    """LECmd's ``-d`` recurses the same way JLECmd's does. No ``-q``: unlike its
-    sibling EZ-Tools, this recipe wants LECmd's full per-file detail, not the
-    quiet/fast summary path."""
+    """gole's ``-d`` recurses the same way gojle's does, content-detecting ``.lnk``
+    by the ``0x4C`` Shell Link header (so Plaso's ``$`` -> ``_`` rename doesn't
+    hide them). It emits the LECmd record shape as JSONL."""
     return container.run(
         _LECMD_IMAGE,
         ["-d", "/in", "--json", "/out"],
@@ -366,12 +380,19 @@ def appcompatcacheparser_argv(system_dir, out_dir) -> list[str]:
 
 
 def sbecmd_argv(user_dir, out_dir) -> list[str]:
-    """SBECmd's ``-d`` looks for hives under the given directory; pointed at the
-    whole extraction root it picks up every user's NTUSER.DAT/UsrClass.dat."""
+    """gosbe's ``-d`` looks for hives (``regf`` header) under the given directory;
+    pointed at the whole extraction root it picks up every user's
+    NTUSER.DAT/UsrClass.dat. Like gore, it replays each hive's sibling .LOG1/.LOG2
+    (regparser.RecoverHive) by default, writing the recovered copy under
+    ``--work-dir`` (a writable tmpfs — the rootfs is read-only), matching .NET
+    SBECmd's dirty-hive fidelity and falling back to the committed hive when
+    logs are absent."""
     return container.run(
         _SBECMD_IMAGE,
-        ["-d", "/in", "--json", "/out", "--jsonf", "sbecmd.json"],
+        ["-d", "/in", "--json", "/out", "--jsonf", "sbecmd.json",
+         "--work-dir", "/work"],
         mounts=[f"{user_dir}:/in:ro", f"{out_dir}:/out"],
+        tmpfs=("/work:rw,nosuid,nodev,size=256m,uid=2000,gid=2000",),
     )
 
 
@@ -399,20 +420,21 @@ def mftecmd_argv(scan_dir, out_dir) -> list[str]:
 
 
 def wxtcmd_argv(activitiescache_dir, out_dir) -> list[str]:
-    """TODO(#88): NOT invoked by ``process_image`` yet. WxTCmd's SQLite interop
+    """TODO(#88): NOT invoked by ``process_image`` yet. gowxt's SQLite interop
     (it copies ActivitiesCache.db before opening it) needs a WRITABLE working
-    area — the hardened base image's rootfs is read-only, so an extra tmpfs at
-    ``/opt/eztool`` (its own working directory, uid/gid 2000 to match the
-    container's non-root user) is the fix described in the epic #86 Phase-D
-    comment. Kept here as a pure, unit-tested argv builder so the shape is ready
-    to wire in once a real ActivitiesCache.db run confirms it (issue #88) — the
-    alternative (breaking the rest of the lane chasing this one tool) is worse.
+    area — the hardened rootfs is read-only, so gowxt takes a ``--work-dir``
+    (a writable tmpfs, uid/gid 2000 to match the container's non-root user), the
+    same replay/unpack pattern goamcache/goappcompat/gore/gosbe use. That solves
+    the read-only-rootfs blocker; the step stays deferred only until a real
+    ActivitiesCache.db run confirms the end-to-end shape (issue #88 — none of the
+    lab images carried a Timeline DB to validate against). Kept as a pure,
+    unit-tested argv builder so it is ready to wire in the moment one does.
     """
     return container.run(
         _WXTCMD_IMAGE,
-        ["-f", "/in/ActivitiesCache.db", "--csv", "/out"],
+        ["-f", "/in/ActivitiesCache.db", "--csv", "/out", "--work-dir", "/work"],
         mounts=[f"{activitiescache_dir}:/in:ro", f"{out_dir}:/out"],
-        tmpfs=("/opt/eztool:rw,nosuid,nodev,exec,size=256m,uid=2000,gid=2000",),
+        tmpfs=("/work:rw,nosuid,nodev,size=256m,uid=2000,gid=2000",),
     )
 
 
@@ -547,9 +569,10 @@ def process_image(image, host_out_dir, *, plaso_image=PLASO_IMAGE, force=False,
     result["steps"]["mftecmd"] = _run_step(
         mftecmd_argv(stage_dir, mftecmd_out), mftecmd_out, log_path)
 
-    # WxTCmd — TODO(#88): needs a writable /opt/eztool tmpfs; not run here. See
-    # wxtcmd_argv()'s docstring for why, and what would need verifying first.
-    result["steps"]["wxtcmd"] = {"ran": False, "reason": "deferred to #88 (writable-rootfs TODO)"}
+    # WxTCmd — TODO(#88): gowxt's --work-dir/tmpfs solves the read-only-rootfs
+    # blocker (see wxtcmd_argv()), but the step stays deferred until a real
+    # ActivitiesCache.db confirms the end-to-end shape (no lab image carried one).
+    result["steps"]["wxtcmd"] = {"ran": False, "reason": "deferred to #88 (needs a real ActivitiesCache.db to validate)"}
 
     return result
 

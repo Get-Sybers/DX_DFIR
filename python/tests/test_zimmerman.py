@@ -106,9 +106,13 @@ def test_recmd_argv():
     argv = z.recmd_argv("/stage", "/out/recmd")
     assert argv[:3] == ["docker", "run", "--rm"]
     assert "/stage:/in:ro" in argv and "/out/recmd:/out" in argv
-    tail = argv[argv.index("get-sybers/recmd:latest") + 1:]
-    assert tail == ["-d", "/in", "--bn", z._RECMD_BATCH_FILE,
-                    "--json", "/out", "--jsonf", "recmd_batch.json", "--nl"]
+    # gore: dirty-hive .LOG replay writes the recovered hive under a writable
+    # /work tmpfs; no --bn (its baked /batch/default.reb) and no --nl (replay on).
+    assert any("/work:rw" in a and "uid=2000" in a for a in argv)
+    tail = argv[argv.index("get-sybers/gore:latest") + 1:]
+    assert tail == ["-d", "/in", "--json", "/out", "--jsonf", "recmd_batch.json",
+                    "--work-dir", "/work"]
+    assert "--bn" not in tail and "--nl" not in tail
 
 
 def test_srum_esedump_argv():
@@ -129,14 +133,14 @@ def test_prefetch_argv():
 
 def test_jlecmd_argv():
     argv = z.jlecmd_argv("/stage", "/out/jlecmd")
-    tail = argv[argv.index("get-sybers/jlecmd:latest") + 1:]
+    tail = argv[argv.index("get-sybers/gojle:latest") + 1:]
     assert tail == ["-d", "/in", "--json", "/out", "--jsonf", "jlecmd.json"]
 
 
 def test_lecmd_argv_has_no_q_flag():
-    """The exact proven recipe: LECmd runs WITHOUT -q (unlike its siblings)."""
+    """The exact proven recipe: gole runs WITHOUT -q (unlike its siblings)."""
     argv = z.lecmd_argv("/stage", "/out/lecmd")
-    tail = argv[argv.index("get-sybers/lecmd:latest") + 1:]
+    tail = argv[argv.index("get-sybers/gole:latest") + 1:]
     assert tail == ["-d", "/in", "--json", "/out"]
     assert "-q" not in tail
 
@@ -161,8 +165,11 @@ def test_appcompatcacheparser_argv():
 
 def test_sbecmd_argv():
     argv = z.sbecmd_argv("/stage", "/out/sbecmd")
-    tail = argv[argv.index("get-sybers/sbecmd:latest") + 1:]
-    assert tail == ["-d", "/in", "--json", "/out", "--jsonf", "sbecmd.json"]
+    # gosbe replays each hive's .LOG1/.LOG2 into a writable /work tmpfs, like gore.
+    assert any("/work:rw" in a and "uid=2000" in a for a in argv)
+    tail = argv[argv.index("get-sybers/gosbe:latest") + 1:]
+    assert tail == ["-d", "/in", "--json", "/out", "--jsonf", "sbecmd.json",
+                    "--work-dir", "/work"]
 
 
 def test_rbcmd_argv():
@@ -177,14 +184,16 @@ def test_mftecmd_argv():
     assert tail == ["-d", "/in", "--json", "/out", "--jsonf", "mftecmd.json"]
 
 
-def test_wxtcmd_argv_adds_writable_opt_eztool_tmpfs():
+def test_wxtcmd_argv_adds_writable_work_tmpfs():
     """Not invoked by process_image (see its docstring / #88), but the builder
-    itself must produce the writable-unpack-path fix described in the recipe."""
+    itself must produce the writable-unpack-path fix: gowxt copies the DB into a
+    writable /work tmpfs (uid 2000) under the read-only rootfs, like gore/gosbe."""
     argv = z.wxtcmd_argv("/wxt", "/out/wxt")
     assert "--tmpfs" in argv
-    assert "/opt/eztool:rw,nosuid,nodev,exec,size=256m,uid=2000,gid=2000" in argv
-    tail = argv[argv.index("get-sybers/wxtcmd:latest") + 1:]
-    assert tail == ["-f", "/in/ActivitiesCache.db", "--csv", "/out"]
+    assert any("/work:rw" in a and "uid=2000" in a for a in argv)
+    tail = argv[argv.index("get-sybers/gowxt:latest") + 1:]
+    assert tail == ["-f", "/in/ActivitiesCache.db", "--csv", "/out",
+                    "--work-dir", "/work"]
 
 
 def test_every_tool_argv_is_hardened():
@@ -329,14 +338,14 @@ def test_process_image_gates_amcache_on_extracted_file_presence(tmp_path, monkey
 
 def test_process_image_wxtcmd_is_never_invoked(tmp_path, monkeypatch):
     """TODO(#88): wxtcmd_argv exists and is unit-tested, but process_image must
-    not call it yet (no writable /opt/eztool wiring verified against a real
-    ActivitiesCache.db)."""
+    not call it yet (gowxt's /work-tmpfs wiring is ready but unverified against a
+    real ActivitiesCache.db — none of the lab images carried a Timeline DB)."""
     host_dir = tmp_path / "out" / "LoneWolf"
     monkeypatch.setattr(z, "extract_artifacts",
                         lambda image, stage_dir, **kw: os.makedirs(stage_dir, exist_ok=True) or [])
 
     def fail_if_wxtcmd(argv, log_path):
-        assert "get-sybers/wxtcmd:latest" not in argv
+        assert "get-sybers/gowxt:latest" not in argv
         return True
 
     monkeypatch.setattr(z, "_run", fail_if_wxtcmd)
