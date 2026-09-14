@@ -17,7 +17,8 @@ import (
 // with a live command box, so the operator keeps driving the SAME CLI verbs
 // without leaving the UI. The CLI logic is unchanged — each typed line runs
 // `dxdfir <args> --no-tui` as a child of this binary and its output streams into
-// the log pane. Tabs (Pipeline | Containers) switch with Tab or the number keys.
+// the log pane. Tabs (Pipeline | Containers) switch with Tab (digits are typed
+// into the command box, so number keys are not tab shortcuts).
 //
 // This is the scaffold: the command box, the streaming log pane, and the tab
 // frame. The Containers table and the richer Pipeline widgets (progress gauge +
@@ -275,12 +276,21 @@ func (s *Shell) start(line string) (chan string, chan struct{}, context.CancelFu
 	cmd.Stderr = pw
 
 	go func() {
-		sc := bufio.NewScanner(pr)
-		sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-		for sc.Scan() {
-			lines <- sc.Text()
+		// bufio.Reader (not Scanner): no max-token limit, so a huge line never
+		// stops the read, and pr is always closed on exit — so the writer below
+		// (and the child's writes) can never block forever on a stalled reader.
+		br := bufio.NewReader(pr)
+		for {
+			line, err := br.ReadString('\n')
+			if len(line) > 0 {
+				lines <- strings.TrimRight(line, "\r\n")
+			}
+			if err != nil {
+				break // io.EOF when pw closes, or any read error
+			}
 		}
-		close(lines) // scanner owns closing `lines`, so nothing else may send on it
+		pr.Close()   // release the writer if it is still blocked mid-write
+		close(lines) // this goroutine owns closing `lines`; nothing else sends on it
 	}()
 	go func() {
 		err := cmd.Run()
