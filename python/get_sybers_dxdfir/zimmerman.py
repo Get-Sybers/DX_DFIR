@@ -569,9 +569,10 @@ def process_image(image, host_out_dir, *, plaso_image=PLASO_IMAGE, force=False,
     result["steps"]["mftecmd"] = _run_step(
         mftecmd_argv(stage_dir, mftecmd_out), mftecmd_out, log_path)
 
-    # WxTCmd — TODO(#88): needs a writable /opt/eztool tmpfs; not run here. See
-    # wxtcmd_argv()'s docstring for why, and what would need verifying first.
-    result["steps"]["wxtcmd"] = {"ran": False, "reason": "deferred to #88 (writable-rootfs TODO)"}
+    # WxTCmd — TODO(#88): gowxt's --work-dir/tmpfs solves the read-only-rootfs
+    # blocker (see wxtcmd_argv()), but the step stays deferred until a real
+    # ActivitiesCache.db confirms the end-to-end shape (no lab image carried one).
+    result["steps"]["wxtcmd"] = {"ran": False, "reason": "deferred to #88 (needs a real ActivitiesCache.db to validate)"}
 
     return result
 

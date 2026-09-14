@@ -2,11 +2,12 @@
 
 Process **forensic disk images** and **VMware VM exports** with the artefact set
 Eric Zimmerman's **EZ-Tools** parse (RECmd, JLECmd, LECmd, AmcacheParser,
-AppCompatCacheParser, SBECmd, RBCmd, MFTECmd) plus a plaso-driven SRUM parse,
-into per-host artefact output for the Elastic-native or SOF-ELK pipeline. Every
-tool now runs as a Linux-native, static-Go `FROM scratch` substitute
+AppCompatCacheParser, SBECmd, RBCmd, MFTECmd) plus SRUM and Prefetch, into
+per-host artefact output for the Elastic-native or SOF-ELK pipeline. Every tool
+now runs as a Linux-native, static-Go `FROM scratch` substitute
 (Get-Sybers/GoDFIR-toolz: `gore`/`gojle`/`gole`/`goamcache`/`goappcompat`/`gosbe`/
-`gorb`/`gomft`), not .NET. The role is structure only — it asserts inputs, runs
+`gorb`/`gomft`), not .NET — including SRUM (`goese`) and Prefetch (`goprefetch`),
+which Plaso only **extracts** the bytes for; the parsing is all Go. The role is structure only — it asserts inputs, runs
 a preflight (docker, input dir, the `get_sybers_dxdfir.zimmerman` module, every
 tool image it drives), then invokes the processor as a **single action** (the
 extraction + nine container runs happen inside Python). One output dir per host.
