@@ -40,7 +40,8 @@ BUILT_IMAGES=(
     "get-sybers/volatility:latest"
     "get-sybers/plaso:latest"
     "get-sybers/evtxecmd:latest"
-    # Eric Zimmerman tool family (GoDFIR-toolz submodule, eztool/Dockerfile).
+    # Eric Zimmerman lane: recmd/lecmd/jlecmd/sbecmd/sqlecmd/wxtcmd (eztool/Dockerfile)
+    # + the Go ports gomft/goamcache/goappcompat/gorb (their own GoDFIR-toolz subdirs).
     "get-sybers/recmd:latest"
     "get-sybers/gomft:latest"
     "get-sybers/goamcache:latest"

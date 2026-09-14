@@ -340,7 +340,7 @@ def lecmd_argv(recent_dir, out_dir) -> list[str]:
 def amcacheparser_argv(amcache_dir, out_dir) -> list[str]:
     """``amcache_dir`` holds ``Amcache.hve`` (+ its .LOG1/.LOG2, read from the same
     dir) — located by ``find_file(stage_dir, "Amcache.hve")``. goamcache replays
-    the dirty-hive .LOG logs (regparser.RecoverHive), writing the recovered copy
+    the dirty-hive transaction logs (.LOG1/.LOG2) via regparser.RecoverHive, writing the recovered copy
     under ``--work-dir`` — a writable tmpfs, since the rootfs is read-only."""
     return container.run(
         _AMCACHEPARSER_IMAGE,
@@ -354,7 +354,7 @@ def amcacheparser_argv(amcache_dir, out_dir) -> list[str]:
 def appcompatcacheparser_argv(system_dir, out_dir) -> list[str]:
     """``system_dir`` holds a file literally named ``SYSTEM`` (+ its .LOG1/.LOG2
     alongside) — located by ``find_file(stage_dir, "SYSTEM")``. goappcompat
-    replays the dirty-hive .LOG logs (regparser.RecoverHive), writing the
+    replays the dirty-hive transaction logs (.LOG1/.LOG2) via regparser.RecoverHive, writing the
     recovered copy under ``--work-dir`` — a writable tmpfs (read-only rootfs)."""
     return container.run(
         _APPCOMPATCACHEPARSER_IMAGE,
