@@ -28,6 +28,7 @@ type collectionView struct {
 }
 
 func newCollectionView() *collectionView {
+	ensureTheme() // apply the Sunset theme before these widgets copy ui.Theme
 	v := &collectionView{
 		header:    widgets.NewParagraph(),
 		gauge:     widgets.NewGauge(),
