@@ -103,24 +103,57 @@ func pollKibana(ctx context.Context, repoRoot string) kibanaStatus {
 	return st
 }
 
-// curl runs `curl -sk` against a localhost endpoint, bounded. Credentials, when
-// given, are passed via a stdin config (-K -) so the password never lands on the
-// argv / process list. Insecure (-k) is deliberate: the stack's cert is
-// self-signed and the port is bound to loopback only.
+// curl runs a bounded GET against a localhost endpoint (see curlDo).
 func curl(ctx context.Context, url, user, pass string) ([]byte, error) {
-	cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	return curlDo(ctx, url, user, pass, "GET", nil)
+}
+
+// curlDo runs `curl -sk` against a localhost endpoint, bounded. Credentials AND
+// any request body are passed through a stdin config (-K -), so neither the
+// password nor the query text ever lands on the argv / process list. Insecure
+// (-k) is deliberate: the stack's cert is self-signed and the port is bound to
+// loopback only.
+func curlDo(ctx context.Context, url, user, pass, method string, body []byte) ([]byte, error) {
+	cctx, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(cctx, "curl", "-sk", "--max-time", "4", "-K", "-", url)
-	cfg := "" // -K - with empty stdin is a no-op; auth added only when present
-	if user != "" {
-		cfg = fmt.Sprintf("user = \"%s:%s\"\n", user, pass)
+	args := []string{"-sk", "--max-time", "6", "-K", "-"}
+	if method != "" && method != "GET" {
+		args = append(args, "-X", method)
 	}
-	cmd.Stdin = strings.NewReader(cfg)
+	if body != nil {
+		args = append(args, "-H", "Content-Type: application/json")
+	}
+	args = append(args, url)
+
+	var cfg strings.Builder // curl config on stdin: keeps password + body off argv
+	if user != "" {
+		fmt.Fprintf(&cfg, "user = \"%s:%s\"\n", curlEsc(user), curlEsc(pass))
+	}
+	if body != nil {
+		fmt.Fprintf(&cfg, "data = \"%s\"\n", curlEsc(string(body)))
+	}
+	cmd := exec.CommandContext(cctx, "curl", args...)
+	cmd.Stdin = strings.NewReader(cfg.String())
 	out, err := cmd.Output()
 	if err != nil {
+		// Surface curl's own stderr so a query failure is legible, not "exit 22".
+		if ee, ok := err.(*exec.ExitError); ok && len(ee.Stderr) > 0 {
+			return nil, fmt.Errorf("%s", strings.TrimSpace(string(ee.Stderr)))
+		}
 		return nil, err
 	}
 	return out, nil
+}
+
+// curlEsc escapes a value for a curl config double-quoted string ("..."), so a
+// credential or query containing a quote, backslash, or newline can neither break
+// the config nor inject a second directive. Backslash first, then the rest;
+// newlines become the \n/\r escapes curl reads back inside the quotes.
+func curlEsc(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	s = strings.ReplaceAll(s, "\r", `\r`)
+	return strings.ReplaceAll(s, "\n", `\n`)
 }
 
 // curlCode returns just the HTTP status code of a bounded HEAD-less GET (or "000"
@@ -140,15 +173,15 @@ func curlCode(ctx context.Context, url string) string {
 // docker/elastic/.env (the file the compose stack itself consumes). Username
 // defaults to "elastic"; the boolean is false when no password is found.
 func readElasticEnv(repoRoot string) (user, pass string, ok bool) {
+	user = "elastic" // the stack's default; returned even when no .env is found
 	if repoRoot == "" {
-		return "", "", false
+		return user, "", false
 	}
 	f, err := os.Open(filepath.Join(repoRoot, "docker", "elastic", ".env"))
 	if err != nil {
-		return "", "", false
+		return user, "", false
 	}
 	defer f.Close()
-	user = "elastic"
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
 		line := strings.TrimSpace(strings.TrimPrefix(sc.Text(), "export "))
@@ -172,4 +205,81 @@ func readElasticEnv(repoRoot string) (user, pass string, ok bool) {
 		}
 	}
 	return user, pass, pass != ""
+}
+
+// esqlResult is one ES|QL query outcome for the Kibana tab: the result columns
+// and rows, or a note explaining an empty/failed run. `ran` distinguishes "a
+// query has completed" from the initial (no query yet) state.
+type esqlResult struct {
+	cols []string
+	rows [][]string
+	note string
+	ran  bool
+}
+
+// runESQL runs an ES|QL query against Elasticsearch (POST /_query) and returns
+// the tabular result. ES|QL replies with columns + values directly — the natural
+// shape for a terminal table — so this is the query language the tab speaks.
+// Degrades to a note (never a hard error) so the tab stays alive.
+func runESQL(ctx context.Context, repoRoot, query string) esqlResult {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return esqlResult{}
+	}
+	user, pass, ok := readElasticEnv(repoRoot)
+	if !ok {
+		return esqlResult{ran: true, note: "no credentials — set docker/elastic/.env to query"}
+	}
+	body, _ := json.Marshal(map[string]any{"query": query})
+	out, err := curlDo(ctx, esURL+"/_query?format=json", user, pass, "POST", body)
+	if err != nil {
+		return esqlResult{ran: true, note: "query failed: " + firstLineOf(err.Error()) + " — is docker/elastic up?"}
+	}
+	return parseESQL(out)
+}
+
+// parseESQL turns an ES|QL /_query response (or an Elasticsearch error body) into
+// a result. Split from runESQL so it is unit-testable without a live stack.
+func parseESQL(out []byte) esqlResult {
+	var r struct {
+		Columns []struct {
+			Name string `json:"name"`
+			Type string `json:"type"`
+		} `json:"columns"`
+		Values [][]any `json:"values"`
+		Error  *struct {
+			Type   string `json:"type"`
+			Reason string `json:"reason"`
+		} `json:"error"`
+	}
+	if json.Unmarshal(out, &r) != nil {
+		return esqlResult{ran: true, note: "unparseable response: " + firstLineOf(strings.TrimSpace(string(out)))}
+	}
+	if r.Error != nil && (r.Error.Reason != "" || r.Error.Type != "") {
+		msg := r.Error.Reason
+		if msg == "" {
+			msg = r.Error.Type
+		}
+		return esqlResult{ran: true, note: "ES error: " + firstLineOf(msg)}
+	}
+	if len(r.Columns) == 0 {
+		return esqlResult{ran: true, note: firstLineOf(strings.TrimSpace(string(out)))}
+	}
+	cols := make([]string, len(r.Columns))
+	for i, c := range r.Columns {
+		cols[i] = c.Name
+	}
+	rows := make([][]string, 0, len(r.Values))
+	for _, v := range r.Values {
+		row := make([]string, len(v))
+		for i, cell := range v {
+			row[i] = str(cell) // shared JSON-scalar renderer (timeline.go)
+		}
+		rows = append(rows, row)
+	}
+	note := ""
+	if len(rows) == 0 {
+		note = "0 rows"
+	}
+	return esqlResult{cols: cols, rows: rows, ran: true, note: note}
 }
