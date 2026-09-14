@@ -28,6 +28,7 @@ func run(v view, updates <-chan model.Update, onAbort func()) (retErr error) {
 	if err := ui.Init(); err != nil {
 		return ErrNoTTY
 	}
+	initTheme() // Sunset theme, before the view's widgets copy ui.Theme
 	closed := false
 	closeUI := func() {
 		if !closed {

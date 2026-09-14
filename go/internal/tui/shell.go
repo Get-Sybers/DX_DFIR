@@ -67,7 +67,7 @@ type shellView struct {
 	self     string
 	repoRoot string
 
-	tabpane    *widgets.TabPane
+	tabpane    *sunsetTabs        // TabPane with the ANSI-white separator re-themed
 	log        *widgets.List      // streamed output of the last/running command
 	gauge      *widgets.Gauge     // Pipeline: overall progress of a running job
 	queue      *widgets.Table     // Pipeline: the lane/step queue, ticked as it runs
@@ -101,12 +101,17 @@ type shellView struct {
 }
 
 func newShellView(self, repoRoot string) *shellView {
-	tp := widgets.NewTabPane(shellTabs...)
+	tp := newSunsetTabs(shellTabs...)
 	tp.Border = true
 	v := &shellView{
-		self:       self,
-		repoRoot:   repoRoot,
-		tabpane:    tp,
+		self:     self,
+		repoRoot: repoRoot,
+		tabpane:  tp,
+		// NOTE: widgets.List draws its scroll arrows in hardcoded ANSI-white
+		// (termui list.go) — the theme can't reach them (List.Draw reads the
+		// unexported topRow). Accepted: they show only when a list overflows AND is
+		// scrolled, are single far-right glyphs, and render light-grey. Tracked
+		// follow-up: a termui `replace` fork to recolour them.
 		log:        widgets.NewList(),
 		gauge:      widgets.NewGauge(),
 		queue:      widgets.NewTable(),
@@ -270,6 +275,24 @@ func (v *shellView) buildGauge() {
 		pct = 100
 	}
 	v.gauge.Percent = pct
+	// Progress bar keys to job STATE, never ramped by fill — a full bar is good
+	// news, so it must not turn crimson. Failed if any lane failed; done when all
+	// lanes have settled; else running (the marigold accent).
+	v.gauge.BarColor = colBlue // running
+	settled := true
+	for _, l := range v.snap.Lanes {
+		if l.State == model.Failed {
+			v.gauge.BarColor = colRed
+			settled = false
+			break
+		}
+		if l.State != model.Done && l.State != model.Skipped {
+			settled = false
+		}
+	}
+	if settled && v.gauge.BarColor != colRed {
+		v.gauge.BarColor = colGreen // all lanes done
+	}
 	label := fmt.Sprintf("%d%%  %d/%d lanes", pct, o.LanesDone, o.LanesTotal)
 	if o.Detail != "" {
 		label += "  " + o.Detail
@@ -347,9 +370,13 @@ func (v *shellView) buildContainers() {
 	}
 	cpuPct := clampPct(int(math.Round(cpuG)))
 	memPct := clampPct(int(math.Round(memSum)))
+	// Load gauges ramp by value (amber → ochre → crimson) — this is the one place
+	// the sunset moves; the numeric label carries it for CVD reading.
 	v.contCPU.Percent = cpuPct
+	v.contCPU.BarColor = gaugeLoad(cpuPct)
 	v.contCPU.Label = fmt.Sprintf("%d%%  ·  Σ %.0f%% over %d cores", cpuPct, cpuSum, cores)
 	v.contMEM.Percent = memPct
+	v.contMEM.BarColor = gaugeLoad(memPct)
 	v.contMEM.Label = fmt.Sprintf("%d%%  ·  %d container(s)", memPct, real)
 }
 
@@ -453,6 +480,7 @@ func (s *Shell) Run() (retErr error) {
 	if err := ui.Init(); err != nil {
 		return ErrNoTTY
 	}
+	initTheme() // paint the Sunset theme before any widget copies ui.Theme
 	closed := false
 	closeUI := func() {
 		if !closed {

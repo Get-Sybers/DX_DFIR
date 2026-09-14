@@ -9,6 +9,7 @@ package tui
 
 import (
 	"errors"
+	"os"
 	"strings"
 	"unicode"
 
@@ -20,16 +21,75 @@ import (
 // failed, or the window is below the minimum). The caller falls back to plain.
 var ErrNoTTY = errors.New("tui: terminal unavailable")
 
-// 256-colour palette translated from the retired Python CLI's palette.
+// The "Sunset" 256-colour palette — one warm accent family (marigold → crimson);
+// green/blue/cyan retired so nothing competes with the sunset and no pass/fail
+// hangs on red-vs-green. The EXISTING names are kept as SEMANTIC ALIASES so the
+// process / home / collection views recolour with no edits — only the values
+// change. Every state still pairs its colour with a glyph/token, never hue alone.
+// (Deep-purple sticker bands translate to the terminal's own dark background —
+// painted by nothing.) Dark-terminal-first; borders are intentionally dim.
 const (
-	colGreen  = ui.Color(71)
-	colYellow = ui.Color(178)
-	colRed    = ui.Color(167)
-	colBlue   = ui.Color(68)
-	colGrey   = ui.Color(245)
-	colCyan   = ui.Color(74)
-	colWhite  = ui.Color(255)
+	colBlue   = ui.Color(214) // #ffaf00 marigold  — accent / running / focus (was 68)
+	colGreen  = ui.Color(172) // #d78700 amber     — done / ready             (was 71)
+	colYellow = ui.Color(173) // #d7875f ochre     — warn / exceptions / mid  (was 178)
+	colCyan   = ui.Color(173) // #d7875f ochre     — collection 'hash' phase  (was 74)
+	colRed    = ui.Color(167) // #d75f5f vermilion — failed / error           (unchanged)
+	colWhite  = ui.Color(255) // #eeeeee           — body / cell / label text (unchanged)
+	colGrey   = ui.Color(245) // #8a8a8a           — secondary / dim TEXT     (unchanged)
+
+	colTitle    = ui.Color(230) // #ffffd7 cream   — widget TITLES (text; near-white allowed)
+	colCritical = ui.Color(160) // #d70000 crimson — high-load gauge fill (BAR-FILL ONLY)
+	colInactive = ui.Color(130) // #af5f00 burnt amber — inactive tab (non-text chrome)
 )
+
+// colBorder is the frame tone — NON-TEXT chrome, so it must never be near-white.
+// It is selectable via DXDFIR_THEME (see frameModes); initTheme sets it. The dim
+// bronze default ("ember") recedes so the frame is felt, not read.
+var colBorder = ui.Color(94) // #875f00 deep bronze — ember (default)
+
+// frameModes are the selectable border tones, all at the dim/warm end of the ramp
+// (none near-white). DXDFIR_THEME picks one; anything unset/unknown → ember.
+var frameModes = map[string]ui.Color{
+	"ember":     ui.Color(94),  // #875f00 deep bronze — most recessive (default)
+	"dusk":      ui.Color(130), // #af5f00 burnt amber — a touch more present
+	"driftwood": ui.Color(137), // #af875f tan         — softest (leans toward grey)
+}
+
+// initTheme paints termui's shared Theme in the Sunset palette. ui.Theme is read
+// at widget CONSTRUCTION, so this MUST run after ui.Init() and BEFORE any view is
+// built. Text (including titles) may be near-white; non-text chrome (borders,
+// tabs, gauge bars) is warm, never near-white.
+func initTheme() {
+	if c, ok := frameModes[strings.ToLower(strings.TrimSpace(os.Getenv("DXDFIR_THEME")))]; ok {
+		colBorder = c
+	} else {
+		colBorder = frameModes["ember"]
+	}
+	ui.Theme.Default = styleFg(colWhite)
+	ui.Theme.Block.Title = styleFg(colTitle)   // cream titles (text)
+	ui.Theme.Block.Border = styleFg(colBorder) // warm frame (non-text, not near-white)
+	ui.Theme.Paragraph.Text = styleFg(colWhite)
+	ui.Theme.List.Text = styleFg(colWhite)
+	ui.Theme.Table.Text = styleFg(colWhite)
+	ui.Theme.Gauge.Bar = colBlue             // default bar fill = marigold, never white
+	ui.Theme.Tab.Active = styleBold(colBlue) // bright marigold = the active view
+	ui.Theme.Tab.Inactive = styleFg(colInactive)
+}
+
+// gaugeLoad ramps a LOAD gauge (Containers CPU/MEM, where more == worse) along the
+// sunset by value: amber calm → ochre busy → crimson hot. PROGRESS gauges never
+// use this — they key to job state so completion never reads as alarm. The numeric
+// label carries the value for colour-vision-deficient reading.
+func gaugeLoad(pct int) ui.Color {
+	switch {
+	case pct >= 85:
+		return colCritical // crimson
+	case pct >= 60:
+		return colYellow // ochre
+	default:
+		return colBlue // amber / marigold
+	}
+}
 
 // Minimum window the dashboard needs; below this we stay plain.
 const (
