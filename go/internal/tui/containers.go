@@ -3,6 +3,7 @@ package tui
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"os/exec"
 	"sort"
 	"strings"
@@ -56,6 +57,11 @@ func dockerLines(ctx context.Context, args ...string) ([]string, error) {
 	defer cancel()
 	out, err := exec.CommandContext(cctx, "docker", args...).Output()
 	if err != nil {
+		// Surface docker's own stderr (e.g. "Cannot connect to the Docker daemon")
+		// so the diagnostic row is useful, not a bare "exit status 1".
+		if ee, ok := err.(*exec.ExitError); ok && len(ee.Stderr) > 0 {
+			return nil, fmt.Errorf("%s", strings.TrimSpace(string(ee.Stderr)))
+		}
 		return nil, err
 	}
 	var lines []string

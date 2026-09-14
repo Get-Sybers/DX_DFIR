@@ -15,48 +15,63 @@ import (
 	"github.com/gizak/termui/v3/widgets"
 
 	"github.com/get-sybers/dx_dfir/go/internal/model"
+	"github.com/get-sybers/dx_dfir/go/internal/repo"
 )
 
 // Shell is the persistent dxdfir front-end (fix.md item 2): a tabbed dashboard
 // with a live command box, so the operator keeps driving the SAME CLI verbs
 // without leaving the UI. The CLI logic is unchanged — each typed line runs
 // `dxdfir <args> --no-tui` as a child of this binary and its output streams into
-// the log pane. Tabs (Pipeline | Containers) switch with Tab (digits are typed
-// into the command box, so number keys are not tab shortcuts).
+// the log pane. Tab cycles the views (digits are typed into the command box, so
+// number keys are not tab shortcuts):
 //
-// This is the scaffold: the command box, the streaming log pane, and the tab
-// frame. The Containers table and the richer Pipeline widgets (progress gauge +
-// the lane/step queue that ticks) land on top of it next.
+//   - Pipeline:   the streaming log, plus a progress gauge + lane/step queue that
+//     tick live while a `process` job runs (via the DXDFIR_PROGRESS=json stream).
+//   - Containers: a ktop-style docker ps/stats table of the tool containers.
+//   - Kibana:     the docker/elastic stack status + logs-dxdfir.* doc counts.
+//   - Timeline:   the byakugan behaviour timeline (data_store/processed/car).
 type Shell struct {
-	self    string // path to this dxdfir binary, re-invoked with --no-tui per command
-	version string
+	self     string // path to this dxdfir binary, re-invoked with --no-tui per command
+	version  string
+	repoRoot string // for the Kibana .env + the on-disk CAR timeline; "" if unlocated
 }
 
-// NewShell returns the persistent shell, resolving the binary to re-invoke.
+// NewShell returns the persistent shell, resolving the binary to re-invoke and
+// the repo root (best-effort — the tabs that need it degrade to a note when "").
 func NewShell(version string) *Shell {
 	self, err := os.Executable()
 	if err != nil || self == "" {
 		self = "dxdfir" // fall back to PATH
 	}
-	return &Shell{self: self, version: version}
+	root := ""
+	if r, err := repo.Detect(""); err == nil && r != nil {
+		root = r.Root
+	}
+	return &Shell{self: self, version: version, repoRoot: root}
 }
 
 // tabs are the top-level views; the command box is shared across all of them.
-var shellTabs = []string{"Pipeline", "Containers"}
+var shellTabs = []string{"Pipeline", "Containers", "Kibana", "Timeline"}
 
 const (
 	tabPipeline   = 0
 	tabContainers = 1
+	tabKibana     = 2
+	tabTimeline   = 3
 )
 
 type shellView struct {
-	self string
+	self     string
+	repoRoot string
 
 	tabpane    *widgets.TabPane
-	log        *widgets.List  // streamed output of the last/running command
-	gauge      *widgets.Gauge // Pipeline: overall progress of a running job
-	queue      *widgets.Table // Pipeline: the lane/step queue, ticked as it runs
-	containers *widgets.Table
+	log        *widgets.List      // streamed output of the last/running command
+	gauge      *widgets.Gauge     // Pipeline: overall progress of a running job
+	queue      *widgets.Table     // Pipeline: the lane/step queue, ticked as it runs
+	containers *widgets.Table     // Containers: ktop-style docker table
+	kibHdr     *widgets.Paragraph // Kibana: stack status header
+	kibStreams *widgets.Table     // Kibana: logs-dxdfir.* data streams
+	timeline   *widgets.Table     // Timeline: byakugan behaviour timeline
 	input      *widgets.Paragraph
 	hint       *widgets.Paragraph
 
@@ -68,22 +83,29 @@ type shellView struct {
 	cmd      string   // current input buffer
 	lines    []string // log lines
 	contRows []containerRow
+	kib      kibanaStatus
+	timeRows []timelineRow
+	timeNote string
 	snap     *model.Snapshot // latest job snapshot (Pipeline tab), nil until a run
 	jsonMode bool            // the running command streams JSON progress (process)
 	running  bool
 	title    string
 }
 
-func newShellView(self string) *shellView {
+func newShellView(self, repoRoot string) *shellView {
 	tp := widgets.NewTabPane(shellTabs...)
 	tp.Border = true
 	v := &shellView{
 		self:       self,
+		repoRoot:   repoRoot,
 		tabpane:    tp,
 		log:        widgets.NewList(),
 		gauge:      widgets.NewGauge(),
 		queue:      widgets.NewTable(),
 		containers: widgets.NewTable(),
+		kibHdr:     widgets.NewParagraph(),
+		kibStreams: widgets.NewTable(),
+		timeline:   widgets.NewTable(),
 		input:      widgets.NewParagraph(),
 		hint:       widgets.NewParagraph(),
 		title:      "dxdfir",
@@ -97,6 +119,13 @@ func newShellView(self string) *shellView {
 	v.containers.Title = "containers"
 	v.containers.RowSeparator = false
 	v.containers.FillRow = true
+	v.kibHdr.Title = "elastic stack"
+	v.kibStreams.Title = "data streams"
+	v.kibStreams.RowSeparator = false
+	v.kibStreams.FillRow = true
+	v.timeline.Title = "behaviour timeline"
+	v.timeline.RowSeparator = false
+	v.timeline.FillRow = true
 	v.input.Title = "command"
 	v.hint.Border = false
 	v.hint.TextStyle = styleFg(colGrey)
@@ -105,6 +134,14 @@ func newShellView(self string) *shellView {
 }
 
 func (v *shellView) layout(w, h int) {
+	// Clamp to the minimum the widgets can occupy, so a terminal resized below it
+	// yields a stable (if clipped) layout rather than negative/overlapping rects.
+	if w < minCols {
+		w = minCols
+	}
+	if h < minRows {
+		h = minRows
+	}
 	v.w = w
 	v.bodyBottom = h - 3 // body ends where the command box starts
 	v.tabpane.SetRect(0, 0, w, 3)
@@ -132,6 +169,17 @@ func (v *shellView) refresh() {
 		v.containers.SetRect(0, 3, v.w, v.bodyBottom)
 		v.buildContainers()
 		body = []ui.Drawable{v.containers}
+	case tabKibana:
+		// A status header over the data-stream table.
+		const hdrBottom = 8
+		v.kibHdr.SetRect(0, 3, v.w, hdrBottom)
+		v.kibStreams.SetRect(0, hdrBottom, v.w, v.bodyBottom)
+		v.buildKibana()
+		body = []ui.Drawable{v.kibHdr, v.kibStreams}
+	case tabTimeline:
+		v.timeline.SetRect(0, 3, v.w, v.bodyBottom)
+		v.buildTimeline()
+		body = []ui.Drawable{v.timeline}
 	default: // Pipeline
 		v.log.Title = "output"
 		if v.snap != nil { // a process job has run: gauge + queue above the log
@@ -238,6 +286,51 @@ func (v *shellView) buildContainers() {
 	v.containers.Rows = rows
 }
 
+// buildKibana fills the Elastic-stack header + data-stream table from the latest
+// poll (the docker/elastic stack; see kibana.go).
+func (v *shellView) buildKibana() {
+	k := v.kib
+	header := []string{
+		"Kibana:         " + k.kibanaState + "   " + k.kibanaURL,
+		"Elasticsearch:  " + k.esState + "   " + k.esDetail,
+	}
+	if k.note != "" {
+		header = append(header, "", sanitize(k.note))
+	}
+	v.kibHdr.Text = strings.Join(header, "\n")
+
+	rows := [][]string{{"DATA STREAM", "DOCS", "SIZE"}}
+	for _, s := range k.streams {
+		rows = append(rows, []string{sanitize(s.index), s.docs, s.size})
+	}
+	if len(k.streams) == 0 {
+		v.kibStreams.Title = "data streams — none"
+	} else {
+		v.kibStreams.Title = fmt.Sprintf("data streams (%d)", len(k.streams))
+	}
+	v.kibStreams.Rows = rows
+}
+
+// buildTimeline fills the behaviour-timeline table from the latest read, newest
+// event first (see timeline.go).
+func (v *shellView) buildTimeline() {
+	rows := [][]string{{"TIME", "KIND", "OBJECT", "HOST", "SUMMARY"}}
+	for _, r := range v.timeRows {
+		rows = append(rows, []string{
+			sanitize(r.ts), sanitize(r.kind), sanitize(r.object), sanitize(r.host), sanitize(r.summary),
+		})
+	}
+	switch {
+	case v.timeNote != "":
+		v.timeline.Title = "behaviour timeline — " + v.timeNote
+	case len(v.timeRows) > 0:
+		v.timeline.Title = fmt.Sprintf("behaviour timeline (%d newest)", len(v.timeRows))
+	default:
+		v.timeline.Title = "behaviour timeline"
+	}
+	v.timeline.Rows = rows
+}
+
 func (v *shellView) drawables() []ui.Drawable { return v.draw }
 
 func (v *shellView) appendLine(s string) {
@@ -274,7 +367,7 @@ func (s *Shell) Run() (retErr error) {
 		closeUI()
 		return ErrNoTTY
 	}
-	v := newShellView(s.self)
+	v := newShellView(s.self, s.repoRoot)
 	v.lines = []string{
 		"dxdfir " + s.version + " — interactive shell",
 		"",
@@ -283,7 +376,7 @@ func (s *Shell) Run() (retErr error) {
 		"    collection status             # tracked collections",
 		"    process <collection> <lane>   # process a collection with a lane",
 		"",
-		"Tab switches the Pipeline / Containers view · `clear` clears · `quit` exits · Ctrl-C cancels a run.",
+		"Tab cycles Pipeline / Containers / Kibana / Timeline · `clear` clears · `quit` exits · Ctrl-C cancels a run.",
 	}
 	v.layout(w, h)
 	ui.Render(v.drawables()...)
@@ -292,28 +385,19 @@ func (s *Shell) Run() (retErr error) {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
-	// Poll docker for the Containers tab in the background (bounded per call), so
-	// the ktop-style table stays live during a run without blocking the UI.
+	// Background pollers for the read-only tabs (each bounded per call), so their
+	// panes stay live during a run without blocking the UI. The latest value is
+	// always stored; only the active tab triggers a redraw.
 	pollCtx, stopPoll := context.WithCancel(context.Background())
 	defer stopPoll()
-	contCh := make(chan []containerRow, 1)
-	go func() {
-		t := time.NewTicker(2 * time.Second)
-		defer t.Stop()
-		for {
-			rows := pollContainers(pollCtx)
-			select {
-			case contCh <- rows:
-			case <-pollCtx.Done():
-				return
-			}
-			select {
-			case <-t.C:
-			case <-pollCtx.Done():
-				return
-			}
-		}
-	}()
+	contCh := startPoll(pollCtx, 2*time.Second, pollContainers)
+	kibCh := startPoll(pollCtx, 5*time.Second, func(ctx context.Context) kibanaStatus {
+		return pollKibana(ctx, s.repoRoot)
+	})
+	timeCh := startPoll(pollCtx, 4*time.Second, func(context.Context) tlResult {
+		rows, note := readTimeline(s.repoRoot, 2000)
+		return tlResult{rows: rows, note: note}
+	})
 
 	// Command output streams in on outLines; outDone signals completion.
 	var outLines chan string
@@ -423,6 +507,16 @@ func (s *Shell) Run() (retErr error) {
 			if v.tab == tabContainers {
 				dirty = true
 			}
+		case k := <-kibCh:
+			v.kib = k
+			if v.tab == tabKibana {
+				dirty = true
+			}
+		case tl := <-timeCh:
+			v.timeRows, v.timeNote = tl.rows, tl.note
+			if v.tab == tabTimeline {
+				dirty = true
+			}
 		case <-ticker.C:
 			if dirty || v.running { // keep the spinner alive while running
 				v.refresh()
@@ -489,6 +583,39 @@ func outDoneOr(done chan struct{}) <-chan struct{} {
 		return nil
 	}
 	return done
+}
+
+// tlResult carries one behaviour-timeline read (rows + a degradation note) over
+// the poll channel — the single value startPoll delivers.
+type tlResult struct {
+	rows []timelineRow
+	note string
+}
+
+// startPoll fetches on `interval` until ctx is cancelled, delivering each result
+// on a size-1 channel (latest-wins). It is the shared shape behind every
+// read-only tab's background refresh (Containers / Kibana / Timeline), so each
+// bounded fetch func stays a plain function.
+func startPoll[T any](ctx context.Context, interval time.Duration, fetch func(context.Context) T) <-chan T {
+	ch := make(chan T, 1)
+	go func() {
+		t := time.NewTicker(interval)
+		defer t.Stop()
+		for {
+			v := fetch(ctx)
+			select {
+			case ch <- v:
+			case <-ctx.Done():
+				return
+			}
+			select {
+			case <-t.C:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return ch
 }
 
 // splitArgs is a minimal shell-word splitter: whitespace-separated, with "…"/'…'
