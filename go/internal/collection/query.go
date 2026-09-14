@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/get-sybers/dx_dfir/go/internal/fsx"
 )
 
 // maxWalks bounds concurrent directory walks. Over a networked evidence store
@@ -76,7 +78,7 @@ func CheckState(repoRoot, name string) (State, error) {
 	if !ok {
 		return s, nil // invalid name: not registered, cannot exist on disk
 	}
-	s.Exists = isDir(root)
+	s.Exists = fsx.IsDir(root)
 	// "detected" == in the unregistered set (valid name, not registered, has evidence).
 	if !s.Registered {
 		for _, u := range unregisteredNames(repoRoot, reg.nameSet) {
@@ -262,9 +264,4 @@ func manifestRollup(root string) *string {
 		}
 	}
 	return nil
-}
-
-func isDir(p string) bool {
-	fi, err := os.Stat(p)
-	return err == nil && fi.IsDir()
 }

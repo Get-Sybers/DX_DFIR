@@ -3,11 +3,11 @@ package collection
 import (
 	"database/sql"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/get-sybers/dx_dfir/go/internal/fsx"
 	"github.com/get-sybers/dx_dfir/go/internal/identify"
 )
 
@@ -55,7 +55,7 @@ func SortInto(repoRoot, name string, dryRun bool, onItem ItemFn) (SortResult, er
 	if !ok {
 		return res, fmt.Errorf("invalid collection name %q — use letters/digits then . _ -", name)
 	}
-	if !isDir(root) {
+	if !fsx.IsDir(root) {
 		return res, fmt.Errorf("no such collection %q — create it first: dxdfir collection create --name %s", name, name)
 	}
 	dz := dropzoneRoot(repoRoot)
@@ -101,7 +101,7 @@ func SortInto(repoRoot, name string, dryRun bool, onItem ItemFn) (SortResult, er
 			continue
 		}
 		dest := filepath.Join(root, subdir, nm)
-		if pathExists(dest) {
+		if fsx.Exists(dest) {
 			res.Skipped = append(res.Skipped, [2]string{nm, "already in " + subdir + "/"})
 			note(nm, subdir, how, "skip")
 			continue
@@ -110,7 +110,7 @@ func SortInto(repoRoot, name string, dryRun bool, onItem ItemFn) (SortResult, er
 			if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 				return res, err
 			}
-			if err := moveFile(p, dest); err != nil {
+			if err := fsx.Move(p, dest); err != nil {
 				return res, err
 			}
 			if db != nil {
@@ -144,21 +144,21 @@ func Register(repoRoot, name, fromPath, source string, onItem ItemFn) (RegisterR
 	if fromPath != "" {
 		fp := resolvePath(fromPath)
 		dzT := ""
-		if isDir(dropzoneRoot(repoRoot)) {
+		if fsx.IsDir(dropzoneRoot(repoRoot)) {
 			dzT = resolvePath(filepath.Join(dropzoneRoot(repoRoot), name))
 		}
 		if dzT != "" && fp == dzT {
 			return promote(db, repoRoot, name, onItem)
 		}
-		if !isDir(fp) {
+		if !fsx.IsDir(fp) {
 			return RegisterResult{}, fmt.Errorf("--from path is not an existing directory: %s", fp)
 		}
 		return linkExternal(db, repoRoot, name, fp)
 	}
 
-	if isDir(root) || isSymlink(root) {
+	if fsx.IsDir(root) || fsx.IsSymlink(root) {
 		already := registeredIn(db, name)
-		if !isRegularFile(filepath.Join(root, markerName)) {
+		if !fsx.IsRegularFile(filepath.Join(root, markerName)) {
 			writeMarker(root, name)
 		}
 		if !already {
@@ -174,8 +174,8 @@ func Register(repoRoot, name, fromPath, source string, onItem ItemFn) (RegisterR
 // create mirrors _create: make the lane subdirs and register (idempotent).
 func create(db *sql.DB, repoRoot, name string) (RegisterResult, error) {
 	root, _ := collectionDir(repoRoot, name)
-	dirExisted := isDir(root)
-	hadMarker := isRegularFile(filepath.Join(root, markerName))
+	dirExisted := fsx.IsDir(root)
+	hadMarker := fsx.IsRegularFile(filepath.Join(root, markerName))
 	for _, sub := range laneSubdirs {
 		if err := os.MkdirAll(filepath.Join(root, sub), 0o755); err != nil {
 			return RegisterResult{}, err
@@ -204,10 +204,10 @@ func create(db *sql.DB, repoRoot, name string) (RegisterResult, error) {
 func promote(db *sql.DB, repoRoot, name string, onItem ItemFn) (RegisterResult, error) {
 	dest, _ := collectionDir(repoRoot, name)
 	src := filepath.Join(dropzoneRoot(repoRoot), name)
-	if !isDir(src) {
+	if !fsx.IsDir(src) {
 		return RegisterResult{}, fmt.Errorf("no dropzone folder at data_store/raw/sort/%s/", name)
 	}
-	if pathExists(dest) || isSymlink(dest) {
+	if fsx.Exists(dest) || fsx.IsSymlink(dest) {
 		return RegisterResult{}, fmt.Errorf("collections/%s/ already exists — cannot promote over it", name)
 	}
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
@@ -234,8 +234,8 @@ func promote(db *sql.DB, repoRoot, name string, onItem ItemFn) (RegisterResult, 
 		subdir, how := identify.Classify(p)
 		if subdir != "" {
 			target := filepath.Join(dest, subdir, nm)
-			if !pathExists(target) {
-				if err := moveFile(p, target); err != nil {
+			if !fsx.Exists(target) {
+				if err := fsx.Move(p, target); err != nil {
 					return RegisterResult{}, err
 				}
 				recordFile(db, name, dest, target, how)
@@ -261,11 +261,11 @@ func promote(db *sql.DB, repoRoot, name string, onItem ItemFn) (RegisterResult, 
 // linkExternal mirrors _link_external: register a collection whose evidence
 // lives outside the repo via a directory symlink collections/<name> → target.
 func linkExternal(db *sql.DB, repoRoot, name, target string) (RegisterResult, error) {
-	if !isDir(target) {
+	if !fsx.IsDir(target) {
 		return RegisterResult{}, fmt.Errorf("target path %s is not an existing directory", target)
 	}
 	dest, _ := collectionDir(repoRoot, name)
-	if pathExists(dest) || isSymlink(dest) {
+	if fsx.Exists(dest) || fsx.IsSymlink(dest) {
 		return RegisterResult{}, fmt.Errorf("collections/%s/ already exists — remove or rename it first", name)
 	}
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
@@ -356,38 +356,6 @@ func resolvePath(p string) string {
 	return p
 }
 
-// moveFile renames src→dst, falling back to copy+remove across filesystems.
-func moveFile(src, dst string) error {
-	if err := os.Rename(src, dst); err == nil {
-		return nil
-	}
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
-	if err != nil {
-		in.Close()
-		return err
-	}
-	if _, err := io.Copy(out, in); err != nil {
-		in.Close()
-		out.Close()
-		return err
-	}
-	in.Close()
-	if err := out.Close(); err != nil {
-		return err
-	}
-	return os.Remove(src)
-}
-
-func pathExists(p string) bool {
-	_, err := os.Lstat(p)
-	return err == nil
-}
-
-func isSymlink(p string) bool {
-	fi, err := os.Lstat(p)
-	return err == nil && fi.Mode()&os.ModeSymlink != 0
-}
+// moveFile/pathExists/isSymlink/isDir/isRegularFile moved to internal/fsx
+// (fsx.Move/Exists/IsSymlink/IsDir/IsRegularFile) — shared with health, repo and
+// the lane walks to come.

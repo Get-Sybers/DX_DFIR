@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/get-sybers/dx_dfir/go/internal/fsx"
 	"github.com/get-sybers/dx_dfir/go/internal/model"
 	"github.com/get-sybers/dx_dfir/go/internal/repo"
 	"github.com/get-sybers/dx_dfir/go/internal/run"
@@ -159,7 +160,7 @@ func checkCollection(r *repo.Repo) model.Check {
 		return c
 	}
 	dir := r.CollectionDir()
-	if isDir(dir) {
+	if fsx.IsDir(dir) {
 		c.State = model.CheckOK
 		c.Detail = "get_sybers.dxdfir (" + repo.CollectionPath + ")"
 		return c
@@ -225,7 +226,7 @@ func checkByakugan(r *repo.Repo) model.Check {
 		c.Detail = "engine root unknown (repo not located)"
 		return c
 	}
-	if !isDir(root) {
+	if !fsx.IsDir(root) {
 		c.State = model.CheckWarn
 		c.Detail = "engine not provisioned at " + root + " (needed for build-car)"
 		return c
@@ -289,11 +290,6 @@ func lastMeaningful(s string) string {
 		}
 	}
 	return ""
-}
-
-func isDir(p string) bool {
-	fi, err := os.Stat(p)
-	return err == nil && fi.IsDir()
 }
 
 func isNonEmptyDir(p string) bool {
