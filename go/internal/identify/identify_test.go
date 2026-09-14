@@ -47,7 +47,9 @@ func TestIsPcap(t *testing.T) {
 	dir := t.TempDir()
 	mk := func(name string, data []byte) string {
 		p := filepath.Join(dir, name)
-		os.WriteFile(p, data, 0o644)
+		if err := os.WriteFile(p, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
 		return p
 	}
 	if !IsPcap(mk("x.bin", []byte{0xa1, 0xb2, 0xc3, 0xd4, 0x00})) {
@@ -65,7 +67,9 @@ func TestDetectFormat(t *testing.T) {
 	dir := t.TempDir()
 	mk := func(name string, data []byte) string {
 		p := filepath.Join(dir, name)
-		os.WriteFile(p, data, 0o644)
+		if err := os.WriteFile(p, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
 		return p
 	}
 	ewf := append([]byte{0x45, 0x56, 0x46, 0x09, 0x0d, 0x0a, 0xff, 0x00, 0x00}, []byte{0x01, 0x00}...)

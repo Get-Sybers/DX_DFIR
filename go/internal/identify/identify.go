@@ -37,6 +37,10 @@ var vmFormats = map[string]bool{"vmdk": true, "vmdk-extent": true, "vhd": true, 
 
 var vmdkExtentRe = regexp.MustCompile(`-flat\.vmdk$|-delta\.vmdk$|-s[0-9]+\.vmdk$`)
 
+// ewfContRe matches an EWF continuation-segment name (.e02…). Compiled once at
+// package load, not per ExtFormat call.
+var ewfContRe = regexp.MustCompile(`\.e[0-9][0-9]$`)
+
 // headHex reads the first n bytes of a file and returns them lower-hex.
 func headHex(path string, n int) string {
 	f, err := os.Open(path)
@@ -150,7 +154,7 @@ func ExtFormat(name string) string {
 		return "vmdk-extent"
 	case strings.HasSuffix(n, ".e01"):
 		return "ewf1"
-	case regexp.MustCompile(`\.e[0-9][0-9]$`).MatchString(n):
+	case ewfContRe.MatchString(n):
 		return "ewf-cont"
 	case strings.HasSuffix(n, ".vmdk"):
 		return "vmdk"
