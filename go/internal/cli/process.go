@@ -56,7 +56,9 @@ func newProcessCmd(env *Env) *cobra.Command {
 				switch {
 				case validSources[a]:
 					if source != "" {
-						return Fail(2, "two lanes given (%q and %q) — pass at most one lane", source, a)
+						return Fail(2, "two lanes given (%q and %q) — pass at most one lane. "+
+							"If one names a collection, select it first (dxdfir collection select <name>) and pass only the lane",
+							source, a)
 					}
 					source = a
 				default:
