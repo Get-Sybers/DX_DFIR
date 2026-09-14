@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/get-sybers/dx_dfir/go/internal/fsx"
 )
 
 // touch creates an empty file, making parent dirs as needed.
@@ -248,13 +250,13 @@ func TestWrites(t *testing.T) {
 	if !s.Exists || !s.Detected {
 		t.Errorf("a after Unregister: exists=%v detected=%v, want both true (dir+evidence remain)", s.Exists, s.Detected)
 	}
-	if isRegularFile(filepath.Join(colls, "a", ".collection")) {
+	if fsx.IsRegularFile(filepath.Join(colls, "a", ".collection")) {
 		t.Error("a .collection marker should be removed")
 	}
-	if !isRegularFile(filepath.Join(colls, "a", ".collection.log")) {
+	if !fsx.IsRegularFile(filepath.Join(colls, "a", ".collection.log")) {
 		t.Error("a .collection.log should be preserved")
 	}
-	if !isRegularFile(filepath.Join(colls, "a", "pcaps", "x.pcap")) {
+	if !fsx.IsRegularFile(filepath.Join(colls, "a", "pcaps", "x.pcap")) {
 		t.Error("a evidence should be preserved")
 	}
 	// Second unregister: no row, no marker => false, no error.
@@ -470,7 +472,7 @@ func TestHashUnregistered(t *testing.T) {
 	if files != 1 || rollup == "" {
 		t.Errorf("files=%d rollup=%q", files, rollup)
 	}
-	if !isRegularFile(filepath.Join(colls, "u", manifestName)) {
+	if !fsx.IsRegularFile(filepath.Join(colls, "u", manifestName)) {
 		t.Error("manifest should still be written for an unregistered collection")
 	}
 	db, _ := sql.Open("sqlite", "file:"+filepath.Join(colls, registryName)+"?mode=ro")
@@ -512,7 +514,7 @@ func TestSortRegisterPromoteLink(t *testing.T) {
 	if !rr.Promoted {
 		t.Error("promote: Promoted=false")
 	}
-	if !isRegularFile(filepath.Join(colls, "promoted", "pcaps", "capture.bin")) {
+	if !fsx.IsRegularFile(filepath.Join(colls, "promoted", "pcaps", "capture.bin")) {
 		t.Error("promote: loose pcap not moved into pcaps/")
 	}
 	db, _ := sql.Open("sqlite", "file:"+filepath.Join(colls, registryName)+"?mode=ro")
@@ -543,7 +545,7 @@ func TestSortRegisterPromoteLink(t *testing.T) {
 	if len(sr.Moved["logs/winevt"]) != 1 {
 		t.Errorf("sort: evtx not moved to logs/winevt; moved=%v", sr.Moved)
 	}
-	if !isRegularFile(filepath.Join(colls, "promoted", "logs/winevt", "win.evtx")) {
+	if !fsx.IsRegularFile(filepath.Join(colls, "promoted", "logs/winevt", "win.evtx")) {
 		t.Error("sort: evtx not on disk in logs/winevt/")
 	}
 	db, _ = sql.Open("sqlite", "file:"+filepath.Join(colls, registryName)+"?mode=ro")
@@ -558,7 +560,7 @@ func TestSortRegisterPromoteLink(t *testing.T) {
 	if _, err := Register(repo, "linked", ext, "manual", nil); err != nil {
 		t.Fatalf("link: %v", err)
 	}
-	if !isSymlink(filepath.Join(colls, "linked")) {
+	if !fsx.IsSymlink(filepath.Join(colls, "linked")) {
 		t.Error("link: collections/linked is not a symlink")
 	}
 	db, _ = sql.Open("sqlite", "file:"+filepath.Join(colls, registryName)+"?mode=ro")

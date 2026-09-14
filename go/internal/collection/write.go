@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/get-sybers/dx_dfir/go/internal/fsx"
 )
 
 // This file is the native-Go registry WRITER for the ops that are pure row
@@ -150,7 +152,7 @@ func Unregister(repoRoot, name string) (bool, error) {
 	// is_dir() (follows a symlinked collection) OR is_symlink() (incl. a dangling one).
 	li, lerr := os.Lstat(root)
 	isLink := lerr == nil && li.Mode()&os.ModeSymlink != 0
-	if !isDir(root) && !isLink {
+	if !fsx.IsDir(root) && !isLink {
 		return false, fmt.Errorf("no such collection %q", name)
 	}
 	reg, err := readRegistry(repoRoot)
@@ -159,7 +161,7 @@ func Unregister(repoRoot, name string) (bool, error) {
 	}
 	wasInDB := reg.nameSet[name]
 	marker := filepath.Join(root, markerName)
-	hadMarker := isRegularFile(marker)
+	hadMarker := fsx.IsRegularFile(marker)
 	if !wasInDB && !hadMarker {
 		return false, nil
 	}
@@ -252,7 +254,7 @@ func migrateMarkers(db *sql.DB, repoRoot string) {
 			continue
 		}
 		marker := filepath.Join(root, name, markerName)
-		if !isRegularFile(marker) {
+		if !fsx.IsRegularFile(marker) {
 			continue
 		}
 		var one int
@@ -383,9 +385,4 @@ func registeredIn(db *sql.DB, name string) bool {
 // matching get_sybers_dxdfir.collection._now().
 func now() string {
 	return time.Now().UTC().Format("2006-01-02T15:04:05Z")
-}
-
-func isRegularFile(p string) bool {
-	fi, err := os.Stat(p)
-	return err == nil && fi.Mode().IsRegular()
 }

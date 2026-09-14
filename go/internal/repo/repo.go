@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/get-sybers/dx_dfir/go/internal/fsx"
 )
 
 // CollectionPath is the marker that identifies a DX_DFIR checkout: a directory
@@ -46,7 +48,7 @@ func Detect(explicit string) (*Repo, error) {
 		if err != nil {
 			continue
 		}
-		if isDir(filepath.Join(abs, CollectionPath)) {
+		if fsx.IsDir(filepath.Join(abs, CollectionPath)) {
 			return &Repo{Root: abs}, nil
 		}
 	}
@@ -132,11 +134,6 @@ func ancestors(p string) []string {
 		cur = parent
 	}
 	return out
-}
-
-func isDir(p string) bool {
-	fi, err := os.Stat(p)
-	return err == nil && fi.IsDir()
 }
 
 func isExecutable(p string) bool {
