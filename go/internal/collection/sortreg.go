@@ -7,13 +7,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/get-sybers/dx_dfir/go/internal/identify"
 )
 
 // This file ports the collection sort + register/promote/link mechanics (epic
 // #174, phase 4): moving classified evidence into a collection's lane subdirs,
 // promoting a dropzone folder, symlinking an external tree, and the registry +
 // on-disk-shadow bookkeeping around each — all native Go, byte-compatible with
-// get_sybers_dxdfir.collection. The magic-byte classifier lives in classify.go;
+// get_sybers_dxdfir.collection. The magic-byte classifier now lives in internal/identify;
 // the SHA-1 manifest (the trailing hash pass) lives in hash.go.
 
 // ItemFn streams one classification decision as it happens: action is "moved",
@@ -92,7 +94,7 @@ func SortInto(repoRoot, name string, dryRun bool, onItem ItemFn) (SortResult, er
 			note(nm+"/", "", "directory", "skip")
 			continue
 		}
-		subdir, how := Classify(p)
+		subdir, how := identify.Classify(p)
 		if subdir == "" {
 			res.Skipped = append(res.Skipped, [2]string{nm, how})
 			note(nm, "", how, "skip")
@@ -229,7 +231,7 @@ func promote(db *sql.DB, repoRoot, name string, onItem ItemFn) (RegisterResult, 
 			continue
 		}
 		p := filepath.Join(dest, nm)
-		subdir, how := Classify(p)
+		subdir, how := identify.Classify(p)
 		if subdir != "" {
 			target := filepath.Join(dest, subdir, nm)
 			if !pathExists(target) {
