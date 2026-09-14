@@ -45,8 +45,6 @@ dxdfir_images_set:
   # eztool/Dockerfile in the GoDFIR-toolz submodule (same recipe as evtxecmd),
   # tool selected per image via build args (see dxdfir_images_build_overrides).
   - recmd
-  - amcacheparser
-  - appcompatcacheparser
   - lecmd
   - jlecmd
   - sbecmd
@@ -58,10 +56,13 @@ dxdfir_images_set:
   #   goese      replaces SrumECmd/SumECmd — SRUDB.dat / SUM Current.mdb
   #   gorb       replaces RBCmd (drops .NET) — Recycle Bin $I records
   #   gomft      replaces MFTECmd (drops .NET, on go-ntfs) — $MFT
+  #   goamcache/goappcompat replace AmcacheParser/AppCompatCacheParser (regparser)
   - goprefetch
   - goese
   - gorb
   - gomft
+  - goamcache
+  - goappcompat
 
 # Rebuild even when an image already exists (docker build cache still applies).
 dxdfir_images_force: false
@@ -78,8 +79,6 @@ dxdfir_images_build_overrides:
     dockerfile: "Dockerfile"
   evtxecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "evtxecmd/Dockerfile"}
   recmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "RECmd"}}
-  amcacheparser: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "AmcacheParser"}}
-  appcompatcacheparser: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "AppCompatCacheParser"}}
   lecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "LECmd"}}
   jlecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "JLECmd"}}
   sbecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "SBECmd"}}
@@ -89,3 +88,5 @@ dxdfir_images_build_overrides:
   goese: {context: "{{ dxdfir_images_eztools_context }}/goese", dockerfile: "Dockerfile"}
   gorb: {context: "{{ dxdfir_images_eztools_context }}/gorb", dockerfile: "Dockerfile"}
   gomft: {context: "{{ dxdfir_images_eztools_context }}/gomft", dockerfile: "Dockerfile"}
+  goamcache: {context: "{{ dxdfir_images_eztools_context }}/goamcache", dockerfile: "Dockerfile"}
+  goappcompat: {context: "{{ dxdfir_images_eztools_context }}/goappcompat", dockerfile: "Dockerfile"}

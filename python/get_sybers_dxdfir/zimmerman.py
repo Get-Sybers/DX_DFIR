@@ -62,8 +62,8 @@ PLASO_IMAGE = imageexport.PLASO_IMAGE
 _RECMD_IMAGE = "get-sybers/recmd:latest"
 _JLECMD_IMAGE = "get-sybers/jlecmd:latest"
 _LECMD_IMAGE = "get-sybers/lecmd:latest"
-_AMCACHEPARSER_IMAGE = "get-sybers/amcacheparser:latest"
-_APPCOMPATCACHEPARSER_IMAGE = "get-sybers/appcompatcacheparser:latest"
+_AMCACHEPARSER_IMAGE = "get-sybers/goamcache:latest"
+_APPCOMPATCACHEPARSER_IMAGE = "get-sybers/goappcompat:latest"
 _SBECMD_IMAGE = "get-sybers/sbecmd:latest"
 _RBCMD_IMAGE = "get-sybers/gorb:latest"
 _MFTECMD_IMAGE = "get-sybers/gomft:latest"
@@ -338,24 +338,30 @@ def lecmd_argv(recent_dir, out_dir) -> list[str]:
 
 
 def amcacheparser_argv(amcache_dir, out_dir) -> list[str]:
-    """``amcache_dir`` must be the directory holding a file literally named
-    ``Amcache.hve`` (its .LOG1/.LOG2 are read from the same directory
-    automatically) — located by ``find_file(stage_dir, "Amcache.hve")``."""
+    """``amcache_dir`` holds ``Amcache.hve`` (+ its .LOG1/.LOG2, read from the same
+    dir) — located by ``find_file(stage_dir, "Amcache.hve")``. goamcache replays
+    the dirty-hive .LOG logs (regparser.RecoverHive), writing the recovered copy
+    under ``--work-dir`` — a writable tmpfs, since the rootfs is read-only."""
     return container.run(
         _AMCACHEPARSER_IMAGE,
-        ["-f", "/in/Amcache.hve", "--csv", "/out", "--csvf", "amcache.csv", "-i"],
+        ["-f", "/in/Amcache.hve", "--csv", "/out", "--csvf", "amcache.csv", "-i",
+         "--work-dir", "/work"],
         mounts=[f"{amcache_dir}:/in:ro", f"{out_dir}:/out"],
+        tmpfs=("/work:rw,nosuid,nodev,size=256m,uid=2000,gid=2000",),
     )
 
 
 def appcompatcacheparser_argv(system_dir, out_dir) -> list[str]:
-    """``system_dir`` must hold a file literally named ``SYSTEM`` (its
-    .LOG1/.LOG2 are needed alongside for a dirty hive) — located by
-    ``find_file(stage_dir, "SYSTEM")``."""
+    """``system_dir`` holds a file literally named ``SYSTEM`` (+ its .LOG1/.LOG2
+    alongside) — located by ``find_file(stage_dir, "SYSTEM")``. goappcompat
+    replays the dirty-hive .LOG logs (regparser.RecoverHive), writing the
+    recovered copy under ``--work-dir`` — a writable tmpfs (read-only rootfs)."""
     return container.run(
         _APPCOMPATCACHEPARSER_IMAGE,
-        ["-f", "/in/SYSTEM", "--csv", "/out", "--csvf", "appcompatcache.csv"],
+        ["-f", "/in/SYSTEM", "--csv", "/out", "--csvf", "appcompatcache.csv",
+         "--work-dir", "/work"],
         mounts=[f"{system_dir}:/in:ro", f"{out_dir}:/out"],
+        tmpfs=("/work:rw,nosuid,nodev,size=256m,uid=2000,gid=2000",),
     )
 
 
