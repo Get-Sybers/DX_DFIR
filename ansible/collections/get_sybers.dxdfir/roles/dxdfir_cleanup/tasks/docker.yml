@@ -1,54 +1,73 @@
 ---
-# Remove built dxdfir/* tool images so the next build is clean. Default: only the
-# hardened tool set (get_sybers_dxdfir.images.HARDENED_IMAGES is the source of
-# truth); --all-dxdfir removes every dxdfir/* image present. Only touches images
-# actually on the host. The read-only discovery runs even under --check (a dry
-# run); only the destructive rmi/prune are skipped there.
-- name: "cleanup-docker | docker daemon reachable"
-  ansible.builtin.command: docker version
-  register: dxdfir_cleanup_docker
-  changed_when: false
-  check_mode: false
+# Remove the hardened dxdfir tool images so the next build is clean. Default: the
+# hardened tool set, found by the `com.get-sybers.hardened=true` label the build
+# stamps on every tool image — so the set is whatever was actually built, with no
+# static list (and no `python -c`) to drift. `--all-dxdfir`
+# (dxdfir_cleanup_all_dxdfir) removes every get-sybers/* image present instead.
+# Only touches images actually on the host; read-only discovery runs even under
+# --check, only the destructive rmi/prune are skipped there.
+#
+# The whole action is wrapped in block/rescue: a docker daemon that is unreachable
+# or errors degrades to a clear skip, never a hard play failure.
+- name: "cleanup-docker | remove the hardened tool images"
+  block:
+    - name: "cleanup-docker | docker daemon reachable"
+      ansible.builtin.command: docker version
+      register: dxdfir_cleanup_docker
+      changed_when: false
+      check_mode: false
 
-# {% raw %} shields docker's Go-template format from Ansible's Jinja.
-- name: "cleanup-docker | list images present on the host"
-  ansible.builtin.command:
-    argv: ["docker", "image", "ls", "--format", "{% raw %}{{.Repository}}:{{.Tag}}{% endraw %}"]
-  register: dxdfir_cleanup_present
-  changed_when: false
-  check_mode: false
+    # The hardened tool images carry com.get-sybers.hardened=true; select by that
+    # label so the target set is exactly what the build produced.
+    # {% raw %} shields docker's Go-template format from Ansible's Jinja.
+    - name: "cleanup-docker | resolve the hardened tool images present"
+      ansible.builtin.command:
+        argv:
+          - docker
+          - image
+          - ls
+          - --filter
+          - "label=com.get-sybers.hardened=true"
+          - --format
+          - "{% raw %}{{ .Repository }}:{{ .Tag }}{% endraw %}"
+      register: dxdfir_cleanup_hardened
+      changed_when: false
+      check_mode: false
+      when: not dxdfir_cleanup_all_dxdfir | bool
 
-- name: "cleanup-docker | resolve the hardened tool image set"
-  ansible.builtin.command:
-    argv:
-      - python3
-      - -c
-      - "from get_sybers_dxdfir import images; print('\n'.join(images.HARDENED_IMAGES))"
-  environment:
-    PYTHONPATH: "{{ dxdfir_cleanup_python_path }}"
-  register: dxdfir_cleanup_hardened
-  changed_when: false
-  check_mode: false
-  when: not dxdfir_cleanup_all_dxdfir | bool
+    - name: "cleanup-docker | list every get-sybers/* image present"
+      ansible.builtin.command:
+        argv: ["docker", "image", "ls", "--format", "{% raw %}{{ .Repository }}:{{ .Tag }}{% endraw %}"]
+      register: dxdfir_cleanup_present
+      changed_when: false
+      check_mode: false
+      when: dxdfir_cleanup_all_dxdfir | bool
 
-- name: "cleanup-docker | compute the images to remove"
-  ansible.builtin.set_fact:
-    dxdfir_cleanup_targets: >-
-      {{ (dxdfir_cleanup_present.stdout_lines | select('match', '^dxdfir/') | list)
-         if dxdfir_cleanup_all_dxdfir | bool
-         else (dxdfir_cleanup_hardened.stdout_lines | intersect(dxdfir_cleanup_present.stdout_lines)) }}
-  check_mode: false
+    - name: "cleanup-docker | choose the images to remove"
+      ansible.builtin.set_fact:
+        dxdfir_cleanup_targets: >-
+          {{ ((dxdfir_cleanup_present.stdout_lines | default([])) | select('match', '^get-sybers/') | list)
+             if dxdfir_cleanup_all_dxdfir | bool
+             else ((dxdfir_cleanup_hardened.stdout_lines | default([])) | reject('equalto', '') | list) }}
+      check_mode: false
 
-- name: "cleanup-docker | remove the target images"
-  ansible.builtin.command:
-    argv: "{{ ['docker', 'rmi', '-f'] + dxdfir_cleanup_targets }}"
-  register: dxdfir_cleanup_rmi
-  changed_when: dxdfir_cleanup_rmi.rc == 0
-  when: dxdfir_cleanup_targets | length > 0
+    - name: "cleanup-docker | remove the target images"
+      ansible.builtin.command:
+        argv: "{{ ['docker', 'rmi', '-f'] + dxdfir_cleanup_targets }}"
+      register: dxdfir_cleanup_rmi
+      changed_when: dxdfir_cleanup_rmi.rc == 0
+      when: dxdfir_cleanup_targets | length > 0
 
-- name: "cleanup-docker | prune dangling layers"
-  ansible.builtin.command:
-    argv: ["docker", "image", "prune", "-f"]
-  register: dxdfir_cleanup_prune
-  changed_when: dxdfir_cleanup_prune.rc == 0
-  when: dxdfir_cleanup_dangling | bool
+    - name: "cleanup-docker | prune dangling layers"
+      ansible.builtin.command:
+        argv: ["docker", "image", "prune", "-f"]
+      register: dxdfir_cleanup_prune
+      changed_when: dxdfir_cleanup_prune.rc == 0
+      when: dxdfir_cleanup_dangling | bool
+
+  rescue:
+    - name: "cleanup-docker | image cleanup skipped (docker unavailable or errored)"
+      ansible.builtin.debug:
+        msg: >-
+          Skipping docker image cleanup — {{ ansible_failed_result.msg | default('a docker command failed') }}.
+          Evidence/CAR cleanup is unaffected; re-run `dxdfir cleanup docker` once the docker daemon is reachable.

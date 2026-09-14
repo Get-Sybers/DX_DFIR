@@ -24,25 +24,50 @@ func newProcessCmd(env *Env) *cobra.Command {
 	var force, noRegister bool
 	var extraVars []string
 	cmd := &cobra.Command{
-		Use:   "process SOURCE [COLLECTION]",
-		Short: "Process one evidence source — or 'all' lanes — driving each Ansible role (preflight → process → verify).",
-		Long: "Process an evidence source (zeek|evtx|volatility|plaso|zimmerman|signatures) or\n" +
-			"'all' lanes. Each lane is driven by its ansible-playbook; progress is reconstructed\n" +
-			"live by watching the deterministic output files land on disk. With a COLLECTION,\n" +
-			"each lane is scoped to data_store/raw/collections/<name>/ and only lanes with staged\n" +
-			"evidence run.",
+		Use:   "process [COLLECTION] LANE",
+		Short: "Process evidence with a lane — what is processed, and what it is processed with.",
+		Long: "Process evidence with a lane (a collection is what is processed; the lane is what\n" +
+			"it is processed with). Each lane is driven by its ansible-playbook; progress is\n" +
+			"reconstructed live by watching the deterministic output files land on disk.\n\n" +
+			"Lanes:\n" +
+			"  zeek        PCAPs -> Zeek JSON logs\n" +
+			"  evtx        Windows event logs -> EvtxECmd JSON\n" +
+			"  volatility  memory images -> plugin JSONL\n" +
+			"  plaso       disk images/VMs -> super timeline\n" +
+			"  zimmerman   disk images/VMs -> registry/MFT/… artefacts\n" +
+			"  signatures  yara/suricata/hayabusa over the staged evidence\n" +
+			"  all         every lane above\n\n" +
+			"The two positionals may be given in either order — the lane is recognised by name,\n" +
+			"anything else is treated as a collection:\n" +
+			"  dxdfir process zeek                 # zeek over all staged raw evidence\n" +
+			"  dxdfir process my-case zeek         # zeek scoped to collection 'my-case'\n" +
+			"  dxdfir process my-case              # every lane with evidence in 'my-case'\n" +
+			"With a collection each lane is scoped to data_store/raw/collections/<name>/ and only\n" +
+			"lanes with staged evidence run. With no collection, the active one is used if set.",
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(_ *cobra.Command, args []string) error {
-			source := args[0]
-			if !validSources[source] {
-				return Fail(2, "invalid source %q — use one of: zeek evtx volatility plaso zimmerman signatures all", source)
+			// The positionals are order-independent: a known lane name is the lane,
+			// anything else is the collection (its existence is validated later).
+			source, collection := "", ""
+			for _, a := range args {
+				switch {
+				case validSources[a]:
+					if source != "" {
+						return Fail(2, "two lanes given (%q and %q) — pass at most one lane", source, a)
+					}
+					source = a
+				default:
+					if collection != "" {
+						return Fail(2, "unrecognised argument %q — %q is not a lane (zeek|evtx|volatility|plaso|zimmerman|signatures|all) and a collection is already given (%q)", a, a, collection)
+					}
+					collection = a
+				}
+			}
+			if source == "" {
+				source = "all" // `process <collection>` runs every lane with evidence
 			}
 			if pipeline != "elastic" && pipeline != "sofelk" {
 				return Fail(2, "invalid --pipeline %q — use elastic or sofelk", pipeline)
-			}
-			collection := ""
-			if len(args) == 2 {
-				collection = args[1]
 			}
 			return runProcess(env, source, collection, pipeline, force, noRegister, extraVars)
 		},
@@ -69,6 +94,11 @@ func runProcess(env *Env, source, collection, pipeline string, force, noRegister
 		if st, err := coll.CheckStatus(r.Root); err == nil {
 			collection = st.Active
 		}
+	}
+	if collection == "" {
+		fmt.Fprintln(os.Stderr, style.Yellow(
+			"no collection selected — processing all staged raw evidence under data_store/raw/. "+
+				"Scope to a case with: dxdfir process <collection> "+source+"  (or select one: dxdfir collection select <name>)"))
 	}
 
 	scopeVars := map[string][]string{}

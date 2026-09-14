@@ -107,6 +107,15 @@ func newCollectionCmd(env *Env) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "collection",
 		Short: "Group raw evidence into collections and auto-sort the dropzone.",
+		// A bare `collection` prints help; an unrecognised subcommand (a typo like
+		// `sellect`) errors clearly instead of silently falling through to help.
+		Args: cobra.ArbitraryArgs,
+		RunE: func(c *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return Fail(2, "unknown collection subcommand %q — see: dxdfir collection --help", args[0])
+			}
+			return c.Help()
+		},
 	}
 	cmd.AddCommand(
 		newCollectionListCmd(env),
