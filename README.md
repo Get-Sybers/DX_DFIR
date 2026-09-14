@@ -35,6 +35,7 @@ cd DX_DFIR
 Run the pipeline:
 
 ```bash
+dxdfir build-docker                 # build the hardened tool images (once per host, before first process)
 # drop evidence under data_store/raw/<type>/ (see data_store/README.md), then per source:
 dxdfir process evtx                 # zeek | evtx | volatility | plaso | zimmerman | signatures
 dxdfir build-car                    # normalise every source into per-source CAR stores (car_<object>.jsonl)
@@ -45,7 +46,8 @@ dxdfir car-timeline data_store/processed/car   # one property-rich, time-ordered
 Bring up the backend:
 
 ```bash
-cd docker/elastic && cp .env.example .env      # replace EVERY placeholder, then:
+sudo sysctl -w vm.max_map_count=262144         # Elasticsearch needs this (persist it in /etc/sysctl.conf)
+cd docker/elastic && cp .env.example .env      # replace EVERY placeholder (keys: openssl rand -hex 32), then:
 docker compose up -d                            # Elasticsearch + Kibana + Fleet + Filebeat, localhost-only
 ```
 
@@ -111,10 +113,12 @@ the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
 
 ## Docs
 
-- [Get started](/docs/Get-Started.md) · [Directory structure](/docs/Dir-Structure.md)
-- [The Elastic-native stack](/docker/elastic/README.md) · [Phase-0 risk gate](/docs/riskgate.md) · [detection rules-as-code](/python/get_sybers_dxdfir/detect/rules/README.md)
-- [CAR pipeline](/docs/CAR-Pipeline.md) · [extraction rules](/docs/CAR-Extraction-Rules.md) · [relations](/docs/CAR-Relations.md)
-- [Task board](/project-progress.md) · [Contributing](/CONTRIBUTING.md) · [Security](/SECURITY.md)
+**Start at the [documentation hub](/docs/README.md)** — it routes you by what you want:
+
+- **New here?** [What DX_DFIR is](/docs/getting-started/README.md) · [Install](/docs/getting-started/install.md) · [First run](/docs/getting-started/first-run.md) · [The interface](/docs/getting-started/the-interface.md) · [Command reference](/docs/getting-started/commands.md)
+- **How it works:** [Architecture overview](/docs/architecture/README.md) · [Processing lanes](/docs/architecture/processing-lanes.md) · [CAR pipeline](/docs/architecture/car-pipeline.md) · [The stack](/docs/architecture/the-stack.md)
+- **Contributing:** [Standards](/docs/reference/README.md) · [Repository map](/docs/reference/repository-map.md) · [Contributing](/CONTRIBUTING.md) · [Security](/SECURITY.md)
+- **Deep reference:** [CAR pipeline](/docs/CAR-Pipeline.md) · [extraction rules](/docs/CAR-Extraction-Rules.md) · [relations](/docs/CAR-Relations.md) · [risk gate](/docs/riskgate.md) · [detection rules-as-code](/python/get_sybers_dxdfir/detect/rules/README.md) · [Task board](/project-progress.md)
 
 > The pre-beta code lives on the frozen
 > [`deprecated`](https://github.com/Get-Sybers/DX_DFIR/tree/deprecated) branch —
