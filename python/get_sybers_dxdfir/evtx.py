@@ -1,4 +1,4 @@
-"""EvtxECmd lane — Windows Event Logs (.evtx) -> normalised JSON.
+"""EVTX lane (goevtx) — Windows Event Logs (.evtx) -> normalised JSON.
 
 The analysis backend cannot read binary ``.evtx``, so **goevtx** (the static-Go
 EvtxECmd substitute, ``get-sybers/goevtx``, on Velociraptor's go-evtx) converts
