@@ -48,7 +48,7 @@ Elastic-native backend reads.
 |:--------------------------------------------------------------|:-------------:|:---------------|:------------:|:-------------:|
 | [Log2timeline](https://github.com/log2timeline/plaso)         | ✅            | json_line       | ✅ `log2timeline/jsonl/`           |     ✅ (`file`) |
 | [Zeek](https://zeek.org/)                                     | ✅            | json            | ✅ `zeek/<capture>/` (`conn` + all other logs) | ✅ (`flow`) |
-| [WinEvent Logs](https://www.sans.org/white-papers/32949/) (EvtxECmd) | ✅ (bundled `get-sybers/evtxecmd` image; 103 real LoneWolf logs) | evtx → json     | ✅ `windows_logs/<host>/` (55,638 rows)           |     ✅ (`process`/`user_session`/`service`) |
+| [WinEvent Logs](https://www.sans.org/white-papers/32949/) (goevtx) | ✅ (`get-sybers/goevtx`, static-Go go-evtx; 103 real LoneWolf logs) | evtx → json     | ✅ `windows_logs/<host>/` (55,638 rows)           |     ✅ (`process`/`user_session`/`service`) |
 | [EZ-Tools](https://ericzimmerman.github.io/) (Zimmerman) artefacts | ✅ the zimmerman lane (`dxdfir process zimmerman`) | json / csv | ✅ `zimmerman/` | ✅ (`registry`/`flow`/`process`) |
 | [Volatility 3](https://github.com/volatilityfoundation/volatility3) | ✅ the volatility lane | json (per plugin) | ✅ `volatility/<image>/` | n/a (memory ≠ CAR dead-box object) |
 | [Log2timeline/Plaso](https://github.com/log2timeline/plaso) (disk images, all formats + VM) | ✅ the plaso lane | json_line (+ `.plaso` db) | ✅ `log2timeline/jsonl/`, one file per host | ✅ (`file`, `process` prefetch/amcache/cron, `user_session` utmp/ssh) |
@@ -85,7 +85,7 @@ Things that are broken or unsafe right now.
   `127.0.0.1` bindings are the control; see [SECURITY.md](/SECURITY.md).
 - ~~**Raw EVTX processing is built but unverified.**~~ **Resolved.** The `dxdfir_evtx`
   role ran on **103 real event logs** carved from the LoneWolf image (bundled
-  `get-sybers/evtxecmd` image), 55,638 EvtxECmd rows, feeding the
+  `get-sybers/goevtx` image), 55,638 EvtxECmd-shape rows, feeding the
   `user_session`/`process`/`service` CAR objects from real 4624/4688/7045.
 
 ---

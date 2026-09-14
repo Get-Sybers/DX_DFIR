@@ -30,7 +30,6 @@ HARDENED_IMAGES = (
     "get-sybers/zeek:latest",
     "get-sybers/volatility:latest",
     "get-sybers/plaso:latest",
-    "get-sybers/evtxecmd:latest",
     # The still-.NET Eric Zimmerman tools (dxdfir_zimmerman lane) — built from the
     # one parameterized third_party/GoDFIR-toolz/eztool/Dockerfile. The Go ports
     # (gorb/gomft/goamcache/goappcompat) live in the GoDFIR block below.
@@ -47,6 +46,7 @@ HARDENED_IMAGES = (
     "get-sybers/goprefetch:latest",
     "get-sybers/goese:latest",
     "get-sybers/gomft:latest",
+    "get-sybers/goevtx:latest",
     "get-sybers/goamcache:latest",
     "get-sybers/goappcompat:latest",
 )

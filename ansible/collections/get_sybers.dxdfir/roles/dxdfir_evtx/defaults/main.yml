@@ -40,25 +40,11 @@ dxdfir_evtx_hayabusa_dir: "{{ dxdfir_evtx_repo_root }}/data_store/dependencies/h
 # Sigma rules dir (empty => rules/ beside the binary).
 dxdfir_evtx_hayabusa_rules: ""
 
-# How EvtxECmd is supplied — two modes:
-#   bundled  (default): the get-sybers/evtxecmd image (third_party/GoDFIR-toolz/evtxecmd) bakes EvtxECmd.dll
-#            + Maps/. Nothing to place by hand; build it once with
-#            `docker build -t get-sybers/evtxecmd:latest -f third_party/GoDFIR-toolz/evtxecmd/Dockerfile third_party/GoDFIR-toolz`.
-#   operator: set dxdfir_evtx_use_bundled_image=false and drop the .NET EvtxECmd
-#            release (incl. Maps/) under dxdfir_evtx_evtxecmd_dir. EvtxECmd is MIT but
-#            we don't vendor it; the operator supplies the build.
-dxdfir_evtx_use_bundled_image: true
-dxdfir_evtx_bundled_image: "get-sybers/evtxecmd:latest"
-# Operator-supplied mode only: the release dir, and the stock .NET runtime image
-# that mounts it. EvtxECmd's current build targets net9.0, so the runtime is 9.x
-# (the old sdk:8.0 default silently fails against today's release).
-dxdfir_evtx_evtxecmd_dir: "{{ dxdfir_evtx_repo_root }}/data_store/dependencies/evtxecmd"
-dxdfir_evtx_dotnet_image: "mcr.microsoft.com/dotnet/runtime:9.0"
-
-# The image the processor actually runs — bundled or the mount-into-runtime one.
-# `| bool` so the string extra-var form (-e dxdfir_evtx_use_bundled_image=false) is
-# read the same way here as in every task (a bare non-empty string is Jinja-truthy).
-dxdfir_evtx_image: "{{ dxdfir_evtx_bundled_image if dxdfir_evtx_use_bundled_image | bool else dxdfir_evtx_dotnet_image }}"
+# EvtxECmd is now the static-Go goevtx (get-sybers/goevtx, on go-evtx) — no .NET
+# runtime, no DLL to supply, no operator release. Built FROM scratch from
+# third_party/GoDFIR-toolz/goevtx by the dxdfir_images role. Override the tag if
+# needed:
+dxdfir_evtx_image: "get-sybers/goevtx:latest"
 
 # In-repo runs use PYTHONPATH; a deployed run installs the package instead.
 dxdfir_evtx_python_path: "{{ dxdfir_evtx_repo_root }}/python"
@@ -73,7 +59,6 @@ dxdfir_evtx_argv: >-
   + (['--stage-dir', dxdfir_evtx_stage_dir] if dxdfir_evtx_stage_dir | length > 0 else [])
   + (['--vss'] if dxdfir_evtx_vss | bool else [])
   if dxdfir_evtx_image_src | length > 0 else [])
-  + ([] if dxdfir_evtx_use_bundled_image | bool else ['--evtxecmd-dir', dxdfir_evtx_evtxecmd_dir])
   + (['--hayabusa', '--hayabusa-dir', dxdfir_evtx_hayabusa_dir]
   + (['--hayabusa-rules', dxdfir_evtx_hayabusa_rules] if dxdfir_evtx_hayabusa_rules | length > 0 else [])
   if dxdfir_evtx_hayabusa | bool else [])

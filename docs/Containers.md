@@ -19,7 +19,7 @@ ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-im
 | `get-sybers/yara` | signatures — YARA | Debian package (`docker/yara/`) |
 | `get-sybers/volatility` | memory (Volatility 3) + `vadyarascan` | pinned PyPI (`docker/volatility/`) |
 | `get-sybers/plaso` | Plaso timelining + `image_export` (dfVFS) | GIFT stable PPA (`docker/plaso/`) |
-| `get-sybers/evtxecmd` | Windows Event Logs (EvtxECmd) | fetched EZ release, baked (`third_party/GoDFIR-toolz/evtxecmd/`) |
+| `get-sybers/goevtx` | Windows Event Logs (.evtx) | static Go on go-evtx, FROM scratch (`third_party/GoDFIR-toolz/goevtx/`) |
 
 The `dxdfir_images` role builds each one and **verifies the minimal-posture
 contract** per build — the static image config plus a shell-free
@@ -49,7 +49,7 @@ it never ships at runtime.
 - **no shell and no python** except where the tool irreducibly needs them:
   `get-sybers/yara` keeps `sh` (its per-file scan loop *is* a shell script);
   `get-sybers/volatility` and `get-sybers/plaso` keep python (the tools *are* python).
-  `get-sybers/zeek`, `get-sybers/suricata`, `get-sybers/evtxecmd` carry neither.
+  `get-sybers/zeek`, `get-sybers/suricata`, and the GoDFIR Go tools carry neither.
 - the tool runs as the fixed unprivileged user (`USER 2000:2000`)
 
 Runtime confinement is what actually contains both threats (an attacker with

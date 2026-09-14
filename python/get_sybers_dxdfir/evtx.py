@@ -1,22 +1,22 @@
-"""EvtxECmd processor — Windows Event Logs (.evtx) -> normalised JSON.
+"""EVTX lane (goevtx) — Windows Event Logs (.evtx) -> normalised JSON.
 
-The analysis backend
-cannot read binary ``.evtx``, so EvtxECmd (Eric Zimmerman, .NET, run via the dotnet
-container) converts each log to ``<base>_EvtxECmd_Output.json`` (normalised records,
-one JSON object per line -> host.EvtxEcmdJson) plus a best-effort ``.xml`` sidecar
-(kept for manual review, not ingested).
+The analysis backend cannot read binary ``.evtx``, so **goevtx** (the static-Go
+EvtxECmd substitute, ``get-sybers/goevtx``, on Velociraptor's go-evtx) converts
+each log to ``<base>_EvtxECmd_Output.json`` (one JSON object per line ->
+host.EvtxEcmdJson) plus a best-effort ``.xml`` sidecar (manual review, not
+ingested). The output name stays ``*_EvtxECmd_Output.json`` — the CAR lane
+content-routes on it. goevtx is a FROM-scratch Go binary: no .NET runtime, no
+DLL to supply.
 
 Output is grouped by the sub-directory the ``.evtx`` came from, so per-host
 collections stay separated; logs sitting directly under the input root go to
 ``unspecified_host``.
 
-EvtxECmd is not vendored (we don't redistribute other people's builds) — the DLL is
-operator-supplied under evtxecmd_dir; the processor locates it (root or nested).
-
-Idempotent: a log whose ``.json`` output already exists (non-empty) is skipped.
-EvtxECmd exits 0 on an empty/corrupt log, so a zero-record output is removed and
-counted as failed (not treated as done). Emits a machine-readable summary as JSON on
-stdout so the Ansible task can set an honest ``changed_when`` (``processed > 0``).
+Idempotent: a log whose ``.json`` output already has records is skipped. goevtx
+exits 0 on an empty log (0 events) and non-zero when it cannot parse, so an empty
+output is counted apart (not failed) and a real parse failure is surfaced. Emits
+a machine-readable JSON summary on stdout so the Ansible task can set an honest
+``changed_when`` (``processed > 0``).
 
 Inputs may be loose ``.evtx`` (``--evtx-dir``) or a disk image / directory of images
 (``--image-src``): WindowsEventLogs are pulled out of the image with log2timeline's
@@ -25,10 +25,7 @@ log — so the lane consumes E01/raw/VMDK evidence without a hand-extraction ste
 
 Run standalone or via the ``dxdfir`` CLI:
 
-    # loose logs, bundled EvtxECmd image
     python -m get_sybers_dxdfir.evtx --evtx-dir RAW/logs/winevt --out-dir PROCESSED/windows_logs
-
-    # straight from a disk image
     python -m get_sybers_dxdfir.evtx --image-src RAW/disk_images/Host.E01 \
         --out-dir PROCESSED/windows_logs
 """
@@ -37,21 +34,16 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import subprocess
 import sys
 
 from . import container, imageexport
 from .signatures import hayabusa as _hb
 
-# Operator-supplied mode: a stock .NET runtime image mounts the operator's release.
-# EvtxECmd's current .NET build targets net9.0, so the runtime must be 9.x — the old
-# sdk:8.0 default silently fails against today's release.
-_DOTNET_IMAGE = "mcr.microsoft.com/dotnet/runtime:9.0"
-# Bundled mode: DX_DFIR's own image (third_party/GoDFIR-toolz/evtxecmd) with the DLL + Maps/ baked in.
-_BUNDLED_IMAGE = "get-sybers/evtxecmd:latest"
-# Where the bundled image keeps EvtxECmd.dll (its WORKDIR, alongside Maps/).
-BUNDLED_DLL = "/opt/evtxecmd/EvtxECmd.dll"
+# The Go substitute: get-sybers/goevtx — a static go-evtx binary (FROM scratch,
+# ENTRYPOINT /goevtx) that parses .evtx to the EvtxECmd *.json shape the CAR lane
+# content-routes on. No .NET runtime, no DLL to supply, no operator release.
+_IMAGE = "get-sybers/goevtx:latest"
 
 
 def discover(evtx_dir: str) -> list[str]:
@@ -62,27 +54,6 @@ def discover(evtx_dir: str) -> list[str]:
             if name.lower().endswith(".evtx"):
                 found.append(os.path.join(root, name))
     return sorted(found)
-
-
-def locate_dll(evtxecmd_dir: str) -> str | None:
-    """Path to EvtxECmd.dll RELATIVE to evtxecmd_dir, or None if absent.
-
-    Releases sometimes nest the DLL under an ``EvtxECmd/`` folder, so search a few
-    levels deep as the shell did (maxdepth 3), preferring the root.
-    """
-    root = os.path.join(evtxecmd_dir, "EvtxECmd.dll")
-    if os.path.isfile(root):
-        return "EvtxECmd.dll"
-    for cur, _dirs, files in os.walk(evtxecmd_dir):
-        # Depth relative to evtxecmd_dir, via os.sep splitting (portable — not a
-        # literal "/" count, which breaks on Windows paths / redundant separators).
-        rel = os.path.relpath(cur, evtxecmd_dir)
-        depth = 0 if rel == "." else len(rel.split(os.sep))
-        if depth > 3:
-            continue
-        if "EvtxECmd.dll" in files:
-            return os.path.relpath(os.path.join(cur, "EvtxECmd.dll"), evtxecmd_dir)
-    return None
 
 
 def host_group(evtx_file: str, evtx_dir: str) -> str:
@@ -100,77 +71,41 @@ def out_names(evtx_file: str) -> tuple[str, str]:
     return f"{base}_EvtxECmd_Output.json", f"{base}_EvtxECmd_Output.xml"
 
 
-def evtxecmd_argv(evtx_file, dest_dir, json_out, xml_out, image, *,
-                  evtxecmd_dir=None, dll_rel=None, bundled_dll=BUNDLED_DLL):
-    """The `docker run` argv for one EvtxECmd container run. Two modes:
-
-    - bundled image (``evtxecmd_dir`` falsy): the minimal get-sybers/evtxecmd image
-      whose ENTRYPOINT is ``dotnet /opt/evtxecmd/EvtxECmd.dll`` (DLL + Maps/
-      baked in), so only the flags are passed.
-    - operator-supplied (``evtxecmd_dir`` given): mount the release read-only at
-      ``/evtxecmd`` into a stock .NET runtime and run ``dotnet /evtxecmd/<dll_rel>``
-      — both with every confinement flag (no caps, no-new-privileges, no
-      network, read-only rootfs).
-
-    Pure (no I/O) so the argv is unit-testable without docker.
-    """
-    args = [
-        "-f", f"/input/{os.path.basename(evtx_file)}",
-        "--json", "/output", "--jsonf", json_out,
-        "--xml", "/output", "--xmlf", xml_out,
-    ]
-    mounts = [f"{os.path.dirname(evtx_file)}:/input:ro", f"{dest_dir}:/output"]
-    if evtxecmd_dir:
-        # operator-supplied release mounted into a stock .NET runtime (no
-        # ENTRYPOINT), so the full `dotnet <dll> ...` argv is passed; still with
-        # every confinement flag.
-        return container.run(
-            image, ["dotnet", f"/evtxecmd/{dll_rel}", *args],
-            mounts=[*mounts, f"{os.path.realpath(evtxecmd_dir)}:/evtxecmd:ro"],
-            workdir="/tmp",
-        )
-    # bundled minimal image: `dotnet <bundled_dll>` is the ENTRYPOINT, so only
-    # the flags are passed.
-    return container.run(image, args, mounts=mounts, workdir="/tmp")
+def goevtx_argv(evtx_file, dest_dir, json_out, xml_out, image):
+    """The `docker run` argv for one goevtx run over one log — the flags only
+    (goevtx is the ENTRYPOINT of the FROM-scratch get-sybers/goevtx image; no
+    dotnet, no DLL). JSON + the best-effort XML sidecar both land in dest_dir,
+    under every confinement flag. Pure (no I/O), unit-testable."""
+    return container.run(
+        image,
+        ["-f", f"/input/{os.path.basename(evtx_file)}",
+         "--json", "/output", "--jsonf", json_out,
+         "--xml", "/output", "--xmlf", xml_out],
+        mounts=[f"{os.path.dirname(evtx_file)}:/input:ro", f"{dest_dir}:/output"],
+        workdir="/tmp",
+    )
 
 
-def _run_evtxecmd(evtx_file, dest_dir, json_out, xml_out, image, *,
-                  evtxecmd_dir=None, dll_rel=None):
-    """One EvtxECmd container run over one log, JSON + XML into dest_dir.
-
-    Returns the CompletedProcess so the caller can tell a genuinely empty log
-    (EvtxECmd opened it and printed a record tally) from an input it could not
-    read at all (missing, or permission-denied under the hardened uid) — EvtxECmd
-    exits 0 on both, but only prints a tally when it actually opened the log.
-    """
+def _run_goevtx(evtx_file, dest_dir, json_out, xml_out, image):
+    """One goevtx container run over one log (JSON + XML into dest_dir). goevtx
+    exits 0 when the log parsed — even with zero events — and 2 when it could not
+    be parsed, so a CalledProcessError is a genuine failure while exit 0 with no
+    records written is a legitimately empty log. Output is captured so nothing
+    reaches OUR stdout (which carries only the JSON summary)."""
     return subprocess.run(
-        evtxecmd_argv(evtx_file, dest_dir, json_out, xml_out, image,
-                      evtxecmd_dir=evtxecmd_dir, dll_rel=dll_rel),
-        # EvtxECmd is chatty (version banner + per-record "time went backwards"
-        # warnings). Capture it so nothing reaches OUR stdout, which carries only
-        # the machine-readable JSON summary the role parses. On failure the output
-        # is still attached to the CalledProcessError for the caller to surface.
+        goevtx_argv(evtx_file, dest_dir, json_out, xml_out, image),
         capture_output=True,
         check=True,
     )
 
 
-def _nonempty(path: str) -> bool:
-    try:
-        return os.path.getsize(path) > 0
-    except OSError:
-        return False
-
-
 def _has_records(path: str) -> bool:
-    """True if the EvtxECmd JSON holds at least one record.
+    """True if the output JSON holds at least one record.
 
-    EvtxECmd exits 0 on a log with no events and still writes a file — just a UTF-8
-    BOM (3 bytes) and nothing else. That is NOT a real output: it has size > 0 but
-    zero records, and if left on disk it (a) miscounts as ``processed`` and (b) is
-    an ill-formed input for whatever reads the output tree next (the CAR lane, a
-    shipper). So the emptiness test must look past the BOM/whitespace, not at the
-    byte size.
+    goevtx writes an empty file for a 0-event log; the emptiness test looks past a
+    UTF-8 BOM / whitespace at the content, not the byte size, so an empty log is
+    never miscounted as ``processed`` or left as an ill-formed input for the CAR
+    lane downstream.
     """
     try:
         with open(path, "r", encoding="utf-8-sig") as fh:
@@ -182,42 +117,17 @@ def _has_records(path: str) -> bool:
     return False
 
 
-def process(evtx_dir, out_dir, evtxecmd_dir=None, image=None, force=False) -> dict:
-    """Parse every .evtx under evtx_dir into out_dir/<host>/. Idempotent.
+def process(evtx_dir, out_dir, image=None, force=False) -> dict:
+    """Parse every .evtx under evtx_dir into out_dir/<host>/ with goevtx. Idempotent.
 
-    Two ways to supply EvtxECmd, chosen by ``evtxecmd_dir``:
-
-    - given -> operator-supplied release: locate EvtxECmd.dll under it and mount it
-      into a stock .NET runtime ``image`` (defaults to ``_DOTNET_IMAGE``).
-    - falsy -> the bundled get-sybers/evtxecmd image (DLL + Maps/ baked in); no release dir
-      is needed and none is looked for. ``image`` defaults to ``_BUNDLED_IMAGE``.
-
-    Pass ``image`` to override either default.
+    goevtx (get-sybers/goevtx) is a static Go binary on go-evtx — no .NET runtime,
+    no DLL to supply. ``image`` overrides the default get-sybers/goevtx.
     """
     evtx_dir = os.path.realpath(evtx_dir)
     out_dir = os.path.realpath(out_dir)
     os.makedirs(out_dir, exist_ok=True)
-    bundled = not evtxecmd_dir
-    # Default the image to match the mode, so a bare process(dir, out) is coherent
-    # (bundled mode -> bundled image, not the stock runtime that has no baked DLL).
     if image is None:
-        image = _BUNDLED_IMAGE if bundled else _DOTNET_IMAGE
-    dll_rel = None if bundled else locate_dll(evtxecmd_dir)
-    if not bundled and dll_rel is not None:
-        # The container runs with every capability dropped (no DAC override),
-        # so the mounted release must be world-readable. It's a tool build, not
-        # evidence — normalise it best-effort.
-        for cur, dirs, fnames in os.walk(evtxecmd_dir):
-            for name in dirs + fnames:
-                try:
-                    path = os.path.join(cur, name)
-                    os.chmod(path, os.stat(path).st_mode | 0o055)
-                except OSError:
-                    pass
-        try:
-            os.chmod(evtxecmd_dir, os.stat(evtxecmd_dir).st_mode | 0o055)
-        except OSError:
-            pass
+        image = _IMAGE
     files = discover(evtx_dir)
 
     summary = {
@@ -225,8 +135,6 @@ def process(evtx_dir, out_dir, evtxecmd_dir=None, image=None, force=False) -> di
         "evtx_dir": evtx_dir,
         "out_dir": out_dir,
         "image": image,
-        "bundled": bundled,
-        "evtxecmd_dll": BUNDLED_DLL if bundled else dll_rel,
         "files": len(files),
         "processed": 0,
         "skipped": 0,
@@ -236,73 +144,48 @@ def process(evtx_dir, out_dir, evtxecmd_dir=None, image=None, force=False) -> di
         "failed": 0,
         "results": [],
     }
-    if not bundled and dll_rel is None:
-        summary["error"] = "EvtxECmd.dll not found under evtxecmd_dir"
-        return summary
-
     for evtx in files:
         host = host_group(evtx, evtx_dir)
         dest_dir = os.path.join(out_dir, host)
         json_out, xml_out = out_names(evtx)
         rel = os.path.relpath(evtx, evtx_dir)
         json_path = os.path.join(dest_dir, json_out)
-        # Skip only a real prior output — one with records. A BOM-only leftover from
+        # Skip only a real prior output — one with records. An empty leftover from
         # an empty log is not "done"; re-checking it is cheap.
         if not force and _has_records(json_path):
             summary["skipped"] += 1
             continue
         os.makedirs(dest_dir, exist_ok=True)
         try:
-            # the hardened image writes as uid 2000
-            os.chmod(dest_dir, 0o777)
+            os.chmod(dest_dir, 0o777)  # the hardened image writes as uid 2000
         except OSError:
             pass
         try:
-            proc = _run_evtxecmd(evtx, dest_dir, json_out, xml_out, image,
-                                 evtxecmd_dir=evtxecmd_dir, dll_rel=dll_rel)
-        except subprocess.CalledProcessError:
+            _run_goevtx(evtx, dest_dir, json_out, xml_out, image)
+        except subprocess.CalledProcessError as exc:
             for p in (json_path, os.path.join(dest_dir, xml_out)):
                 if os.path.exists(p):
                     os.remove(p)
+            tail = (exc.stderr or b"").decode("utf-8", "replace").strip().splitlines()
+            why = tail[-1].strip() if tail else "goevtx failed"
             summary["failed"] += 1
-            summary["results"].append({"log": rel, "error": "EvtxECmd failed"})
+            summary["results"].append({"log": rel, "error": f"goevtx failed: {why}"})
             continue
+        # goevtx exited 0: the log parsed. Records -> processed; none -> a
+        # legitimately empty log. There is no output-error-masquerading-as-empty
+        # case: goevtx returns non-zero if it cannot open/parse/write.
         if _has_records(json_path):
             summary["processed"] += 1
             summary["results"].append({"log": rel, "output": os.path.join(host, json_out)})
-            continue
-        # No records written. EvtxECmd exits 0 in three shapes here, and only one is
-        # benign, so we read its own "Total event log records found: <n>" tally:
-        #   n == 0 -> genuinely EMPTY: it opened the log and there was nothing. Benign.
-        #   n  > 0 -> it found records but wrote NONE to disk (an output/write error,
-        #             e.g. an unwritable dest) — a failure masquerading as empty.
-        #   no tally at all -> it never opened the log (missing file, or the
-        #             permission-denied it prints as "... does not exist! Exiting").
-        #             A failure; surface EvtxECmd's own reason.
-        # Matching on the tally (not merely the "records found" substring) keeps a
-        # non-zero-but-unwritten count from being hidden as a silent "empty".
-        for p in (json_path, os.path.join(dest_dir, xml_out)):
-            if os.path.exists(p):
-                os.remove(p)
-        out = (proc.stdout or b"") + (proc.stderr or b"")
-        text = out.decode("utf-8", "replace")
-        m = re.search(r"records found:\s*([\d,]+)", text, re.IGNORECASE)
-        tally = int(m.group(1).replace(",", "")) if m else None
-        if tally == 0:
+        else:
+            for p in (json_path, os.path.join(dest_dir, xml_out)):
+                if os.path.exists(p):
+                    os.remove(p)
             summary["empty"] += 1
             summary["results"].append({"log": rel, "empty": True})
-        elif tally is not None:
-            summary["failed"] += 1
-            summary["results"].append(
-                {"log": rel,
-                 "error": f"EvtxECmd reported {m.group(1)} records but wrote none"})
-        else:
-            tail = text.strip().splitlines()
-            why = tail[-1].strip() if tail else "no output and no record tally"
-            summary["failed"] += 1
-            summary["results"].append(
-                {"log": rel, "error": f"EvtxECmd did not read the log: {why}"})
     return summary
+
+
 
 
 def extract_images(image_src, stage_dir, *, plaso_image=imageexport.PLASO_IMAGE,
@@ -387,14 +270,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="also extract from Volume Shadow Copies during --image-src extraction")
     ap.add_argument("--out-dir", required=True, help="output dir; grouped by source sub-dir (host)")
     ap.add_argument(
-        "--evtxecmd-dir", default="",
-        help="operator-supplied EvtxECmd release dir (holds EvtxECmd.dll). Omit to "
-             "use the bundled image (third_party/GoDFIR-toolz/evtxecmd), which bakes the DLL + Maps/.",
-    )
-    ap.add_argument(
-        "--image", "--dotnet-image", dest="image", default=None,
-        help="container image: the bundled get-sybers/evtxecmd (default when --evtxecmd-dir "
-             "is omitted) or a stock .NET runtime that mounts the operator release.",
+        "--image", dest="image", default=None,
+        help="container image (default: get-sybers/goevtx, the static-Go EvtxECmd substitute).",
     )
     ap.add_argument("--force", action="store_true", help="reparse logs that already have output")
     ap.add_argument("--hayabusa", action="store_true",
@@ -434,8 +311,7 @@ def main(argv: list[str] | None = None) -> int:
     if extract_summary is not None:
         summary["extract"] = extract_summary
     for src in sources:
-        s = process(src, out_dir, args.evtxecmd_dir or None,
-                    image=args.image, force=args.force)
+        s = process(src, out_dir, image=args.image, force=args.force)
         summary["sources"].append(s)
         if s.get("error"):
             summary["error"] = s["error"]

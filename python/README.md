@@ -10,7 +10,7 @@ the user-facing **`dxdfir`** front-end is the Go binary built from `go/`.
 Each source is a module runnable standalone or through its role:
 ```bash
 python -m get_sybers_dxdfir.zeek        --pcap-dir RAW/pcaps --out-dir PROCESSED/zeek
-python -m get_sybers_dxdfir.evtx        --evtx-dir RAW/logs/winevt --out-dir PROCESSED/windows_logs --evtxecmd-dir DEPS/evtxecmd
+python -m get_sybers_dxdfir.evtx        --evtx-dir RAW/logs/winevt --out-dir PROCESSED/windows_logs
 python -m get_sybers_dxdfir.volatility  --memory-dir RAW/memory --out-dir PROCESSED/volatility --symbols-dir DEPS/symbols --renderer … --plugins-dir …
 python -m get_sybers_dxdfir.plaso       --input-dir RAW/disk_images --out-dir PROCESSED/log2timeline --module dev-scripts/plaso/l2t_json_dxdfir.py
 python -m get_sybers_dxdfir.signatures  --output-dir PROCESSED/signatures --repo-root .

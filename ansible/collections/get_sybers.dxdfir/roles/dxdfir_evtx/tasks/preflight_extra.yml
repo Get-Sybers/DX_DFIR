@@ -1,64 +1,23 @@
 ---
 # Lane-specific evtx preflight, included by dxdfir_lane's shared preflight (after
-# the docker + input-dir checks, before the module/image guards). EvtxECmd is
-# supplied one of two ways (dxdfir_evtx_use_bundled_image):
-#   bundled  — the get-sybers/evtxecmd image bakes the DLL + Maps/; it must exist.
-#   operator — a .NET EvtxECmd release dir (with EvtxECmd.dll) must be in place.
+# the docker + input-dir checks, before the module/image guards). The parser is
+# goevtx (get-sybers/goevtx) — a static-Go EvtxECmd substitute, no .NET, no DLL
+# to supply. The only precondition is that its image exists.
 
-- name: "evtx-preflight | bundled EvtxECmd image is present"
-  when: dxdfir_evtx_use_bundled_image | bool
-  block:
-    - name: "evtx-preflight | inspect the bundled EvtxECmd image"
-      # Inspect the image that will actually run (dxdfir_evtx_image), not just the
-      # default tag — so a dxdfir_evtx_image digest-pin override is validated too.
-      ansible.builtin.command: "docker image inspect {{ dxdfir_evtx_image }}"
-      register: dxdfir_evtx_bundled_inspect
-      changed_when: false
-      failed_when: false
+- name: "evtx-preflight | inspect the goevtx image"
+  # Inspect the image that will actually run (dxdfir_evtx_image), not just the
+  # default tag — so a dxdfir_evtx_image digest-pin override is validated too.
+  ansible.builtin.command: "docker image inspect {{ dxdfir_evtx_image }}"
+  register: dxdfir_evtx_image_inspect
+  changed_when: false
+  failed_when: false
 
-    - name: "evtx-preflight | assert the bundled EvtxECmd image exists"
-      ansible.builtin.assert:
-        that:
-          - dxdfir_evtx_bundled_inspect.rc == 0
-        fail_msg: >-
-          Bundled image {{ dxdfir_evtx_image }} not found. Build it with
-          `ansible-playbook playbooks/dxdfir-build-images.yml`, or set
-          dxdfir_evtx_use_bundled_image=false to use an operator-supplied release.
-        quiet: true
-
-- name: "evtx-preflight | operator-supplied EvtxECmd release"
-  when: not dxdfir_evtx_use_bundled_image | bool
-  block:
-    - name: "evtx-preflight | stat the EvtxECmd release dir"
-      ansible.builtin.stat:
-        path: "{{ dxdfir_evtx_evtxecmd_dir }}"
-      register: dxdfir_evtx_evtxecmd_stat
-
-    - name: "evtx-preflight | EvtxECmd release dir exists and is a directory"
-      ansible.builtin.assert:
-        that:
-          - dxdfir_evtx_evtxecmd_stat.stat.exists
-          - dxdfir_evtx_evtxecmd_stat.stat.isdir is defined and dxdfir_evtx_evtxecmd_stat.stat.isdir
-        fail_msg: >-
-          dxdfir_evtx_evtxecmd_dir ({{ dxdfir_evtx_evtxecmd_dir }}) is missing or is not a
-          directory — extract the operator-supplied EvtxECmd release there.
-        quiet: true
-
-    - name: "evtx-preflight | find the operator-supplied EvtxECmd.dll"
-      ansible.builtin.find:
-        paths: "{{ dxdfir_evtx_evtxecmd_dir }}"
-        patterns: "EvtxECmd.dll"
-        recurse: true
-        depth: 3           # matches the processor's locate_dll() maxdepth
-      register: dxdfir_evtx_dll
-
-    - name: "evtx-preflight | EvtxECmd.dll is present (operator-supplied)"
-      ansible.builtin.assert:
-        that:
-          - dxdfir_evtx_dll.matched | int > 0
-        fail_msg: >-
-          EvtxECmd.dll not found under dxdfir_evtx_evtxecmd_dir
-          ({{ dxdfir_evtx_evtxecmd_dir }}). EvtxECmd is not vendored — download the .NET
-          release (incl. Maps/) from https://github.com/EricZimmerman/evtx/releases and
-          extract it there, or set dxdfir_evtx_use_bundled_image=true.
-        quiet: true
+- name: "evtx-preflight | assert the goevtx image exists"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_evtx_image_inspect.rc == 0
+    fail_msg: >-
+      goevtx image {{ dxdfir_evtx_image }} not found. Build it with
+      `ansible-playbook playbooks/dxdfir-build-images.yml` (from
+      third_party/GoDFIR-toolz/goevtx).
+    quiet: true
