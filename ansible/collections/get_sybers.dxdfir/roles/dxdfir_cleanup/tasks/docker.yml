@@ -33,7 +33,7 @@
       register: dxdfir_cleanup_hardened
       changed_when: false
       check_mode: false
-      when: not dxdfir_cleanup_all_dxdfir | bool
+      when: not (dxdfir_cleanup_all_dxdfir | bool)
 
     - name: "cleanup-docker | list every get-sybers/* image present"
       ansible.builtin.command:
@@ -43,12 +43,17 @@
       check_mode: false
       when: dxdfir_cleanup_all_dxdfir | bool
 
+    # reject('search', '<none>') drops any dangling `<none>:<none>` entry a
+    # re-tagged/rebuilt image can leave behind — `docker rmi <none>:<none>` errors
+    # with "invalid reference format". (The ^get-sybers/ match already excludes it
+    # on the --all-dxdfir path; guard the label path the same way.)
     - name: "cleanup-docker | choose the images to remove"
       ansible.builtin.set_fact:
         dxdfir_cleanup_targets: >-
           {{ ((dxdfir_cleanup_present.stdout_lines | default([])) | select('match', '^get-sybers/') | list)
-             if dxdfir_cleanup_all_dxdfir | bool
-             else ((dxdfir_cleanup_hardened.stdout_lines | default([])) | reject('equalto', '') | list) }}
+             if (dxdfir_cleanup_all_dxdfir | bool)
+             else ((dxdfir_cleanup_hardened.stdout_lines | default([]))
+                   | reject('equalto', '') | reject('search', '<none>') | list) }}
       check_mode: false
 
     - name: "cleanup-docker | remove the target images"

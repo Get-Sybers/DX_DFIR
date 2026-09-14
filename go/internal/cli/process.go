@@ -24,7 +24,7 @@ func newProcessCmd(env *Env) *cobra.Command {
 	var force, noRegister bool
 	var extraVars []string
 	cmd := &cobra.Command{
-		Use:   "process [COLLECTION] LANE",
+		Use:   "process [COLLECTION] [LANE]",
 		Short: "Process evidence with a lane — what is processed, and what it is processed with.",
 		Long: "Process evidence with a lane (a collection is what is processed; the lane is what\n" +
 			"it is processed with). Each lane is driven by its ansible-playbook; progress is\n" +
@@ -43,7 +43,10 @@ func newProcessCmd(env *Env) *cobra.Command {
 			"  dxdfir process my-case zeek         # zeek scoped to collection 'my-case'\n" +
 			"  dxdfir process my-case              # every lane with evidence in 'my-case'\n" +
 			"With a collection each lane is scoped to data_store/raw/collections/<name>/ and only\n" +
-			"lanes with staged evidence run. With no collection, the active one is used if set.",
+			"lanes with staged evidence run. With no collection, the active one is used if set.\n\n" +
+			"A collection named exactly like a lane (e.g. 'zeek') is read as the lane when given\n" +
+			"positionally — select it first (dxdfir collection select zeek) and it is used as the\n" +
+			"active collection instead.",
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			// The positionals are order-independent: a known lane name is the lane,
