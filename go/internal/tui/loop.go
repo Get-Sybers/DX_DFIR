@@ -99,6 +99,37 @@ func run(v view, updates <-chan model.Update, onAbort func()) (retErr error) {
 	}
 
 	ui.Render(v.drawables()...) // final frame
+
+	// Hold the completed dashboard until the operator dismisses it — a fast job
+	// (e.g. a lane with nothing to process) otherwise flashes and vanishes before
+	// the result can be read. An abort skips this: the operator already asked to
+	// quit, so tear down immediately.
+	if !aborted {
+		const dismiss = "done — press q, enter or esc to close"
+		if hv, ok := v.(hinter); ok {
+			hv.hint(dismiss)
+			ui.Render(v.drawables()...)
+		}
+		for held := true; held; {
+			switch e := <-events; e.ID {
+			case "q", "<C-c>", "<Escape>", "<Enter>":
+				held = false
+			case "<Resize>":
+				if r, ok := e.Payload.(ui.Resize); ok {
+					v.layout(r.Width, r.Height)
+					if hv, ok := v.(hinter); ok {
+						hv.hint(dismiss)
+					}
+					ui.Clear()
+					ui.Render(v.drawables()...)
+				}
+			case "<C-l>":
+				ui.Clear()
+				ui.Render(v.drawables()...)
+			}
+		}
+	}
+
 	closeUI()
 	plain.PrintSummary(os.Stderr, v.final())
 	if aborted {
@@ -106,6 +137,10 @@ func run(v view, updates <-chan model.Update, onAbort func()) (retErr error) {
 	}
 	return jobErr
 }
+
+// hinter is an optional view capability: set a one-line footer hint. run() uses
+// it to show the dismiss prompt once a job finishes.
+type hinter interface{ hint(string) }
 
 // ProcessPresenter renders the `process` dashboard.
 type ProcessPresenter struct{}
