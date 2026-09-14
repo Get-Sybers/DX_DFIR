@@ -35,9 +35,11 @@ func Exists(p string) bool {
 	return err == nil
 }
 
-// Move renames src→dst, falling back to copy+remove when the two are on
-// different filesystems (os.Rename fails across devices — e.g. a tmpfs staging
-// dir to a data volume).
+// Move renames src→dst, falling back to a copy+remove whenever os.Rename fails —
+// most commonly because src and dst sit on different filesystems (os.Rename
+// cannot move across devices, e.g. a tmpfs staging dir to a data volume). On a
+// failed copy the partial destination is removed, so a failure never leaves a
+// half-written file behind.
 func Move(src, dst string) error {
 	if err := os.Rename(src, dst); err == nil {
 		return nil
@@ -46,18 +48,18 @@ func Move(src, dst string) error {
 	if err != nil {
 		return err
 	}
+	defer in.Close()
 	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
-		in.Close()
 		return err
 	}
 	if _, err := io.Copy(out, in); err != nil {
-		in.Close()
 		out.Close()
+		os.Remove(dst) // don't leave a partial destination behind
 		return err
 	}
-	in.Close()
 	if err := out.Close(); err != nil {
+		os.Remove(dst)
 		return err
 	}
 	return os.Remove(src)
