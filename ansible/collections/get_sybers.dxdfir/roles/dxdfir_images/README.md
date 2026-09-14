@@ -8,18 +8,18 @@ in-tree sources:
   (volatility from the [PIIAT-Mem](https://github.com/Get-Sybers/PIIAT-Mem)
   submodule's context).
 - **The [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz)
-  submodule** (`third_party/GoDFIR-toolz/`): evtxecmd and the whole **Eric
-  Zimmerman tool family** — recmd, mftecmd, amcacheparser, appcompatcacheparser,
-  lecmd, jlecmd, sbecmd, sqlecmd, rbcmd, wxtcmd — all built from the ONE
-  parameterized `eztool/Dockerfile` (tool selected per image via
-  `dxdfir_images_build_overrides` args), plus the two **Linux-native Go
-  substitutes** for the Windows-bound EZ tools:
-  - `prefetch` (`goprefetch`) replaces **PECmd** — parses XP→Win11 `.pf`, MAM-compressed included;
-  - `esedump` (`goese`) replaces **SrumECmd/SumECmd** — SRUDB.dat / SUM `Current.mdb`.
-
-  (PECmd/SrumECmd/SumECmd can't parse on Linux — a non-Windows startup guard and
-  Windows-native ESE respectively — so the Go substitutes stand in. Both are
-  `FROM scratch`: no shell, no python, just the static Go binary.)
+  submodule** (`third_party/GoDFIR-toolz/`): the whole **Eric Zimmerman tool
+  family**, now almost entirely **static-Go `FROM scratch` substitutes** (no
+  shell, no python, just the binary) — `goevtx` (EvtxECmd), `gomft` (MFTECmd),
+  `goamcache`/`goappcompat` (Amcache/AppCompatCache), `gore`/`gosbe`
+  (RECmd/SBECmd, with dirty-hive `.LOG` replay), `gole`/`gojle` (LECmd/JLECmd),
+  `gorb` (RBCmd), `gowxt` (WxTCmd), plus the two tools that were never
+  Linux-viable under .NET at all — `goprefetch` (PECmd — XP→Win11 `.pf`,
+  MAM-compressed included) and `goese` (SrumECmd/SumECmd — SRUDB.dat / SUM
+  `Current.mdb`). Each builds from its OWN subdir in the submodule. The one
+  remaining .NET tool, **sqlecmd** (SQLECmd), still builds from the ONE
+  parameterized `eztool/Dockerfile` (tool selected via
+  `dxdfir_images_build_overrides` args).
 
 Every image runs as uid 2000 (the single `dxdfir_runtime_uid` knob) and is
 verified against the hardening contract by this role.

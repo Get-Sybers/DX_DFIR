@@ -1,9 +1,12 @@
 # dxdfir_zimmerman
 
-Process **forensic disk images** and **VMware VM exports** with Eric Zimmerman's
-**EZ-Tools** (RECmd, JLECmd, LECmd, AmcacheParser, AppCompatCacheParser, SBECmd,
-RBCmd, MFTECmd) plus a plaso-driven SRUM parse, into per-host artefact output for
-the Elastic-native or SOF-ELK pipeline. The role is structure only — it asserts inputs, runs
+Process **forensic disk images** and **VMware VM exports** with the artefact set
+Eric Zimmerman's **EZ-Tools** parse (RECmd, JLECmd, LECmd, AmcacheParser,
+AppCompatCacheParser, SBECmd, RBCmd, MFTECmd) plus a plaso-driven SRUM parse,
+into per-host artefact output for the Elastic-native or SOF-ELK pipeline. Every
+tool now runs as a Linux-native, static-Go `FROM scratch` substitute
+(Get-Sybers/GoDFIR-toolz: `gore`/`gojle`/`gole`/`goamcache`/`goappcompat`/`gosbe`/
+`gorb`/`gomft`), not .NET. The role is structure only — it asserts inputs, runs
 a preflight (docker, input dir, the `get_sybers_dxdfir.zimmerman` module, every
 tool image it drives), then invokes the processor as a **single action** (the
 extraction + nine container runs happen inside Python). One output dir per host.
@@ -19,16 +22,19 @@ For each disk image, the processor (`get_sybers_dxdfir/zimmerman.py`):
    NTUSER.DAT/UsrClass.dat) **with their .LOG1/.LOG2 transaction logs**, Amcache,
    jump lists/`.lnk` (Explorer "Recent"), Recycle Bin `$I` records, the Windows
    Timeline database, the SRUM database, and a resident `$MFT`.
-2. Runs the hardened EZ-Tools containers over what was pulled out: RECmd
-   (registry batch), JLECmd/LECmd (jump lists/lnk), AmcacheParser,
-   AppCompatCacheParser, SBECmd (ShellBags), RBCmd (Recycle Bin), MFTECmd (when
-   a `$MFT` was extracted). The two Windows-bound EZ tools run through their
-   Linux-native Go substitutes: **SRUM** via `get-sybers/goese` (`goese` —
-   SrumECmd is .NET and P/Invokes Windows' ESE engine) and **Prefetch** via
-   `get-sybers/goprefetch` (`goprefetch` — PECmd refuses off-Windows), each run
-   only when its artefact (`SRUDB.dat` / any `.pf`) was extracted.
+2. Runs the hardened Go containers over what was pulled out: `gore` (RECmd —
+   registry batch), `gojle`/`gole` (JLECmd/LECmd — jump lists/lnk), `goamcache`,
+   `goappcompat`, `gosbe` (SBECmd — ShellBags), `gorb` (RBCmd — Recycle Bin),
+   `gomft` (MFTECmd — when a `$MFT` was extracted). The registry-family tools
+   (`gore`/`gosbe`/`goamcache`/`goappcompat`) replay each hive's `.LOG1/.LOG2`
+   dirty-hive transaction logs into a writable `/work` tmpfs to match .NET
+   fidelity. The two tools that were never Linux-viable under .NET at all run as
+   Go substitutes too: **SRUM** via `get-sybers/goese` (SrumECmd P/Invokes
+   Windows' ESE engine) and **Prefetch** via `get-sybers/goprefetch` (PECmd
+   refuses off-Windows), each run only when its artefact (`SRUDB.dat` / any
+   `.pf`) was extracted.
 
-Directory-recursive tools (RECmd, JLECmd, LECmd, SBECmd, RBCmd) are pointed at
+Directory-recursive tools (`gore`, `gojle`, `gole`, `gosbe`, `gorb`) are pointed at
 the **whole per-image extraction root**, not a hand-picked sub-directory: that
 tree holds only the filtered artefact set (never the rest of the filesystem), so
 scanning it whole is both correct and needs no per-user directory lookup for a
@@ -71,13 +77,14 @@ The skip lives in the Python processor, never in a task `when:`.
 ## What is deliberately NOT run: WxTCmd
 
 `wxtcmd_argv()` exists as a pure, unit-tested argv builder, but
-`process_image()` does **not** invoke it. WxTCmd's SQLite interop needs a
-**writable** unpack path (its own working directory), which the hardened
-read-only-rootfs base image does not provide by default; the fix is an extra
-writable tmpfs at `/opt/eztool` (uid/gid 2000 to match the container's non-root
-user) — see the epic #86 Phase-D comment and `wxtcmd_argv()`'s docstring.
-Verifying this against a real `ActivitiesCache.db` is deferred to issue #88
-rather than risk breaking the rest of the lane chasing one tool.
+`process_image()` does **not** invoke it yet. `gowxt`'s SQLite interop needs a
+**writable** unpack path (it copies `ActivitiesCache.db` before opening it),
+which the hardened read-only rootfs does not provide; `gowxt` takes a
+`--work-dir` on a writable `/work` tmpfs (uid/gid 2000), the same replay/unpack
+pattern `gore`/`gosbe`/`goamcache`/`goappcompat` use — so the read-only-rootfs
+blocker is solved. The step stays deferred only until a real `ActivitiesCache.db`
+confirms the end-to-end shape (issue #88 — none of the lab images carried a
+Windows Timeline database to validate against).
 
 ## Example
 ```bash

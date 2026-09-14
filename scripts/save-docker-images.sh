@@ -40,18 +40,19 @@ BUILT_IMAGES=(
     "get-sybers/volatility:latest"
     "get-sybers/plaso:latest"
     "get-sybers/goevtx:latest"
-    # Eric Zimmerman lane: recmd/lecmd/jlecmd/sbecmd/sqlecmd/wxtcmd (eztool/Dockerfile)
-    # + the Go ports gomft/goamcache/goappcompat/gorb (their own GoDFIR-toolz subdirs).
-    "get-sybers/recmd:latest"
+    # Eric Zimmerman lane: sqlecmd is the last .NET tool (eztool/Dockerfile); every
+    # other EZ tool is now a Go substitute built from its own GoDFIR-toolz subdir:
+    # gomft/goamcache/goappcompat/gorb/gore/gosbe/gole/gojle/gowxt.
+    "get-sybers/sqlecmd:latest"
     "get-sybers/gomft:latest"
     "get-sybers/goamcache:latest"
     "get-sybers/goappcompat:latest"
-    "get-sybers/lecmd:latest"
-    "get-sybers/jlecmd:latest"
-    "get-sybers/sbecmd:latest"
-    "get-sybers/sqlecmd:latest"
+    "get-sybers/gore:latest"
+    "get-sybers/gosbe:latest"
+    "get-sybers/gole:latest"
+    "get-sybers/gojle:latest"
     "get-sybers/gorb:latest"
-    "get-sybers/wxtcmd:latest"
+    "get-sybers/gowxt:latest"
     # Linux-native Go substitutes for the Windows-bound EZ tools.
     "get-sybers/goprefetch:latest"
     "get-sybers/goese:latest"

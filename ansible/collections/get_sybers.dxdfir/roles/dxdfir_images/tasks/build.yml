@@ -79,8 +79,7 @@
       {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }} still carries a shell or python though its tool
       needs neither.
     quiet: true
-  when: dxdfir_images_name in ['suricata', 'zeek', 'evtxecmd',
-                             'recmd', 'mftecmd',
-                             'amcacheparser', 'appcompatcacheparser', 'lecmd',
-                             'jlecmd', 'sbecmd', 'sqlecmd', 'rbcmd', 'wxtcmd',
-                             'prefetch', 'esedump']
+  when: dxdfir_images_name in ['suricata', 'zeek', 'sqlecmd',
+                             'goprefetch', 'goese', 'gorb', 'gomft', 'goevtx',
+                             'goamcache', 'goappcompat', 'gore', 'gosbe',
+                             'gole', 'gojle', 'gowxt']

@@ -39,12 +39,12 @@
     dxdfir_lane_python_path: "{{ dxdfir_zimmerman_python_path }}"
     dxdfir_lane_images:
       - "{{ dxdfir_zimmerman_plaso_image }}"
-      - "get-sybers/recmd:latest"
-      - "get-sybers/jlecmd:latest"
-      - "get-sybers/lecmd:latest"
+      - "get-sybers/gore:latest"
+      - "get-sybers/gojle:latest"
+      - "get-sybers/gole:latest"
       - "get-sybers/goamcache:latest"
       - "get-sybers/goappcompat:latest"
-      - "get-sybers/sbecmd:latest"
+      - "get-sybers/gosbe:latest"
       - "get-sybers/gorb:latest"
       - "get-sybers/gomft:latest"
     dxdfir_lane_input_checks:

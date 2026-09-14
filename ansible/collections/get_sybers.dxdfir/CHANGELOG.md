@@ -11,6 +11,7 @@ root [CHANGELOG.md](../../../CHANGELOG.md).
 
 ### Changed
 
+- The `dxdfir_zimmerman` lane and `dxdfir_images` build now run the all-Go Eric Zimmerman tool family: RECmd→`gore`, SBECmd→`gosbe`, LECmd→`gole`, JLECmd→`gojle`, WxTCmd→`gowxt` (joining the already-ported `goamcache`/`goappcompat`/`gomft`/`goevtx`/`gorb`/`goprefetch`/`goese`). `gore`/`gosbe` replay dirty-hive `.LOG1/.LOG2` logs into a writable `/work` tmpfs. Only SQLECmd remains .NET. The "no shell/python" image-hardening assertion was corrected to the Go images' real names.
 - The processing roles' pipeline axis is `elastic|sofelk` (was `adx|sofelk`): `dxdfir_<role>_pipeline` defaults to `elastic`, and `dxdfir_<role>_adx_out_dir` is now `dxdfir_<role>_elastic_out_dir` — the same default path (`data_store/processed/<source>`, the tree the CAR lane builds from). `dxdfir_<role>_out_dir` still carries the resolved choice.
 
 ### Removed (earlier)

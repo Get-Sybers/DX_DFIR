@@ -8,6 +8,21 @@ is `0`, anything may change without notice.
 ## [Unreleased]
 
 ### Changed
+- **The Eric Zimmerman tool family is now all-Go, and the zimmerman lane runs the
+  Go substitutes end to end.** The last five .NET EZ tools were ported to
+  static-Go `FROM scratch` images in
+  [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) and the pipeline was
+  switched onto them: **RECmd→`gore`**, **SBECmd→`gosbe`** (both replay the
+  `.LOG1/.LOG2` dirty-hive transaction logs via `regparser.RecoverHive` into a
+  writable `/work` tmpfs, matching .NET fidelity), **LECmd→`gole`**,
+  **JLECmd→`gojle`**, **WxTCmd→`gowxt`**. `gore` drops the `--bn`/`--nl` flags
+  and uses its own baked, redistributable `/batch/default.reb` (a substitute for
+  the non-redistributable Kroll batch). Only **SQLECmd** remains .NET (its YAML
+  Maps engine is a separate, larger port and it is not pipeline-invoked). The
+  GoDFIR-toolz submodule is bumped to the commit carrying all twelve Go tools.
+  Also restored the `dxdfir_images` "no shell/python" hardening assertion for the
+  Go images, whose real names (`goamcache`/`gomft`/…) had drifted out of the
+  check's tool list during the earlier renames.
 - **The zimmerman lane's SRUM and Prefetch now run through the Linux-native Go
   substitutes** instead of Plaso: SRUM via `get-sybers/goese` (`goese`,
   replacing the old plaso `esedb/srum` two-step) and a new Prefetch pass via
