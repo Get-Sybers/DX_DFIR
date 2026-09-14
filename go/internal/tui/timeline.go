@@ -52,8 +52,12 @@ func readTimeline(repoRoot string, limit int) ([]timelineRow, string) {
 	return rows, ""
 }
 
-// findTimelines returns every timeline.jsonl under dir (bounded walk), the
-// aggregate at the root included.
+// maxTimelineFiles bounds the walk — far above any real per-source count, a guard
+// against a pathological tree rather than an expected limit.
+const maxTimelineFiles = 256
+
+// findTimelines returns the timeline.jsonl files under dir (the aggregate at the
+// root included), the walk stopped once maxTimelineFiles are collected.
 func findTimelines(dir string) []string {
 	var out []string
 	_ = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
@@ -62,6 +66,9 @@ func findTimelines(dir string) []string {
 		}
 		if !d.IsDir() && d.Name() == "timeline.jsonl" {
 			out = append(out, p)
+			if len(out) >= maxTimelineFiles {
+				return filepath.SkipAll
+			}
 		}
 		return nil
 	})

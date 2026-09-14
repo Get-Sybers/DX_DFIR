@@ -28,7 +28,8 @@ import (
 //   - Pipeline:   the streaming log, plus a progress gauge + lane/step queue that
 //     tick live while a `process` job runs (via the DXDFIR_PROGRESS=json stream).
 //   - Containers: a ktop-style docker ps/stats table of the tool containers.
-//   - Kibana:     the docker/elastic stack status + logs-dxdfir.* doc counts.
+//   - Kibana:     run ES|QL queries against Elasticsearch and render the results
+//     (the command box becomes the query input on this tab); stack status too.
 //   - Timeline:   the byakugan behaviour timeline (data_store/processed/car).
 type Shell struct {
 	self     string // path to this dxdfir binary, re-invoked with --no-tui per command
@@ -84,6 +85,9 @@ type shellView struct {
 	lines    []string // log lines
 	contRows []containerRow
 	kib      kibanaStatus
+	kibQuery string     // last ES|QL query typed on the Kibana tab
+	kibRes   esqlResult // its result (columns + rows, or a note)
+	querying bool       // an ES|QL query is in flight
 	timeRows []timelineRow
 	timeNote string
 	snap     *model.Snapshot // latest job snapshot (Pipeline tab), nil until a run
@@ -153,13 +157,20 @@ func (v *shellView) layout(w, h int) {
 func (v *shellView) refresh() {
 	v.tabpane.ActiveTabIndex = v.tab
 
-	prompt := "> " + v.cmd
-	if v.running {
+	prompt := "> " + v.cmd + "_" // trailing cursor
+	switch {
+	case v.running:
 		prompt = spinnerFrame() + " running: " + v.title
-	} else {
-		prompt += "_" // cursor
+	case v.querying:
+		prompt = spinnerFrame() + " querying…"
 	}
 	v.input.Text = prompt
+	// On the Kibana tab the box is an ES|QL query input, elsewhere the CLI.
+	if v.tab == tabKibana {
+		v.input.Title = "es|ql query"
+	} else {
+		v.input.Title = "command"
+	}
 
 	// The body depends on the active tab (and, on Pipeline, on whether a job has
 	// run). refresh() owns placing the body widgets because the split changes.
@@ -276,7 +287,7 @@ func stateIcon(s model.State) string {
 func (v *shellView) buildContainers() {
 	rows := [][]string{{"NAME", "IMAGE", "STATUS", "CPU", "MEM"}}
 	for _, c := range v.contRows {
-		rows = append(rows, []string{sanitize(c.name), sanitize(c.image), sanitize(c.status), c.cpu, c.mem})
+		rows = append(rows, sanitizeRow([]string{c.name, c.image, c.status, c.cpu, c.mem}))
 	}
 	if len(v.contRows) == 0 {
 		v.containers.Title = "containers — none running"
@@ -286,29 +297,68 @@ func (v *shellView) buildContainers() {
 	v.containers.Rows = rows
 }
 
-// buildKibana fills the Elastic-stack header + data-stream table from the latest
-// poll (the docker/elastic stack; see kibana.go).
+// buildKibana renders the Kibana tab: a stack-status header + the query line,
+// over the ES|QL result table (or the available data streams before any query).
+// Every dynamic string is sanitized — health details, the echoed query, and the
+// external result cells can all carry termui markup / control runes.
 func (v *shellView) buildKibana() {
 	k := v.kib
 	header := []string{
-		"Kibana:         " + k.kibanaState + "   " + k.kibanaURL,
-		"Elasticsearch:  " + k.esState + "   " + k.esDetail,
+		"ES: " + k.esState + "  " + k.esDetail + "   ·   Kibana: " + k.kibanaState + "  " + k.kibanaURL,
+	}
+	switch {
+	case v.querying:
+		header = append(header, "query> "+v.kibQuery+"   (running…)")
+	case v.kibQuery != "":
+		line := "query> " + v.kibQuery
+		if v.kibRes.note != "" {
+			line += "   [" + v.kibRes.note + "]"
+		} else if len(v.kibRes.rows) > 0 {
+			line += fmt.Sprintf("   [%d rows]", len(v.kibRes.rows))
+		}
+		header = append(header, line)
+	default:
+		header = append(header, "query> (type an ES|QL query below, e.g.  FROM logs-dxdfir.* | LIMIT 20)")
 	}
 	if k.note != "" {
-		header = append(header, "", sanitize(k.note))
+		header = append(header, k.note)
+	}
+	for i := range header {
+		header[i] = sanitize(header[i])
 	}
 	v.kibHdr.Text = strings.Join(header, "\n")
 
+	// Result table: the query's columns/rows once one has run; otherwise the
+	// available data streams, which double as a "what can I query" aid.
+	if v.kibRes.ran && len(v.kibRes.cols) > 0 {
+		rows := [][]string{sanitizeRow(v.kibRes.cols)}
+		for _, r := range v.kibRes.rows {
+			rows = append(rows, sanitizeRow(r))
+		}
+		v.kibStreams.Title = fmt.Sprintf("results (%d rows)", len(v.kibRes.rows))
+		v.kibStreams.Rows = rows
+		return
+	}
 	rows := [][]string{{"DATA STREAM", "DOCS", "SIZE"}}
 	for _, s := range k.streams {
-		rows = append(rows, []string{sanitize(s.index), s.docs, s.size})
+		rows = append(rows, []string{sanitize(s.index), sanitize(s.docs), sanitize(s.size)})
 	}
 	if len(k.streams) == 0 {
-		v.kibStreams.Title = "data streams — none"
+		v.kibStreams.Title = "data streams — none (run a query above)"
 	} else {
-		v.kibStreams.Title = fmt.Sprintf("data streams (%d)", len(k.streams))
+		v.kibStreams.Title = fmt.Sprintf("data streams (%d) — or run a query above", len(k.streams))
 	}
 	v.kibStreams.Rows = rows
+}
+
+// sanitizeRow sanitizes every cell of a table row (external / user-supplied
+// content), so termui markup and control runes can't corrupt the render.
+func sanitizeRow(row []string) []string {
+	out := make([]string, len(row))
+	for i, c := range row {
+		out[i] = sanitize(c)
+	}
+	return out
 }
 
 // buildTimeline fills the behaviour-timeline table from the latest read, newest
@@ -403,6 +453,15 @@ func (s *Shell) Run() (retErr error) {
 	var outLines chan string
 	var outDone chan struct{}
 	var cancel context.CancelFunc
+	// An ES|QL query (Kibana tab) runs off the UI goroutine; its result arrives on
+	// queryCh, and queryCancel lets Ctrl-C abort an in-flight query.
+	queryCh := make(chan esqlMsg, 1)
+	var queryCancel context.CancelFunc
+	defer func() {
+		if queryCancel != nil {
+			queryCancel() // release an in-flight query's context on any exit
+		}
+	}()
 	dirty := false
 
 	for {
@@ -410,6 +469,13 @@ func (s *Shell) Run() (retErr error) {
 		case e := <-events:
 			switch e.ID {
 			case "<C-c>":
+				if v.querying && queryCancel != nil {
+					queryCancel() // abort the in-flight ES|QL query, stay in the shell
+					v.querying = false
+					queryCancel = nil
+					dirty = true
+					continue
+				}
 				if v.running && cancel != nil {
 					cancel() // cancel the running command, stay in the shell
 					continue
@@ -425,7 +491,7 @@ func (s *Shell) Run() (retErr error) {
 					ui.Render(v.drawables()...)
 				}
 			case "<Enter>":
-				if v.running {
+				if v.running || v.querying {
 					continue
 				}
 				line := strings.TrimSpace(v.cmd)
@@ -438,7 +504,18 @@ func (s *Shell) Run() (retErr error) {
 					return nil
 				}
 				if line == "clear" {
-					v.lines = nil
+					if v.tab == tabKibana {
+						v.kibQuery, v.kibRes = "", esqlResult{} // clear the query view
+					} else {
+						v.lines = nil
+					}
+					dirty = true
+					continue
+				}
+				if v.tab == tabKibana {
+					// The command box is the ES|QL query input on this tab: run the
+					// query off the UI goroutine and render its result in the table.
+					queryCancel = v.startQuery(s.repoRoot, line, queryCh)
 					dirty = true
 					continue
 				}
@@ -456,19 +533,19 @@ func (s *Shell) Run() (retErr error) {
 				v.title = line
 				dirty = true
 			case "<Backspace>", "<C-8>":
-				if !v.running && v.cmd != "" {
+				if !v.busy() && v.cmd != "" {
 					r := []rune(v.cmd)
 					v.cmd = string(r[:len(r)-1])
 					dirty = true
 				}
 			case "<Space>":
-				if !v.running {
+				if !v.busy() {
 					v.cmd += " "
 					dirty = true
 				}
 			default:
 				// A single printable rune (termui reports it as its literal id).
-				if !v.running && len(e.ID) == 1 {
+				if !v.busy() && len(e.ID) == 1 {
 					v.cmd += e.ID
 					dirty = true
 				}
@@ -517,8 +594,20 @@ func (s *Shell) Run() (retErr error) {
 			if v.tab == tabTimeline {
 				dirty = true
 			}
+		case m := <-queryCh:
+			v.querying = false
+			if queryCancel != nil {
+				queryCancel() // release its context now the result is in
+				queryCancel = nil
+			}
+			if m.query == v.kibQuery { // ignore a superseded/cancelled query's late result
+				v.kibRes = m.res
+			}
+			if v.tab == tabKibana {
+				dirty = true
+			}
 		case <-ticker.C:
-			if dirty || v.running { // keep the spinner alive while running
+			if dirty || v.running || v.querying { // keep the spinner alive while busy
 				v.refresh()
 				ui.Render(v.drawables()...)
 				dirty = false
@@ -592,6 +681,33 @@ type tlResult struct {
 	note string
 }
 
+// esqlMsg carries a finished ES|QL query back to the UI goroutine, tagged with
+// the query it answers so a superseded/cancelled query's late result is ignored.
+type esqlMsg struct {
+	query string
+	res   esqlResult
+}
+
+// busy reports whether the command box should ignore input — a dxdfir job or an
+// ES|QL query is in flight.
+func (v *shellView) busy() bool { return v.running || v.querying }
+
+// startQuery launches an ES|QL query off the UI goroutine, delivering its result
+// on out (tagged with the query). It returns the query's cancel func for the
+// caller to hold — Ctrl-C aborts it and the caller releases it on completion.
+func (v *shellView) startQuery(repoRoot, query string, out chan<- esqlMsg) context.CancelFunc {
+	v.kibQuery, v.kibRes, v.querying = query, esqlResult{}, true
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		res := runESQL(ctx, repoRoot, query)
+		select {
+		case out <- esqlMsg{query: query, res: res}:
+		case <-ctx.Done():
+		}
+	}()
+	return cancel
+}
+
 // startPoll fetches on `interval` until ctx is cancelled, delivering each result
 // on a size-1 channel (latest-wins). It is the shared shape behind every
 // read-only tab's background refresh (Containers / Kibana / Timeline), so each
@@ -603,6 +719,12 @@ func startPoll[T any](ctx context.Context, interval time.Duration, fetch func(co
 		defer t.Stop()
 		for {
 			v := fetch(ctx)
+			// Latest-wins: drop any un-consumed value first so the send below
+			// never blocks (single producer → after the drain the buffer has room).
+			select {
+			case <-ch:
+			default:
+			}
 			select {
 			case ch <- v:
 			case <-ctx.Done():
