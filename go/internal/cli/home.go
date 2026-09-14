@@ -65,7 +65,7 @@ func runHome(env *Env, version string) error {
 // the native read fails it degrades to an instant listing of the collection
 // directory names so tracked collections still show.
 func gatherCollections(r *repo.Repo) (colls []model.CollInfo, note, hardErr string) {
-	st, err := collection.GetStatus(r.Root)
+	st, err := collection.CheckStatus(r.Root)
 	if err != nil {
 		if fast := fastCollections(r); len(fast) > 0 {
 			return fast, "registry unavailable (" + firstNonEmptyLine(err.Error()) + ") - names only; `dxdfir collection list` for detail", ""

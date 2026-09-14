@@ -66,7 +66,7 @@ func runProcess(env *Env, source, collection, pipeline string, force, noRegister
 
 	// Resolve the collection (explicit arg, else the active one).
 	if collection == "" {
-		if st, err := coll.GetStatus(r.Root); err == nil {
+		if st, err := coll.CheckStatus(r.Root); err == nil {
 			collection = st.Active
 		}
 	}
@@ -78,7 +78,7 @@ func runProcess(env *Env, source, collection, pipeline string, force, noRegister
 		if err := resolveCollection(r, collection, noRegister); err != nil {
 			return err
 		}
-		cl, ok := coll.GetLanes(r.Root, collection)
+		cl, ok := coll.ListLanes(r.Root, collection)
 		if !ok {
 			return Fail(2, "invalid collection name %q", collection)
 		}

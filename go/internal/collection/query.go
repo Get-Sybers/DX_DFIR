@@ -16,10 +16,10 @@ import (
 // middle ground.
 const maxWalks = 32
 
-// GetStatus mirrors `collection status`: the active collection, the registered
+// CheckStatus mirrors `collection status`: the active collection, the registered
 // collections and hand-staged unregistered ones (each with per-lane counts and
 // the stored SHA-1 rollup), and the dropzone candidates.
-func GetStatus(repoRoot string) (Status, error) {
+func CheckStatus(repoRoot string) (Status, error) {
 	reg, err := readRegistry(repoRoot)
 	if err != nil {
 		return Status{}, err
@@ -42,9 +42,9 @@ func GetStatus(repoRoot string) (Status, error) {
 	return st, nil
 }
 
-// GetLanes mirrors `collection lanes`: one (lane, input_var, dir, count) row per
+// ListLanes mirrors `collection lanes`: one (lane, input_var, dir, count) row per
 // lane input, scoped to the collection. Returns ok=false for an invalid name.
-func GetLanes(repoRoot, name string) (Lanes, bool) {
+func ListLanes(repoRoot, name string) (Lanes, bool) {
 	root, ok := collectionDir(repoRoot, name)
 	if !ok {
 		return Lanes{}, false
@@ -64,9 +64,9 @@ func GetLanes(repoRoot, name string) (Lanes, bool) {
 	return out, true
 }
 
-// GetState mirrors `collection state`: registered / detected (unregistered but
+// CheckState mirrors `collection state`: registered / detected (unregistered but
 // has evidence) / exists, for one name.
-func GetState(repoRoot, name string) (State, error) {
+func CheckState(repoRoot, name string) (State, error) {
 	reg, err := readRegistry(repoRoot)
 	if err != nil {
 		return State{}, err
