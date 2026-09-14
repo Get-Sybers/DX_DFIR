@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -70,6 +71,8 @@ type shellView struct {
 	gauge      *widgets.Gauge     // Pipeline: overall progress of a running job
 	queue      *widgets.Table     // Pipeline: the lane/step queue, ticked as it runs
 	containers *widgets.Table     // Containers: ktop-style docker table
+	contCPU    *widgets.Gauge     // Containers: aggregate CPU gauge (ktop-style)
+	contMEM    *widgets.Gauge     // Containers: aggregate memory gauge
 	kibHdr     *widgets.Paragraph // Kibana: stack status header
 	kibStreams *widgets.Table     // Kibana: logs-dxdfir.* data streams
 	timeline   *widgets.Table     // Timeline: byakugan behaviour timeline
@@ -107,6 +110,8 @@ func newShellView(self, repoRoot string) *shellView {
 		gauge:      widgets.NewGauge(),
 		queue:      widgets.NewTable(),
 		containers: widgets.NewTable(),
+		contCPU:    widgets.NewGauge(),
+		contMEM:    widgets.NewGauge(),
 		kibHdr:     widgets.NewParagraph(),
 		kibStreams: widgets.NewTable(),
 		timeline:   widgets.NewTable(),
@@ -123,6 +128,8 @@ func newShellView(self, repoRoot string) *shellView {
 	v.containers.Title = "containers"
 	v.containers.RowSeparator = false
 	v.containers.FillRow = true
+	v.contCPU.Title = "CPU"
+	v.contMEM.Title = "memory"
 	v.kibHdr.Title = "elastic stack"
 	v.kibStreams.Title = "data streams"
 	v.kibStreams.RowSeparator = false
@@ -131,9 +138,10 @@ func newShellView(self, repoRoot string) *shellView {
 	v.timeline.RowSeparator = false
 	v.timeline.FillRow = true
 	v.input.Title = "command"
+	v.input.WrapText = false // one-line box; refresh() clips to keep the cursor visible
 	v.hint.Border = false
 	v.hint.TextStyle = styleFg(colGrey)
-	v.hint.Text = "type a dxdfir command, Enter to run · Tab switches view · Ctrl-C quits"
+	v.hint.Text = "type a command, Enter to run · Tab/→ next · Shift-Tab/← prev · Ctrl-C quits"
 	return v
 }
 
@@ -147,9 +155,12 @@ func (v *shellView) layout(w, h int) {
 		h = minRows
 	}
 	v.w = w
-	v.bodyBottom = h - 3 // body ends where the command box starts
+	// The command box needs 3 rows (border, one text row, border) — at 2 rows the
+	// borders ate the only line and nothing typed was visible. Body ends above it.
+	inputTop := h - 4
+	v.bodyBottom = inputTop
 	v.tabpane.SetRect(0, 0, w, 3)
-	v.input.SetRect(0, v.bodyBottom, w, h-1)
+	v.input.SetRect(0, inputTop, w, h-1)
 	v.hint.SetRect(0, h-1, w, h)
 	v.refresh()
 }
@@ -164,6 +175,12 @@ func (v *shellView) refresh() {
 	case v.querying:
 		prompt = spinnerFrame() + " querying…"
 	}
+	// Keep the cursor end visible: on a line wider than the box, show the tail.
+	if iw := v.input.Inner.Dx(); iw > 3 {
+		if r := []rune(prompt); len(r) > iw {
+			prompt = "…" + string(r[len(r)-iw+1:])
+		}
+	}
 	v.input.Text = prompt
 	// On the Kibana tab the box is an ES|QL query input, elsewhere the CLI.
 	if v.tab == tabKibana {
@@ -177,9 +194,18 @@ func (v *shellView) refresh() {
 	var body []ui.Drawable
 	switch v.tab {
 	case tabContainers:
-		v.containers.SetRect(0, 3, v.w, v.bodyBottom)
 		v.buildContainers()
-		body = []ui.Drawable{v.containers}
+		// ktop-style: two resource gauges (CPU / memory) stacked over the table,
+		// dropped when the body is too short to fit them plus a usable table.
+		if v.bodyBottom-3 >= 9 {
+			v.contCPU.SetRect(0, 3, v.w, 6)
+			v.contMEM.SetRect(0, 6, v.w, 9)
+			v.containers.SetRect(0, 9, v.w, v.bodyBottom)
+			body = []ui.Drawable{v.contCPU, v.contMEM, v.containers}
+		} else {
+			v.containers.SetRect(0, 3, v.w, v.bodyBottom)
+			body = []ui.Drawable{v.containers}
+		}
 	case tabKibana:
 		// A status header over the data-stream table.
 		const hdrBottom = 8
@@ -283,18 +309,50 @@ func stateIcon(s model.State) string {
 	}
 }
 
-// buildContainers fills the containers table from the latest poll.
+// buildContainers fills the ktop-style Containers tab: the aggregate CPU/memory
+// gauges plus the per-container table, from the latest docker poll.
 func (v *shellView) buildContainers() {
 	rows := [][]string{{"NAME", "IMAGE", "STATUS", "CPU", "MEM"}}
+	var cpuSum, memSum float64
+	real := 0 // rows that are containers, not the "docker unavailable" diagnostic
 	for _, c := range v.contRows {
 		rows = append(rows, sanitizeRow([]string{c.name, c.image, c.status, c.cpu, c.mem}))
-	}
-	if len(v.contRows) == 0 {
-		v.containers.Title = "containers — none running"
-	} else {
-		v.containers.Title = "containers"
+		if c.status != "" || c.cpu != "" { // a real container row carries a status
+			real++
+			cpuSum += c.cpuPct
+			memSum += c.memPct
+		}
 	}
 	v.containers.Rows = rows
+	if real == 0 {
+		v.containers.Title = "containers — none running (spawned per-file during a process run)"
+	} else {
+		v.containers.Title = fmt.Sprintf("containers (%d running)", real)
+	}
+
+	// CPU across all containers is summed then normalised by host cores (docker's
+	// per-container CPU% is already relative to one core); memory sums each
+	// container's share of the host. Both are clamped to the 0..100 gauge.
+	cores := runtime.NumCPU()
+	cpuG := cpuSum
+	if cores > 0 {
+		cpuG = cpuSum / float64(cores)
+	}
+	v.contCPU.Percent = clampPct(int(cpuG))
+	v.contCPU.Label = fmt.Sprintf("%.0f%%  ·  Σ %.0f%% over %d cores", clampPctF(cpuG), cpuSum, cores)
+	v.contMEM.Percent = clampPct(int(memSum))
+	v.contMEM.Label = fmt.Sprintf("%.0f%%  ·  %d container(s)", clampPctF(memSum), real)
+}
+
+// clampPctF bounds a float percentage to 0..100 for the gauge label.
+func clampPctF(f float64) float64 {
+	if f < 0 {
+		return 0
+	}
+	if f > 100 {
+		return 100
+	}
+	return f
 }
 
 // buildKibana renders the Kibana tab: a stack-status header + the query line,
@@ -426,7 +484,7 @@ func (s *Shell) Run() (retErr error) {
 		"    collection status             # tracked collections",
 		"    process <collection> <lane>   # process a collection with a lane",
 		"",
-		"Tab cycles Pipeline / Containers / Kibana / Timeline · `clear` clears · `quit` exits · Ctrl-C cancels a run.",
+		"Tab / →  next view · Shift-Tab / ←  previous · `clear` clears · `quit` exits · Ctrl-C cancels a run.",
 	}
 	v.layout(w, h)
 	ui.Render(v.drawables()...)
@@ -481,8 +539,14 @@ func (s *Shell) Run() (retErr error) {
 					continue
 				}
 				return nil // idle: quit the shell
-			case "<Tab>":
+			case "<Tab>", "<Right>":
 				v.tab = (v.tab + 1) % len(shellTabs)
+				dirty = true
+			case "<S-Tab>", "<Left>":
+				// termui/termbox never reports Shift+Tab (the terminal's ESC[Z is
+				// not decoded), so ← is the real "previous tab"; the <S-Tab> case is
+				// harmless and fires on any terminal that does send it.
+				v.tab = (v.tab - 1 + len(shellTabs)) % len(shellTabs)
 				dirty = true
 			case "<Resize>":
 				if r, ok := e.Payload.(ui.Resize); ok {
