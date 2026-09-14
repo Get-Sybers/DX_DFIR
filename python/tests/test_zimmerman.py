@@ -144,14 +144,19 @@ def test_lecmd_argv_has_no_q_flag():
 def test_amcacheparser_argv():
     argv = z.amcacheparser_argv("/amcache", "/out/amcache")
     assert "/amcache:/in:ro" in argv
-    tail = argv[argv.index("get-sybers/amcacheparser:latest") + 1:]
-    assert tail == ["-f", "/in/Amcache.hve", "--csv", "/out", "--csvf", "amcache.csv", "-i"]
+    # goamcache: a writable tmpfs at /work for the .LOG-replay recovered hive
+    assert any("/work:rw" in a and "uid=2000" in a for a in argv)
+    tail = argv[argv.index("get-sybers/goamcache:latest") + 1:]
+    assert tail == ["-f", "/in/Amcache.hve", "--csv", "/out", "--csvf", "amcache.csv",
+                    "-i", "--work-dir", "/work"]
 
 
 def test_appcompatcacheparser_argv():
     argv = z.appcompatcacheparser_argv("/sys", "/out/appcompat")
-    tail = argv[argv.index("get-sybers/appcompatcacheparser:latest") + 1:]
-    assert tail == ["-f", "/in/SYSTEM", "--csv", "/out", "--csvf", "appcompatcache.csv"]
+    assert any("/work:rw" in a and "uid=2000" in a for a in argv)   # tmpfs for .LOG replay
+    tail = argv[argv.index("get-sybers/goappcompat:latest") + 1:]
+    assert tail == ["-f", "/in/SYSTEM", "--csv", "/out", "--csvf", "appcompatcache.csv",
+                    "--work-dir", "/work"]
 
 
 def test_sbecmd_argv():
@@ -317,7 +322,7 @@ def test_process_image_gates_amcache_on_extracted_file_presence(tmp_path, monkey
     res = z.process_image("/img/LoneWolf.E01", str(host_dir))
     assert res["steps"]["amcache"]["ran"] is True
     assert res["steps"]["amcache"]["ok"] is True
-    amcache_calls = [a for a in seen_argvs if "get-sybers/amcacheparser:latest" in a]
+    amcache_calls = [a for a in seen_argvs if "get-sybers/goamcache:latest" in a]
     assert len(amcache_calls) == 1
     assert amcache_calls[0][amcache_calls[0].index("-f") + 1] == "/in/Amcache.hve"
 
