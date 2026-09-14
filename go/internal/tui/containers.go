@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -13,8 +14,11 @@ import (
 // containerRow is one row of the Containers tab — a running container and its
 // live resource use, ktop-style. The dxdfir tool containers are ephemeral
 // (--rm, one per file), so this is mostly populated while a process job runs.
+// cpuPct/memPct are the parsed percentages that drive the aggregate gauges; the
+// cpu/mem strings are docker's own rendering for the table.
 type containerRow struct {
 	name, image, status, cpu, mem string
+	cpuPct, memPct                float64
 }
 
 // pollContainers runs `docker ps` + `docker stats --no-stream` and returns the
@@ -25,12 +29,13 @@ func pollContainers(ctx context.Context) []containerRow {
 	if err != nil {
 		return []containerRow{{name: "docker unavailable", image: firstLineOf(err.Error())}}
 	}
-	// stats is best-effort: skip CPU/mem if it errors or times out.
-	stats := map[string][2]string{}
-	if sl, serr := dockerLines(ctx, "stats", "--no-stream", "--format", "{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"); serr == nil {
+	// stats is best-effort: skip resource use if it errors or times out.
+	type stat struct{ cpu, mem, memPct string }
+	stats := map[string]stat{}
+	if sl, serr := dockerLines(ctx, "stats", "--no-stream", "--format", "{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}"); serr == nil {
 		for _, l := range sl {
-			if f := strings.SplitN(l, "\t", 3); len(f) == 3 {
-				stats[f[0]] = [2]string{f[1], f[2]}
+			if f := strings.SplitN(l, "\t", 4); len(f) == 4 {
+				stats[f[0]] = stat{cpu: f[1], mem: f[2], memPct: f[3]}
 			}
 		}
 	}
@@ -42,12 +47,24 @@ func pollContainers(ctx context.Context) []containerRow {
 		}
 		r := containerRow{name: f[0], image: f[1], status: f[2]}
 		if s, ok := stats[f[0]]; ok {
-			r.cpu, r.mem = s[0], s[1]
+			r.cpu, r.mem = s.cpu, s.mem
+			r.cpuPct = parsePct(s.cpu)
+			r.memPct = parsePct(s.memPct)
 		}
 		rows = append(rows, r)
 	}
 	sort.Slice(rows, func(i, j int) bool { return rows[i].name < rows[j].name })
 	return rows
+}
+
+// parsePct reads a docker percentage like "12.34%" into a float; anything
+// unparseable (missing stats, "--") reads as 0.
+func parsePct(s string) float64 {
+	v, err := strconv.ParseFloat(strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(s), "%")), 64)
+	if err != nil {
+		return 0
+	}
+	return v
 }
 
 // dockerLines runs one docker command (bounded), returning its non-empty output
