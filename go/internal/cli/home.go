@@ -50,10 +50,13 @@ func runHome(env *Env, version string) error {
 	wg.Wait()
 
 	if !env.ForcePlain && termdetect.UseTUI(env.ForceTUI) {
-		if err := tui.RunHome(h); !errors.Is(err, tui.ErrNoTTY) {
+		// Bare `dxdfir` on a terminal is the persistent interactive shell: a tabbed
+		// dashboard with a live command box driving the same CLI verbs. It declines
+		// with ErrNoTTY when the terminal can't host it, and we fall through to the
+		// plain readiness/collections listing below.
+		if err := tui.NewShell(version).Run(); !errors.Is(err, tui.ErrNoTTY) {
 			return err
 		}
-		// dashboard declined (not a terminal, or too small) — fall through to plain.
 	}
 	plain.PrintHome(os.Stdout, h)
 	return nil
