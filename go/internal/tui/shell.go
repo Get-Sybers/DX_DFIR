@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"runtime"
@@ -324,35 +325,32 @@ func (v *shellView) buildContainers() {
 		}
 	}
 	v.containers.Rows = rows
-	if real == 0 {
-		v.containers.Title = "containers — none running (spawned per-file during a process run)"
-	} else {
+	switch {
+	case real > 0:
 		v.containers.Title = fmt.Sprintf("containers (%d running)", real)
+	case len(v.contRows) > 0:
+		// Rows exist but none are real containers: the docker-unavailable
+		// diagnostic. Say so — the row itself carries the reason.
+		v.containers.Title = "containers — docker unavailable"
+	default:
+		v.containers.Title = "containers — none running (spawned per-file during a process run)"
 	}
 
 	// CPU across all containers is summed then normalised by host cores (docker's
 	// per-container CPU% is already relative to one core); memory sums each
-	// container's share of the host. Both are clamped to the 0..100 gauge.
+	// container's share of the host. Round once so the gauge bar and its label
+	// agree (Percent is an int, the label was rounding separately), then clamp.
 	cores := runtime.NumCPU()
 	cpuG := cpuSum
 	if cores > 0 {
 		cpuG = cpuSum / float64(cores)
 	}
-	v.contCPU.Percent = clampPct(int(cpuG))
-	v.contCPU.Label = fmt.Sprintf("%.0f%%  ·  Σ %.0f%% over %d cores", clampPctF(cpuG), cpuSum, cores)
-	v.contMEM.Percent = clampPct(int(memSum))
-	v.contMEM.Label = fmt.Sprintf("%.0f%%  ·  %d container(s)", clampPctF(memSum), real)
-}
-
-// clampPctF bounds a float percentage to 0..100 for the gauge label.
-func clampPctF(f float64) float64 {
-	if f < 0 {
-		return 0
-	}
-	if f > 100 {
-		return 100
-	}
-	return f
+	cpuPct := clampPct(int(math.Round(cpuG)))
+	memPct := clampPct(int(math.Round(memSum)))
+	v.contCPU.Percent = cpuPct
+	v.contCPU.Label = fmt.Sprintf("%d%%  ·  Σ %.0f%% over %d cores", cpuPct, cpuSum, cores)
+	v.contMEM.Percent = memPct
+	v.contMEM.Label = fmt.Sprintf("%d%%  ·  %d container(s)", memPct, real)
 }
 
 // buildKibana renders the Kibana tab: a stack-status header + the query line,
