@@ -128,7 +128,7 @@ func newCollectionListCmd(env *Env) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			st, err := collection.GetStatus(r.Root)
+			st, err := collection.CheckStatus(r.Root)
 			if err != nil {
 				return Fail(2, "collection status: %v", err)
 			}
@@ -331,7 +331,7 @@ func newCollectionSortCmd(env *Env) *cobra.Command {
 
 // defaultCollection returns the active collection, or the only one if unambiguous.
 func defaultCollection(r *repo.Repo) (string, error) {
-	st, err := collection.GetStatus(r.Root)
+	st, err := collection.CheckStatus(r.Root)
 	if err != nil {
 		return "", Fail(2, "collection status: %v", err)
 	}
@@ -360,7 +360,7 @@ func defaultCollection(r *repo.Repo) (string, error) {
 // detected (unregistered but has evidence) → register (prompt when interactive);
 // absent → error.
 func resolveCollection(r *repo.Repo, name string, noRegister bool) error {
-	st, err := collection.GetState(r.Root, name)
+	st, err := collection.CheckState(r.Root, name)
 	if err != nil {
 		return Fail(2, "collection state %s: %v", name, err)
 	}

@@ -76,9 +76,9 @@ func TestReader(t *testing.T) {
 
 	seedRegistry(t, filepath.Join(colls, registryName), map[string]bool{"reg": true})
 
-	st, err := GetStatus(repo)
+	st, err := CheckStatus(repo)
 	if err != nil {
-		t.Fatalf("GetStatus: %v", err)
+		t.Fatalf("CheckStatus: %v", err)
 	}
 	if st.Active != "reg" {
 		t.Errorf("active = %q, want reg", st.Active)
@@ -110,9 +110,9 @@ func TestReader(t *testing.T) {
 	}
 
 	// Lanes: one row per (lane, input_var) pair, signatures has three subdirs.
-	ln, ok := GetLanes(repo, "reg")
+	ln, ok := ListLanes(repo, "reg")
 	if !ok {
-		t.Fatal("GetLanes ok=false for valid name")
+		t.Fatal("ListLanes ok=false for valid name")
 	}
 	sig := 0
 	for _, in := range ln.Inputs {
@@ -133,9 +133,9 @@ func TestReader(t *testing.T) {
 		{"hand", false, true, true},
 		{"nope", false, false, false},
 	} {
-		s, err := GetState(repo, tc.name)
+		s, err := CheckState(repo, tc.name)
 		if err != nil {
-			t.Fatalf("GetState(%s): %v", tc.name, err)
+			t.Fatalf("CheckState(%s): %v", tc.name, err)
 		}
 		if s.Registered != tc.reg || s.Detected != tc.detected || s.Exists != tc.exists {
 			t.Errorf("state %s = %+v, want reg=%v detected=%v exists=%v",
@@ -147,8 +147,8 @@ func TestReader(t *testing.T) {
 	if ValidName("../escape") || ValidName(".") || ValidName("") {
 		t.Error("ValidName accepted an invalid name")
 	}
-	if _, ok := GetLanes(repo, "../escape"); ok {
-		t.Error("GetLanes accepted an invalid name")
+	if _, ok := ListLanes(repo, "../escape"); ok {
+		t.Error("ListLanes accepted an invalid name")
 	}
 }
 
@@ -157,9 +157,9 @@ func TestReader(t *testing.T) {
 func TestNoRegistry(t *testing.T) {
 	repo := t.TempDir()
 	touch(t, filepath.Join(repo, "data_store", "raw", "collections", "hand", "memory", "m.raw"))
-	st, err := GetStatus(repo)
+	st, err := CheckStatus(repo)
 	if err != nil {
-		t.Fatalf("GetStatus with no DB: %v", err)
+		t.Fatalf("CheckStatus with no DB: %v", err)
 	}
 	if st.Active != "" || len(st.Registered) != 0 {
 		t.Errorf("expected empty registry, got active=%q registered=%+v", st.Active, st.Registered)
@@ -198,7 +198,7 @@ func TestWrites(t *testing.T) {
 	if err := Select(repo, "b"); err != nil {
 		t.Fatalf("Select(b): %v", err)
 	}
-	if st, _ := GetStatus(repo); st.Active != "b" {
+	if st, _ := CheckStatus(repo); st.Active != "b" {
 		t.Errorf("after Select(b) active=%q, want b", st.Active)
 	}
 	// The on-disk log line must match the Python json.dumps spacing exactly.
@@ -222,7 +222,7 @@ func TestWrites(t *testing.T) {
 	if prev != "b" {
 		t.Errorf("Unselect prev=%q, want b", prev)
 	}
-	if st, _ := GetStatus(repo); st.Active != "" {
+	if st, _ := CheckStatus(repo); st.Active != "" {
 		t.Errorf("after Unselect active=%q, want empty", st.Active)
 	}
 	if eventCount(t, repo, "b", "unselected") != 1 {
@@ -241,7 +241,7 @@ func TestWrites(t *testing.T) {
 	if !removed {
 		t.Error("Unregister(a) removed=false, want true")
 	}
-	s, _ := GetState(repo, "a")
+	s, _ := CheckState(repo, "a")
 	if s.Registered {
 		t.Error("a still registered after Unregister")
 	}
@@ -292,14 +292,14 @@ func TestSelectMigratesLegacyMarker(t *testing.T) {
 	}
 
 	// Precondition: the read path (no migration) sees leg as unregistered.
-	if st, _ := GetStatus(repo); !containsName(st.Unregistered, "leg") {
+	if st, _ := CheckStatus(repo); !containsName(st.Unregistered, "leg") {
 		t.Fatal("precondition: leg should read as unregistered before select")
 	}
 	// Select migrates the marker in, then selects it.
 	if err := Select(repo, "leg"); err != nil {
 		t.Fatalf("Select(leg): %v", err)
 	}
-	st, _ := GetStatus(repo)
+	st, _ := CheckStatus(repo)
 	if st.Active != "leg" {
 		t.Errorf("active=%q, want leg", st.Active)
 	}
@@ -346,7 +346,7 @@ func TestSchemaEvolutionAddsSelected(t *testing.T) {
 	if err := Select(repo, "old"); err != nil {
 		t.Fatalf("Select(old) on a pre-`selected` registry: %v", err)
 	}
-	if st, _ := GetStatus(repo); st.Active != "old" {
+	if st, _ := CheckStatus(repo); st.Active != "old" {
 		t.Errorf("active=%q, want old", st.Active)
 	}
 }
