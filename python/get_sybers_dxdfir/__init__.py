@@ -1,6 +1,6 @@
 """get_sybers_dxdfir — the DX_DFIR processing package.
 
-Pure Python processors (zeek, plaso, volatility, evtx, zimmerman, signatures),
+Pure Python processors (zeek, plaso, volatility, evtx, godfir_toolz, signatures),
 the CAR lane (mitrecar, carcheck), the Elastic detection rules (detect/) and the
 STIX exchange verbs (stix/); the Go `dxdfir` front-end (go/) drives them. The
 Ansible collection `get_sybers.dxdfir` invokes these as single actions; the

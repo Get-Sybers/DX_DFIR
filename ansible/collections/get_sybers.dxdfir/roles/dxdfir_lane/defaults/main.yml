@@ -29,7 +29,7 @@ dxdfir_lane_gate_extra: ""
 
 # Assert the processor reported zero failures (failed==0). Default: require it.
 # Lanes whose processor legitimately exits 0 with per-item failures (plaso
-# per-image, volatility per-plugin without symbols, zimmerman per-image) set this
+# per-image, volatility per-plugin without symbols, godfir-toolz per-image) set this
 # false and gate purely on their own "produced output unless nothing to do".
 dxdfir_lane_require_no_failures: true
 # Optional lane-specific preflight task file (absolute path), included after the

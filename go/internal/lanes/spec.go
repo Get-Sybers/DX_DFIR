@@ -16,7 +16,7 @@ import (
 // Spec is the static description of one process lane, derived from the role
 // defaults and the processors' output-path contracts.
 type Spec struct {
-	Name    string     // zeek, evtx, volatility, plaso, zimmerman, signatures
+	Name    string     // zeek, evtx, volatility, plaso, godfir-toolz, signatures
 	Title   string     // display title
 	Kind    model.Kind // gauge / heartbeat / spinner
 	OutLeaf string     // processed subdir leaf for pipeline=elastic
@@ -41,7 +41,7 @@ var Specs = []Spec{
 		Exts: dotset(".dmp", ".mem", ".lime", ".vmem", ".raw", ".dump", ".bin")},
 	{Name: "plaso", Title: "plaso", Kind: model.KindHeartbeat, OutLeaf: "log2timeline",
 		InputSubdirs: []string{"disk_images", "VM_files"}, Exts: imageExts()},
-	{Name: "zimmerman", Title: "zimmerman", Kind: model.KindGauge, OutLeaf: "zimmerman",
+	{Name: "godfir-toolz", Title: "godfir-toolz", Kind: model.KindGauge, OutLeaf: "godfir-toolz",
 		InputSubdirs: []string{"disk_images", "VM_files"}, Exts: imageExts()},
 	{Name: "signatures", Title: "signatures", Kind: model.KindSpinner, OutLeaf: "detections",
 		InputSubdirs: []string{"pcaps", "disk_images", "memory"}, Exts: nil},
@@ -125,7 +125,7 @@ func (s Spec) countDone(outDir string) int {
 	case "plaso":
 		// completion marker per image (.host written last)
 		return len(glob(outDir, "plaso", "*.host"))
-	case "zimmerman":
+	case "godfir-toolz":
 		// one host dir per image with any output
 		return len(hostDirsWithOutput(outDir))
 	case "signatures":

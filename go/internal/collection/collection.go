@@ -33,8 +33,8 @@ var LANES = []Lane{
 	{"volatility", []string{"memory"}, []string{"dxdfir_volatility_memory_dir"}},
 	{"plaso", []string{"disk_images", "VM_files"},
 		[]string{"dxdfir_plaso_input_dir", "dxdfir_plaso_vm_dir"}},
-	{"zimmerman", []string{"disk_images", "VM_files"},
-		[]string{"dxdfir_zimmerman_input_dir", "dxdfir_zimmerman_vm_dir"}},
+	{"godfir-toolz", []string{"disk_images", "VM_files"},
+		[]string{"dxdfir_godfir_toolz_input_dir", "dxdfir_godfir_toolz_vm_dir"}},
 	{"signatures", []string{"pcaps", "disk_images", "memory"},
 		[]string{"dxdfir_signatures_pcap_dir", "dxdfir_signatures_disk_dir",
 			"dxdfir_signatures_memory_dir"}},
@@ -42,7 +42,7 @@ var LANES = []Lane{
 
 // laneSubdirs is the set of raw/ subdirs a collection materialises — the union
 // walked once per collection so per-lane counts are summed without re-walking a
-// shared subdir (disk_images feeds plaso, zimmerman AND signatures).
+// shared subdir (disk_images feeds plaso, godfir-toolz AND signatures).
 var laneSubdirs = []string{"pcaps", "logs/winevt", "memory", "disk_images", "VM_files"}
 
 // Registry / dropzone locations and control-file names — mirror collection.py.

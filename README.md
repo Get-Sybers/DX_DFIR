@@ -37,7 +37,7 @@ Run the pipeline:
 ```bash
 dxdfir build-docker                 # build the hardened tool images (once per host, before first process)
 # drop evidence under data_store/raw/<type>/ (see data_store/README.md), then per source:
-dxdfir process evtx                 # zeek | evtx | volatility | plaso | zimmerman | signatures
+dxdfir process evtx                 # zeek | evtx | volatility | plaso | godfir-toolz | signatures
 dxdfir build-car                    # normalise every source into per-source CAR stores (car_<object>.jsonl)
 dxdfir verify-car                   # the CAR correctness gate over what was written
 dxdfir car-timeline data_store/processed/byakugan   # one property-rich, time-ordered timeline JSONL
@@ -80,7 +80,7 @@ matching `dxdfir_<source>` role); processors are also runnable as
 | PCAP (Zeek) | `process zeek` | `zeek/<capture>/` (`conn.json` + every other Zeek log) |
 | Windows event logs + Sysmon (EvtxECmd) | `process evtx` | `windows_logs/<host>/` (EvtxECmd JSON) |
 | Memory (Volatility 3 / [PIIAT-Mem](https://github.com/Get-Sybers/PIIAT-Mem)) | `process volatility` | `volatility/<image>/` (per-plugin JSONL) |
-| EZ-Tools artefacts — SRUM, registry, … | `process zimmerman` | `zimmerman/` |
+| EZ-Tools artefacts — SRUM, registry, … | `process godfir-toolz` | `godfir-toolz/` |
 | YARA / Suricata / Hayabusa | `process signatures` | `signatures/<lane>/` (JSONL) |
 
 The **CAR layer is materialised**: the [Byakugan](https://github.com/Get-Sybers/byakugan)
@@ -96,7 +96,7 @@ every sink reads and cannot drift from what the engine emits.
 pinned Sysmon fixtures, asserting the extracted field values) and by
 **`dxdfir verify-car`** (each CAR object populated, values sane — IPs, ports, SIDs —
 `car_action` checked against the engine's model vocabulary, every row traceable to
-a source). The other lanes (Plaso, Zeek, Volatility, Zimmerman) are run by hand on
+a source). The other lanes (Plaso, Zeek, Volatility, GoDFIR-toolz) are run by hand on
 the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
 `LOOKUP JOIN`) have their own [risk gate](/docs/riskgate.md).
 

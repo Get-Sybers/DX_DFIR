@@ -1,13 +1,13 @@
 ---
 galaxy_info:
-  role_name: dxdfir_zimmerman
+  role_name: dxdfir_godfir_toolz
   namespace: get_sybers
   author: Get-Sybers
   description: >-
     Process disk images with Eric Zimmerman's EZ-Tools (RECmd, JLECmd, LECmd,
     AmcacheParser, AppCompatCacheParser, SBECmd, RBCmd, MFTECmd) plus a plaso-driven
     SRUM parse into per-host artefact output for the Elastic-native or SOF-ELK pipeline.
-    Invokes the get_sybers_dxdfir.zimmerman Python processor; one output dir per host.
+    Invokes the get_sybers_dxdfir.godfir_toolz Python processor; one output dir per host.
   company: Get-Sybers
   license: MIT
   min_ansible_version: "2.15"

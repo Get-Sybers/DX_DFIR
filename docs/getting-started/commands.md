@@ -33,7 +33,7 @@ See the [collection concept](../architecture/processing-lanes.md#collections).
 
 | Command | What it does |
 |---|---|
-| `dxdfir process [COLLECTION] [LANE]` | Process evidence with a [lane](../architecture/processing-lanes.md). `LANE` ∈ `zeek·evtx·volatility·plaso·zimmerman·signatures·all`; positionals are order-independent. |
+| `dxdfir process [COLLECTION] [LANE]` | Process evidence with a [lane](../architecture/processing-lanes.md). `LANE` ∈ `zeek·evtx·volatility·plaso·godfir-toolz·signatures·all`; positionals are order-independent. |
 | `dxdfir process … --force` | Reprocess inputs that already have output (default is idempotent). |
 | `dxdfir process … -p sofelk` | Use the retiring SOF-ELK delivery pipeline instead of the default `elastic`. |
 | `dxdfir process … -e KEY=VALUE` | Pass an Ansible extra-var (repeatable). |

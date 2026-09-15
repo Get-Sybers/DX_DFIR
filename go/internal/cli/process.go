@@ -16,7 +16,7 @@ import (
 
 var validSources = map[string]bool{
 	"zeek": true, "evtx": true, "volatility": true, "plaso": true,
-	"zimmerman": true, "signatures": true, "all": true,
+	"godfir-toolz": true, "signatures": true, "all": true,
 }
 
 func newProcessCmd(env *Env) *cobra.Command {
@@ -30,13 +30,13 @@ func newProcessCmd(env *Env) *cobra.Command {
 			"it is processed with). Each lane is driven by its ansible-playbook; progress is\n" +
 			"reconstructed live by watching the deterministic output files land on disk.\n\n" +
 			"Lanes:\n" +
-			"  zeek        PCAPs -> Zeek JSON logs\n" +
-			"  evtx        Windows event logs -> EvtxECmd JSON\n" +
-			"  volatility  memory images -> plugin JSONL\n" +
-			"  plaso       disk images/VMs -> super timeline\n" +
-			"  zimmerman   disk images/VMs -> registry/MFT/… artefacts\n" +
-			"  signatures  yara/suricata/hayabusa over the staged evidence\n" +
-			"  all         every lane above\n\n" +
+			"  zeek         PCAPs -> Zeek JSON logs\n" +
+			"  evtx         Windows event logs -> EvtxECmd JSON\n" +
+			"  volatility   memory images -> plugin JSONL\n" +
+			"  plaso        disk images/VMs -> super timeline\n" +
+			"  godfir-toolz disk images/VMs -> registry/MFT/… artefacts\n" +
+			"  signatures   yara/suricata/hayabusa over the staged evidence\n" +
+			"  all          every lane above\n\n" +
 			"The two positionals may be given in either order — the lane is recognised by name,\n" +
 			"anything else is treated as a collection:\n" +
 			"  dxdfir process zeek                 # zeek over all staged raw evidence\n" +
@@ -63,7 +63,7 @@ func newProcessCmd(env *Env) *cobra.Command {
 					source = a
 				default:
 					if collection != "" {
-						return Fail(2, "unrecognised argument %q — %q is not a lane (zeek|evtx|volatility|plaso|zimmerman|signatures|all) and a collection is already given (%q)", a, a, collection)
+						return Fail(2, "unrecognised argument %q — %q is not a lane (zeek|evtx|volatility|plaso|godfir-toolz|signatures|all) and a collection is already given (%q)", a, a, collection)
 					}
 					collection = a
 				}

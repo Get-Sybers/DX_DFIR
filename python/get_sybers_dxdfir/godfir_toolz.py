@@ -1,4 +1,4 @@
-"""Zimmerman EZ-Tools processor — disk images -> per-host EZ-Tool artefact parse.
+"""GoDFIR-toolz EZ-Tools processor — disk images -> per-host EZ-Tool artefact parse.
 
 The evtx/plaso lanes get their bytes straight off the image via Plaso's
 ``image_export.py`` (see ``imageexport``); this lane does the same for the
@@ -37,7 +37,7 @@ fidelity (goese's second-precision timestamps, decoded device paths/SIDs).
 
 Output isolation follows the CAR pipeline's rule (docs/CAR-Pipeline.md §2 — "one
 source, one database"): each image gets its OWN
-``data_store/processed/zimmerman/<host>/``, holding the raw extraction
+``data_store/processed/godfir-toolz/<host>/``, holding the raw extraction
 (``_extracted/``), the EZ-Tool container outputs (one sub-dir per tool), and a
 combined run log. Idempotent at the HOST level: a host dir that already holds any
 non-empty file is skipped whole unless ``--force`` — a partial prior run is
@@ -49,7 +49,7 @@ its SQLite interop needs a writable unpack path the tool's own working directory
 provides, which the hardened read-only-rootfs base image does not; verifying that
 against a real ActivitiesCache.db is deferred to issue #88. See its docstring.
 
-    python -m get_sybers_dxdfir.zimmerman --image-src RAW/disk_images --out-dir PROCESSED/zimmerman
+    python -m get_sybers_dxdfir.godfir_toolz --image-src RAW/disk_images --out-dir PROCESSED/godfir-toolz
 """
 from __future__ import annotations
 
@@ -481,7 +481,7 @@ def _run_step(argv: list[str], out_dir: str, log_path: str) -> dict:
 def process_image(image, host_out_dir, *, plaso_image=PLASO_IMAGE, force=False,
                   vss=False) -> dict:
     """Extract + run every EZ-Tools step for one disk image into ``host_out_dir``
-    (== ``processed/zimmerman/<host>/`` — one host, one directory, per the CAR
+    (== ``processed/godfir-toolz/<host>/`` — one host, one directory, per the CAR
     isolation rule in docs/CAR-Pipeline.md §2). Idempotent at the HOST level: a
     host dir that already holds any non-empty file is skipped whole unless
     ``force`` (a partial prior run is reprocessed entirely, not resumed
@@ -498,7 +498,7 @@ def process_image(image, host_out_dir, *, plaso_image=PLASO_IMAGE, force=False,
         os.chmod(host_out_dir, 0o777)
     except OSError:
         pass
-    log_path = os.path.join(host_out_dir, "zimmerman.log")
+    log_path = os.path.join(host_out_dir, "godfir-toolz.log")
 
     stage_dir = os.path.join(host_out_dir, "_extracted")
     try:
@@ -630,7 +630,7 @@ def process(input_dir, out_dir, *, vm_dir="", plaso_image=PLASO_IMAGE, force=Fal
     if vm_dir and os.path.isdir(vm_dir):
         sources.append(os.path.realpath(vm_dir))
 
-    summary = {"tool": "zimmerman", "out_dir": os.path.realpath(out_dir), "sources": [],
+    summary = {"tool": "godfir-toolz", "out_dir": os.path.realpath(out_dir), "sources": [],
               "images": 0, "processed": 0, "skipped": 0, "empty": 0, "failed": 0}
     for src in sources:
         s = process_source(src, out_dir, plaso_image=plaso_image, force=force, vss=vss)
@@ -642,7 +642,7 @@ def process(input_dir, out_dir, *, vm_dir="", plaso_image=PLASO_IMAGE, force=Fal
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        prog="get_sybers_dxdfir.zimmerman",
+        prog="get_sybers_dxdfir.godfir_toolz",
         description="disk images -> Eric Zimmerman EZ-Tools artefact parse (registry, "
                     "Amcache, AppCompatCache, jump lists/lnk, ShellBags, Recycle Bin, "
                     "MFT, SRUM), one output dir per host",

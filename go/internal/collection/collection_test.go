@@ -90,9 +90,9 @@ func TestReader(t *testing.T) {
 	}
 	reg := st.Registered[0]
 	// Per-lane counts: zeek=pcaps(1), evtx=winevt(0), volatility=memory(1),
-	// plaso=disk_images(2)+VM_files(0)=2, zimmerman=2, signatures=pcaps(1)+
+	// plaso=disk_images(2)+VM_files(0)=2, godfir-toolz=2, signatures=pcaps(1)+
 	// disk_images(2)+memory(1)=4. Total = sum with overlaps = 10.
-	want := map[string]int{"zeek": 1, "evtx": 0, "volatility": 1, "plaso": 2, "zimmerman": 2, "signatures": 4}
+	want := map[string]int{"zeek": 1, "evtx": 0, "volatility": 1, "plaso": 2, "godfir-toolz": 2, "signatures": 4}
 	for lane, n := range want {
 		if reg.Lanes[lane] != n {
 			t.Errorf("reg lane %s = %d, want %d", lane, reg.Lanes[lane], n)

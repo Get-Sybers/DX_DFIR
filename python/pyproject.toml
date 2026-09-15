@@ -19,7 +19,7 @@ dependencies = [
     # wheel bundle alike.
     "requests>=2.31",
     "docker>=7.0",
-    # The zimmerman lane renders its own plaso yaml_filter_file (image_export.py
+    # The godfir-toolz lane renders its own plaso yaml_filter_file (image_export.py
     # has no named forensic-artifact-definitions entry for the EZ-Tools set).
     # Already a transitive dependency of ansible-core; declared directly since
     # get_sybers_dxdfir now imports it itself.

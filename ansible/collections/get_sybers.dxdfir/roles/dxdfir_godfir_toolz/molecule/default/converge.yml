@@ -1,0 +1,13 @@
+---
+- name: Converge
+  hosts: localhost
+  gather_facts: true
+  vars:
+    dxdfir_godfir_toolz_pipeline: elastic
+    dxdfir_godfir_toolz_input_dir: /tmp/dxdfir_godfir_toolz_molecule/in
+    dxdfir_godfir_toolz_vm_dir: /tmp/dxdfir_godfir_toolz_molecule/vm
+    dxdfir_godfir_toolz_elastic_out_dir: /tmp/dxdfir_godfir_toolz_molecule/out
+  tasks:
+    - name: "converge | run dxdfir_godfir_toolz (elastic)"
+      ansible.builtin.include_role:
+        name: dxdfir_godfir_toolz

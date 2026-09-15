@@ -11,7 +11,7 @@ per-item processing).
     │   └── man/                                      # dxdfir.1 man page
     │
     └── python/                                       # get_sybers_dxdfir package — the processors the front-end and roles invoke
-    │   └── get_sybers_dxdfir/                          # processors (zeek/plaso/volatility/evtx/zimmerman/signatures), the CAR lane (mitrecar, carcheck), stix/
+    │   └── get_sybers_dxdfir/                          # processors (zeek/plaso/volatility/evtx/godfir_toolz/signatures), the CAR lane (mitrecar, carcheck), stix/
     │   │   └── detect/rules/                         # the Elastic detection rules-as-code (ES|QL / EQL, one YAML per rule)
     │   └── tests/                                    # pytest unit tests (pure logic, no Docker)
     │
@@ -75,7 +75,7 @@ per-item processing).
             └── volatility/
             │   └── <image>/                          # Volatility 3 JSONL per plugin
             │
-            └── zimmerman/                            # EZ-Tools artefacts (RECmd, SRUM, MFT, …)
+            └── godfir-toolz/                            # EZ-Tools artefacts (RECmd, SRUM, MFT, …)
             │
             └── signatures/
             │   └── yara/ suricata/ hayabusa/         # detection JSONL (YARA matches / Suricata EVE / Hayabusa Sigma)

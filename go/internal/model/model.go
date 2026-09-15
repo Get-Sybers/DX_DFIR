@@ -32,7 +32,7 @@ type Kind int
 
 const (
 	// KindGauge: a clear i/N is reconstructable from per-item output files
-	// landing on disk (zeek, evtx, suricata, zimmerman, volatility).
+	// landing on disk (zeek, evtx, suricata, godfir-toolz, volatility).
 	KindGauge Kind = iota
 	// KindHeartbeat: coarse, no per-item sub-signal; show elapsed + the growing
 	// on-disk artefact size as the "still alive" proof (plaso — status_view none).
@@ -44,7 +44,7 @@ const (
 	KindBytes
 )
 
-// Step is a named sub-step within a lane (e.g. the ~9 EZ-Tools per zimmerman host).
+// Step is a named sub-step within a lane (e.g. the ~9 EZ-Tools per godfir-toolz host).
 type Step struct {
 	Name  string
 	State State
@@ -67,7 +67,7 @@ type Lane struct {
 	Detail string  // current item / status line, already trimmed for width
 	Rate   float64 // units-or-bytes per second, 0 => not computed
 
-	Steps []Step // optional nested checklist (zimmerman)
+	Steps []Step // optional nested checklist (godfir-toolz)
 
 	Started time.Time
 	Ended   time.Time

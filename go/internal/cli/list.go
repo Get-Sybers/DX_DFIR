@@ -29,7 +29,7 @@ func extSet(xs ...string) map[string]bool {
 	return m
 }
 
-// diskImageExts is shared by the plaso and zimmerman lanes.
+// diskImageExts is shared by the plaso and godfir-toolz lanes.
 var diskImageExts = extSet(".e01", ".ex01", ".dd", ".raw", ".img", ".vmdk",
 	".vhd", ".vhdx", ".001", ".aff4", ".vmx", ".ova")
 
@@ -40,7 +40,7 @@ var evidenceLanes = []evidenceLane{
 	{"evtx", []string{"logs/winevt"}, extSet(".evtx")},
 	{"volatility", []string{"memory"}, extSet(".dmp", ".mem", ".lime", ".vmem", ".raw", ".dump", ".bin")},
 	{"plaso", []string{"disk_images", "VM_files"}, diskImageExts},
-	{"zimmerman", []string{"disk_images", "VM_files"}, diskImageExts},
+	{"godfir-toolz", []string{"disk_images", "VM_files"}, diskImageExts},
 }
 
 // rawSubdirs are the top-level data_store/raw/ subdirs shown by `list raw`.
@@ -52,7 +52,7 @@ var rawSubdirs = []string{
 // processedSubdirs are the top-level data_store/processed/ subdirs shown by
 // `list processed`.
 var processedSubdirs = []string{
-	"zeek", "windows_logs", "volatility", "plaso", "zimmerman",
+	"zeek", "windows_logs", "volatility", "plaso", "godfir-toolz",
 	"linux_logs", "software_logs", "log2timeline", "csv", "json",
 }
 

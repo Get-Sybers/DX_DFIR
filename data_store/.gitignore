@@ -92,8 +92,8 @@
 !/processed/windows_logs/hostname3/.gitkeep
 !/processed/zeek/
 !/processed/zeek/.gitkeep
-!/processed/zimmerman/
-!/processed/zimmerman/.gitkeep
+!/processed/godfir-toolz/
+!/processed/godfir-toolz/.gitkeep
 
 !/raw/
 !/raw/.gitkeep
