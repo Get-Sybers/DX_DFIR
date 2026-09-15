@@ -31,35 +31,16 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 REPO_ROOT_DIR="$(realpath "$SCRIPT_DIR/..")"
 DOCKER_TAR_DIR="${DXDFIR_IMAGE_DIR:-$REPO_ROOT_DIR/data_store/docker_images}"
 
-# Runtime tool images — BUILT in-repo (or from the GoDFIR-toolz submodule),
-# never pulled. Keep in sync with dxdfir_images_set (the image-build role).
-BUILT_IMAGES=(
-    # the whole detection lane in one image (yara + suricata + hayabusa).
-    "get-sybers/signatures:latest"
-    # the external MITRE CAR engine, cloned + built in at the sources.yml pin —
-    # the engine ships INSIDE this image now, not as a separate byakugan.tar.
-    "get-sybers/byakugan:latest"
-    "get-sybers/zeek:latest"
-    "get-sybers/volatility:latest"
-    "get-sybers/plaso:latest"
-    "get-sybers/goevtx:latest"
-    # Eric Zimmerman lane: sqlecmd is the last .NET tool (eztool/Dockerfile); every
-    # other EZ tool is now a Go substitute built from its own GoDFIR-toolz subdir:
-    # gomft/goamcache/goappcompat/gorb/gore/gosbe/gole/gojle/gowxt.
-    "get-sybers/sqlecmd:latest"
-    "get-sybers/gomft:latest"
-    "get-sybers/goamcache:latest"
-    "get-sybers/goappcompat:latest"
-    "get-sybers/gore:latest"
-    "get-sybers/gosbe:latest"
-    "get-sybers/gole:latest"
-    "get-sybers/gojle:latest"
-    "get-sybers/gorb:latest"
-    "get-sybers/gowxt:latest"
-    # Linux-native Go substitutes for the Windows-bound EZ tools.
-    "get-sybers/goprefetch:latest"
-    "get-sybers/goese:latest"
-)
+# Runtime tool images — BUILT in-repo (or from the GoDFIR-toolz submodule), never
+# pulled. Derived from the repo-root images.yml manifest (the single source of
+# truth the Python guard and the dxdfir_images build role also read), so a new
+# image is added in ONE place.
+_ns="$(awk -F': *' '/^namespace:/{print $2; exit}' "$REPO_ROOT_DIR/images.yml")"
+mapfile -t BUILT_IMAGES < <(awk -v ns="${_ns:-get-sybers}" '
+    $1=="images:"{f=1; next}
+    /^[^[:space:]]/{f=0}
+    f && $1=="-" && $2=="name:"{print ns "/" $3 ":latest"}
+' "$REPO_ROOT_DIR/images.yml")
 # Unbuildable images — pulled from a registry (online side only).
 PULL_IMAGES=(
     "mcr.microsoft.com/dotnet/runtime:9.0"

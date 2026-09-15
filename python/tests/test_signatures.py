@@ -126,24 +126,25 @@ def test_vadyarascan_argv_mounts_and_wrapper_args(tmp_path):
     mem.parent.mkdir()
     mem.write_bytes(b"x")
     sym = tmp_path / "symbols"; sym.mkdir()
-    ren = tmp_path / "r.py"; ren.write_text("")
     rules = tmp_path / "combined.yar"; rules.write_text("rule X { condition: true }")
-    argv = yara.vadyarascan_argv(str(mem), str(sym), str(ren), str(rules), "vol:img")
+    argv = yara.vadyarascan_argv(str(mem), str(sym), str(rules), "vol:img")
     for flag in ("--cap-drop", "--security-opt", "--read-only"):
         assert flag in argv
     assert "--network" in argv                                   # offline by default
     assert f"{mem.parent}:/mem:ro" in argv                       # image dir read-only
     assert f"{sym}:/symbols" in argv                             # symbols writable (ISF cache)
     assert f"{rules}:/rules/combined.yar:ro" in argv
+    # the batch entrypoint is overridden to python3 running the baked wrapper +
+    # renderer (no renderer mount); vol_wrapper.py is the first arg after the image
+    assert argv[argv.index("--entrypoint") + 1] == "python3"
     assert "vol:img" in argv
-    # the baked wrapper is the ENTRYPOINT, so the argv after the image is the
-    # renderer path + vol CLI args, ending in the plugin + --yara-file
     tail = argv[argv.index("vol:img") + 1:]
-    assert tail[0] == "/opt/jsonl_dfir_renderer.py"
+    assert tail[0] == "/opt/piiat-mem/docker/vol_wrapper.py"
+    assert tail[1] == "/opt/piiat-mem/jsonl_dfir_renderer.py"
     assert "windows.vadyarascan.VadYaraScan" in tail
     assert tail[tail.index("--yara-file") + 1] == "/rules/combined.yar"
     # symbols_online lifts the network isolation for ISF fetch
-    online = yara.vadyarascan_argv(str(mem), str(sym), str(ren), str(rules),
+    online = yara.vadyarascan_argv(str(mem), str(sym), str(rules),
                                    "vol:img", symbols_online=True)
     assert "--network" not in online
 

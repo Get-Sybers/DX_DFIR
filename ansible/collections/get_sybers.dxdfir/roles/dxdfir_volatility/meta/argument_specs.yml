@@ -39,15 +39,11 @@ argument_specs:
         type: str
         required: false
         description: "Volatility 3 symbol cache (passed as --symbols-dir); pre-seed when offline."
-      dxdfir_volatility_piiat_mem_dir:
-        type: str
-        required: false
-        description: "PIIAT-Mem submodule dir (third_party/piiat-mem); the standalone Volatility tool the lane drives via its CLI."
       dxdfir_volatility_image:
         type: str
         required: false
-        default: "get-sybers/volatility:latest"
-        description: "Volatility 3 container image."
+        default: "get-sybers/piiat-mem:latest"
+        description: "The self-orchestrating, env-driven PIIAT-Mem (Volatility 3) image the lane docker-runs directly."
       dxdfir_volatility_python_path:
         type: str
         required: false

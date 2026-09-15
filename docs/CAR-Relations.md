@@ -4,7 +4,7 @@ The relational discipline of [PIIAT-Mem](https://github.com/Get-Sybers/PIIAT-Mem
 objects the **memory artefact cannot supply** — determined from MITRE's own doc
 pages (car.mitre.org, field semantics read verbatim) and ratified against real
 evidence. The ten memory-fed objects are governed by
-`third_party/piiat-mem/docs/design/car-store.md`; this document covers
+PIIAT-Mem's own `docs/design/car-store.md` (github.com/Get-Sybers/PIIAT-Mem); this document covers
 **authentication**, **http**, and **email**, and the engine rules they added.
 
 The test, unchanged: *a property may be attributed across objects only via a key

@@ -9,29 +9,24 @@ dxdfir_volatility_repo_root: "{{ role_path }}/../../../../.."
 dxdfir_volatility_memory_dir: "{{ dxdfir_volatility_repo_root }}/data_store/raw/memory"
 dxdfir_volatility_elastic_out_dir: "{{ dxdfir_volatility_repo_root }}/data_store/processed/volatility"
 dxdfir_volatility_sofelk_out_dir: "{{ dxdfir_volatility_repo_root }}/data_store/processed/sofelk/volatility"
-# Resolved output base for the selected pipeline — consumed by
-# tasks/process.yml. Override directly to send output to a custom location.
+# Resolved output base for the selected pipeline. Override directly to send output
+# to a custom location.
 dxdfir_volatility_out_dir: "{{ dxdfir_volatility_elastic_out_dir if dxdfir_volatility_pipeline == 'elastic' else dxdfir_volatility_sofelk_out_dir }}"
-# Kernel symbol cache (passed as --symbols-dir). Windows plugins fetch ISF tables from
+# Kernel symbol cache (mounted at /symbols). Windows plugins fetch ISF tables from
 # the symbol servers on first use — pre-seed this on an isolated host.
 dxdfir_volatility_symbols_dir: "{{ dxdfir_volatility_repo_root }}/data_store/dependencies/volatility3-symbols"
-# The PIIAT-Mem submodule (third_party/piiat-mem) is the standalone Volatility tool
-# the lane drives via its CLI; it owns the runner, renderer and custom plugins. This
-# path is put on PYTHONPATH so `python -m piiat_mem` resolves (preflight guard).
-dxdfir_volatility_piiat_mem_dir: "{{ dxdfir_volatility_repo_root }}/third_party/piiat-mem"
-# The hardened in-repo image (build with playbooks/dxdfir-build-images.yml).
-dxdfir_volatility_image: "get-sybers/volatility:latest"
-# Allow the container network access for ISF symbol fetch — the ONE legitimate
-# network need; default fully offline (pre-seed the symbols dir instead).
+# The self-orchestrating, env-driven PIIAT-Mem image (Volatility 3 in-process via
+# --native). ansible runs it directly — no processor module. Built from
+# docker/GoDFIR-toolz/piiat-mem at the sources.yml pin (dxdfir build-docker).
+dxdfir_volatility_image: "get-sybers/piiat-mem:latest"
+# Allow the container network for ISF symbol fetch — the ONE legitimate network
+# need; default fully offline (pre-seed the symbols dir instead).
 dxdfir_volatility_symbols_online: false
-# In-repo runs use PYTHONPATH; a deployed run installs the package instead.
-dxdfir_volatility_python_path: "{{ dxdfir_volatility_repo_root }}/python"
 dxdfir_volatility_force: false
+# There is no processor module, but the shared image supply-chain guard still runs
+# python3 -m get_sybers_dxdfir.images --require <image>, so the package must be on
+# PYTHONPATH. In-repo runs use this; a deployed run installs the package instead.
+dxdfir_volatility_python_path: "{{ dxdfir_volatility_repo_root }}/python"
 
-# The processor command argv, handed to the shared dxdfir_lane process step. This
-# is the one genuinely per-lane piece; the run/verify/gate skeleton is shared.
-dxdfir_volatility_argv: >-
-  {{ ['python3', '-m', 'get_sybers_dxdfir.volatility', '--memory-dir', dxdfir_volatility_memory_dir, '--out-dir', dxdfir_volatility_out_dir,
-  '--symbols-dir', dxdfir_volatility_symbols_dir, '--image', dxdfir_volatility_image]
-  + (['--symbols-online'] if dxdfir_volatility_symbols_online | bool else [])
-  + (['--force'] if dxdfir_volatility_force | bool else []) }}
+# tasks/main.yml builds dxdfir_volatility_argv (the confined `docker run`) after
+# stat'ing the evidence mount for its --group-add gid; it can't be a static default.

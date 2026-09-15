@@ -667,7 +667,7 @@ def main(argv: list[str] | None = None) -> int:
     json.dump(summary, sys.stdout)
     sys.stdout.write("\n")
     # Fail only when the run produced nothing AND nothing was already done — see
-    # the same rationale in evtx.py/volatility.py/plaso.py: a source that can
+    # the same rationale in evtx.py/plaso.py: a source that can
     # never produce output for a given image must not flip an otherwise-complete,
     # idempotent re-run into a failure.
     return 1 if summary["failed"] and not summary["processed"] and not summary["skipped"] else 0

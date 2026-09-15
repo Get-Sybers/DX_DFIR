@@ -41,6 +41,10 @@
   ansible.builtin.include_tasks: "{{ dxdfir_lane_preflight_extra }}"
   when: dxdfir_lane_preflight_extra | length > 0
 
+# Most lanes drive a get_sybers_dxdfir.<lane> processor module; verify it imports.
+# A lane that ansible drives directly (e.g. volatility runs the self-orchestrating
+# get-sybers/piiat-mem container with no processor module) sets dxdfir_lane_module
+# empty and skips this — the image supply-chain guard below still runs.
 - name: "preflight | processor module imports | {{ dxdfir_lane_name }}"
   ansible.builtin.command:
     argv: ["python3", "-c", "import {{ dxdfir_lane_module }}"]
@@ -48,6 +52,7 @@
     PYTHONPATH: "{{ dxdfir_lane_python_path }}"
   register: dxdfir_lane_import
   changed_when: false
+  when: dxdfir_lane_module | default('') | length > 0
 
 # Supply-chain guard: refuse to start unless every tool image about to run is a
 # KNOWN hardened get-sybers/* image (label + uid + expected name). A substituted

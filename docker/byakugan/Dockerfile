@@ -11,7 +11,7 @@
 # The engine's `byakugan` console binary IS the ENTRYPOINT (byakugan-entry.py):
 # one binary, dispatched on its first argument to the engine's three operations
 # (build / timeline / car-vocab) — see that file. It is a python engine, so
-# python3 stays (like get-sybers/plaso and get-sybers/volatility); everything
+# python3 stays (like get-sybers/plaso and get-sybers/piiat-mem); everything
 # else is stripped by the shared build-time hardener.
 #
 #   docker build -t get-sybers/byakugan:latest \

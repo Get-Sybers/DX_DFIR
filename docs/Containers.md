@@ -17,7 +17,7 @@ ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-im
 | `get-sybers/zeek` | PCAP → Zeek JSON | Zeek LTS from the project's OBS Debian repo (`docker/zeek/`) |
 | `get-sybers/suricata` | signatures — Suricata (offline replay) | Debian package (`docker/suricata/`) |
 | `get-sybers/yara` | signatures — YARA | Debian package (`docker/yara/`) |
-| `get-sybers/volatility` | memory (Volatility 3) + `vadyarascan` | pinned PyPI (`docker/volatility/`) |
+| `get-sybers/piiat-mem` | memory (Volatility 3) + `vadyarascan` | `docker/GoDFIR-toolz/piiat-mem/` (clone-at-build) |
 | `get-sybers/plaso` | Plaso timelining + `image_export` (dfVFS) | GIFT stable PPA (`docker/plaso/`) |
 | `get-sybers/goevtx` | Windows Event Logs (.evtx) | static Go on go-evtx, FROM scratch (`docker/GoDFIR-toolz/goevtx/`) |
 
@@ -48,7 +48,7 @@ it never ships at runtime.
 - **no package manager, no pip** — nothing installable at runtime
 - **no shell and no python** except where the tool irreducibly needs them:
   `get-sybers/yara` keeps `sh` (its per-file scan loop *is* a shell script);
-  `get-sybers/volatility` and `get-sybers/plaso` keep python (the tools *are* python).
+  `get-sybers/piiat-mem` and `get-sybers/plaso` keep python (the tools *are* python).
   `get-sybers/zeek`, `get-sybers/suricata`, and the GoDFIR Go tools carry neither.
 - the tool runs as the fixed unprivileged user (`USER 2000:2000`)
 

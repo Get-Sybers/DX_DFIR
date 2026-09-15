@@ -37,7 +37,6 @@ func Probe(r *repo.Repo) []model.Check {
 		checkAnsible,
 		checkCollection,
 		checkDocker,
-		checkPiiatMem,
 		checkByakugan,
 	}
 	out := make([]model.Check, len(probes))
@@ -193,27 +192,6 @@ func checkDocker(r *repo.Repo) model.Check {
 
 // --- lane-specific capabilities (warn, not a hard gate) ---
 
-// checkPiiatMem reports whether the vendored PIIAT-Mem submodule is initialised;
-// the volatility lane reads its tree, so an uninitialised submodule narrows the
-// pipeline to the other lanes rather than blocking it.
-func checkPiiatMem(r *repo.Repo) model.Check {
-	c := model.Check{Name: "piiat-mem", Gate: false}
-	if r == nil {
-		c.State = model.CheckWarn
-		c.Detail = "repo not located"
-		return c
-	}
-	dir := r.Path("third_party", "piiat-mem")
-	if isNonEmptyDir(dir) {
-		c.State = model.CheckOK
-		c.Detail = "submodule initialised (volatility lane)"
-		return c
-	}
-	c.State = model.CheckWarn
-	c.Detail = "submodule not initialised - volatility lane unavailable (git submodule update --init)"
-	return c
-}
-
 // checkByakugan reports whether the hardened Byakugan CAR engine image is
 // present. The engine used to be a host checkout; it now runs entirely inside
 // the get-sybers/byakugan image (cloned + built at the sources.yml pin by
@@ -286,16 +264,6 @@ func lastMeaningful(s string) string {
 		}
 	}
 	return ""
-}
-
-func isNonEmptyDir(p string) bool {
-	f, err := os.Open(p)
-	if err != nil {
-		return false
-	}
-	defer f.Close()
-	names, _ := f.Readdirnames(1)
-	return len(names) > 0
 }
 
 func isExecutable(p string) bool {
