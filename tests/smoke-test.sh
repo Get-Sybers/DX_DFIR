@@ -41,6 +41,11 @@ FIXTURE_DIR="data_store/raw/logs/winevt/sysmon-attack-samples"
 OUT_DIR="$(mktemp -d)"     # the evtx lane's EvtxECmd JSON
 CAR_DIR="$(mktemp -d)"     # the materialised CAR built from it
 LOG_DIR="$(mktemp -d)"
+# The tool images run as a non-root uid (2000), so they must be able to traverse
+# the working tree — exactly as the real data_store is provisioned (g=rX + the
+# docker group; setup-environment.sh). mktemp defaults to 0700, which would block
+# the CAR engine container from reading the processed tree it normalises.
+chmod 0755 "$OUT_DIR" "$CAR_DIR"
 
 PASS=0; FAIL=0
 pass() { PASS=$((PASS+1)); echo "    ✓ $1"; }
