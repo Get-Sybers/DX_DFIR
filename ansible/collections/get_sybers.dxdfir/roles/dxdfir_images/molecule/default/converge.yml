@@ -1,13 +1,13 @@
 ---
-# Builds the LIGHTEST tool-only image (suricata: no shell, no python) so the
+# Builds the LIGHTEST tool-only image (zeek: no shell, no python) so the
 # role's own minimal-posture assertions run — proving the export-scan verifies
 # the stripped surface. The full set is exercised by the release-gate run-through.
 - name: Converge
   hosts: localhost
   gather_facts: false
   vars:
-    dxdfir_images_set: [suricata]
+    dxdfir_images_set: [zeek]
   tasks:
-    - name: "converge | run dxdfir_images (suricata only)"
+    - name: "converge | run dxdfir_images (zeek only)"
       ansible.builtin.include_role:
         name: dxdfir_images

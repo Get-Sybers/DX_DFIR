@@ -90,25 +90,34 @@ Units are in 512-byte sectors
 """
 
 
-def test_parse_mmls_offset_first_ntfs_partition():
-    assert yara.parse_mmls_offset(_MMLS) == 128 * 512
+def test_yara_disk_extracts_in_userspace_then_scans(tmp_path, monkeypatch):
+    """The disk source extracts every file via the plaso container (no host mount)
+    and scans the staged tree in the signatures container."""
+    disk = tmp_path / "data_store" / "raw" / "disk_images"
+    disk.mkdir(parents=True)
+    (disk / "host.E01").write_bytes(b"x")
+    rules = tmp_path / "rules"; rules.mkdir()
+    (rules / "r.yar").write_text('rule R { condition: true }\n')
+    extracted, scanned = [], []
 
+    def fake_extract(image, out_dir, *, artifact_filters=None, **kw):
+        extracted.append((image, artifact_filters))
+        return []
 
-def test_parse_mmls_offset_basic_data_and_none():
-    text = "005:  000:002   0000206848   0104855551   0104648704   Basic data partition\n"
-    assert yara.parse_mmls_offset(text) == 206848 * 512
-    assert yara.parse_mmls_offset("") == 0                       # partitionless volume
-    assert yara.parse_mmls_offset("no table\n") == 0
+    def fake_scan_dir(scan_dir, rules_dir, index_path, source, base, image):
+        scanned.append((source, base))
+        return [{"tool": "yara", "source": source, "rule": "R", "target": base}]
 
-
-def test_mount_argvs():
-    assert yara.ewfmount_argv("/d/case.E01", "/tmp/ewf") == \
-        ["ewfmount", "/d/case.E01", "/tmp/ewf"]
-    assert yara.mmls_argv("/tmp/ewf/ewf1") == ["mmls", "-a", "/tmp/ewf/ewf1"]
-    argv = yara.ntfs3g_argv("/tmp/ewf/ewf1", "/mnt/y0", 65536)
-    assert argv == ["ntfs-3g", "-o", "ro,offset=65536,streams_interface=windows",
-                    "/tmp/ewf/ewf1", "/mnt/y0"]
-    assert "ro," in argv[2]                                      # read-only, always
+    monkeypatch.setattr(yara.imageexport, "discover_images",
+                        lambda d: [str(disk / "host.E01")])
+    monkeypatch.setattr(yara.imageexport, "extract", fake_extract)
+    monkeypatch.setattr(yara, "_scan_dir", fake_scan_dir)
+    out = tmp_path / "out"; out.mkdir()
+    res = yara.run(output_dir=str(out), repo_root=str(tmp_path),
+                   sources=("disk",), disk_dir=str(disk), rules_dir=str(rules))
+    assert extracted and extracted[0][1] is None       # no filter => extract everything
+    assert scanned == [("disk", "host.E01")]
+    assert res["produced"] == 1
 
 
 # ---- yara memory source: vadyarascan argv + rules concat --------------------
@@ -172,15 +181,6 @@ def test_tag_detections():
     assert len(got) == 2
     assert all(d["tool"] == "hayabusa" for d in got)
     assert got[0]["RuleTitle"] == "Susp Logon"
-
-
-def test_find_binary(tmp_path):
-    assert hayabusa.find_binary(str(tmp_path)) is None
-    b = tmp_path / "hayabusa-3.4.0-lin"
-    b.write_bytes(b"#!/bin/sh\n")
-    os.chmod(b, 0o755)
-    (tmp_path / "hayabusa.zip").write_bytes(b"zip")   # ignored
-    assert hayabusa.find_binary(str(tmp_path)) == str(b)
 
 
 # ---- orchestrator ----------------------------------------------------------
@@ -253,14 +253,6 @@ def test_collect_ips_from_eve_stream():
 from get_sybers_dxdfir import evtx
 
 
-def test_evtx_run_hayabusa_notes_missing_binary(tmp_path):
-    empty = tmp_path / "hb"; empty.mkdir()
-    out = tmp_path / "out"; out.mkdir()
-    res = evtx.run_hayabusa([str(tmp_path)], str(out), hb_dir=str(empty))
-    assert res["produced"] == 0 and res["output"] is None
-    assert "no hayabusa binary" in res["note"]
-
-
 # ---- unified image discovery (detections see what the processors see) ------
 def test_list_images_covers_processor_formats(tmp_path):
     for name in ("a.E01", "b.ex01", "c.vhdx", "d.qcow2", "e.vhd", "f.vmdk"):
@@ -304,7 +296,6 @@ def test_hayabusa_run_stages_disk_images_without_fuse(tmp_path, monkeypatch):
     disk = repo / "data_store" / "raw" / "disk_images"
     disk.mkdir(parents=True)
     (disk / "host.E01").write_bytes(b"x")
-    _fake_hb_bin(repo)
     stage = repo / "stage"
 
     def fake_extract_staged(image_src, stage_dir, **kw):
@@ -317,7 +308,7 @@ def test_hayabusa_run_stages_disk_images_without_fuse(tmp_path, monkeypatch):
 
     scanned = []
 
-    def fake_scan(hb_bin, scan_dir, rules_dir):
+    def fake_scan(scan_dir, rules_dir=None, *, image=None):
         scanned.append(scan_dir)
         return '{"RuleTitle": "T"}\n'
 

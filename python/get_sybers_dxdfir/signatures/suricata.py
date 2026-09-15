@@ -36,7 +36,7 @@ import tempfile
 from .. import container
 from . import clean_name
 
-_SURICATA_IMAGE = "get-sybers/suricata:latest"
+_SURICATA_IMAGE = "get-sybers/signatures:latest"  # yara + suricata + hayabusa, one image
 _WANTED = {"alert", "anomaly", "http", "dns", "tls", "fileinfo", "flow"}
 
 # Ranges that count as "home" when auto-deriving HOME_NET: RFC1918 + CGNAT +
@@ -461,10 +461,11 @@ def suricata_argv(pcap, out_dir, rules_dir, rules_file, image, sets=None):
         args += ["-S", f"/rules/{os.path.basename(rules_file)}"]
     for entry in (sets or []):
         args += ["--set", entry]
-    # suricata (the ENTRYPOINT) writes eve.json to the mounted -l /out; under the
-    # read-only rootfs it also touches /var/{run,log}/suricata -> tmpfs.
+    # The signatures image has no ENTRYPOINT; name the tool (suricata) explicitly.
+    # It writes eve.json to the mounted -l /out; under the read-only rootfs it also
+    # touches /var/{run,log}/suricata -> tmpfs.
     return container.run(
-        image, args,
+        image, ["suricata", *args],
         mounts=[f"{os.path.dirname(pcap)}:/pcaps:ro",
                 f"{os.path.realpath(rules_dir)}:/rules:ro",
                 f"{out_dir}:/out"],

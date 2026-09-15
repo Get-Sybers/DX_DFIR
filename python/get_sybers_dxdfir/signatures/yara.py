@@ -33,14 +33,12 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
 import subprocess
 import tempfile
 
-from .. import container
-from . import clean_name, have_fuse, list_images
+from .. import container, imageexport
 
-_YARA_IMAGE = "get-sybers/yara:latest"
+_SIGNATURES_IMAGE = "get-sybers/signatures:latest"  # yara + suricata + hayabusa, one image
 _VOL_IMAGE = "get-sybers/volatility:latest"
 _STRING_RE = re.compile(r"^0x([0-9a-fA-F]+):(\$[^:]*):\s?(.*)$")
 
@@ -103,86 +101,21 @@ def parse_vadyarascan(lines: str, mem: str) -> list[dict]:
     return out
 
 
-# --- disk source: read-only image mounting (ewfmount + ntfs-3g, both FUSE) ---
-
-def ewfmount_argv(image: str, mount_dir: str) -> list[str]:
-    """Expose an E01/Ex01 as a raw device file (``<mount_dir>/ewf1``). Pure."""
-    return ["ewfmount", image, mount_dir]
-
-
-def mmls_argv(raw: str) -> list[str]:
-    """TSK partition listing (allocated only) for the NTFS-offset probe. Pure."""
-    return ["mmls", "-a", raw]
-
-
-def parse_mmls_offset(text: str) -> int:
-    """Byte offset of the first NTFS/"basic data"/0x07 partition in ``mmls -a``
-    output (start sector * 512), or 0 for a partitionless volume. Pure — mirrors
-    the awk in the retired disk-image.sh."""
-    for line in text.splitlines():
-        low = line.lower()
-        if "ntfs" not in low and "basic data" not in low and "0x07" not in low:
-            continue
-        parts = line.split()
-        if len(parts) < 3:
-            continue
-        try:
-            return int(parts[2], 10) * 512
-        except ValueError:
-            continue
-    return 0
+# --- disk source: userspace artefact extraction (no host mount) ---
+#
+# The disk YARA scan used to mount each image on the HOST via ewfmount + ntfs-3g
+# (both FUSE) and scan it in place — native image parsers running unconfined on
+# the analyst host (a container-safety audit's largest escape surface). It now
+# extracts every allocated file out of each image in USERSPACE via the hardened
+# get-sybers/plaso image_export (imageexport.extract, no --artifact_filters), into
+# a temp staging dir, then scans the staged files inside the signatures container.
+# Nothing is mounted on the host; no /dev/fuse, no SYS_ADMIN.
 
 
-def ntfs3g_argv(raw: str, mount_dir: str, offset: int) -> list[str]:
-    """Mount the NTFS filesystem at byte ``offset`` of ``raw`` read-only, with
-    Windows-style ADS naming. Pure."""
-    return ["ntfs-3g", "-o", f"ro,offset={offset},streams_interface=windows",
-            raw, mount_dir]
-
-
-def mount_image(image: str, mount_dir: str) -> list[tuple[str, str]] | None:
-    """Mount a disk image read-only at ``mount_dir``. E01/Ex01 go through ewfmount
-    (into a temp dir) first; the first NTFS partition (mmls) is then ntfs-3g-mounted
-    — Windows images, which is what most Windows YARA targets need.
-
-    Returns the unmount state for :func:`unmount_image` on success, None on failure
-    (with everything already unwound)."""
-    image = os.path.realpath(image)
-    os.makedirs(mount_dir, exist_ok=True)
-    state: list[tuple[str, str]] = []
-    raw = image
-    if image.lower().endswith((".e01", ".ex01")):
-        ewfdir = tempfile.mkdtemp()
-        proc = subprocess.run(ewfmount_argv(image, ewfdir),
-                              capture_output=True, check=False)
-        if proc.returncode != 0:
-            shutil.rmtree(ewfdir, ignore_errors=True)
-            return None
-        state.append(("ewf", ewfdir))
-        raw = os.path.join(ewfdir, "ewf1")
-    probe = subprocess.run(mmls_argv(raw), capture_output=True, text=True, check=False)
-    offset = parse_mmls_offset(probe.stdout)
-    proc = subprocess.run(ntfs3g_argv(raw, mount_dir, offset),
-                          capture_output=True, check=False)
-    if proc.returncode == 0:
-        state.append(("ntfs", mount_dir))
-        return state
-    unmount_image(state, mount_dir)
-    return None
-
-
-def unmount_image(state: list[tuple[str, str]], mount_dir: str) -> None:
-    """Unwind :func:`mount_image` — newest mount first, ewf temp dirs removed."""
-    for kind, path in reversed(state):
-        if subprocess.run(["fusermount", "-u", path],
-                          capture_output=True, check=False).returncode != 0:
-            subprocess.run(["umount", path], capture_output=True, check=False)
-        if kind == "ewf":
-            shutil.rmtree(path, ignore_errors=True)
-    try:
-        os.rmdir(mount_dir)
-    except OSError:
-        pass
+def extract_disk_files(image: str, stage_dir: str) -> list[str]:
+    """Extract every allocated file from one disk image into ``stage_dir`` (via the
+    plaso container) and return the files written. Raises on extraction failure."""
+    return imageexport.extract(image, stage_dir, artifact_filters=None)
 
 
 # --- memory source: Volatility 3 windows.vadyarascan -------------------------
@@ -260,13 +193,13 @@ def _scan_dir(scan_dir, rules_dir, index_path, source, base, image) -> list[dict
         listf.close()
         # NamedTemporaryFile is 0600; the container reads it as uid 2000
         os.chmod(listf.name, 0o644)
-        # The minimal get-sybers/yara image's ENTRYPOINT is the baked per-file scan
-        # loop (/opt/dxdfir/scan-list.sh); it reads the mounted list + index and
-        # prints matches to stdout (captured here) — no shell command is
-        # injected from here.
+        # The signatures image has no ENTRYPOINT; run its baked, allow-listed
+        # per-file scan loop (/opt/dxdfir/scan-list.sh) explicitly. It reads the
+        # mounted list + index and prints matches to stdout (captured here) — no
+        # shell command is injected from here.
         proc = subprocess.run(
             container.run(
-                image, [],
+                image, ["/opt/dxdfir/scan-list.sh"],
                 mounts=[f"{os.path.realpath(rules_dir)}:/rules:ro",
                         f"{os.path.realpath(scan_dir)}:/scan:ro",
                         f"{os.path.realpath(index_path)}:/index.yar:ro",
@@ -291,9 +224,8 @@ def _note(res: dict, note: str) -> None:
 def run(*, output_dir, repo_root, fetch=False, force=False,
         sources=("files", "disk", "memory"),
         rules_dir=None, files_target=None, disk_dir=None, memory_dir=None,
-        disk_subpath=None, mount_base="/mnt/dxdfir-sig",
         symbols_dir=None, renderer=None,
-        image=_YARA_IMAGE, vol_image=_VOL_IMAGE, **_ignored) -> dict:
+        image=_SIGNATURES_IMAGE, vol_image=_VOL_IMAGE, **_ignored) -> dict:
     """Run the selected YARA sources. Returns {lane, produced, skipped, failed}."""
     ds = os.path.join(repo_root, "data_store")
     rules_dir = rules_dir or os.path.join(ds, "dependencies", "yara-rules")
@@ -359,40 +291,34 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
         out = os.path.join(output_dir, "disk.jsonl")
         if not force and os.path.exists(out):
             res["skipped"] += 1
-        elif not have_fuse():
-            # This lane never extracts files out of images — either the host
-            # allows FUSE (lxc.cgroup2.devices.allow: c 10:229 rwm + a /dev/fuse
-            # mount entry) or the disk source stands down. No output file is
-            # written, so the source runs for real once mounting is enabled.
-            _note(res, "disk: /dev/fuse unavailable — cannot mount images here; "
-                       "mount-enable the host (nothing is extracted from images)")
         else:
-            images = list_images(disk_dir) if os.path.isdir(disk_dir) else []
+            images = imageexport.discover_images(disk_dir) if os.path.isdir(disk_dir) else []
             matches: list[dict] = []
-            unmountable = []
-            for i, img in enumerate(images):
-                mnt = os.path.join(mount_base, f"y{i}")
-                state = mount_image(img, mnt)
-                if state is None:
-                    unmountable.append(os.path.basename(img))
-                    continue
-                try:
-                    scanroot = mnt
-                    if disk_subpath and os.path.isdir(os.path.join(mnt, disk_subpath)):
-                        scanroot = os.path.join(mnt, disk_subpath)
+            for img in images:
+                base = os.path.basename(img)
+                # Extract every allocated file in userspace (plaso container), then
+                # scan the staged tree in the signatures container. Nothing mounts
+                # on the host. The stage is torn down per image to bound disk use.
+                with tempfile.TemporaryDirectory(prefix="dxdfir-yara-disk-") as stage:
                     try:
-                        matches += _scan_dir(scanroot, rules_dir, index_path, "disk",
-                                             os.path.basename(img), image)
+                        os.chmod(stage, 0o777)
+                    except OSError:
+                        pass
+                    try:
+                        extract_disk_files(img, stage)
+                    except subprocess.CalledProcessError as exc:
+                        res["failed"] += 1
+                        _note(res, f"disk {base}: extraction failed "
+                                   f"({(exc.stderr or b'')[:200]!r})")
+                        continue
+                    try:
+                        matches += _scan_dir(stage, rules_dir, index_path, "disk",
+                                             base, image)
                     except RuntimeError as exc:
                         res["failed"] += 1
-                        _note(res, f"disk {os.path.basename(img)}: {exc}")
-                finally:
-                    unmount_image(state, mnt)
+                        _note(res, f"disk {base}: {exc}")
             _write(out, matches)
             res["produced"] += len(matches)
-            if unmountable:
-                _note(res, "disk: not mountable Windows volumes (skipped): "
-                           + ", ".join(unmountable))
 
     if "memory" in sources:
         out = os.path.join(output_dir, "memory.jsonl")

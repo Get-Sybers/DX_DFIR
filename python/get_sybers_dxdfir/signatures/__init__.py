@@ -46,12 +46,6 @@ def list_images(root: str) -> list[str]:
     return imageexport.discover_images(root)
 
 
-def have_fuse() -> bool:
-    """True if a real read-only mount of an image is possible here (FUSE + ntfs-3g)."""
-    import shutil
-    return os.path.exists("/dev/fuse") and shutil.which("ntfs-3g") is not None
-
-
 def process(output_dir: str, lanes=LANES, *, repo_root: str, fetch: bool = False,
             force: bool = False, config: dict | None = None) -> dict:
     """Run the requested lanes; return a combined summary.
