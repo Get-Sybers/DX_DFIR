@@ -100,7 +100,12 @@ func SortInto(repoRoot, name string, dryRun bool, onItem ItemFn) (SortResult, er
 			note(nm, "", how, "skip")
 			continue
 		}
-		dest := filepath.Join(root, subdir, nm)
+		dest, derr := safeLaneDest(root, subdir, nm)
+		if derr != nil {
+			res.Skipped = append(res.Skipped, [2]string{nm, derr.Error()})
+			note(nm, subdir, how, "skip")
+			continue
+		}
 		if fsx.Exists(dest) {
 			res.Skipped = append(res.Skipped, [2]string{nm, "already in " + subdir + "/"})
 			note(nm, subdir, how, "skip")
@@ -124,6 +129,39 @@ func SortInto(repoRoot, name string, dryRun bool, onItem ItemFn) (SortResult, er
 		logEvent(db, root, name, now(), "sorted", [][2]any{{"moved", res.MovedCount()}, {"skipped", len(res.Skipped)}})
 	}
 	return res, nil
+}
+
+// safeLaneDest returns <root>/<subdir>/<name> for a classified move, but refuses
+// to write THROUGH a lane subdir that is a symlink (or that otherwise resolves
+// outside the collection root). data_store is group-writable, so a hostile
+// evidence stager could replace, say, collections/<c>/pcaps with a symlink to
+// /etc/cron.d; without this guard the operator's `collection sort` / promote would
+// rename an attacker-named, attacker-content file through the link and write
+// outside the tree — an arbitrary-write → host-code-execution primitive. An
+// externally-linked collection (root itself a legitimate symlink) still works,
+// because containment is checked against the RESOLVED root.
+func safeLaneDest(root, subdir, name string) (string, error) {
+	if name != filepath.Base(name) || name == "." || name == ".." {
+		return "", fmt.Errorf("refusing evidence name with a path separator: %q", name)
+	}
+	realRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", fmt.Errorf("collection root unresolvable: %w", err)
+	}
+	laneDir := filepath.Join(root, subdir)
+	if fi, err := os.Lstat(laneDir); err == nil {
+		if fi.Mode()&os.ModeSymlink != 0 {
+			return "", fmt.Errorf("refusing to move through symlinked lane dir %q", subdir)
+		}
+		realLane, err := filepath.EvalSymlinks(laneDir)
+		if err != nil {
+			return "", err
+		}
+		if realLane != realRoot && !strings.HasPrefix(realLane, realRoot+string(os.PathSeparator)) {
+			return "", fmt.Errorf("lane dir %q resolves outside the collection root", subdir)
+		}
+	}
+	return filepath.Join(laneDir, name), nil
 }
 
 // Register is the unified register entry point (mirrors register): from=""
@@ -233,7 +271,13 @@ func promote(db *sql.DB, repoRoot, name string, onItem ItemFn) (RegisterResult, 
 		p := filepath.Join(dest, nm)
 		subdir, how := identify.Classify(p)
 		if subdir != "" {
-			target := filepath.Join(dest, subdir, nm)
+			target, derr := safeLaneDest(dest, subdir, nm)
+			if derr != nil {
+				if onItem != nil {
+					onItem(nm, subdir, derr.Error(), "skip")
+				}
+				continue
+			}
 			if !fsx.Exists(target) {
 				if err := fsx.Move(p, target); err != nil {
 					return RegisterResult{}, err
