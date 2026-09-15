@@ -15,8 +15,8 @@ ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-im
 | Image | Tool | Source |
 |---|---|---|
 | `get-sybers/zeek` | PCAP → Zeek JSON | Zeek LTS from the project's OBS Debian repo (`docker/GoDFIR-toolz/zeek/`) |
-| `get-sybers/suricata` | signatures — Suricata (offline replay) | Debian package (`docker/suricata/`) |
-| `get-sybers/yara` | signatures — YARA | Debian package (`docker/yara/`) |
+| `get-sybers/signatures` | detections — YARA + Suricata (offline replay) + Hayabusa | Debian packages + the pinned Hayabusa release (`docker/GoDFIR-toolz/signatures/`) |
+| `get-sybers/byakugan` | CAR/STIX behaviour engine | clone-at-build at the `sources.yml` pin (`docker/GoDFIR-toolz/byakugan/`) |
 | `get-sybers/piiat-mem` | memory (Volatility 3) + `vadyarascan` | `docker/GoDFIR-toolz/piiat-mem/` (clone-at-build) |
 | `get-sybers/plaso` | Plaso timelining + `image_export` (dfVFS) | GIFT stable PPA (`docker/GoDFIR-toolz/plaso/`) |
 | `get-sybers/goevtx` | Windows Event Logs (.evtx) | static Go on go-evtx, FROM scratch (`docker/GoDFIR-toolz/goevtx/`) |
@@ -47,9 +47,9 @@ it never ships at runtime.
   suite are removed; every setuid/setgid bit is stripped
 - **no package manager, no pip** — nothing installable at runtime
 - **no shell and no python** except where the tool irreducibly needs them:
-  `get-sybers/yara` keeps `sh` (its per-file scan loop *is* a shell script);
+  `get-sybers/signatures` keeps `sh` (its per-file scan loop *is* a shell script);
   `get-sybers/piiat-mem` and `get-sybers/plaso` keep python (the tools *are* python).
-  `get-sybers/zeek`, `get-sybers/suricata`, and the GoDFIR Go tools carry neither.
+  `get-sybers/zeek` and the GoDFIR Go tools carry neither.
 - the tool runs as the fixed unprivileged user (`USER 2000:2000`)
 
 Runtime confinement is what actually contains both threats (an attacker with

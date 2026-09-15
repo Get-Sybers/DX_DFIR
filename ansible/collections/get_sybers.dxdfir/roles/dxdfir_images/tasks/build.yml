@@ -34,9 +34,10 @@
     source: build
     force_source: "{{ dxdfir_images_force | bool }}"
     build:
-      # context is repo-root-relative in the manifest (default: the GoDFIR-toolz
-      # submodule root); dockerfile is relative to it (default: <name>/Dockerfile).
-      path: "{{ dxdfir_images_repo_root ~ '/' ~ (_img.context | default('docker/GoDFIR-toolz')) }}"
+      # context is repo-root-relative in the manifest; absent, the role default
+      # dxdfir_images_context (the GoDFIR-toolz submodule root) applies.
+      # dockerfile is relative to the context (default: <name>/Dockerfile).
+      path: "{{ (dxdfir_images_repo_root ~ '/' ~ _img.context) if _img.context is defined else dxdfir_images_context }}"
       dockerfile: "{{ _img.dockerfile | default(dxdfir_images_name ~ '/Dockerfile') }}"
       # The single-source run-as uid/gid are combined ON TOP of the manifest args
       # (and any ref arg), so they always WIN over a per-image build arg.

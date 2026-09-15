@@ -1,7 +1,7 @@
 ---
 argument_specs:
   main:
-    short_description: "PCAPs -> Zeek JSON logs,."
+    short_description: "PCAPs -> Zeek JSON logs."
     description:
       - >-
         Discovers captures under dxdfir_zeek_pcap_dir, runs the zeek container per
