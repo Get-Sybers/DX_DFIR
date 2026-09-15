@@ -30,13 +30,13 @@ func newProcessCmd(env *Env) *cobra.Command {
 			"it is processed with). Each lane is driven by its ansible-playbook; progress is\n" +
 			"reconstructed live by watching the deterministic output files land on disk.\n\n" +
 			"Lanes:\n" +
-			"  zeek        PCAPs -> Zeek JSON logs\n" +
-			"  evtx        Windows event logs -> EvtxECmd JSON\n" +
-			"  volatility  memory images -> plugin JSONL\n" +
-			"  plaso       disk images/VMs -> super timeline\n" +
-			"  godfir-toolz   disk images/VMs -> registry/MFT/… artefacts\n" +
-			"  signatures  yara/suricata/hayabusa over the staged evidence\n" +
-			"  all         every lane above\n\n" +
+			"  zeek         PCAPs -> Zeek JSON logs\n" +
+			"  evtx         Windows event logs -> EvtxECmd JSON\n" +
+			"  volatility   memory images -> plugin JSONL\n" +
+			"  plaso        disk images/VMs -> super timeline\n" +
+			"  godfir-toolz disk images/VMs -> registry/MFT/… artefacts\n" +
+			"  signatures   yara/suricata/hayabusa over the staged evidence\n" +
+			"  all          every lane above\n\n" +
 			"The two positionals may be given in either order — the lane is recognised by name,\n" +
 			"anything else is treated as a collection:\n" +
 			"  dxdfir process zeek                 # zeek over all staged raw evidence\n" +

@@ -38,7 +38,7 @@ a lane/step queue that ticks as evidence lands. State icons: `▸` running, `✓
 │ ▸ evtx               3/8        Security.evtx                                    │
 │ · volatility         0/1        queued                                           │
 │ · plaso              0/1        queued                                           │
-│ – godfir-toolz          –          skipped — no disk image                          │
+│ – godfir-toolz       –          skipped — no disk image                          │
 ├ output ─────────────────────────────────────────────────────────────────────── ┤
 │ [zeek] wrote conn.log — 18,442 records                                           │
 │ [evtx] parsing Security.evtx …                                                   │
