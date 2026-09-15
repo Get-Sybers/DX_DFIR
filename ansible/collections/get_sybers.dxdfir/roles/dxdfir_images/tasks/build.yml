@@ -7,7 +7,7 @@
 
 # Fail fast (not a silent docker/<name>/Dockerfile fallback) if the requested
 # image isn't in the manifest — images.yml is the source of truth.
-- name: "images-build | {{ dxdfir_images_name }} is declared in images.yml"
+- name: "images-build | assert the image is declared in images.yml — {{ dxdfir_images_name }}"
   ansible.builtin.assert:
     that:
       - (dxdfir_images_manifest.images | default([])) | selectattr('name', 'equalto', dxdfir_images_name) | list | length == 1
