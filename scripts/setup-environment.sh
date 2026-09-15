@@ -6,10 +6,11 @@
 # shell out to, puts the invoking user in the docker group, and sets
 # ownership/permissions on the repository.
 #
-# Pre-seeding the analysis images as offline tarballs is a separate concern
-# with its own online/offline lifecycle — it now lives in
-# scripts/save-docker-images.sh. The processing scripts pull their images on
-# first use, so a host with registry access needs nothing further here.
+# Building the hardened tool images is the dxdfir_images role's job — run
+# `dxdfir build-docker` after this script (nothing is ever pulled at runtime;
+# the inventory guard refuses unknown images). Pre-seeding those images as
+# offline tarballs is a separate concern with its own online/offline
+# lifecycle — it lives in scripts/save-docker-images.sh.
 #
 # Each guard below encodes a way the previous revision of this script failed on
 # a clean machine:
@@ -35,8 +36,8 @@
 #     had just given them. Capital X applies +x to directories and to files
 #     that are already executable, leaving the .sh files runnable and data
 #     files alone.
-#   - unzip is installed, not merely hoped for. the velociraptor lane hard
-#     exits without it and the old script never mentioned it.
+#   - unzip is installed, not merely hoped for. dev-scripts/fetch-samples.sh
+#     unpacks zip fixtures with it and the old script never mentioned it.
 #
 # Usage: scripts/setup-environment.sh [--yes] [--no-color] [--help]
 # ==============================================================================
@@ -49,8 +50,9 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 REPO_ROOT_DIR="$(realpath "$SCRIPT_DIR/..")"
 
 # Userland tools the pipeline shells out to. python3 runs the get_sybers_dxdfir
-# package, unzip backs the velociraptor lane, tar backs the image tarballs
-# written by save-docker-images.sh, curl fetches sample fixtures.
+# package, unzip unpacks the zip fixtures dev-scripts/fetch-samples.sh stages,
+# tar backs the image tarballs written by save-docker-images.sh, curl fetches
+# sample fixtures and the Go toolchain.
 # ca-certificates and gnupg are needed to add the Docker repo itself.
 APT_DEPS=(ca-certificates curl git gnupg unzip python3 python3-venv tar)
 REQUIRED_CMDS=(curl git python3 unzip tar realpath readlink)
@@ -123,7 +125,9 @@ while [[ $# -gt 0 ]]; do
         -y|--yes) ASSUME_YES=true ;;
         --no-color|--no-colour) USE_COLOR=false; setup_colors ;;
         -h|--help)
-            sed -n '2,42p' "$0" | sed 's/^# \{0,1\}//'
+            # The help IS the header block: everything between the opening and
+            # closing `# ===` rules, so it never drifts from a hardcoded range.
+            awk 'NR < 3 { next } /^# =+$/ { exit } { sub(/^# ?/, ""); print }' "$0"
             exit 0
             ;;
         *)
@@ -300,9 +304,9 @@ fi
 ################################################################################
 # Install the userland tools the processing scripts need.
 #
-# The old script installed none of these. The velociraptor lane exits on a
-# missing unzip, and nothing in the pipeline runs without python3 — each one
-# an error the analyst hit halfway through an ingest instead of here.
+# The old script installed none of these. Nothing in the pipeline runs without
+# python3, and the sample fetcher exits on a missing unzip — each one an error
+# the analyst hit halfway through an ingest instead of here.
 MISSING_DEPS=()
 for cmd in "${REQUIRED_CMDS[@]}"; do
     command -v "$cmd" >/dev/null 2>&1 || MISSING_DEPS+=("$cmd")
@@ -352,14 +356,14 @@ confirm "Do you wish to proceed?" || { info "Setup cancelled."; exit 1; }
 ################################################################################
 # Pull the git submodules — RECURSIVELY.
 #
-# The remaining submodule is docker/GoDFIR-toolz: the Go EZ-tool family, goevtx
-# and the PIIAT-Mem volatility image build. --recursive is kept on principle: it
-# means any submodule that DOES nest content checks out complete instead of
-# silently empty — the failure mode that bit the CAR engine while it was vendored
-# here. (The Byakugan engine is no longer a submodule; it is provisioned as an
-# external checkout in the next step, and PIIAT-Mem is fused into the
-# get-sybers/piiat-mem image.) Runs before the chown/chmod below so the freshly
-# checked-out files inherit them too.
+# The remaining submodule is docker/GoDFIR-toolz — since #221 the home of EVERY
+# tool-image build context (byakugan, plaso, signatures, zeek, piiat-mem, the EZ
+# family and the Go substitutes) plus the canonical hardening playbook, so a
+# checkout without it cannot build a single image (the dxdfir_images preflight
+# gates on exactly this). --recursive is kept on principle: any submodule that
+# DOES nest content checks out complete instead of silently empty — the failure
+# mode that bit the CAR engine while it was vendored here. Runs before the
+# chown/chmod below so the freshly checked-out files inherit them too.
 section "Git submodules"
 if [[ -f "$REPO_ROOT_DIR/.gitmodules" ]]; then
     step "Initialising git submodules (recursive) ..."
@@ -457,7 +461,10 @@ ok "ansible on PATH: $(/usr/local/bin/ansible-playbook --version 2>/dev/null | h
 ################################################################################
 section "Go toolchain + dxdfir front-end"
 GO_VERSION="${GO_VERSION:-1.24.7}"
-GO_MIN_MINOR=24
+# The minimum minor comes from go/go.mod (the single authority on the floor) —
+# no second copy of the number to drift in this script.
+GO_MIN_MINOR="$(awk '/^go /{split($2, v, "."); print v[2]; exit}' "$REPO_ROOT_DIR/go/go.mod")"
+[[ "$GO_MIN_MINOR" =~ ^[0-9]+$ ]] || die "Could not read the Go floor from go/go.mod."
 GO_BIN_DIR="${GO_BIN_DIR:-/opt/dxdfir/bin}"
 _go_ok=0
 if command -v go >/dev/null 2>&1; then
@@ -572,7 +579,10 @@ fi
 echo
 
 step "Build the hardened tool containers (everything the pipeline runs):"
-cmd "ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml"
+cmd "dxdfir build-docker" "(drives the dxdfir_images role; playbooks/dxdfir-build-images.yml is the same thing)"
+echo
+step "Bring up the Elastic analysis stack (docker/elastic):"
+cmd "dxdfir stack deploy" "(dxdfir_stack role; needs docker/elastic/.env — copy .env.example first)"
 echo
 step "Pre-seed the analysis images as tarballs for an offline host:"
 cmd "scripts/save-docker-images.sh" "(online host: pull + save)"
