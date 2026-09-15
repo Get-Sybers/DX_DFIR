@@ -277,11 +277,18 @@ def main(argv: list[str] | None = None) -> int:
     # never be reached by accident (e.g. a stray extra-var); the container is the
     # only supported path otherwise.
     if args.vol_native and not args.accept_unconfined:
-        sys.stderr.write(
-            "refusing --vol-native: it runs Volatility 3 UNCONFINED on the host "
-            "(no cap-drop/read-only/network-none, skips the hardened-image guard). "
-            "Re-run without it to use the hardened container, or pass "
-            "--accept-unconfined to override.\n")
+        msg = ("refusing --vol-native: it runs Volatility 3 UNCONFINED on the host "
+               "(no cap-drop/read-only/network-none, skips the hardened-image guard). "
+               "Re-run without it to use the hardened container, or pass "
+               "--accept-unconfined to override.")
+        # Keep the output contract: a machine-readable summary on stdout (the Ansible
+        # lane wrapper reads it) plus the error on stderr, like every other failure.
+        summary = {"tool": "volatility", "memory_dir": args.memory_dir,
+                   "out_dir": args.out_dir, "processed": 0, "skipped": 0,
+                   "failed": 0, "error": msg}
+        sys.stderr.write(msg + "\n")
+        json.dump(summary, sys.stdout)
+        sys.stdout.write("\n")
         return 2
     if args.vol_native:
         sys.stderr.write(
