@@ -103,6 +103,19 @@ redistribution obligation attaches — the same position as DetectRaptor above.
 - The ruleset carries **Proofpoint's ET Open licence** (BSD-style, non-commercial
   attribution terms); those terms bind the operator who fetches, not this repo.
 
+### Hayabusa (Sigma over EVTX) — downloaded at build, not redistributed
+
+**This repository ships no Hayabusa binary.** The consolidated detection image
+(`docker/signatures/Dockerfile`, `get-sybers/signatures`) downloads a pinned
+[Hayabusa](https://github.com/Yamato-Security/hayabusa) release (Yamato-Security,
+**GPL-3.0**) from its GitHub releases **at image-build time** — the same way the
+apt tools (YARA, Suricata) are installed at build — and sha256-verifies the
+archive before baking the binary + its `config/` and bundled sigma `rules/` into
+the image. The version and checksums are pinned in the Dockerfile
+(`HAYABUSA_VERSION`, `HB_SHA_amd64`/`HB_SHA_arm64`). Nothing GPL is committed to
+this repository; the built image, produced on the operator's host, carries
+Hayabusa under its own GPL-3.0 terms.
+
 ---
 
 ---

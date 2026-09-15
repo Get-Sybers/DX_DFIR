@@ -227,15 +227,12 @@ def run_hayabusa(sources, out_dir, *, hb_dir=None, hb_bin=None, rules_dir=None,
         summary["skipped"] = 1
         summary["output"] = timeline
         return summary
-    hb_bin = hb_bin or (_hb.find_binary(hb_dir) if hb_dir else None)
-    if not hb_bin or not os.access(hb_bin, os.X_OK):
-        summary["note"] = f"no hayabusa binary under {hb_dir!r} — supply --hayabusa-dir"
-        return summary
-    rules_dir = rules_dir or os.path.join(os.path.dirname(hb_bin), "rules")
+    # Hayabusa (binary + config + default rules) is baked into the signatures
+    # image; rules_dir, when given, overrides the baked rule set.
     raw = ""
     for src in sources:
         if os.path.isdir(src):
-            hits = _hb.scan_directory(hb_bin, src, rules_dir)
+            hits = _hb.scan_directory(src, rules_dir)
             if hits.strip():
                 summary["scanned"] += 1
                 raw += hits

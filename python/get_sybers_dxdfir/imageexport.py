@@ -52,6 +52,9 @@ def image_export_argv(image, out_dir, *, artifact_filters=("WindowsEventLogs",),
 
     The image's directory is mounted read-only at ``/data`` and the output dir at
     ``/out``; ``--artifact_filters`` scopes the copy to the named artefact set(s).
+    Passing ``artifact_filters=None`` (or empty) OMITS the filter so image_export
+    copies EVERY allocated file — the broad extraction the YARA disk source uses to
+    keep coverage wide without mounting the image on the host.
     ``--partitions all`` so a multi-partition Windows image is fully searched;
     ``--vss_stores none`` by default (skip shadow copies — set ``vss`` to include them).
 
@@ -59,13 +62,13 @@ def image_export_argv(image, out_dir, *, artifact_filters=("WindowsEventLogs",),
     read-only rootfs); image_export.py is the tool argv (plaso has no single
     ENTRYPOINT). Pure (no I/O).
     """
+    argv = ["image_export.py", "-q", "--partitions", "all",
+            "--vss_stores", "all" if vss else "none"]
+    if artifact_filters:  # None/empty => no filter => extract every allocated file
+        argv += ["--artifact_filters", ",".join(artifact_filters)]
+    argv += ["-w", "/out", f"/data/{os.path.basename(image)}"]
     return container.run(
-        plaso_image,
-        ["image_export.py", "-q", "--partitions", "all",
-         "--vss_stores", "all" if vss else "none",
-         "--artifact_filters", ",".join(artifact_filters),
-         "-w", "/out",
-         f"/data/{os.path.basename(image)}"],
+        plaso_image, argv,
         mounts=[f"{os.path.dirname(image)}:/data:ro", f"{out_dir}:/out"],
         workdir="/tmp",
     )

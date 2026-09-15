@@ -25,8 +25,7 @@ import sys
 
 # The tool images the pipeline runs. Each MUST be hardened (label + uid 2000).
 HARDENED_IMAGES = (
-    "get-sybers/yara:latest",
-    "get-sybers/suricata:latest",
+    "get-sybers/signatures:latest",  # the whole detection lane: yara + suricata + hayabusa
     "get-sybers/zeek:latest",
     "get-sybers/volatility:latest",
     "get-sybers/plaso:latest",

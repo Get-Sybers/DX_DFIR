@@ -36,8 +36,7 @@ dxdfir_images_eztools_context: "{{ dxdfir_images_repo_root }}/third_party/GoDFIR
 # and — for the docker/ context — the dir under docker/) — the build is verified
 # against the hardening contract afterwards.
 dxdfir_images_set:
-  - yara
-  - suricata
+  - signatures    # the whole detection lane in one image: yara + suricata + hayabusa
   - zeek
   - volatility
   - plaso

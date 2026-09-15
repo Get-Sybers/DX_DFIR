@@ -19,14 +19,18 @@ for parity with the bash script but not yet implemented here.
 """
 from __future__ import annotations
 
-import glob
 import json
 import os
 import subprocess
 import tempfile
 
-from .. import imageexport
+from .. import container, imageexport
 from . import list_images
+
+_SIGNATURES_IMAGE = "get-sybers/signatures:latest"  # yara + suricata + hayabusa, one image
+_HAYABUSA_BIN = "/opt/dxdfir/hayabusa/hayabusa"     # baked binary
+_HAYABUSA_HOME = "/opt/dxdfir/hayabusa"             # config/ resolved relative to here
+_HAYABUSA_RULES = "/opt/dxdfir/hayabusa/rules"      # bundled sigma rules (default)
 
 
 def tag_detections(text: str) -> list[dict]:
@@ -45,16 +49,6 @@ def tag_detections(text: str) -> list[dict]:
     return out
 
 
-def find_binary(hb_dir: str) -> str | None:
-    """The hayabusa executable under hb_dir (not a .zip, executable), or None."""
-    for cand in sorted(glob.glob(os.path.join(hb_dir, "**", "hayabusa*"), recursive=True)):
-        if cand.endswith(".zip"):
-            continue
-        if os.path.isfile(cand) and os.access(cand, os.X_OK):
-            return cand
-    return None
-
-
 def _dir_has_evtx(d: str) -> bool:
     for _cur, _dirs, files in os.walk(d):
         if any(n.lower().endswith(".evtx") for n in files):
@@ -62,37 +56,45 @@ def _dir_has_evtx(d: str) -> bool:
     return False
 
 
-def scan_directory(hb_bin, scan_dir, rules_dir) -> str:
-    """Run hayabusa over scan_dir; return its JSONL detections (empty if none).
+def scan_directory(scan_dir, rules_dir=None, *, image=_SIGNATURES_IMAGE) -> str:
+    """Run the BAKED Hayabusa over scan_dir INSIDE the hardened signatures container
+    (no host binary); return its JSONL detections (empty if none). scan_dir is
+    mounted read-only; the binary, its config and the default sigma rules are baked
+    into the image. A given rules_dir mounts an operator rule set over the default.
 
     Public so the evtx pipeline (get_sybers_dxdfir.evtx.run_hayabusa) can scan the
     same .evtx it collected — loose or image-extracted — without duplicating this.
     """
     if not _dir_has_evtx(scan_dir):
         return ""
-    # Hayabusa won't overwrite an existing --output file. Use a fresh temp DIR and a
-    # path inside it that does not exist yet — unique without the deprecated,
-    # TOCTOU-prone tempfile.mktemp(); the dir (and file) are cleaned up on exit.
+    # Hayabusa won't overwrite an existing --output file; a fresh empty temp dir is
+    # mounted at /out so /out/timeline.jsonl never pre-exists.
     with tempfile.TemporaryDirectory() as tmpd:
-        tmp_out = os.path.join(tmpd, "timeline.jsonl")
+        try:
+            os.chmod(tmpd, 0o777)  # the container's non-root uid must write /out
+        except OSError:
+            pass
         # `--profile verbose` so each JSONL detection carries its MITRE ATT&CK
         # columns (%MitreTactics% / %MitreTags%) — the default (standard) profile
-        # omits them, which is what once made the detection lane emit empty
-        # technique ids. Downstream readers (the sig-hayabusa-high rule's
-        # matcher contract, the STIX exporter) parse MitreTags into technique
-        # ids. A leaner custom profile (minimal + the two Mitre columns) would
-        # need authoring into the operator-supplied config/profiles.yaml, which
-        # isn't present to write to/verify here, so the built-in verbose profile
-        # — guaranteed to emit both — is used; readers keep only the columns
-        # they need, so the extra fields are inert.
+        # omits them, which once made the detection lane emit empty technique ids.
+        # Downstream readers (the sig-hayabusa-high matcher, the STIX exporter)
+        # parse MitreTags into technique ids; the extra columns are inert to others.
         argv = [
-            hb_bin, "json-timeline", "--directory", scan_dir, "--output", tmp_out,
-            "--JSONL-output", "--profile", "verbose",
-            "--no-wizard", "--UTC", "--quiet",
+            _HAYABUSA_BIN, "json-timeline", "--directory", "/scan",
+            "--output", "/out/timeline.jsonl", "--JSONL-output",
+            "--profile", "verbose", "--no-wizard", "--UTC", "--quiet",
         ]
-        if rules_dir:
-            argv += ["--rules", rules_dir]
-        subprocess.run(argv, capture_output=True, check=False)
+        mounts = [f"{os.path.realpath(scan_dir)}:/scan:ro", f"{tmpd}:/out"]
+        if rules_dir and os.path.isdir(rules_dir):
+            argv += ["--rules", "/rules"]
+            mounts.append(f"{os.path.realpath(rules_dir)}:/rules:ro")
+        else:
+            argv += ["--rules", _HAYABUSA_RULES]
+        subprocess.run(
+            container.run(image, argv, mounts=mounts, workdir=_HAYABUSA_HOME),
+            capture_output=True, check=False,
+        )
+        tmp_out = os.path.join(tmpd, "timeline.jsonl")
         if os.path.isfile(tmp_out) and os.path.getsize(tmp_out) > 0:
             with open(tmp_out, encoding="utf-8", errors="replace") as fh:
                 return fh.read()
@@ -110,12 +112,11 @@ def default_stage_dir(repo_root: str) -> str:
 
 def run(*, output_dir, repo_root, fetch=False, force=False,
         loose_dir=None, disk_dir=None, stage_dir=None, plaso_image=None, vss=False,
-        hb_dir=None, hb_bin=None, rules_dir=None, scan_disk=True, **_ignored) -> dict:
+        rules_dir=None, scan_disk=True, image=_SIGNATURES_IMAGE, **_ignored) -> dict:
     ds = os.path.join(repo_root, "data_store")
     loose_dir = loose_dir or os.path.join(ds, "raw")
     disk_dir = disk_dir or os.path.join(ds, "raw", "disk_images")
     stage_dir = stage_dir or default_stage_dir(repo_root)
-    hb_dir = hb_dir or os.path.join(ds, "dependencies", "hayabusa")
     os.makedirs(output_dir, exist_ok=True)
 
     res = {"lane": "hayabusa", "produced": 0, "skipped": 0, "failed": 0, "note": None}
@@ -124,16 +125,12 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
         res["skipped"] += 1
         return res
 
-    hb_bin = hb_bin or find_binary(hb_dir)
-    if not hb_bin or not os.access(hb_bin, os.X_OK):
-        res["note"] = f"no hayabusa binary in {hb_dir} — supply one or --fetch"
-        return res
-    rules_dir = rules_dir or os.path.join(os.path.dirname(hb_bin), "rules")
-
+    # Hayabusa (binary + config + default rules) is baked into the signatures image;
+    # rules_dir, when given, overrides the baked rule set.
     raw = ""
     # 1) loose EVTX
     if _dir_has_evtx(loose_dir):
-        raw += scan_directory(hb_bin, loose_dir, rules_dir)
+        raw += scan_directory(loose_dir, rules_dir, image=image)
 
     # 2) disk images: stage WindowsEventLogs out of each image (userspace, no fuse)
     #    and scan the stage. Reuse-aware: an image the evtx processor (or a prior
@@ -148,7 +145,7 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
         if extract["failed"]:
             res["note"] = f"disk: image_export failed on {extract['failed']} image(s)"
         if _dir_has_evtx(stage_dir):
-            raw += scan_directory(hb_bin, stage_dir, rules_dir)
+            raw += scan_directory(stage_dir, rules_dir, image=image)
 
     if not raw.strip():
         res["note"] = res["note"] or "no detections (no EVTX reachable)"
