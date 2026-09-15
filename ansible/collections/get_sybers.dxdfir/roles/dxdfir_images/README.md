@@ -8,7 +8,7 @@ in-tree sources:
   (volatility from the [PIIAT-Mem](https://github.com/Get-Sybers/PIIAT-Mem)
   submodule's context).
 - **The [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz)
-  submodule** (`third_party/GoDFIR-toolz/`): the whole **Eric Zimmerman tool
+  submodule** (`docker/GoDFIR-toolz/`): the whole **Eric Zimmerman tool
   family**, now almost entirely **static-Go `FROM scratch` substitutes** (no
   shell, no python, just the binary) — `goevtx` (EvtxECmd), `gomft` (MFTECmd),
   `goamcache`/`goappcompat` (Amcache/AppCompatCache), `gore`/`gosbe`
@@ -31,7 +31,7 @@ supply-chain-compromised tool: each image is **stripped to the tool itself** and
 every run is confined hard. ansible does the hardening *at build time* and is
 then **removed from the final image** — it never ships at runtime. The hardening
 playbook has ONE canonical home,
-[`third_party/GoDFIR-toolz/hardening/harden.yml`](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/hardening/harden.yml):
+[`docker/GoDFIR-toolz/hardening/harden.yml`](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/hardening/harden.yml):
 the submodule's images use it directly, and this role's preflight syncs it into
 `docker/hardening/harden.yml` (git-ignored, generated) so DX_DFIR's own images
 can `COPY` it from their build context.
@@ -97,7 +97,7 @@ operator-supplied mode).
 |---|---|---|
 | `dxdfir_images_namespace` | `get-sybers` | Image namespace — every image is tagged `<namespace>/<name>:latest`. |
 | `dxdfir_images_context` | `<repo>/docker` | DX_DFIR's own build context (yara/suricata/zeek/plaso; holds `<name>/Dockerfile` + the synced `hardening/harden.yml`). |
-| `dxdfir_images_eztools_context` | `<repo>/third_party/GoDFIR-toolz` | The GoDFIR-toolz submodule root — evtxecmd, the EZ family, and the two Go substitutes build from here. |
+| `dxdfir_images_eztools_context` | `<repo>/docker/GoDFIR-toolz` | The GoDFIR-toolz submodule root — evtxecmd, the EZ family, and the two Go substitutes build from here. |
 | `dxdfir_runtime_uid` / `dxdfir_runtime_gid` | `2000` | Single run-as uid/gid, passed to every build as `DFIR_UID`/`DFIR_GID` and asserted in the contract. |
 | `dxdfir_images_set` | all eighteen | Images to build. |
 | `dxdfir_images_force` | `false` | Rebuild existing images (layer cache applies). |

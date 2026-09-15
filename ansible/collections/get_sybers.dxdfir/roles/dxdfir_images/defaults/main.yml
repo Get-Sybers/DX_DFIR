@@ -28,7 +28,7 @@ dxdfir_images_context: "{{ dxdfir_images_repo_root }}/docker"
 # family, and the GoDFIR Go tools (goevtx/gomft/gorb/goprefetch/goese/
 # goamcache/goappcompat) build from here; the
 # submodule carries its own hardening/harden.yml (COPYd by its Dockerfiles).
-dxdfir_images_eztools_context: "{{ dxdfir_images_repo_root }}/third_party/GoDFIR-toolz"
+dxdfir_images_eztools_context: "{{ dxdfir_images_repo_root }}/docker/GoDFIR-toolz"
 
 # The build-it-yourself image set. Every runtime tool container is built from
 # an in-repo (or submodule), ansible-hardened Dockerfile — nothing is pulled

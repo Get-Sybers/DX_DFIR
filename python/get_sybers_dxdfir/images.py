@@ -35,7 +35,7 @@ HARDENED_IMAGES = (
     "get-sybers/volatility:latest",
     "get-sybers/plaso:latest",
     # The last still-.NET Eric Zimmerman tool (dxdfir_godfir_toolz lane) — built from
-    # the one parameterized third_party/GoDFIR-toolz/eztool/Dockerfile. Every other
+    # the one parameterized docker/GoDFIR-toolz/eztool/Dockerfile. Every other
     # EZ tool has been ported to a Go substitute in the GoDFIR block below.
     "get-sybers/sqlecmd:latest",
     # GoDFIR Go tools (FROM scratch; each built from its own subdir in the

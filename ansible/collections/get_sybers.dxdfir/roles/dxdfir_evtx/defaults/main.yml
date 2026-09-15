@@ -42,7 +42,7 @@ dxdfir_evtx_hayabusa_rules: ""
 
 # EvtxECmd is now the static-Go goevtx (get-sybers/goevtx, on go-evtx) — no .NET
 # runtime, no DLL to supply, no operator release. Built FROM scratch from
-# third_party/GoDFIR-toolz/goevtx by the dxdfir_images role. Override the tag if
+# docker/GoDFIR-toolz/goevtx by the dxdfir_images role. Override the tag if
 # needed:
 dxdfir_evtx_image: "get-sybers/goevtx:latest"
 

@@ -19,5 +19,5 @@
     fail_msg: >-
       goevtx image {{ dxdfir_evtx_image }} not found. Build it with
       `ansible-playbook playbooks/dxdfir-build-images.yml` (from
-      third_party/GoDFIR-toolz/goevtx).
+      docker/GoDFIR-toolz/goevtx).
     quiet: true

@@ -21,7 +21,7 @@ per-item processing).
     │
     └── scripts/                                      # Host provisioning: setup, image save/load, the offline bundle (bash)
     │
-    └── docker/                                       # Container builds — the hardened dxdfir/* tool images, Byakugan's Elastic-native stack (elastic/), the retiring SOF-ELK stack (sof-elk/)
+    └── docker/                                       # Container builds — the hardened dxdfir/* tool images, the GoDFIR-toolz submodule (static-Go EZ-tools + goevtx), Byakugan's Elastic-native stack (elastic/), the retiring SOF-ELK stack (sof-elk/)
     │
     └── dev-scripts/                                  # Experimental/one-off helpers, unsupported (e.g. the Plaso output module)
     │

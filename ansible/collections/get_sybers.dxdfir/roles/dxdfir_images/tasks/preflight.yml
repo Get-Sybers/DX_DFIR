@@ -24,7 +24,7 @@
       {{ dxdfir_images_eztools_context }}/hardening/harden.yml is missing — the
       GoDFIR-toolz submodule (the canonical home of the hardening playbook) is
       not checked out. Run:
-      git submodule update --init third_party/GoDFIR-toolz
+      git submodule update --init docker/GoDFIR-toolz
     quiet: true
 
 - name: "images-preflight | sync the canonical hardening playbook into the docker/ context"
