@@ -72,8 +72,8 @@ Image tarball management is handled by `scripts/save-docker-images.sh`, not by
 the setup script. On a host with registry access it is optional.
 
 ```bash
-# On an online host: build (dxdfir build-docker) + save every image as tarballs
-scripts/save-docker-images.sh --build
+# On an online host: pull each analysis image and save it as a tarball
+scripts/save-docker-images.sh
 
 # List the images this manages and the tarball directory
 scripts/save-docker-images.sh --list
@@ -83,11 +83,11 @@ scripts/save-docker-images.sh --load
 ```
 
 The images managed are:
-- the `get-sybers/*` hardened tool images from `images.yml` — built in-repo by
-  `dxdfir build-docker` (the `dxdfir_images` role; see docs/Containers.md)
-- the Elastic stack's `docker.elastic.co/*` images at `ELASTIC_VERSION`
-  (derived from `docker/elastic/`'s compose file + `.env.example`) — pulled and
-  saved so the analysis backend deploys offline with zero pulls
+- `dxdfir/*` hardened tool images — built in-repo by
+  `ansible-playbook playbooks/dxdfir-build-images.yml` (see docs/Containers.md)
+- `mcr.microsoft.com/dotnet/runtime:9.0` — the stock .NET runtime for the evtx
+  lane's operator-supplied mode (the only pulled image; the Elastic-native
+  backend under `docker/elastic/` is compose-managed and not part of this set)
 
 Tarballs are written to `data_store/docker_images/`.
 
@@ -96,10 +96,8 @@ After running the script:
 
 1. **Log out and log back in** to apply the Docker group membership changes
 2. If you are seeding an offline host, carry the tarballs from
-   `data_store/docker_images/` across and run `scripts/save-docker-images.sh --verify`
-   (loads every tarball, then asserts the hardened inventory); for a complete
-   air-gapped install use `scripts/package-offline.sh` → the bundle's
-   `setup-offline.sh` instead
+   `data_store/docker_images/` across and run `scripts/save-docker-images.sh --load`
+   (equivalent to loading each one manually with `docker load -i`)
 
 ## Troubleshooting
 
