@@ -94,7 +94,7 @@ jobs:
       - name: Build the Byakugan engine image (at the sources.yml pin)
         run: |
           ref="$(awk '/^byakugan:/{b=1;next} b&&/^[^[:space:]]/{b=0} b&&$1=="ref:"{print $2;exit}' sources.yml)"
-          test -n "$ref"
+          [[ "$ref" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::sources.yml byakugan ref is not a 40-hex sha: '$ref'"; exit 1; }
           # docker/hardening/harden.yml is gitignored — its canonical home is the
           # GoDFIR-toolz submodule, and the dxdfir_images preflight syncs it into
           # the docker/ build context. Do the same here so the raw `docker build`
