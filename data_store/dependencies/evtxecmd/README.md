@@ -10,7 +10,7 @@ Build the image once (the `dxdfir_images` role does this for you):
 
 ```bash
 docker build -t get-sybers/goevtx:latest \
-  -f third_party/GoDFIR-toolz/goevtx/Dockerfile third_party/GoDFIR-toolz/goevtx
+  -f docker/GoDFIR-toolz/goevtx/Dockerfile docker/GoDFIR-toolz/goevtx
 ```
 
 goevtx emits the same `*_EvtxECmd_Output.json` shape the CAR lane consumes

@@ -111,7 +111,7 @@ command -v docker >/dev/null 2>&1 || die "docker not found. This test RUNS the p
 docker info >/dev/null 2>&1 || die "docker daemon not reachable."
 command -v python3 >/dev/null 2>&1 || die "python3 not found."
 docker image inspect get-sybers/goevtx:latest >/dev/null 2>&1 \
-    || die "image get-sybers/goevtx:latest missing — build it: docker build -t get-sybers/goevtx:latest -f third_party/GoDFIR-toolz/goevtx/Dockerfile third_party/GoDFIR-toolz/goevtx"
+    || die "image get-sybers/goevtx:latest missing — build it: docker build -t get-sybers/goevtx:latest -f docker/GoDFIR-toolz/goevtx/Dockerfile docker/GoDFIR-toolz/goevtx"
 # The CAR lane drives the external Byakugan engine inside the hardened
 # get-sybers/byakugan image (cloned + built at the byakugan.ref pin); the engine
 # reconstructs its model from its OWN nested submodules, all baked into the image.

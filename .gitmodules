@@ -2,5 +2,5 @@
 	path = third_party/piiat-mem
 	url = https://github.com/Get-Sybers/PIIAT-Mem.git
 [submodule "third_party/GoDFIR-toolz"]
-	path = third_party/GoDFIR-toolz
+	path = docker/GoDFIR-toolz
 	url = https://github.com/Get-Sybers/GoDFIR-toolz.git

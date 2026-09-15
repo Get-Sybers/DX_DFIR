@@ -11,7 +11,7 @@ argument_specs:
       - >-
         .evtx are parsed by goevtx (get-sybers/goevtx), a static-Go EvtxECmd
         substitute on go-evtx — no .NET runtime, no DLL to supply, built FROM
-        scratch from third_party/GoDFIR-toolz/goevtx.
+        scratch from docker/GoDFIR-toolz/goevtx.
     options:
       dxdfir_evtx_pipeline:
         type: str
@@ -86,7 +86,7 @@ argument_specs:
         default: "get-sybers/goevtx:latest"
         description: >-
           The image the processor runs: goevtx, the static-Go EvtxECmd substitute
-          (built FROM scratch from third_party/GoDFIR-toolz/goevtx). Override to pin
+          (built FROM scratch from docker/GoDFIR-toolz/goevtx). Override to pin
           a digest.
       dxdfir_evtx_python_path:
         type: str

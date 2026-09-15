@@ -11,7 +11,7 @@ grouped by the source sub-dir (host).
 ## The parser: goevtx (no .NET)
 `.evtx` are parsed by **`get-sybers/goevtx`** — a static Go binary on Velociraptor's
 go-evtx, built `FROM scratch` from
-[`third_party/GoDFIR-toolz/goevtx`](https://github.com/Get-Sybers/GoDFIR-toolz/tree/main/goevtx)
+[`docker/GoDFIR-toolz/goevtx`](https://github.com/Get-Sybers/GoDFIR-toolz/tree/main/goevtx)
 by the `dxdfir_images` role. No .NET runtime, no `EvtxECmd.dll` to supply. It emits
 the same `*_EvtxECmd_Output.json` shape the CAR lane content-routes on (EventId,
 Provider, Channel, Computer, EventRecordId, TimeCreated, Payload with the raw
