@@ -40,9 +40,12 @@ func newBuildDockerCmd(env *Env) *cobra.Command {
 				vars = append(vars, "dxdfir_images_force=true")
 			}
 			if len(images) > 0 {
-				// JSON so ansible parses it as a list, matching the play's own docs.
-				set, _ := json.Marshal(images)
-				vars = append(vars, "dxdfir_images_set="+string(set))
+				// A JSON OBJECT extra-var so ansible types the value as a list. A
+				// `key=value` -e is always a STRING (the role's `loop` rejects it),
+				// and -e has higher precedence than any set_fact coercion — so the
+				// list must arrive typed from here.
+				blob, _ := json.Marshal(map[string][]string{"dxdfir_images_set": images})
+				vars = append(vars, string(blob))
 			}
 			vars = append(vars, extraVars...)
 			plan, err := ansiblePlan(r, ap, "dxdfir-build-images.yml", vars, false)

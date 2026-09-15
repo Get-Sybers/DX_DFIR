@@ -1,0 +1,79 @@
+# ==============================================================================
+# The get-sybers/* hardened tool-image inventory — the ONE source of truth.
+#
+# BOTH consumers read this file, so an image is added or changed in ONE place:
+#   - the Python runtime guard  (get_sybers_dxdfir.images) — the allow-list it
+#     enforces (require/audit), and the non-tool repos it exempts;
+#   - the Ansible build role     (dxdfir_images) — the set it builds and each
+#     image's build context / dockerfile / build-args.
+#
+# Per image:
+#   name        <namespace>/<name>:latest, and the build's identity.
+#   context     build context, repo-root-relative (default: docker).
+#   dockerfile  Dockerfile path relative to the context
+#               (default: <name>/Dockerfile — right for the docker/ context).
+#   args        extra --build-arg map (e.g. {EZTOOL: SQLECmd}); DFIR_UID/GID are
+#               always added by the role on top.
+#   ref         a key in sources.yml — its pinned sha is passed as the
+#               <NAME>_REF build-arg (byakugan -> BYAKUGAN_REF).
+#   tool        false = a non-tool image, exempt from the hardened-tool contract
+#               (default: true).
+# ==============================================================================
+namespace: get-sybers
+
+images:
+  - name: signatures        # the whole detection lane: yara + suricata + hayabusa
+  - name: byakugan          # external MITRE CAR engine, cloned + built at the sources.yml pin
+    ref: byakugan
+  - name: zeek
+  - name: volatility        # Volatility 3 memory forensics (PIIAT-Mem submodule's own image)
+    context: third_party/piiat-mem/docker
+    dockerfile: Dockerfile
+  - name: plaso
+  - name: sqlecmd           # the last still-.NET EZ tool (one parameterized Dockerfile)
+    context: docker/GoDFIR-toolz
+    dockerfile: eztool/Dockerfile
+    args: {EZTOOL: SQLECmd}
+  # GoDFIR Go substitutes — each FROM scratch, from its own subdir in the submodule.
+  - name: goprefetch        # PECmd            (XP->Win11 .pf, MAM-compressed)
+    context: docker/GoDFIR-toolz/goprefetch
+    dockerfile: Dockerfile
+  - name: goese             # SrumECmd/SumECmd (SRUDB.dat / SUM Current.mdb)
+    context: docker/GoDFIR-toolz/goese
+    dockerfile: Dockerfile
+  - name: gorb              # RBCmd            (Recycle Bin $I records)
+    context: docker/GoDFIR-toolz/gorb
+    dockerfile: Dockerfile
+  - name: gomft             # MFTECmd          ($MFT, go-ntfs)
+    context: docker/GoDFIR-toolz/gomft
+    dockerfile: Dockerfile
+  - name: goevtx            # EvtxECmd         (.evtx, go-evtx)
+    context: docker/GoDFIR-toolz/goevtx
+    dockerfile: Dockerfile
+  - name: goamcache         # AmcacheParser    (regparser)
+    context: docker/GoDFIR-toolz/goamcache
+    dockerfile: Dockerfile
+  - name: goappcompat       # AppCompatCacheParser (regparser)
+    context: docker/GoDFIR-toolz/goappcompat
+    dockerfile: Dockerfile
+  - name: gore              # RECmd            (regparser, dirty-hive .LOG replay)
+    context: docker/GoDFIR-toolz/gore
+    dockerfile: Dockerfile
+  - name: gosbe             # SBECmd           (regparser, shellbags)
+    context: docker/GoDFIR-toolz/gosbe
+    dockerfile: Dockerfile
+  - name: gole              # LECmd            (.lnk, golnk)
+    context: docker/GoDFIR-toolz/gole
+    dockerfile: Dockerfile
+  - name: gojle             # JLECmd           (jump lists, mscfb)
+    context: docker/GoDFIR-toolz/gojle
+    dockerfile: Dockerfile
+  - name: gowxt             # WxTCmd           (ActivitiesCache.db, modernc sqlite; built, #88)
+    context: docker/GoDFIR-toolz/gowxt
+    dockerfile: Dockerfile
+
+# get-sybers/* repos that legitimately exist but are NOT tool containers — exempt
+# from the hardened-tool contract, allow-listed so the inventory audit ignores them.
+non_tool_repos:
+  - get-sybers/sof-elk
+  - get-sybers/molecule

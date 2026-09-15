@@ -46,4 +46,5 @@ The full directory map is [Dir-Structure.md](../Dir-Structure.md). The pieces th
 | `scripts/` | Host provisioning + offline packaging ([overview](../scripts/Scripts-Overview.md)). |
 | `.github/tests/` | The [check + smoke harnesses](build-and-test.md). |
 | `sources.yml` | External source pins — the Byakugan engine sha (clone-at-build) + a submodule inventory. |
+| `images.yml` | The `get-sybers/*` tool-image inventory (names + build context/dockerfile/args + `ref`→`sources.yml` pin) — the single source of truth both the Python guard (`get_sybers_dxdfir.images`) and the `dxdfir_images` role read. |
 | `third_party/` | The submodules above. |
