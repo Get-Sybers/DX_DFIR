@@ -34,7 +34,7 @@ func readTimeline(repoRoot string, limit int) ([]timelineRow, string) {
 	carDir := filepath.Join(repoRoot, carSubdir)
 	files := findTimelines(carDir)
 	if len(files) == 0 {
-		return nil, "no CAR timeline yet — run `process`, then the car lane (dxdfir_byakugan timeline)"
+		return nil, "no CAR timeline yet — run `process`, then `dxdfir build-car` and `dxdfir car-timeline`"
 	}
 
 	var rows []timelineRow

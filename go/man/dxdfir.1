@@ -111,7 +111,7 @@ is given.
 .TP
 .B verify-car
 The CAR correctness gate over the materialised CAR
-.RI ( data_store/processed/car
+.RI ( data_store/processed/byakugan
 by default, or
 .BR --car-dir ):
 each exercised object populated, values sane (IPs, ports, SIDs,
@@ -216,7 +216,7 @@ Rebuild CAR stores that already exist (after a map/coverage change).
 .TP
 .BI --car-dir " DIR"
 The materialised CAR tree to check. Default:
-.IR <repo>/data_store/processed/car .
+.IR <repo>/data_store/processed/byakugan .
 .SS build-docker
 .TP
 .BR --image ", " -i " " \fINAME\fR
@@ -287,7 +287,7 @@ Normalise everything processed into CAR, then gate it:
 .B dxdfir build-car && dxdfir verify-car
 .TP
 One timeline across every source:
-.B dxdfir car-timeline data_store/processed/car --out /tmp/timeline.jsonl
+.B dxdfir car-timeline data_store/processed/byakugan --out /tmp/timeline.jsonl
 .SH FILES
 .TP
 .I ansible/collections/get_sybers.dxdfir/
@@ -300,7 +300,7 @@ The processing package (also runnable as
 .TP
 .I data_store/
 Raw evidence and processed output (gitignored); the materialised CAR lands under
-.IR data_store/processed/car/ .
+.IR data_store/processed/byakugan/ .
 .TP
 .I docker/elastic/
 The Elastic-native analysis backend (docker compose).

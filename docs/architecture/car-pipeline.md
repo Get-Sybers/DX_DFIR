@@ -11,12 +11,12 @@ into the image at the `byakugan.ref` pin (`docker/byakugan/Dockerfile`) by `dxdf
 build-docker`, never vendored. DX_DFIR is a thin front over it: one Ansible role,
 `dxdfir_byakugan`, with three actions. Each action runs the Python seam
 `get_sybers_dxdfir.mitrecar`, which holds **no CAR logic itself** — it only maps the host
-paths to container mounts (processed evidence read-only, the `car/` output read-write) and
+paths to container mounts (processed evidence read-only, the `byakugan/` output read-write) and
 shells the engine image. (Grepping the code, `mitrecar` is the name you'll meet for the
 CAR lane.)
 
 ```
-processed/ ──build──▶ car/<source>/car.db + car_<object>.jsonl ──timeline──▶ timeline.jsonl
+processed/ ──build──▶ byakugan/<source>/car.db + car_<object>.jsonl ──timeline──▶ timeline.jsonl
                              │
                           verify  (the correctness gate)
 ```
