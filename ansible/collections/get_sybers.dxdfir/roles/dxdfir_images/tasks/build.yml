@@ -5,14 +5,26 @@
 # `docker export` scan proving the escalation/installer binaries and (for the
 # tool-only images) the shell and python are actually absent.
 
+# Fail fast (not a silent docker/<name>/Dockerfile fallback) if the requested
+# image isn't in the manifest — images.yml is the source of truth.
+- name: "images-build | {{ dxdfir_images_name }} is declared in images.yml"
+  ansible.builtin.assert:
+    that:
+      - (dxdfir_images_manifest.images | default([])) | selectattr('name', 'equalto', dxdfir_images_name) | list | length == 1
+    fail_msg: >-
+      {{ dxdfir_images_name }} is not in images.yml — add it to the manifest (the
+      single source of truth), or correct the requested --image name.
+    quiet: true
+
 - name: "images-build | build the hardened image {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"
   vars:
-    # This image's entry in the images.yml manifest. A `ref` (if present) resolves
-    # to a <NAME>_REF build-arg whose sha comes from sources.yml (byakugan ->
-    # BYAKUGAN_REF), so a clone-at-build image builds reproducibly at the pin.
-    _img: "{{ dxdfir_images_manifest.images | selectattr('name', 'equalto', dxdfir_images_name) | first | default({}) }}"
+    # This image's entry in the images.yml manifest (guaranteed present by the
+    # assert above). A `ref` (if present) is a sources.yml key whose sha is passed
+    # as the <NAME>_REF build-arg — named from the IMAGE (byakugan -> BYAKUGAN_REF,
+    # piiat-mem -> PIIAT_MEM_REF), the arg name the Dockerfile expects.
+    _img: "{{ (dxdfir_images_manifest.images | default([])) | selectattr('name', 'equalto', dxdfir_images_name) | first }}"
     _ref_args: >-
-      {{ {(_img.ref | upper | replace('-', '_')) ~ '_REF':
+      {{ {(dxdfir_images_name | upper | replace('-', '_')) ~ '_REF':
            ((dxdfir_images_sources[_img.ref] | default({})).ref | default('main'))}
          if (_img.ref is defined) else {} }}
   community.docker.docker_image:

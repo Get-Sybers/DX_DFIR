@@ -41,7 +41,7 @@ dxdfir_images_sources: >-
   {{ (lookup('file', dxdfir_images_repo_root ~ '/sources.yml', errors='ignore') | default('', true) | from_yaml) or {} }}
 # Names to build, in manifest order; build.yml resolves each one's build context,
 # dockerfile and args (incl. a sources.yml `ref` -> <NAME>_REF) from its entry.
-dxdfir_images_set: "{{ dxdfir_images_manifest.images | map(attribute='name') | list }}"
+dxdfir_images_set: "{{ (dxdfir_images_manifest.images | default([])) | map(attribute='name') | list }}"
 
 # Rebuild even when an image already exists (docker build cache still applies).
 dxdfir_images_force: false

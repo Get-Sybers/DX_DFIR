@@ -47,12 +47,23 @@ def _load_inventory() -> tuple[tuple[str, ...], tuple[str, ...]]:
     default) MUST be hardened (label + uid 2000); non_tool_repos are exempt but
     allow-listed so they don't trip the 'unexpected image' audit."""
     import yaml
-    data = yaml.safe_load(_find_manifest().read_text(encoding="utf-8")) or {}
+    path = _find_manifest()
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise RuntimeError(f"{path}: tool-image manifest must be a YAML mapping")
     ns = data.get("namespace", "get-sybers")
-    hardened = tuple(f"{ns}/{img['name']}:latest"
-                     for img in (data.get("images") or []) if img.get("tool", True))
+    images = data.get("images") or []
+    if not isinstance(images, list):
+        raise RuntimeError(f"{path}: 'images' must be a list of image entries")
+    hardened = []
+    for img in images:
+        if not isinstance(img, dict) or not isinstance(img.get("name"), str) or not img["name"]:
+            raise RuntimeError(f"{path}: every image entry needs a non-empty 'name' "
+                               f"string (bad entry: {img!r})")
+        if img.get("tool", True):
+            hardened.append(f"{ns}/{img['name']}:latest")
     non_tool = tuple(data.get("non_tool_repos") or ())
-    return hardened, non_tool
+    return tuple(hardened), non_tool
 
 
 HARDENED_IMAGES, ALLOWED_NON_TOOL_REPOS = _load_inventory()
