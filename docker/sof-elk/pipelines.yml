@@ -1,3 +1,0 @@
-# Load SOF-ELK's order-prefixed parsing configs as one pipeline (the VM's conf.d model).
-- pipeline.id: sof-elk
-  path.config: "/usr/local/sof-elk/configfiles/*.conf"

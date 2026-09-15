@@ -1,7 +1,6 @@
 # dxdfir_volatility
 
-Process **memory images** with **Volatility 3** into per-plugin JSON Lines for the
-Elastic-native or SOF-ELK pipeline. The role is structure only — it asserts inputs,
+Process **memory images** with **Volatility 3** into per-plugin JSON Lines. The role is structure only — it asserts inputs,
 runs a preflight (docker reachable, memory dir present, the hardened
 [`get-sybers/piiat-mem`](https://github.com/Get-Sybers/PIIAT-Mem) image guarded),
 then **`docker run`s that image directly** — no processor module, no vendored
@@ -21,10 +20,8 @@ the raw `<dest>/plugins/<plugin>.jsonl` to the mounted `/out`.
 ## Role variables
 | Variable | Default | Description |
 |---|---|---|
-| `dxdfir_volatility_pipeline` | `elastic` | `elastic` or `sofelk` — selects the output destination (the **playbook** decides this). |
 | `dxdfir_volatility_memory_dir` | `<repo>/data_store/raw/memory` | Memory-image tree to process (recursed). |
-| `dxdfir_volatility_elastic_out_dir` | `<repo>/data_store/processed/volatility` | Elastic-path output. |
-| `dxdfir_volatility_sofelk_out_dir` | `<repo>/data_store/processed/sofelk/volatility` | SOF-ELK-path output. |
+| `dxdfir_volatility_out_dir` | `<repo>/data_store/processed/volatility` | Output base (override to redirect). |
 | `dxdfir_volatility_symbols_dir` | `<repo>/data_store/dependencies/volatility3-symbols` | Volatility 3 kernel-symbol cache (mounted at `/symbols`). |
 | `dxdfir_volatility_image` | `get-sybers/piiat-mem:latest` | The hardened, env-driven PIIAT-Mem (Volatility 3) image the lane docker-runs (built by `playbooks/dxdfir-build-images.yml`). |
 | `dxdfir_volatility_symbols_online` | `false` | Allow container network access for ISF symbol fetch — the one legitimate network need; pre-seed the symbols dir instead. |
@@ -46,7 +43,7 @@ verify gate is "some plugin produced output, or there were no images", not
 
 ## Example
 ```bash
-ansible-playbook playbooks/dxdfir-process-volatility.yml -e dxdfir_volatility_pipeline=elastic
+ansible-playbook playbooks/dxdfir-process-volatility.yml
 ```
 
 ## Testing

@@ -7,11 +7,10 @@
 - name: "evtx | assert inputs"
   ansible.builtin.assert:
     that:
-      - dxdfir_evtx_pipeline in ['elastic', 'sofelk']
       # At least one input source: loose .evtx (evtx_dir) or disk images (image_src).
       - (dxdfir_evtx_evtx_dir | length > 0) or (dxdfir_evtx_image_src | length > 0)
     fail_msg: >-
-      dxdfir_evtx needs dxdfir_evtx_pipeline (elastic|sofelk) and an input source
+      dxdfir_evtx needs an input source
       (dxdfir_evtx_evtx_dir or dxdfir_evtx_image_src).
     quiet: true
   tags: [always]
@@ -24,8 +23,8 @@
     dxdfir_evtx_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
   tags: [always]
 
-# The pipeline decision (elastic|sofelk) is carried by the resolved
-# dxdfir_evtx_out_dir default — the shared tasks are pipeline-agnostic.
+# Output lands under the resolved dxdfir_evtx_out_dir default — the shared
+# tasks only consume it.
 - name: "evtx | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
     name: dxdfir_lane

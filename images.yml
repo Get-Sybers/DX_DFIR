@@ -9,9 +9,11 @@
 #
 # Per image:
 #   name        <namespace>/<name>:latest, and the build's identity.
-#   context     build context, repo-root-relative (default: docker).
+#   context     build context, repo-root-relative (default: docker/GoDFIR-toolz,
+#               the submodule root — the canonical hardening/harden.yml is COPYd
+#               from there).
 #   dockerfile  Dockerfile path relative to the context
-#               (default: <name>/Dockerfile — right for the docker/ context).
+#               (default: <name>/Dockerfile — right for the submodule-root context).
 #   args        extra --build-arg map (e.g. {EZTOOL: SQLECmd}); DFIR_UID/GID are
 #               always added by the role on top.
 #   ref         a key in sources.yml — its pinned sha is passed as the
@@ -27,12 +29,9 @@ images:
     ref: byakugan
   - name: zeek
   - name: piiat-mem         # Volatility 3 memory forensics — self-orchestrating, env-driven
-    context: docker/GoDFIR-toolz
-    dockerfile: piiat-mem/Dockerfile
     ref: piiat-mem
   - name: plaso
   - name: sqlecmd           # the last still-.NET EZ tool (one parameterized Dockerfile)
-    context: docker/GoDFIR-toolz
     dockerfile: eztool/Dockerfile
     args: {EZTOOL: SQLECmd}
   # GoDFIR Go substitutes — each FROM scratch, from its own subdir in the submodule.
@@ -76,5 +75,4 @@ images:
 # get-sybers/* repos that legitimately exist but are NOT tool containers — exempt
 # from the hardened-tool contract, allow-listed so the inventory audit ignores them.
 non_tool_repos:
-  - get-sybers/sof-elk
   - get-sybers/molecule

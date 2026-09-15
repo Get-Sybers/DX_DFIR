@@ -4,15 +4,15 @@ galaxy_info:
   namespace: get_sybers
   author: Get-Sybers
   description: >-
-    Lifecycle for the docker-compose analysis backends (Elastic-native and
-    SOF-ELK): deploy/destroy/start/stop/status. Elastic uses prebuilt images and
-    stacks/elastic/.env; SOF-ELK reuses dxdfir_deploy_sofelk for its build.
+    Lifecycle for the docker-compose Elastic analysis backend:
+    deploy/destroy/start/stop/status. The stack uses prebuilt images and
+    docker/elastic/.env.
   company: Get-Sybers
   license: MIT
   min_ansible_version: "2.15"
   platforms:
     - name: Debian
       versions: [bookworm, trixie]
-  galaxy_tags: [dfir, stack, elastic, sofelk, docker]
+  galaxy_tags: [dfir, stack, elastic, docker]
 
 dependencies: []

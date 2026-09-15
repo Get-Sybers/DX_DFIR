@@ -10,12 +10,6 @@ argument_specs:
         and names each json_line output by the resolved image_hostname. Idempotent:
         an image whose .plaso db and recorded output both exist is skipped.
     options:
-      dxdfir_plaso_pipeline:
-        type: str
-        required: false
-        default: elastic
-        choices: [elastic, sofelk]
-        description: "Which backend to target; selects the output destination."
       dxdfir_plaso_input_dir:
         type: str
         required: false
@@ -31,21 +25,10 @@ argument_specs:
           - Loose-artefact trees, one folder per host (/var/log copies, mobile
             filesystem dumps, triage output), parsed by log2timeline as directory
             sources. Empty disables loose sources (opt-in — trees can be large).
-      dxdfir_plaso_elastic_out_dir:
-        type: str
-        required: false
-        description: "Elastic-path output dir (default data_store/processed/log2timeline)."
-      dxdfir_plaso_sofelk_out_dir:
-        type: str
-        required: false
-        description: "SOF-ELK-path output dir (delivered into SOF-ELK by dxdfir_ingest_sofelk)."
       dxdfir_plaso_out_dir:
         type: str
         required: false
-        description: >-
-          Resolved output base for the selected pipeline (defaults to the
-          elastic/sofelk out dir per dxdfir_plaso_pipeline); override to send
-          output to a custom location.
+        description: "Output dir (default data_store/processed/log2timeline); override to send output to a custom location."
       dxdfir_plaso_module:
         type: str
         required: false

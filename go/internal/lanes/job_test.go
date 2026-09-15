@@ -52,12 +52,11 @@ func laneIndexOf(args []string, want string) int {
 
 func TestAnsibleArgsVarLayering(t *testing.T) {
 	j := &Job{
-		Repo:     &repo.Repo{Root: "/fake/repo"},
-		Ansible:  "/venv/bin/ansible-playbook",
-		Pipeline: "sofelk",
-		Force:    true,
+		Repo:    &repo.Repo{Root: "/fake/repo"},
+		Ansible: "/venv/bin/ansible-playbook",
+		Force:   true,
 		// user vars LAST — must win over everything via ansible last-wins
-		ExtraVars: []string{"dxdfir_zeek_pipeline=elastic", "user=1"},
+		ExtraVars: []string{"dxdfir_zeek_force=false", "user=1"},
 	}
 	lr := LaneRun{
 		Spec:      Spec{Name: "zeek"},
@@ -84,13 +83,12 @@ func TestAnsibleArgsVarLayering(t *testing.T) {
 		t.Errorf("process lanes must never run with --check: %v", args)
 	}
 
-	// Full ordered layering: pipeline, force, collection scope, user extra LAST.
+	// Full ordered layering: force, collection scope, user extra LAST.
 	want := []string{
-		"dxdfir_zeek_pipeline=sofelk",
 		"dxdfir_zeek_force=true",
 		"dxdfir_zeek_pcaps_dir=/coll/pcaps",
 		"scope=a",
-		"dxdfir_zeek_pipeline=elastic",
+		"dxdfir_zeek_force=false",
 		"user=1",
 	}
 	vals, firstE := laneExtraVars(args)
@@ -111,18 +109,17 @@ func TestAnsibleArgsVarLayering(t *testing.T) {
 
 func TestAnsibleArgsForceFalseNoUserVars(t *testing.T) {
 	j := &Job{
-		Repo:     &repo.Repo{Root: "/fake/repo"},
-		Ansible:  "ansible-playbook",
-		Pipeline: "elastic",
-		Force:    false,
+		Repo:    &repo.Repo{Root: "/fake/repo"},
+		Ansible: "ansible-playbook",
+		Force:   false,
 	}
 	args, err := j.ansibleArgs(LaneRun{Spec: Spec{Name: "plaso"}})
 	if err != nil {
 		t.Fatalf("ansibleArgs: %v", err)
 	}
-	want := []string{"dxdfir_plaso_pipeline=elastic", "dxdfir_plaso_force=false"}
+	want := []string{"dxdfir_plaso_force=false"}
 	vals, _ := laneExtraVars(args)
-	if len(vals) != len(want) || vals[0] != want[0] || vals[1] != want[1] {
+	if len(vals) != len(want) || vals[0] != want[0] {
 		t.Fatalf("-e values = %v, want %v", vals, want)
 	}
 }

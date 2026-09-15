@@ -19,7 +19,7 @@ type Spec struct {
 	Name    string     // zeek, evtx, volatility, plaso, godfir-toolz, signatures
 	Title   string     // display title
 	Kind    model.Kind // gauge / heartbeat / spinner
-	OutLeaf string     // processed subdir leaf for pipeline=elastic
+	OutLeaf string     // processed subdir leaf under data_store/processed/
 	// InputSubdirs are the raw/ subdirs this lane reads by default (used for the
 	// denominator when NOT collection-scoped). Extensions filter what counts.
 	InputSubdirs []string
@@ -71,12 +71,8 @@ func AllNames() []string {
 	return out
 }
 
-// outDir resolves the processed output directory for this lane and pipeline;
-// sofelk nests the same leaf under processed/sofelk/.
-func (s Spec) outDir(repoRoot, pipeline string) string {
-	if pipeline == "sofelk" {
-		return filepath.Join(repoRoot, "data_store", "processed", "sofelk", s.OutLeaf)
-	}
+// outDir resolves the processed output directory for this lane.
+func (s Spec) outDir(repoRoot string) string {
 	return filepath.Join(repoRoot, "data_store", "processed", s.OutLeaf)
 }
 

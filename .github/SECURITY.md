@@ -25,15 +25,13 @@ Expect a slow response — this is a personal project, not a maintained product.
 
 These are already known. You do not need to report them.
 
-- **The analysis backend holds evidence.** The Elastic-native stack
-  (`stacks/elastic`) runs with security **on** — authentication, RBAC, TLS on
+- **The analysis backend holds evidence.** The Elastic stack
+  (`docker/elastic`) runs with security **on** — authentication, RBAC, TLS on
   the Elasticsearch API and transport — but Kibana is served over plain HTTP on
   the loopback interface, Filebeat writes as the `elastic` superuser for now
   (a least-privilege writer role is a follow-up), and every credential lives in
-  the gitignored `stacks/elastic/.env`. The retiring SOF-ELK stack
-  (`docker/sof-elk`) has no security at all — no authentication, no access
-  control, plaintext HTTP. Every published port binds `127.0.0.1`; that
-  binding is a real control, the rest is best effort.
+  the gitignored `docker/elastic/.env`. Every published port binds
+  `127.0.0.1`; that binding is a real control, the rest is best effort.
 - **`chmod -R 777`.** The setup and processing scripts widen permissions
   across `data_store/` to work around container UID mismatch. Anyone with
   local access can read or modify evidence and configuration. Do not run this
@@ -62,9 +60,9 @@ legally significant.
 - Work on copies, and verify hashes before and after processing.
 - The processing scripts mount evidence directories into containers. The VMware
   path is mounted read-only; treat everything else as potentially mutable.
-- The backend holds ingested evidence on localhost (named Docker volumes for the
-  Elastic stack), and the delivery role (`dxdfir_ingest_sofelk`) mirrors processed
-  output into the watch directory the stack mounts — copies that outlive the
-  run; purge them with the case.
+- The backend holds ingested evidence on localhost (named Docker volumes for
+  the Elastic stack), and Filebeat's read of the processed tree
+  (`ELASTIC_INGEST_DIR`) indexes copies that outlive the run; purge the
+  stack's volumes with the case.
 - Nothing here is written to preserve chain of custody. If your work needs to
   stand up in a legal context, this project is not sufficient on its own.

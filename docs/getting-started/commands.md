@@ -35,7 +35,6 @@ See the [collection concept](../architecture/processing-lanes.md#collections).
 |---|---|
 | `dxdfir process [COLLECTION] [LANE]` | Process evidence with a [lane](../architecture/processing-lanes.md). `LANE` ∈ `zeek·evtx·volatility·plaso·godfir-toolz·signatures·all`; positionals are order-independent. |
 | `dxdfir process … --force` | Reprocess inputs that already have output (default is idempotent). |
-| `dxdfir process … -p sofelk` | Use the retiring SOF-ELK delivery pipeline instead of the default `elastic`. |
 | `dxdfir process … -e KEY=VALUE` | Pass an Ansible extra-var (repeatable). |
 
 ## CAR (normalisation)
@@ -51,12 +50,12 @@ See the [collection concept](../architecture/processing-lanes.md#collections).
 
 | Command | What it does |
 |---|---|
-| `dxdfir stack deploy [-s elastic\|sofelk] [--no-build]` | Build (if needed), start, and verify the analysis stack. |
+| `dxdfir stack deploy [--no-build]` | Build (if needed), start, and verify the analysis stack. |
 | `dxdfir stack start` / `stop` / `status` | Start / stop / show the selected stack's containers. |
 | `dxdfir stack destroy [--volumes] [-y]` | Remove the stack; `--volumes` also wipes ingested data. |
 
 See [the stack](../architecture/the-stack.md) and
-[stacks/elastic/README.md](../../stacks/elastic/README.md).
+[docker/elastic/README.md](../../docker/elastic/README.md).
 
 ## Housekeeping
 

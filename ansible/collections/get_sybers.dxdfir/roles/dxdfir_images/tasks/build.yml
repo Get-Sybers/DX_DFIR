@@ -1,11 +1,12 @@
 ---
-# One image: build from docker/<name>/Dockerfile (context docker/, so the shared
-# build-time hardening playbook is in reach), then verify the MINIMAL posture —
+# One image: build from the GoDFIR-toolz submodule (<name>/Dockerfile against
+# the submodule-root context by default, so the canonical build-time hardening
+# playbook is in reach), then verify the MINIMAL posture —
 # statically (fixed non-root USER, hardened label) and with a shell-free
 # `docker export` scan proving the escalation/installer binaries and (for the
 # tool-only images) the shell and python are actually absent.
 
-# Fail fast (not a silent docker/<name>/Dockerfile fallback) if the requested
+# Fail fast (not a silent <name>/Dockerfile fallback) if the requested
 # image isn't in the manifest — images.yml is the source of truth.
 - name: "images-build | assert the image is declared in images.yml — {{ dxdfir_images_name }}"
   ansible.builtin.assert:
@@ -33,9 +34,10 @@
     source: build
     force_source: "{{ dxdfir_images_force | bool }}"
     build:
-      # context is repo-root-relative in the manifest (default: docker/); dockerfile
-      # is relative to it (default: <name>/Dockerfile, right for the docker/ context).
-      path: "{{ dxdfir_images_repo_root ~ '/' ~ (_img.context | default('docker')) }}"
+      # context is repo-root-relative in the manifest; absent, the role default
+      # dxdfir_images_context (the GoDFIR-toolz submodule root) applies.
+      # dockerfile is relative to the context (default: <name>/Dockerfile).
+      path: "{{ (dxdfir_images_repo_root ~ '/' ~ _img.context) if _img.context is defined else dxdfir_images_context }}"
       dockerfile: "{{ _img.dockerfile | default(dxdfir_images_name ~ '/Dockerfile') }}"
       # The single-source run-as uid/gid are combined ON TOP of the manifest args
       # (and any ref arg), so they always WIN over a per-image build arg.

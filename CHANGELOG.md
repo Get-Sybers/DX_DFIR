@@ -7,7 +7,33 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Removed
+- **SOF-ELK, eradicated.** The Elastic-native stack is the one analysis backend;
+  the legacy SOF-ELK path is gone end to end: `docker/sof-elk/` (the from-source
+  image + compose stack), the `dxdfir_deploy_sofelk` / `dxdfir_ingest_sofelk`
+  roles and their playbooks, `get_sybers_dxdfir.sofelk` (the delivery
+  script + ledger — Filebeat's own registry already provides idempotent
+  ingest of the processed tree), the `--pipeline elastic|sofelk` axis on
+  `dxdfir process` (and the `dxdfir_<lane>_pipeline` /
+  `*_elastic_out_dir` / `*_sofelk_out_dir` role variables — collapsed into one
+  `dxdfir_<lane>_out_dir`), the `--stack` selector on `dxdfir stack`, and the
+  `get-sybers/sof-elk` allow-list entry in `images.yml`. Removing the from-source
+  SOF-ELK build also removes the repo's least-pinned fetches (a floating
+  `philhagen/sof-elk@main` clone, `FROM alpine/git:latest`, unpinned Logstash
+  plugins).
+
 ### Changed
+- **All tool-image builds live in the GoDFIR-toolz submodule; the Elastic stack
+  is back home at `docker/elastic/`.** The byakugan/plaso/signatures/zeek build
+  items moved from `docker/<name>/` into the submodule (one dir per image,
+  submodule-root build context — the piiat-mem pattern), so `docker/` holds only
+  `elastic/` and the submodule. `images.yml`'s default context is now
+  `docker/GoDFIR-toolz`; the `dxdfir_images` preflight no longer syncs
+  `harden.yml` into a generated `docker/hardening/` mirror (every Dockerfile
+  COPYs the canonical copy from the shared context) and its submodule gate now
+  says `git submodule update --init --recursive`. The Elastic stack moved from
+  `stacks/elastic/` to `docker/elastic/` (reverting #219's `stacks/` detour);
+  `stacks/` is gone.
 - **The Eric Zimmerman tool family is now all-Go, and the zimmerman lane runs the
   Go substitutes end to end.** The last five .NET EZ tools were ported to
   static-Go `FROM scratch` images in

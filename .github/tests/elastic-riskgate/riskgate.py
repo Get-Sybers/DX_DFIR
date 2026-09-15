@@ -2,7 +2,7 @@
 """Byakugan Phase-0 RISK GATE — the runner behind .github/tests/elastic-riskgate/riskgate.sh.
 
 Proves the two load-bearing assumptions of the Elastic-native design against a
-RUNNING stacks/elastic stack (Elasticsearch 9.4.3, security on, Basic licence):
+RUNNING docker/elastic stack (Elasticsearch 9.4.3, security on, Basic licence):
 
   proof 1  a detection runs ON DEMAND over an EVIDENCE-TIME window — dead-box
            evidence whose @timestamps lie years in the past — and nothing old is
@@ -23,7 +23,7 @@ removes the fixture again. Standard library only.
       --keep                  `all`: leave the fixture in the cluster afterwards
       --drop-template         `clean`: also delete the car-detections index template
 
-Connection (riskgate.sh discovers these from stacks/elastic): ES_URL, ES_USER,
+Connection (riskgate.sh discovers these from docker/elastic): ES_URL, ES_USER,
 ES_PASSWORD, ES_CA (PEM), RISKGATE_INSECURE=1. docs/riskgate.md is the manual.
 """
 from __future__ import annotations
@@ -59,7 +59,7 @@ TEMPLATE_NAME = "car-detections"
 # Every fixture row predates this — the dead-box bar every stored row must clear.
 EVIDENCE_CUTOFF = "2020-01-01T00:00:00.000Z"
 REQUIRED_MAJOR = 9          # LOOKUP JOIN: 9.x (technical preview in 8.18)
-PINNED_VERSION = "9.4.3"    # stacks/elastic pins this; other versions are indicative only
+PINNED_VERSION = "9.4.3"    # docker/elastic pins this; other versions are indicative only
 # The two fixture guids the probe reads (see fixtures/logs-car.ndjson).
 PROCESS_GUID = "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}"
 FILE_GUID = "WS01-filestat-000ef2a1"
@@ -161,7 +161,7 @@ class Es:
         except (urllib.error.URLError, OSError) as e:
             raise RiskgateError(
                 f"{method} {path}: cannot reach {self.url}: {getattr(e, 'reason', e)} "
-                "(is stacks/elastic up? ES_URL / ES_CA right?)") from e
+                "(is docker/elastic up? ES_URL / ES_CA right?)") from e
         try:
             doc = json.loads(text) if text.strip() else {}
         except ValueError:
@@ -176,7 +176,7 @@ def connect_from_env() -> Es:
     ca = os.environ.get("ES_CA") or None
     insecure = os.environ.get("RISKGATE_INSECURE", "0") == "1"
     if not password:
-        raise RiskgateError("ES_PASSWORD is not set (riskgate.sh reads stacks/elastic/.env; or export it)")
+        raise RiskgateError("ES_PASSWORD is not set (riskgate.sh reads docker/elastic/.env; or export it)")
     if ca and not os.path.isfile(ca):
         raise RiskgateError(f"ES_CA={ca} is not a file")
     if url.startswith("https://") and not ca and not insecure:
@@ -334,7 +334,7 @@ def preflight(es: Es, rep: Report) -> None:
               f"Elasticsearch {version}, cluster {doc.get('cluster_name', '?')}",
               f"Elasticsearch {version}: LOOKUP JOIN needs {REQUIRED_MAJOR}.x (technical preview in 8.18)")
     if version != PINNED_VERSION:
-        rep.info(f"stacks/elastic pins {PINNED_VERSION}; a result on {version} is indicative only")
+        rep.info(f"docker/elastic pins {PINNED_VERSION}; a result on {version} is indicative only")
     status, doc = es.call("GET", "/_license")
     lic = doc.get("license", {}) if status == 200 else {}
     rep.info(f"licence: {lic.get('type', '?')} ({lic.get('status', '?')}) — Basic is enough for everything here")
@@ -577,7 +577,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="riskgate.py",
         description="Byakugan Phase-0 risk gate: proves manual evidence-time detection runs and "
-                    "LOOKUP JOIN flagging against a running stacks/elastic stack (docs/riskgate.md).")
+                    "LOOKUP JOIN flagging against a running docker/elastic stack (docs/riskgate.md).")
     ap.add_argument("command", nargs="?", default="all",
                     choices=["all", "selftest", "load", "proof1", "proof2", "probe", "clean"])
     ap.add_argument("--keep", action="store_true", help="`all`: leave the fixture in the cluster")

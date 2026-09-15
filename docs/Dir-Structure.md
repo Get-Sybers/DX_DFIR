@@ -16,16 +16,14 @@ per-item processing).
     │   └── tests/                                    # pytest unit tests (pure logic, no Docker)
     │
     └── ansible/collections/get_sybers.dxdfir/         # the Ansible collection — orchestration
-    │   └── roles/                                    # one role per source + dxdfir_images / dxdfir_byakugan / dxdfir_stack / dxdfir_cleanup + the SOF-ELK deploy/deliver roles
-    │   └── playbooks/                                # dxdfir-process-* / dxdfir-build-images / dxdfir-verify-images / dxdfir-build-car / dxdfir-verify-car / dxdfir-car-timeline / dxdfir-stack-* / dxdfir-cleanup / dxdfir-deploy-sofelk / dxdfir-ingest-sofelk
+    │   └── roles/                                    # one role per source + dxdfir_images / dxdfir_byakugan / dxdfir_stack / dxdfir_cleanup
+    │   └── playbooks/                                # dxdfir-process-* / dxdfir-build-images / dxdfir-verify-images / dxdfir-build-car / dxdfir-verify-car / dxdfir-car-timeline / dxdfir-stack-* / dxdfir-cleanup
     │
     └── scripts/                                      # Host provisioning: setup, image save/load, the offline bundle (bash)
     │
-    └── docker/                                       # Container builds — the hardened dxdfir/* tool images, the GoDFIR-toolz submodule (static-Go EZ-tools + goevtx), Byakugan's Elastic-native stack (elastic/), the retiring SOF-ELK stack (sof-elk/)
+    └── docker/                                       # Container builds — the hardened dxdfir/* tool images, the GoDFIR-toolz submodule (every tool-image build context), Byakugan's Elastic-native stack (elastic/)
     │
     └── dev-scripts/                                  # Experimental/one-off helpers, unsupported (e.g. the Plaso output module)
-    │
-    └── third_party/                                  # Vendored as a submodule: PIIAT-Mem (memory)
     │
     └── .github/                                      # CI workflows + the check harness (tests/: run-checks.sh, smoke-test.sh, the Elastic risk gate) + CONTRIBUTING / SECURITY / THIRD_PARTY_NOTICES
     │
@@ -81,14 +79,12 @@ per-item processing).
             │   └── yara/ suricata/ hayabusa/         # detection JSONL (YARA matches / Suricata EVE / Hayabusa Sigma)
             │
             └── car/
-            │   └── <source>/                         # the materialised CAR: car.db + superset.db + car_<object>.jsonl (+ car_relationships.jsonl)
-            │
-            └── sofelk/<tool>/                        # --pipeline sofelk output, delivered by dxdfir-ingest-sofelk.yml
+                └── <source>/                         # the materialised CAR: car.db + superset.db + car_<object>.jsonl (+ car_relationships.jsonl)
 ```
 
 The CAR engine lives **outside** this tree entirely: the Byakugan engine is
 cloned + built into the hardened `get-sybers/byakugan` image
-(`docker/byakugan/Dockerfile`) at the pin in the repo-root `sources.yml`, by
+(`docker/GoDFIR-toolz/byakugan/Dockerfile`) at the pin in the repo-root `sources.yml`, by
 `dxdfir build-docker`. The CAR lane only shells that image — nothing is checked
 out on the host.
 

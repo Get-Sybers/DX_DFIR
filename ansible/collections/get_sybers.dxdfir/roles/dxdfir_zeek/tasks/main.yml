@@ -9,10 +9,9 @@
 - name: "zeek | assert inputs"
   ansible.builtin.assert:
     that:
-      - dxdfir_zeek_pipeline in ['elastic', 'sofelk']
       - dxdfir_zeek_pcap_dir | length > 0
     fail_msg: >-
-      dxdfir_zeek needs dxdfir_zeek_pipeline (elastic|sofelk) and a non-empty
+      dxdfir_zeek needs a non-empty
       dxdfir_zeek_pcap_dir.
     quiet: true
   tags: [always]
@@ -24,8 +23,8 @@
     dxdfir_zeek_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
   tags: [always]
 
-# The pipeline decision (elastic|sofelk) is carried by the resolved
-# dxdfir_zeek_out_dir default — the shared tasks are pipeline-agnostic.
+# Output lands under the resolved dxdfir_zeek_out_dir default — the shared
+# tasks only consume it.
 - name: "zeek | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
     name: dxdfir_lane

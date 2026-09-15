@@ -29,7 +29,7 @@ verifies it against `car.mitre.org`). It is **not vendored** in this repository'
 tree. The CAR engine (Byakugan, MIT, Get-Sybers) is an external public project
 that reconstructs its model from the `car` repo its own pinned submodules carry.
 The distribution
-vector is the hardened **`get-sybers/byakugan` image**: `docker/byakugan/Dockerfile`
+vector is the hardened **`get-sybers/byakugan` image**: `docker/GoDFIR-toolz/byakugan/Dockerfile`
 clones Byakugan at the `sources.yml` pin and bakes in its `car` and
 `attack-datasources` submodules (both MITRE, Apache-2.0), so the built image —
 and the offline bundle's saved copy of it (`scripts/save-docker-images.sh`) —
@@ -108,7 +108,7 @@ redistribution obligation attaches — the same position as DetectRaptor above.
 ### Hayabusa (Sigma over EVTX) — downloaded at build, not redistributed
 
 **This repository ships no Hayabusa binary.** The consolidated detection image
-(`docker/signatures/Dockerfile`, `get-sybers/signatures`) downloads a pinned
+(`docker/GoDFIR-toolz/signatures/Dockerfile`, `get-sybers/signatures`) downloads a pinned
 [Hayabusa](https://github.com/Yamato-Security/hayabusa) release (Yamato-Security,
 **GPL-3.0**) from its GitHub releases **at image-build time** — the same way the
 apt tools (YARA, Suricata) are installed at build — and sha256-verifies the
@@ -233,7 +233,7 @@ repository.**
 |---|---|---|---|
 | [Plaso / log2timeline](https://github.com/log2timeline/plaso) | `log2timeline/plaso:latest` container | Apache-2.0 | None |
 | [Zeek](https://zeek.org/) | `zeek/zeek:latest` container | BSD-3-Clause | None |
-| [Elastic Stack](https://www.elastic.co/) (Elasticsearch, Kibana, Elastic Agent / Fleet Server, Filebeat) | `docker.elastic.co/*` images at a pinned `ELASTIC_VERSION` — **the analysis backend** (`stacks/elastic/`) | [Elastic License 2.0](https://www.elastic.co/licensing/elastic-license) (default distribution; only the free Basic-tier features are enabled) | See below |
+| [Elastic Stack](https://www.elastic.co/) (Elasticsearch, Kibana, Elastic Agent / Fleet Server, Filebeat) | `docker.elastic.co/*` images at a pinned `ELASTIC_VERSION` — **the analysis backend** (`docker/elastic/`) | [Elastic License 2.0](https://www.elastic.co/licensing/elastic-license) (default distribution; only the free Basic-tier features are enabled) | See below |
 | [go-evtx](https://github.com/Velocidex/evtx) (Velociraptor) | `get_sybers_dxdfir.evtx` runs **goevtx** (`get-sybers/goevtx`, `docker/GoDFIR-toolz/goevtx`) — a static-Go `.evtx` parser on go-evtx; the .NET EvtxECmd is no longer used | Apache-2.0 | None |
 | [Velociraptor](https://github.com/Velocidex/velociraptor) | Formerly: JSON output normalised by `dev-scripts/` (the lane was removed in 0.6.0) | AGPL-3.0 | None — output ingestion does not trigger AGPL |
 
@@ -251,7 +251,7 @@ history.
 
 ### Elastic Stack — the analysis backend
 
-The Elastic-native stack (`stacks/elastic/`) pulls the official
+The Elastic-native stack (`docker/elastic/`) pulls the official
 `docker.elastic.co` images at a pinned `ELASTIC_VERSION`; nothing of it is
 vendored, so this is a constraint on you rather than on this code. The
 default distribution ships under the

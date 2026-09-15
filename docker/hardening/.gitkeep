@@ -1,3 +1,0 @@
-# The hardening playbook is generated here by the dxdfir_images preflight,
-# synced from the canonical docker/GoDFIR-toolz/hardening/harden.yml.
-# This .gitkeep keeps the directory present in a fresh checkout.

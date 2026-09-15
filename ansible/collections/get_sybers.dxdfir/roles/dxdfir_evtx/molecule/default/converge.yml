@@ -3,9 +3,8 @@
   hosts: localhost
   gather_facts: true
   vars:
-    dxdfir_evtx_pipeline: elastic
     dxdfir_evtx_evtx_dir: /tmp/dxdfir_evtx_molecule/in
-    dxdfir_evtx_elastic_out_dir: /tmp/dxdfir_evtx_molecule/out
+    dxdfir_evtx_out_dir: /tmp/dxdfir_evtx_molecule/out
     # Uses the default goevtx image (get-sybers/goevtx); build it first with
     # playbooks/dxdfir-build-images.yml.
   tasks:

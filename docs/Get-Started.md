@@ -18,10 +18,8 @@ dxdfir verify-car        # the CAR correctness gate over what was written
 dxdfir validate          # run the repo check harness
 ```
 
-The processors write the tree the CAR lane builds from (`--pipeline elastic`,
-the default); the retiring SOF-ELK path is `dxdfir process <source> --pipeline
-sofelk`, then the collection's `dxdfir-deploy-sofelk.yml` / `dxdfir-ingest-sofelk.yml`
-playbooks. `man dxdfir` for the manual.
+The processors write the tree the CAR lane builds from and Filebeat ships.
+`man dxdfir` for the manual.
 
 ### Step 1: Setup Environment
 - **Run setup-environment.sh:**
@@ -101,7 +99,7 @@ dxdfir car-timeline data_store/processed/byakugan # one time-ordered timeline ac
 
 ### Step 7: Bring up the Elastic-native backend
 ```bash
-cd stacks/elastic
+cd docker/elastic
 cp .env.example .env            # then replace EVERY placeholder (see the file)
 sudo sysctl -w vm.max_map_count=262144
 docker compose up -d
@@ -112,15 +110,13 @@ docker compose ps               # setup exits 0; the rest go (healthy)
   `ELASTIC_VERSION`, all published on `127.0.0.1`. Kibana is at
   `http://127.0.0.1:5601` (log in as `elastic`).
 - `.env` holds every credential and is gitignored — **never commit it**.
-- Full detail (Fleet enrolment, the CA, shipping): [stacks/elastic/README.md](/stacks/elastic/README.md).
+- Full detail (Fleet enrolment, the CA, shipping): [docker/elastic/README.md](/docker/elastic/README.md).
 
 ### Step 8: Deliver evidence to the backend
 - Filebeat tails the tree mounted at `ELASTIC_INGEST_DIR` (`<type>/**/*.json[l]`)
-  and writes each line into the `logs-dxdfir.<type>-<namespace>` data stream. The
-  `dxdfir-ingest-sofelk.yml` playbook delivers a `processed/sofelk/<tool>/` tree
-  into a watch dir with a delivery ledger — point `ELASTIC_INGEST_DIR` at the same
-  path (process with `--pipeline sofelk` for that tree, or mount your own
-  `<type>/` tree).
+  and writes each line into the `logs-dxdfir.<type>-<namespace>` data stream —
+  point `ELASTIC_INGEST_DIR` at `data_store/processed` (or mount your own curated
+  `<type>/` tree). Filebeat's own registry keeps re-runs idempotent.
 - The CAR→ECS load of `processed/byakugan/` into the `logs-car.*` data streams and the
   `car-detections` lookup index is the next phase; the Phase-0
   [risk gate](/docs/riskgate.md) proves the two assumptions it rests on

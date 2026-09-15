@@ -22,5 +22,5 @@ Licensed under the Apache License, Version 2.0.
 Source: https://github.com/mitre-attack/car
 
 The MITRE CAR data model is redistributed via the get-sybers/byakugan image
-(docker/byakugan/Dockerfile), which bakes in MITRE's car repo at the sources.yml
+(docker/GoDFIR-toolz/byakugan/Dockerfile), which bakes in MITRE's car repo at the sources.yml
 pin with its upstream LICENSE/NOTICE intact. See .github/THIRD_PARTY_NOTICES.md.

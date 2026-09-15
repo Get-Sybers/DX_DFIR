@@ -1,15 +1,13 @@
 ---
 # dxdfir_stack: analysis-stack lifecycle. The role GROUPS; the playbook DECIDES
-# the action + stack. Idempotence comes from compose semantics, not a `when:`.
+# the action. Idempotence comes from compose semantics, not a `when:`.
 
 - name: "stack | assert inputs"
   ansible.builtin.assert:
     that:
       - dxdfir_stack_action in ['deploy', 'destroy', 'start', 'stop', 'status']
-      - dxdfir_stack_name in ['elastic', 'sofelk']
     fail_msg: >-
-      dxdfir_stack needs dxdfir_stack_action (deploy|destroy|start|stop|status)
-      and dxdfir_stack_name (elastic|sofelk).
+      dxdfir_stack needs dxdfir_stack_action (deploy|destroy|start|stop|status).
     quiet: true
   tags: [always]
 

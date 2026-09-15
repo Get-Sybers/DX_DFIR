@@ -8,10 +8,10 @@ exclude_paths:
   - .ansible/
   - .claude/
   - data_store/
-  # The vendored PIIAT-Mem submodule: third-party YAML we neither own nor lint
+  # The GoDFIR-toolz submodule: its harden.yml is linted in ITS repo, not here
   # (matches the doc-link check; the Byakugan CAR engine is an external
   # checkout outside the repo, so it never enters the walk).
-  - third_party/
+  - docker/GoDFIR-toolz/
   - ansible/collections/get_sybers.dxdfir/.ansible/
   # Elastic detection rules-as-code: these are rule DATA (ES|QL/EQL definitions
   # with long query lines), not ansible. ansible-lint auto-discovers the YAML

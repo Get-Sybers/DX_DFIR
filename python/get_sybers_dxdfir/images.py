@@ -10,7 +10,7 @@ Two checks:
   un-hardened get-sybers/* image stops the run before any evidence is touched.
 - ``audit()`` — the full inventory: every expected hardened image must be
   present and compliant, and **no other ``get-sybers/*`` image may exist on the host**
-  except the curated non-tool ones (the SOF-ELK stack, the molecule harness). An
+  except the curated non-tool ones (the molecule harness). An
   unexpected ``get-sybers/<x>`` image is something added that should not be — a
   supply-chain red flag — and the audit fails on it.
 
@@ -158,7 +158,7 @@ def audit() -> dict:
         if present in allowed:
             continue
         if _repo(present) in allowed_repos:
-            continue           # e.g. get-sybers/sof-elk:test, get-sybers/molecule:latest
+            continue           # e.g. get-sybers/molecule:latest
         violations.append(
             f"{present}: unexpected get-sybers/* image — not a known DX_DFIR image "
             "(something was added to the namespace that should not be)")

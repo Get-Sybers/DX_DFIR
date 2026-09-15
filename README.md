@@ -11,7 +11,7 @@ Point DX_DFIR at a disk image or a PCAP; it processes the evidence with
 **[Zimmerman EZ-Tools](https://ericzimmerman.github.io/)**, normalises it into the
 **[MITRE CAR](https://car.mitre.org/data_model/)** data model — materialised, one
 `car_<object>.jsonl` per object — and feeds an **Elastic-native analysis backend**
-(`stacks/elastic`: Elasticsearch + Kibana with security on, Fleet, Filebeat; Basic
+(`docker/elastic`: Elasticsearch + Kibana with security on, Fleet, Filebeat; Basic
 licence, everything on `127.0.0.1`). Detections are ES|QL / EQL rules-as-code run
 by Elastic's Detection Engine, tagging the CAR evidence lines they match, with a
 STIX 2.1 / OpenCTI exchange on top. You get normalised CAR in a real analytics
@@ -47,13 +47,13 @@ Bring up the backend:
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144         # Elasticsearch needs this (persist it in /etc/sysctl.conf)
-cd stacks/elastic && cp .env.example .env      # replace EVERY placeholder (keys: openssl rand -hex 32), then:
+cd docker/elastic && cp .env.example .env      # replace EVERY placeholder (keys: openssl rand -hex 32), then:
 docker compose up -d                            # Elasticsearch + Kibana + Fleet + Filebeat, localhost-only
 ```
 
-Kibana is at `http://127.0.0.1:5601`. Filebeat ships the delivered evidence tree
-(`<type>/**/*.json[l]`, the layout `dxdfir-ingest-sofelk.yml` delivers) into
-`logs-dxdfir.<type>-*` data streams — see [stacks/elastic/README.md](/stacks/elastic/README.md).
+Kibana is at `http://127.0.0.1:5601`. Filebeat tails the processed evidence tree
+(`<type>/**/*.json[l]`, pointed at by `ELASTIC_INGEST_DIR`) into
+`logs-dxdfir.<type>-*` data streams — see [docker/elastic/README.md](/docker/elastic/README.md).
 The CAR→ECS projection into `logs-car.*` and ES|QL `LOOKUP JOIN` flagging against
 the `car-detections` lookup index are proven by the Phase-0
 [risk gate](/docs/riskgate.md); the detection rules are data under
@@ -66,9 +66,8 @@ lists every command (`man dxdfir` for the manual).
 
 A three-layer stack — the **`dxdfir` CLI** → the **`get_sybers.dxdfir` Ansible
 collection** (one role per source, one action per task) → the **`get_sybers_dxdfir`
-Python package** — writing the processed tree the CAR lane builds from
-(`--pipeline elastic`, the default) or the retiring SOF-ELK delivery tree
-(`--pipeline sofelk`). Each source runs as `dxdfir process <source>` (driving the
+Python package** — writing the processed tree the CAR lane builds from and
+Filebeat ships. Each source runs as `dxdfir process <source>` (driving the
 matching `dxdfir_<source>` role); processors are also runnable as
 `python -m get_sybers_dxdfir.<source>`.
 
@@ -102,11 +101,10 @@ the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
 
 ## Before you run anything
 
-- **The backend holds evidence.** The Elastic stack (`stacks/elastic`) runs with
+- **The backend holds evidence.** The Elastic stack (`docker/elastic`) runs with
   security **on** — authentication, RBAC, TLS on the Elasticsearch API — but its
-  credentials live in `stacks/elastic/.env` (gitignored; never commit it) and
-  every port binds `127.0.0.1`. The retiring SOF-ELK stack (`docker/sof-elk`) has
-  no security at all. See [SECURITY.md](/.github/SECURITY.md).
+  credentials live in `docker/elastic/.env` (gitignored; never commit it) and
+  every port binds `127.0.0.1`. See [SECURITY.md](/.github/SECURITY.md).
 - **This handles real evidence.** `data_store/` is gitignored deny-by-default, so
   unknown/extensionless formats are covered — a safety net, not a guarantee. Check
   `git status` before you commit.

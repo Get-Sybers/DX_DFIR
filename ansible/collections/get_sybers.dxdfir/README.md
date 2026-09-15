@@ -3,7 +3,7 @@
 The DX_DFIR forensic processing pipeline as an Ansible Galaxy collection. The heavy
 logic lives in the `get_sybers_dxdfir` Python package (`python/`); each Ansible **task
 is one action** that invokes it, and the **playbook** holds every decision — which
-roles run and the `--pipeline elastic|sofelk` selection.
+roles run.
 
 Conforms to the Get-Sybers Ansible standards (naming/structuring + one-action-per-task
 + robustness) — see `Get-Sybers/Ludus-Ansible` `docs/standards/ansible/`.
@@ -20,12 +20,10 @@ as a single action.
 | `dxdfir_plaso` | Disk images / VM exports → Plaso JSONL | `get_sybers_dxdfir.plaso` |
 | `dxdfir_signatures` | YARA / Suricata / Hayabusa detections | `get_sybers_dxdfir.signatures` |
 
-Deploy + deliver roles: **`dxdfir_ingest_sofelk`** (deliver processed output into a
-watch dir — the `<type>/…` tree the Elastic-native stack's Filebeat and the retiring
-SOF-ELK both read), **`dxdfir_deploy_sofelk`** (builds the from-source SOF-ELK stack —
-`docker/sof-elk/`, retiring). The Elastic-native analysis backend (`stacks/elastic/`)
-is brought up with docker compose; an Ansible deploy role for it is a follow-up
-(see its README).
+Stack lifecycle: **`dxdfir_stack`** (deploy/destroy/start/stop/status for the
+Elastic analysis backend, `docker/elastic/`). The stack's Filebeat tails the
+processed `<type>/…` tree directly (`ELASTIC_INGEST_DIR`), so there is no
+delivery role — the processors write, Filebeat ships.
 
 **`dxdfir_images`** builds every tool container the processors run — hardened,
 from in-repo Dockerfiles, with ansible as the container's only execution path
@@ -39,7 +37,7 @@ changes); see [the role README](roles/dxdfir_images/README.md).
 Detection is not a role: the detections are Elastic rules-as-code
 (`python/get_sybers_dxdfir/detect/rules/`, ES|QL/EQL loaded and validated by
 `get_sybers_dxdfir.detect.rules_loader`) run by Elastic's Detection Engine on the
-`stacks/elastic` stack. The CAR lane (`dxdfir build-car` / `dxdfir verify-car`)
+`docker/elastic` stack. The CAR lane (`dxdfir build-car` / `dxdfir verify-car`)
 prepares and gates the materialised CAR they read.
 
 ## Usage
@@ -83,13 +81,13 @@ recorded here rather than half-implemented.
 | Practice | Where it lives here |
 |---|---|
 | Structure, naming, docs | One role per evidence source; `main -> preflight -> process` task files; house task-name prefix `<role>-<stage> \| description`; per-role `README.md` + `meta/argument_specs.yml`; collection `CHANGELOG.md`; playbooks under `playbooks/`. |
-| Variables, no hardcoding | Everything flows through `defaults/main.yml` with the `dxdfir_<role>_` prefix; inputs validated with `assert` at play start; the elastic\|sofelk decision is a resolved variable (`dxdfir_<role>_out_dir`), not duplicated task files. |
+| Variables, no hardcoding | Everything flows through `defaults/main.yml` with the `dxdfir_<role>_` prefix; inputs validated with `assert` at play start; each lane's output base is a resolved variable (`dxdfir_<role>_out_dir`), not duplicated task files. |
 | Idempotency | State lives in the Python processors (skip-if-done); `changed_when` reads each processor's JSON summary; exit codes are re-run-safe; molecule enforces `changed=0` on the second run. Check mode is supported: command tasks skip and their gates skip with them. |
 | Roles for reusability | Single-responsibility roles invoked by thin playbooks; shared behaviour lives in the Python package, not copy-pasted tasks; versioned as a collection (`galaxy.yml`, pinned deps in `requirements.yml`). |
 | Error handling & validation | Preflight asserts prerequisites before anything runs; the process/verify/gate unit runs in a `block` whose `rescue` surfaces the processor's JSON summary and stderr as one diagnostic before failing. |
 | Dynamic inventory | **Deviation, verified inapplicable:** the pipeline is localhost-only by design (evidence never leaves the analysis host); tool containers are resources the roles manage, not inventory hosts, so there is nothing to discover. Becomes applicable only if remote acquisition/collector hosts ever become targets. |
 | Testing in CI/CD | `ansible-lint` (production profile, config in `.ansible-lint`) + the repo harness run on every push/PR; molecule scenarios run the roles for real (`.github/tests/run-molecule.sh`), idempotence included. |
-| Cross-platform conditionals | **Principle implemented, mechanics inapplicable:** the practice's point — one adaptable unit instead of near-identical copies — is exactly the shared `process.yml` + resolved `dxdfir_<role>_out_dir`, applied to the elastic\|sofelk axis. OS-family `when` ladders have no surface: targets are tool containers on a Linux analysis host, single-platform by design. |
-| Vault / secrets | **No secrets exist in the collection by design** — verified: no credentials anywhere (SOF-ELK included), every published port binds `127.0.0.1`, and the Elastic stack's credentials live in its gitignored `stacks/elastic/.env`, never in the collection. The practice's pre-commit secret hook is replaced by a CI-time pattern scan (private keys, AWS/GitHub/GitLab/Slack tokens) in the repo harness — a deliberate adaptation, because commits land via the GitHub API here, so pre-commit hooks would never execute; CI is the only enforceable choke point. When an Ansible deploy role for the Elastic stack lands, its secrets go through Ansible Vault, never defaults. |
+| Cross-platform conditionals | **Principle implemented, mechanics inapplicable:** the practice's point — one adaptable unit instead of near-identical copies — is exactly the shared `process.yml` + resolved `dxdfir_<role>_out_dir`. OS-family `when` ladders have no surface: targets are tool containers on a Linux analysis host, single-platform by design. |
+| Vault / secrets | **No secrets exist in the collection by design** — verified: no credentials anywhere, every published port binds `127.0.0.1`, and the Elastic stack's credentials live in its gitignored `docker/elastic/.env`, never in the collection. The practice's pre-commit secret hook is replaced by a CI-time pattern scan (private keys, AWS/GitHub/GitLab/Slack tokens) in the repo harness — a deliberate adaptation, because commits land via the GitHub API here, so pre-commit hooks would never execute; CI is the only enforceable choke point. When an Ansible deploy role for the Elastic stack lands, its secrets go through Ansible Vault, never defaults. |
 | Hardened execution containers | Every tool container is built in-repo by `dxdfir_images` with ansible as its only execution path (allow-listed run role), uid0 renamed+locked, no escalation/installers, non-root runtime; every `docker run` adds `--cap-drop ALL --security-opt no-new-privileges --network none` (volatility symbol fetch is the one explicit opt-in). |
 | Monitor, log, audit | Repo-root `ansible.cfg` appends every run to `logs/ansible.log` and enables `ansible.posix.profile_tasks` for per-task timing; every processor emits a machine-readable JSON summary that the roles gate on. The log captures task output, which includes evidence-derived metadata (paths, resolved hostnames, artefact names) — it is therefore treated like evidence: gitignored (only `logs/.gitkeep` is tracked) and never leaves the analysis host. |

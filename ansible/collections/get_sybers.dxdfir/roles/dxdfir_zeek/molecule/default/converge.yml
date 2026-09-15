@@ -3,9 +3,8 @@
   hosts: localhost
   gather_facts: true
   vars:
-    dxdfir_zeek_pipeline: elastic
     dxdfir_zeek_pcap_dir: /tmp/dxdfir_zeek_molecule/pcaps
-    dxdfir_zeek_elastic_out_dir: /tmp/dxdfir_zeek_molecule/out
+    dxdfir_zeek_out_dir: /tmp/dxdfir_zeek_molecule/out
   tasks:
     - name: "converge | run dxdfir_zeek (elastic)"
       ansible.builtin.include_role:

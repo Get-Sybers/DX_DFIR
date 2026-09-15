@@ -14,11 +14,11 @@ ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-im
 
 | Image | Tool | Source |
 |---|---|---|
-| `get-sybers/zeek` | PCAP → Zeek JSON | Zeek LTS from the project's OBS Debian repo (`docker/zeek/`) |
-| `get-sybers/suricata` | signatures — Suricata (offline replay) | Debian package (`docker/suricata/`) |
-| `get-sybers/yara` | signatures — YARA | Debian package (`docker/yara/`) |
+| `get-sybers/zeek` | PCAP → Zeek JSON | Zeek LTS from the project's OBS Debian repo (`docker/GoDFIR-toolz/zeek/`) |
+| `get-sybers/signatures` | detections — YARA + Suricata (offline replay) + Hayabusa | Debian packages + the pinned Hayabusa release (`docker/GoDFIR-toolz/signatures/`) |
+| `get-sybers/byakugan` | CAR/STIX behaviour engine | clone-at-build at the `sources.yml` pin (`docker/GoDFIR-toolz/byakugan/`) |
 | `get-sybers/piiat-mem` | memory (Volatility 3) + `vadyarascan` | `docker/GoDFIR-toolz/piiat-mem/` (clone-at-build) |
-| `get-sybers/plaso` | Plaso timelining + `image_export` (dfVFS) | GIFT stable PPA (`docker/plaso/`) |
+| `get-sybers/plaso` | Plaso timelining + `image_export` (dfVFS) | GIFT stable PPA (`docker/GoDFIR-toolz/plaso/`) |
 | `get-sybers/goevtx` | Windows Event Logs (.evtx) | static Go on go-evtx, FROM scratch (`docker/GoDFIR-toolz/goevtx/`) |
 
 The `dxdfir_images` role builds each one and **verifies the minimal-posture
@@ -37,7 +37,7 @@ that shouldn't be).
 Chosen for the strongest resistance to container escape AND to a
 supply-chain-compromised tool: strip each image to the tool itself, and confine
 every run hard. ansible does the hardening *at build time*
-(`docker/hardening/harden.yml`) and is then **removed from the final image** —
+(`docker/GoDFIR-toolz/hardening/harden.yml`) and is then **removed from the final image** —
 it never ships at runtime.
 
 - the tool is the image **ENTRYPOINT**; there is no ansible, no run-role, no
@@ -47,9 +47,9 @@ it never ships at runtime.
   suite are removed; every setuid/setgid bit is stripped
 - **no package manager, no pip** — nothing installable at runtime
 - **no shell and no python** except where the tool irreducibly needs them:
-  `get-sybers/yara` keeps `sh` (its per-file scan loop *is* a shell script);
+  `get-sybers/signatures` keeps `sh` (its per-file scan loop *is* a shell script);
   `get-sybers/piiat-mem` and `get-sybers/plaso` keep python (the tools *are* python).
-  `get-sybers/zeek`, `get-sybers/suricata`, and the GoDFIR Go tools carry neither.
+  `get-sybers/zeek` and the GoDFIR Go tools carry neither.
 - the tool runs as the fixed unprivileged user (`USER 2000:2000`)
 
 Runtime confinement is what actually contains both threats (an attacker with
@@ -73,7 +73,7 @@ policing a large image from inside.
 mcr.microsoft.com/dotnet/runtime:9.0                         # evtxecmd operator-supplied mode only
 ```
 
-The analysis backend is not a tool image: the Elastic stack (`stacks/elastic/`)
+The analysis backend is not a tool image: the Elastic stack (`docker/elastic/`)
 is the official Elastic images, version-pinned (`ELASTIC_VERSION`), brought up
 with docker compose on `127.0.0.1` with security on — see its README.
 
@@ -109,11 +109,6 @@ the collections offline, and finishes by running `dxdfir verify-images` so the
 loaded inventory is confirmed to be the expected hardened set. Nothing reaches
 the network.
 
-The SOF-ELK stack (`docker/sof-elk/`, from-source build) is handled separately
-by `dxdfir_deploy_sofelk`. It is retiring in favour of Byakugan's own Elastic-native
-stack (`stacks/elastic/` — security on, Fleet, Filebeat instead of Logstash; see
-its README).
-
 **Not containers:** **Hayabusa** ships as a self-contained Rust binary (no
 official image) — operator-supplied: download the pinned release into
 `data_store/dependencies/hayabusa/`. Disk-image file access uses host tools
@@ -124,7 +119,7 @@ official image) — operator-supplied: download the pinned release into
 - [Zeek](https://zeek.org/) · [Suricata](https://suricata.io/) · [YARA](https://virustotal.github.io/yara/)
 - [Volatility 3](https://github.com/volatilityfoundation/volatility3) · [Plaso / GIFT PPA](https://launchpad.net/~gift)
 - [EvtxECmd (Eric Zimmerman)](https://github.com/EricZimmerman/evtx) · [Hayabusa (Yamato Security)](https://github.com/Yamato-Security/hayabusa)
-- [Elastic Stack](https://www.elastic.co/docs) — the analysis backend (`stacks/elastic/`)
+- [Elastic Stack](https://www.elastic.co/docs) — the analysis backend (`docker/elastic/`)
 
 The obligations the tools and the backend place on the operator are recorded in
 [THIRD_PARTY_NOTICES.md](/.github/THIRD_PARTY_NOTICES.md).

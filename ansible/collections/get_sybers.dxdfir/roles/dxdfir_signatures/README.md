@@ -1,7 +1,7 @@
 # dxdfir_signatures
 
 Run the **YARA**, **Suricata** and **Hayabusa** detection lanes over the evidence and
-land their native events as JSON Lines for the Elastic-native or SOF-ELK pipeline. The role is
+land their native events as JSON Lines. The role is
 structure only — it asserts inputs, runs a preflight (docker, the `data_store`
 anchor, the module), then invokes the `get_sybers_dxdfir.signatures` Python processor
 as a **single action**. One `<lane>/` folder of detections under the output base.
@@ -27,9 +27,7 @@ as a **single action**. One `<lane>/` folder of detections under the output base
 ## Role variables
 | Variable | Default | Description |
 |---|---|---|
-| `dxdfir_signatures_pipeline` | `elastic` | `elastic` or `sofelk` — selects the output destination (the **playbook** decides this). |
-| `dxdfir_signatures_elastic_out_dir` | `<repo>/data_store/processed/signatures` | Elastic-path output base. |
-| `dxdfir_signatures_sofelk_out_dir` | `<repo>/data_store/processed/sofelk/signatures` | SOF-ELK-path output base. |
+| `dxdfir_signatures_out_dir` | `<repo>/data_store/processed/signatures` | Output base (override to redirect). |
 | `dxdfir_signatures_lanes` | `[]` (all) | Lanes to run — any of `yara`, `suricata`, `hayabusa`. |
 | `dxdfir_signatures_stage_dir` | `""` (evtx processor's stage) | Where the hayabusa lane stages disk-image EVTX extractions; already-staged images are reused, never re-extracted. |
 | `dxdfir_signatures_vss` | `false` | Include Volume Shadow Copies when staging disk images. |
@@ -92,7 +90,7 @@ processor, never in a task `when:`. The verify gate tolerates a zero-detection r
 
 ## Example
 ```bash
-ansible-playbook playbooks/dxdfir-process-signatures.yml -e dxdfir_signatures_pipeline=elastic
+ansible-playbook playbooks/dxdfir-process-signatures.yml
 # one lane:
 ansible-playbook playbooks/dxdfir-process-signatures.yml -e '{"dxdfir_signatures_lanes":["yara"]}'
 ```

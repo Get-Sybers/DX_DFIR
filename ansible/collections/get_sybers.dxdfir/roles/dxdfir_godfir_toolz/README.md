@@ -3,7 +3,7 @@
 Process **forensic disk images** and **VMware VM exports** with the artefact set
 Eric Zimmerman's **EZ-Tools** parse (RECmd, JLECmd, LECmd, AmcacheParser,
 AppCompatCacheParser, SBECmd, RBCmd, MFTECmd) plus SRUM and Prefetch, into
-per-host artefact output for the Elastic-native or SOF-ELK pipeline. Every tool
+per-host artefact output. Every tool
 now runs as a Linux-native, static-Go `FROM scratch` substitute
 (Get-Sybers/GoDFIR-toolz: `gore`/`gojle`/`gole`/`goamcache`/`goappcompat`/`gosbe`/
 `gorb`/`gomft`), not .NET — including SRUM (`goese`) and Prefetch (`goprefetch`),
@@ -57,11 +57,9 @@ EZ-Tool, and a combined `godfir-toolz.log`.
 ## Role variables
 | Variable | Default | Description |
 |---|---|---|
-| `dxdfir_godfir_toolz_pipeline` | `elastic` | `elastic` or `sofelk` — selects the output destination (the **playbook** decides this). |
 | `dxdfir_godfir_toolz_input_dir` | `<repo>/data_store/raw/disk_images` | Disk-image tree (E01/raw/img/dd/vmdk/vhd/vhdx/aff), recursed. |
 | `dxdfir_godfir_toolz_vm_dir` | `<repo>/data_store/raw/VM_files` | VMware VM export folders (one per VM); optional. |
-| `dxdfir_godfir_toolz_elastic_out_dir` | `<repo>/data_store/processed/godfir-toolz` | Elastic-path output. |
-| `dxdfir_godfir_toolz_sofelk_out_dir` | `<repo>/data_store/processed/sofelk/godfir-toolz` | SOF-ELK-path output. |
+| `dxdfir_godfir_toolz_out_dir` | `<repo>/data_store/processed/godfir-toolz` | Output base (override to redirect). |
 | `dxdfir_godfir_toolz_plaso_image` | `get-sybers/plaso:latest` | Used for both artefact extraction and the SRUM two-step. |
 | `dxdfir_godfir_toolz_vss` | `false` | Also extract from Volume Shadow Copies. |
 | `dxdfir_godfir_toolz_python_path` | `<repo>/python` | PYTHONPATH to `get_sybers_dxdfir` (in-repo runs). |
@@ -89,7 +87,7 @@ Windows Timeline database to validate against).
 
 ## Example
 ```bash
-ansible-playbook playbooks/dxdfir-process-godfir-toolz.yml -e dxdfir_godfir_toolz_pipeline=elastic
+ansible-playbook playbooks/dxdfir-process-godfir-toolz.yml
 ```
 
 ## Testing

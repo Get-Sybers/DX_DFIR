@@ -32,6 +32,9 @@ jobs:
           # The evidence-gitignore checks call `git check-ignore`, which needs
           # real git metadata rather than a tarball export.
           fetch-depth: 1
+          # Docs link into the GoDFIR-toolz submodule (every tool-image build
+          # context lives there), so the link checker needs it present.
+          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@v5

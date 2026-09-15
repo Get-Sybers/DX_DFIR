@@ -11,10 +11,9 @@
 - name: "volatility | assert inputs"
   ansible.builtin.assert:
     that:
-      - dxdfir_volatility_pipeline in ['elastic', 'sofelk']
       - dxdfir_volatility_memory_dir | length > 0
     fail_msg: >-
-      dxdfir_volatility needs dxdfir_volatility_pipeline (elastic|sofelk) and a non-empty
+      dxdfir_volatility needs a non-empty
       dxdfir_volatility_memory_dir.
     quiet: true
   tags: [always]

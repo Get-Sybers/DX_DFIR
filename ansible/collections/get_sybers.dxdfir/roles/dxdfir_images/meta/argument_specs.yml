@@ -4,9 +4,10 @@ argument_specs:
     short_description: "Build + verify the ansible-hardened dxdfir/* tool images."
     description:
       - >-
-        Builds every runtime tool container from its in-repo Dockerfile (context
-        docker/, one directory per image), each of which runs the shared ansible
-        hardening playbook (docker/hardening/harden.yml) inside the build and
+        Builds every runtime tool container from its Dockerfile in the
+        GoDFIR-toolz submodule (context docker/GoDFIR-toolz, one directory per
+        image), each of which runs the canonical ansible hardening playbook
+        (hardening/harden.yml at the context root) inside the build and
         squashes the result: uid 0 renamed 'ansible' and locked, sudo/su/pkexec
         and the account-manipulation suite removed, every setuid/setgid bit
         stripped, package managers and pip removed (nothing installable at
@@ -18,12 +19,12 @@ argument_specs:
         After each build the role asserts the contract statically (USER 2000:2000,
         pinned ENTRYPOINT, hardened label) AND from inside the running container. Nothing in the pipeline pulls a
         third-party tool image at runtime; the analysis backend (the Elastic
-        stack under stacks/elastic) is deployed separately with compose.
+        stack under docker/elastic) is deployed separately with compose.
     options:
       dxdfir_images_context:
         type: str
         required: false
-        description: "The docker/ build context holding <name>/Dockerfile dirs and hardening/harden.yml."
+        description: "The GoDFIR-toolz submodule build context holding <name>/Dockerfile dirs and the canonical hardening/harden.yml."
       dxdfir_images_set:
         type: list
         elements: str

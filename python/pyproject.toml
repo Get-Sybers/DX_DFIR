@@ -13,7 +13,7 @@ dependencies = [
     # working ansible-playbook.
     "ansible-core>=2.16",
     # The collection's docker-driving roles (dxdfir_images builds the tool images,
-    # dxdfir_deploy_sofelk runs compose) use community.docker, whose modules import
+    # dxdfir_stack runs compose) use community.docker, whose modules import
     # the Python docker SDK (requests + docker); the ansible-playbook this package
     # installs must be able to run them, on a clean install and from the offline
     # wheel bundle alike.
