@@ -1,0 +1,15 @@
+# Build context for the hardened tool images is docker/ (the default
+# dxdfir_images_context) so the shared build-time hardening playbook under
+# hardening/ is in reach. The content below is NOT part of that shared context —
+# excluding it keeps the context small and stops unrelated changes from
+# invalidating every tool image's build cache.
+
+# The GoDFIR-toolz submodule: images that need it build from it DIRECTLY
+# (dxdfir_images_eztools_context = docker/GoDFIR-toolz, its own context), never
+# from the shared docker/ context.
+GoDFIR-toolz/
+
+# The Elastic and SOF-ELK stacks are docker-compose deployments, not tool-image
+# build inputs.
+elastic/
+sof-elk/
