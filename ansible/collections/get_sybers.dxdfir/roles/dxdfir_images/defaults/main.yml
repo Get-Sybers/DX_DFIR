@@ -12,8 +12,8 @@ dxdfir_images_namespace: get-sybers
 # single override knob — set it via extra-var or inventory (e.g.
 # -e dxdfir_runtime_uid=3000) to move all images + their runs off 2000; unset, it
 # defaults to 2000 here. Passed as build args to each Dockerfile and asserted in
-# the build contract, so the build and the runtime share one uid. (get-sybers/volatility
-# is built from the third_party/piiat-mem submodule — Get-Sybers/PIIAT-Mem#2.)
+# the build contract, so the build and the runtime share one uid. (get-sybers/piiat-mem
+# is built from docker/GoDFIR-toolz/piiat-mem at the sources.yml pin.)
 dxdfir_images_uid: "{{ dxdfir_runtime_uid | default(2000) }}"
 # gid follows the uid unless explicitly set, so setting only dxdfir_runtime_uid
 # still yields a matched USER <uid>:<uid>, never <uid>:2000.

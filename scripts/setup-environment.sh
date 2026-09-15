@@ -352,14 +352,14 @@ confirm "Do you wish to proceed?" || { info "Setup cancelled."; exit 1; }
 ################################################################################
 # Pull the git submodules — RECURSIVELY.
 #
-# The remaining vendored submodule is third_party/piiat-mem: the PIIAT-Mem tree
-# the volatility lane (get_sybers_dxdfir.volatility) drives in place. --recursive
-# is kept on principle even though piiat-mem nests nothing today: it is a no-op
-# then, and it means any submodule that DOES nest content checks out complete
-# instead of silently empty — the failure mode that bit the CAR engine while it
-# was vendored here. (The Byakugan engine is no longer a submodule; it is
-# provisioned as an external checkout in the next step.) Runs before the
-# chown/chmod below so the freshly checked-out files inherit them too.
+# The remaining submodule is docker/GoDFIR-toolz: the Go EZ-tool family, goevtx
+# and the PIIAT-Mem volatility image build. --recursive is kept on principle: it
+# means any submodule that DOES nest content checks out complete instead of
+# silently empty — the failure mode that bit the CAR engine while it was vendored
+# here. (The Byakugan engine is no longer a submodule; it is provisioned as an
+# external checkout in the next step, and PIIAT-Mem is fused into the
+# get-sybers/piiat-mem image.) Runs before the chown/chmod below so the freshly
+# checked-out files inherit them too.
 section "Git submodules"
 if [[ -f "$REPO_ROOT_DIR/.gitmodules" ]]; then
     step "Initialising git submodules (recursive) ..."
@@ -371,7 +371,7 @@ if [[ -f "$REPO_ROOT_DIR/.gitmodules" ]]; then
     git "${GIT_SAFE[@]}" -C "$REPO_ROOT_DIR" submodule sync --recursive >/dev/null 2>&1 || true
     git "${GIT_SAFE[@]}" -C "$REPO_ROOT_DIR" submodule update --init --recursive \
         || die "Failed to initialise git submodules recursively (need network + git access)."
-    ok "Submodules checked out (third_party/piiat-mem)."
+    ok "Submodules checked out (docker/GoDFIR-toolz)."
 else
     info "No .gitmodules found — skipping submodule init."
 fi
@@ -406,12 +406,12 @@ fi
 # install gives a working `dxdfir process/build-car/verify-car/build-docker`.
 #
 # --editable is REQUIRED, not a preference. The package still resolves paths
-# RELATIVE TO ITS OWN FILES (_REPO_ROOT = three dirs up from __file__):
-# volatility.py locates the vendored piiat-mem tree (third_party/piiat-mem) and
-# carcheck.py defaults its --car-dir under the repo's data_store. A plain copying
-# install puts the package under the venv's site-packages, three dirs up from
-# which is .../lib/pythonX.Y with no third_party/ or data_store/ — the volatility
-# lane dies "not initialised" even though the submodule WAS initialised (above).
+# RELATIVE TO ITS OWN FILES (walking up from __file__): images.py reads the
+# repo-root images.yml + sources.yml (the tool-image inventory + external pins),
+# and carcheck.py defaults its --car-dir under the repo's data_store. A plain
+# copying install puts the package under the venv's site-packages, whose ancestors
+# hold no images.yml or data_store/ — the guard and lanes then fail to find them
+# even though the repo IS present (above).
 # Editable keeps the installed module IN the repo tree, so every _REPO_ROOT-
 # relative path resolves. (The Byakugan CAR engine is no longer a host checkout —
 # it is cloned + built into the get-sybers/byakugan image, so mitrecar/carcheck

@@ -17,8 +17,6 @@
 #                 (The Byakugan CAR engine is no longer a separate tarball: it is
 #                 cloned + built into the get-sybers/byakugan image, model sources
 #                 and Go parse binary baked in, so it rides in images/ below.)
-#   piiat-mem.tar the vendored third_party/piiat-mem tree (the volatility lane)
-#                 — the gitlink drop above meant it never reached older bundles
 #   deps.tar      data_store/dependencies/ — the signature rulesets (YARA,
 #                 Suricata, Hayabusa incl. its binary), the Volatility ISF
 #                 symbol cache and the EvtxECmd release: everything the
@@ -113,16 +111,10 @@ echo "   $(du -sh "$STAGE/go-vendor.tar" | cut -f1) of Go modules vendored."
 # the saved container images below (section 2) exactly like every other tool.
 # Nothing to stage here; the image bundle carries the whole engine.
 
-# ---- 1d. the vendored piiat-mem tree (the volatility lane) -------------------
-# Same gitlink drop, other submodule: third_party/piiat-mem never reached
-# repo.tar either, so the offline volatility lane has always been broken.
-# Package the checked-out tree (rooted `piiat-mem`, so the installer can untar
-# it straight into <target>/third_party/).
-[[ -n "$(find "$REPO/third_party/piiat-mem" -mindepth 1 -print -quit 2>/dev/null)" ]] \
-    || die "third_party/piiat-mem is not checked out — run: git -C \"$REPO\" submodule update --init --recursive"
-echo "🧠 Archiving third_party/piiat-mem ..."
-tar -C "$REPO/third_party" --exclude=.git -cf "$STAGE/piiat-mem.tar" piiat-mem \
-    || die "failed to package third_party/piiat-mem."
+# PIIAT-Mem (the volatility lane) is no longer a vendored submodule: it is fused
+# into the get-sybers/piiat-mem image (built from the GoDFIR-toolz submodule), so
+# it ships in the docker-images tarball with every other tool image — nothing
+# extra to package here.
 
 # ---- 2. the get_sybers_dxdfir package + all Python deps as wheels ------------
 echo "🐍 Building the get_sybers_dxdfir package and downloading Python dependencies as wheels ..."

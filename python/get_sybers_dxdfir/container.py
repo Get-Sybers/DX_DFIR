@@ -84,16 +84,17 @@ def _mount_group_ids(mounts) -> list[str]:
 
 
 def run(image, after_image=(), *, mounts=(), network=False, tmpfs=(),
-        workdir=None) -> list[str]:
+        workdir=None, entrypoint=None) -> list[str]:
     """``docker run`` argv for a minimal hardened dxdfir/* image.
 
     ``after_image`` is appended verbatim after the image name: for a tool-as-
     ENTRYPOINT image these are just the tool's arguments; for an image with no
     ENTRYPOINT (plaso, which has three entry tools) it is the full ``[tool,
-    args...]``. ``workdir`` sets the tool's cwd (tools that write housekeeping
-    files to cwd need it pointed at a writable mount or /tmp, since the root
-    filesystem is immutable). The tool writes to the mounted output dir
-    (read-write) and reads mounted evidence (read-only).
+    args...]``. ``entrypoint`` overrides the image's baked ENTRYPOINT (e.g. run a
+    different baked binary than the image's default). ``workdir`` sets the tool's
+    cwd (tools that write housekeeping files to cwd need it pointed at a writable
+    mount or /tmp, since the root filesystem is immutable). The tool writes to the
+    mounted output dir (read-write) and reads mounted evidence (read-only).
     """
     argv = ["docker", "run", "--rm", *run_flags(network, tmpfs)]
     # Grant the container the group that owns each read-only (evidence) mount, so
@@ -102,6 +103,8 @@ def run(image, after_image=(), *, mounts=(), network=False, tmpfs=(),
     # the mounts — no per-run --user/--group knobs threaded through processing.
     for gid in _mount_group_ids(mounts):
         argv += ["--group-add", gid]
+    if entrypoint:
+        argv += ["--entrypoint", entrypoint]
     if workdir:
         argv += ["-w", workdir]
     for mount in mounts:

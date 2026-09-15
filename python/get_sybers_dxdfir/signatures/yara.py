@@ -39,7 +39,7 @@ import tempfile
 from .. import container, imageexport
 
 _SIGNATURES_IMAGE = "get-sybers/signatures:latest"  # yara + suricata + hayabusa, one image
-_VOL_IMAGE = "get-sybers/volatility:latest"
+_VOL_IMAGE = "get-sybers/piiat-mem:latest"
 _STRING_RE = re.compile(r"^0x([0-9a-fA-F]+):(\$[^:]*):\s?(.*)$")
 
 
@@ -120,30 +120,32 @@ def extract_disk_files(image: str, stage_dir: str) -> list[str]:
 
 # --- memory source: Volatility 3 windows.vadyarascan -------------------------
 
-# vadyarascan runs on the hardened get-sybers/volatility image through its BAKED
-# wrapper (/opt/dfir/vol_wrapper.py — the only python entry the image
-# allow-lists), which imports the mounted jsonl_dfir renderer then hands the
-# CLI the remaining argv verbatim.
+# vadyarascan runs on the hardened get-sybers/piiat-mem image (Volatility 3 fused
+# in). That image's ENTRYPOINT is the batch orchestrator, so we OVERRIDE it to run
+# the BAKED vol_wrapper (/opt/piiat-mem/docker/vol_wrapper.py) with the BAKED
+# jsonl_dfir renderer (/opt/piiat-mem/jsonl_dfir_renderer.py) — both ship inside
+# the image, so nothing is mounted but the evidence, the symbols and the rules.
 
 
-def vadyarascan_argv(mem: str, symbols_dir: str, renderer: str, rules_file: str,
+def vadyarascan_argv(mem: str, symbols_dir: str, rules_file: str,
                      vol_image: str = _VOL_IMAGE,
                      symbols_online: bool = False) -> list[str]:
     """The ``docker run`` argv for one vadyarascan pass over one memory image on
-    the minimal hardened get-sybers/volatility image (the baked wrapper is the
-    ENTRYPOINT; no caps, read-only rootfs, no network unless ``symbols_online``).
-    The scan's JSONL goes to stdout. Pure (no I/O beyond path normalisation)."""
+    the hardened get-sybers/piiat-mem image: the batch ENTRYPOINT is overridden to
+    python3 running the baked vol_wrapper + renderer (no caps, read-only rootfs, no
+    network unless ``symbols_online``). The scan's JSONL goes to stdout. Pure."""
     return container.run(
         vol_image,
-        ["/opt/jsonl_dfir_renderer.py",
+        ["/opt/piiat-mem/docker/vol_wrapper.py",
+         "/opt/piiat-mem/jsonl_dfir_renderer.py",
          "-q", "-s", "/symbols", "-r", "jsonl_dfir",
          "-f", f"/mem/{os.path.basename(mem)}",
          "windows.vadyarascan.VadYaraScan", "--yara-file", "/rules/combined.yar"],
         mounts=[f"{os.path.dirname(mem)}:/mem:ro",
                 f"{os.path.realpath(symbols_dir)}:/symbols",
-                f"{os.path.realpath(renderer)}:/opt/jsonl_dfir_renderer.py:ro",
                 f"{os.path.realpath(rules_file)}:/rules/combined.yar:ro"],
         network=symbols_online,
+        entrypoint="python3",
     )
 
 
@@ -224,7 +226,7 @@ def _note(res: dict, note: str) -> None:
 def run(*, output_dir, repo_root, fetch=False, force=False,
         sources=("files", "disk", "memory"),
         rules_dir=None, files_target=None, disk_dir=None, memory_dir=None,
-        symbols_dir=None, renderer=None,
+        symbols_dir=None,
         image=_SIGNATURES_IMAGE, vol_image=_VOL_IMAGE, **_ignored) -> dict:
     """Run the selected YARA sources. Returns {lane, produced, skipped, failed}."""
     ds = os.path.join(repo_root, "data_store")
@@ -233,13 +235,9 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
     disk_dir = disk_dir or os.path.join(ds, "raw", "disk_images")
     memory_dir = memory_dir or os.path.join(ds, "raw", "memory")
     symbols_dir = symbols_dir or os.path.join(ds, "dependencies", "volatility3-symbols")
-    # The jsonl_dfir renderer is owned by the vendored PIIAT-Mem tool (the same
-    # renderer the volatility PROCESSOR drives through `python -m piiat_mem`); the
-    # memory scan bind-mounts it into the hardened get-sybers/volatility image, whose
-    # baked wrapper (/opt/dfir/vol_wrapper.py) loads it. It lives in the submodule,
-    # not in a dev-scripts/ tree.
-    renderer = renderer or os.path.join(
-        repo_root, "third_party", "piiat-mem", "jsonl_dfir_renderer.py")
+    # The jsonl_dfir renderer + vol_wrapper are BAKED into the get-sybers/piiat-mem
+    # image (at /opt/piiat-mem/); the memory scan overrides the batch entrypoint to
+    # run them there, so nothing renderer-related is mounted (see vadyarascan_argv).
     os.makedirs(output_dir, exist_ok=True)
 
     res = {"lane": "yara", "sources": list(sources), "produced": 0, "skipped": 0,
@@ -345,7 +343,7 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
             try:
                 for mem in mems:
                     proc = subprocess.run(
-                        vadyarascan_argv(mem, symbols_dir, renderer,
+                        vadyarascan_argv(mem, symbols_dir,
                                          combined.name, vol_image),
                         capture_output=True, text=True, check=False,
                     )

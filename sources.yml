@@ -24,11 +24,16 @@ byakugan:
   ref: bcd01c39ffbf40eea05ee09e25890d64a5d48593
   consumed: "docker/byakugan/Dockerfile (BYAKUGAN_REF build-arg)"
 
+# PIIAT-Mem (Volatility 3 memory forensics) — fused into get-sybers/piiat-mem in
+# the GoDFIR-toolz submodule, cloned + built at this pin (no longer vendored here).
+# Volatility runs in-process (--native), confined by the hardened image.
+piiat-mem:
+  url: https://github.com/Get-Sybers/PIIAT-Mem
+  ref: d32b5d3c6068b50c778d7bf5a1480a46a96b1f8d
+  consumed: "docker/GoDFIR-toolz/piiat-mem/Dockerfile (PIIAT_MEM_REF build-arg)"
+
 # Git submodules: pinned by their gitlink (.gitmodules). Inventory only.
 submodules:
   godfir-toolz:
     url: https://github.com/Get-Sybers/GoDFIR-toolz
     path: docker/GoDFIR-toolz
-  piiat-mem:
-    url: https://github.com/Get-Sybers/PIIAT-Mem
-    path: third_party/piiat-mem

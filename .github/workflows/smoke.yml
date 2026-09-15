@@ -60,8 +60,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Submodules: third_party/piiat-mem (volatility lane) and
-          # docker/GoDFIR-toolz (EvtxECmd + the EZ tool family + the
+          # Submodule: docker/GoDFIR-toolz (EvtxECmd + the EZ tool family + the
           # canonical hardening playbook). The EvtxECmd image built below comes
           # from the latter, so this MUST be recursive.
           submodules: recursive

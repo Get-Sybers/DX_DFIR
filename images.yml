@@ -26,9 +26,10 @@ images:
   - name: byakugan          # external MITRE CAR engine, cloned + built at the sources.yml pin
     ref: byakugan
   - name: zeek
-  - name: volatility        # Volatility 3 memory forensics (PIIAT-Mem submodule's own image)
-    context: third_party/piiat-mem/docker
-    dockerfile: Dockerfile
+  - name: piiat-mem         # Volatility 3 memory forensics — self-orchestrating, env-driven
+    context: docker/GoDFIR-toolz
+    dockerfile: piiat-mem/Dockerfile
+    ref: piiat-mem
   - name: plaso
   - name: sqlecmd           # the last still-.NET EZ tool (one parameterized Dockerfile)
     context: docker/GoDFIR-toolz

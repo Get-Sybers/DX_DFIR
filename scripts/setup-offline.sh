@@ -10,11 +10,8 @@
 #      restores data_store/dependencies from deps.tar — the signature rulesets
 #      (YARA/Suricata/Hayabusa), the Volatility symbol cache and EvtxECmd
 #      (the Byakugan CAR engine is no longer a separate tarball — it is baked
-#      into the get-sybers/byakugan image and rides in the loaded images), and
-#   3. unpacks the piiat-mem tree (piiat-mem.tar — the volatility lane) into
-#      <target>/third_party/. A bundle from before that tarball existed installs
-#      with a warning: the volatility lane is then unavailable offline until
-#      provisioned by hand, everything else still works
+#      into the get-sybers/byakugan image and rides in the loaded images; the
+#      PIIAT-Mem volatility lane likewise ships in the get-sybers/piiat-mem image)
 #   4. loads the container images and runs the hardened-inventory guard
 #   5. installs the get_sybers_dxdfir processors + ansible into a venv from the
 #      bundled wheels (no PyPI)
@@ -90,19 +87,9 @@ fi
 # (get_sybers_dxdfir.mitrecar — build-car / verify-car / timeline) shells that
 # image, so the whole engine rides in the loaded images.
 
-# ---- 2c. the vendored piiat-mem tree (the volatility lane) ------------------
-# Same gitlink drop: third_party/piiat-mem never reached older bundles either.
-# The tarball is rooted `piiat-mem`, so it lands as $TARGET/third_party/piiat-mem
-# — exactly where the volatility lane resolves it relative to the repo.
-if [[ -f "$BUNDLE/piiat-mem.tar" ]]; then
-    echo "🧠 Unpacking third_party/piiat-mem ..."
-    mkdir -p "$TARGET/third_party"
-    tar -xf "$BUNDLE/piiat-mem.tar" -C "$TARGET/third_party" || die "failed to unpack piiat-mem.tar"
-else
-    echo "⚠️  No piiat-mem.tar in the bundle (packaged before it shipped) — the"
-    echo "    volatility lane is unavailable offline until third_party/piiat-mem"
-    echo "    is provisioned by hand."
-fi
+# PIIAT-Mem (the volatility lane) is no longer a vendored submodule — it is fused
+# into the get-sybers/piiat-mem image, so it arrives with the loaded tool images
+# above. Nothing to unpack here.
 
 # ---- 3. images + inventory guard --------------------------------------------
 DOCKER_CMD=""
