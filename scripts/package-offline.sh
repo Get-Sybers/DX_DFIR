@@ -2,11 +2,17 @@
 # ==============================================================================
 # Build a self-contained offline package for an air-gapped DX_DFIR analysis host.
 #
-# Run this on an ONLINE host that can reach Docker Hub, PyPI and Ansible Galaxy.
+# Run this on an ONLINE host that can reach the registries, PyPI and Ansible
+# Galaxy — the connected half of the two-host flow (setup-environment.sh first,
+# then this; the air-gapped host runs only the bundle's setup-offline.sh).
 # It assembles ONE portable bundle containing everything the offline host needs:
 #
-#   images/       the hardened dxdfir/* tool images (built + docker-saved) plus the
-#                 one unbuildable image (the .NET runtime), as tars
+#   images/       every image, saved as tars by scripts/save-docker-images.sh
+#                 (the image engine): the hardened get-sybers/* tool set from
+#                 images.yml (built via dxdfir build-docker, --build runs it)
+#                 plus the Elastic stack's docker.elastic.co images at
+#                 ELASTIC_VERSION (docker/elastic) — the analysis backend
+#                 deploys offline with zero pulls
 #   wheels/       the get_sybers_dxdfir processor package, ansible-core and every
 #                 Python dependency, as wheels (installed offline with --no-index)
 #   collections/  the pinned ansible collections (community.docker, ansible.posix)
@@ -18,10 +24,10 @@
 #                 cloned + built into the get-sybers/byakugan image, model sources
 #                 and Go parse binary baked in, so it rides in images/ below.)
 #   deps.tar      data_store/dependencies/ — the signature rulesets (YARA,
-#                 Suricata, Hayabusa incl. its binary), the Volatility ISF
-#                 symbol cache and the EvtxECmd release: everything the
-#                 detection lanes need that git prunes from the skeleton and
-#                 that an air-gapped host cannot fetch
+#                 Suricata, Hayabusa incl. its binary) and the Volatility ISF
+#                 symbol cache: everything the detection lanes need that git
+#                 prunes from the skeleton and that an air-gapped host cannot
+#                 fetch
 #   MANIFEST.sha256   a checksum of every file above
 #   setup-offline.sh  a copy, so the bundle installs itself
 #
@@ -31,7 +37,8 @@
 # Usage:
 #   scripts/package-offline.sh [--out DIR] [--build] [--no-tar] [--no-images]
 #
-#   --build      (re)build the dxdfir/* images before saving (else they must exist)
+#   --build      (re)build the get-sybers/* images before saving (else they must
+#                exist) — runs dxdfir build-docker (the dxdfir_images role)
 #   --fetch-rules provision the pinned DetectRaptor YARA set first if the rules
 #                dir is empty (online-side convenience for a fresh checkout)
 #   --no-tar     leave the staged bundle as a directory, don't compress it
@@ -56,7 +63,7 @@ while [[ $# -gt 0 ]]; do
         --fetch-rules) DO_FETCH=1 ;;
         --no-tar) DO_TAR=0 ;;
         --no-images) DO_IMAGES=0 ;;
-        -h|--help) sed -n '2,43p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) awk 'NR < 3 { next } /^# =+$/ { exit } { sub(/^# ?/, ""); print }' "$0"; exit 0 ;;
         *) echo "❌ Unknown option: $1" >&2; exit 1 ;;
     esac
     shift
@@ -136,7 +143,7 @@ if [[ "$DO_FETCH" -eq 1 ]]; then
         --yara-sources files --fetch >/dev/null 2>&1 || true
 fi
 if [[ -d "$DEPS" ]] && [[ -n "$(find "$DEPS" -type f -print -quit 2>/dev/null)" ]]; then
-    echo "🧩 Archiving data_store/dependencies (signature rules, Hayabusa, symbols, EvtxECmd) ..."
+    echo "🧩 Archiving data_store/dependencies (signature rules, Hayabusa, symbols) ..."
     tar -C "$REPO/data_store" -cf "$STAGE/deps.tar" dependencies \
         || die "failed to archive data_store/dependencies."
     echo "   $(du -sh "$STAGE/deps.tar" | cut -f1) of detection dependencies packaged."
@@ -156,9 +163,9 @@ else
     echo "⚠️  ansible-galaxy not found; skipping collection download (the offline host will need them another way)."
 fi
 
-# ---- 4. the images ----------------------------------------------------------
+# ---- 4. the images (via the image engine) -----------------------------------
 if [[ "$DO_IMAGES" -eq 1 ]]; then
-    echo "🐳 Saving the container images ..."
+    echo "🐳 Saving the container images (scripts/save-docker-images.sh) ..."
     build_arg=(); [[ "$DO_BUILD" -eq 1 ]] && build_arg=(--build)
     DXDFIR_IMAGE_DIR="$STAGE/images" "$SCRIPT_DIR/save-docker-images.sh" "${build_arg[@]}" \
         || die "image save failed."

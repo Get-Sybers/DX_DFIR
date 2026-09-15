@@ -46,7 +46,7 @@ knowing:
 
 ## Offline hosts
 
-Air-gapped installs use a two-host flow: `scripts/package-offline.sh` (online: bundle
-everything) → `scripts/setup-offline.sh` + `scripts/save-docker-images.sh --load`
+Air-gapped installs use a two-host flow: `scripts/package-offline.sh --build` (online:
+build + bundle everything, images included) → the bundle's `setup-offline.sh`
 (offline: install from the bundle). See the
 [scripts overview](../scripts/Scripts-Overview.md).

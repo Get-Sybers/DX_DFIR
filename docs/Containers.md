@@ -67,25 +67,25 @@ orchestrator to police it only enlarges the supply-chain and execution surface.
 So the design minimises what is present and confines what runs, rather than
 policing a large image from inside.
 
-## Pulled (unbuildable) images
+## Pulled images
 
-```sh
-mcr.microsoft.com/dotnet/runtime:9.0                         # evtxecmd operator-supplied mode only
-```
-
-The analysis backend is not a tool image: the Elastic stack (`docker/elastic/`)
-is the official Elastic images, version-pinned (`ELASTIC_VERSION`), brought up
-with docker compose on `127.0.0.1` with security on — see its README.
+No tool image is pulled — every `get-sybers/*` image is built from source. The
+one pulled set is the analysis backend: the Elastic stack (`docker/elastic/`)
+is the official `docker.elastic.co/*` images, version-pinned
+(`ELASTIC_VERSION`), brought up with docker compose on `127.0.0.1` with
+security on — see its README. `scripts/save-docker-images.sh` includes them in
+the offline tarball set, so the stack deploys air-gapped with zero pulls.
 
 ## Offline / air-gapped hosts
 
 Two levels:
 
-**Images only** — `save-docker-images.sh` saves the built `dxdfir/*` images plus
-the pulled .NET runtime into `data_store/docker_images/`:
+**Images only** — `save-docker-images.sh` saves the built `get-sybers/*` images
+(from `images.yml`) plus the pulled Elastic-stack images (`docker/elastic`, at
+`ELASTIC_VERSION`) into `data_store/docker_images/`:
 
 ```bash
-scripts/save-docker-images.sh --build     # online: build the dxdfir/* images, then save all
+scripts/save-docker-images.sh --build     # online: build the get-sybers/* images (dxdfir build-docker), then save all
 scripts/save-docker-images.sh --verify    # offline: load every tarball, then assert the hardened inventory
 ```
 

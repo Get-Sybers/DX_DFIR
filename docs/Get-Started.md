@@ -70,10 +70,9 @@ dxdfir process zeek
 ```bash
 dxdfir process evtx
 ```
-- Converts `.evtx` in `data_store/raw/logs/winevt/<host>/` using EvtxECmd.
-- Requires operator-supplied EvtxECmd — see
-  [the README](/data_store/dependencies/evtxecmd/README.md). MIT licensed, no
-  commercial-use restriction.
+- Converts `.evtx` in `data_store/raw/logs/winevt/<host>/` to the EvtxECmd JSON
+  shape using **goevtx** (`get-sybers/goevtx`, the static-Go EvtxECmd
+  substitute built by `dxdfir build-docker`) — nothing operator-supplied.
 - See [Scripts-Overview](/docs/scripts/Scripts-Overview.md) for the pipeline layers.
 
 ### Step 6: Build and verify the CAR

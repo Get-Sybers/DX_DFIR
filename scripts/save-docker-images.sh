@@ -2,20 +2,24 @@
 # ==============================================================================
 # Save / load the DX_DFIR analysis images as tarballs for offline hosts.
 #
-# The runtime tool images (dxdfir/*) are BUILT in-repo
-# (`ansible-playbook playbooks/dxdfir-build-images.yml`), not pulled — so this
-# script `docker save`s the local builds. Only the one image that cannot be
-# built from source is pulled first: the stock .NET runtime for evtxecmd's
-# operator-supplied mode. (The Elastic analysis backend, docker/elastic,
-# is compose-managed — its images are not part of this set.)
+# THE image engine of the offline lifecycle — both offline entry points call
+# it: scripts/package-offline.sh (online side, save into the bundle) and
+# scripts/setup-offline.sh (air-gapped side, load from the bundle). It also
+# runs standalone to seed a host that already has the repo and docker.
 #
-# This is the image half of the offline lifecycle. For a complete portable
-# bundle (images + the dxdfir CLI wheels + the ansible collections + the repo),
-# use scripts/package-offline.sh, which calls this script.
+# Two image sets, no hardcoded lists:
+#   built  — the hardened get-sybers/* tool images from the repo-root
+#            images.yml manifest; BUILT by `dxdfir build-docker` (the
+#            dxdfir_images role), never pulled, so this script `docker save`s
+#            the local builds (--build first runs that build).
+#   pulled — the Elastic analysis stack (docker/elastic): the official
+#            docker.elastic.co images at ELASTIC_VERSION, derived from the
+#            compose file + .env.example. The stack IS the analysis backend,
+#            so an offline bundle without it could process but never analyse.
 #
 # Usage:
 #   scripts/save-docker-images.sh              save every image to a tarball
-#   scripts/save-docker-images.sh --build      build the dxdfir/* images first, then save
+#   scripts/save-docker-images.sh --build      build the get-sybers/* images first, then save
 #   scripts/save-docker-images.sh --load       load every tarball in the image dir
 #   scripts/save-docker-images.sh --verify     load, then assert the hardened inventory
 #   scripts/save-docker-images.sh --list       show the images this manages
@@ -31,20 +35,31 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 REPO_ROOT_DIR="$(realpath "$SCRIPT_DIR/..")"
 DOCKER_TAR_DIR="${DXDFIR_IMAGE_DIR:-$REPO_ROOT_DIR/data_store/docker_images}"
 
-# Runtime tool images — BUILT in-repo (or from the GoDFIR-toolz submodule), never
-# pulled. Derived from the repo-root images.yml manifest (the single source of
-# truth the Python guard and the dxdfir_images build role also read), so a new
-# image is added in ONE place.
+# Runtime tool images — BUILT from the GoDFIR-toolz submodule, never pulled.
+# Derived from the repo-root images.yml manifest (the single source of truth
+# the Python guard and the dxdfir_images build role also read), so a new image
+# is added in ONE place.
 _ns="$(awk -F': *' '/^namespace:/{print $2; exit}' "$REPO_ROOT_DIR/images.yml")"
 mapfile -t BUILT_IMAGES < <(awk -v ns="${_ns:-get-sybers}" '
     $1=="images:"{f=1; next}
     /^[^[:space:]]/{f=0}
     f && $1=="-" && $2=="name:"{print ns "/" $3 ":latest"}
 ' "$REPO_ROOT_DIR/images.yml")
-# Unbuildable images — pulled from a registry (online side only).
-PULL_IMAGES=(
-    "mcr.microsoft.com/dotnet/runtime:9.0"
-)
+
+# Pulled images — the Elastic analysis stack (docker/elastic), part of the
+# offline set now that it is THE analysis backend. Derived from the compose
+# file's image: lines with ELASTIC_VERSION resolved from .env.example (falling
+# back to the compose default), so neither the list nor the version has a
+# second copy here to drift. (The retired .NET runtime for evtxecmd's
+# operator-supplied mode is gone with that mode — goevtx replaced it.)
+_elastic_dir="$REPO_ROOT_DIR/docker/elastic"
+_ever="$(awk -F'=' '$1=="ELASTIC_VERSION"{print $2; exit}' "$_elastic_dir/.env.example" 2>/dev/null)"
+if [[ -z "$_ever" ]]; then
+    _ever="$(grep -oE '\$\{ELASTIC_VERSION:-[^}]+\}' "$_elastic_dir/docker-compose.yml" | head -1 | sed 's/.*:-//; s/}$//')"
+fi
+mapfile -t PULL_IMAGES < <(awk -F'"' '/^[[:space:]]*image:/{print $2}' "$_elastic_dir/docker-compose.yml" \
+    | sed "s/\${ELASTIC_VERSION:-[^}]*}/$_ever/" | sort -u)
+
 ALL_IMAGES=("${BUILT_IMAGES[@]}" "${PULL_IMAGES[@]}")
 
 MODE="save"
@@ -57,7 +72,9 @@ while [[ $# -gt 0 ]]; do
         --verify) MODE="verify" ;;
         --list) MODE="list" ;;
         -h|--help)
-            sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'
+            # The help IS the header block: everything between the opening and
+            # closing `# ===` rules, so it never drifts from a hardcoded range.
+            awk 'NR < 3 { next } /^# =+$/ { exit } { sub(/^# ?/, ""); print }' "$0"
             exit 0
             ;;
         *)
@@ -72,9 +89,9 @@ done
 die() { echo "❌ $*" >&2; exit 1; }
 
 if [[ "$MODE" == "list" ]]; then
-    echo "Built in-repo (docker save):"
+    echo "Built in-repo (images.yml → dxdfir build-docker; docker save):"
     printf '   • %s\n' "${BUILT_IMAGES[@]}"
-    echo "Pulled (unbuildable):"
+    echo "Pulled (the Elastic stack, docker/elastic @ ${_ever:-?}):"
     printf '   • %s\n' "${PULL_IMAGES[@]}"
     echo "Image directory: $DOCKER_TAR_DIR"
     exit 0
@@ -134,10 +151,16 @@ fi
 ################################################################################
 # MODE=save.
 if [[ "$BUILD_FIRST" -eq 1 ]]; then
-    echo "🐳 Building the hardened dxdfir/* images first..."
-    ( cd "$REPO_ROOT_DIR" && ansible-playbook \
-        ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml \
-        -i localhost, -c local ) || die "Image build failed."
+    echo "🐳 Building the hardened get-sybers/* images first (dxdfir_images role)..."
+    # dxdfir build-docker IS the build path; the raw playbook invocation below
+    # is the same role, for a host where the Go front-end is not installed yet.
+    if command -v dxdfir >/dev/null 2>&1; then
+        dxdfir build-docker || die "Image build failed (dxdfir build-docker)."
+    else
+        ( cd "$REPO_ROOT_DIR" && ansible-playbook \
+            ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml \
+            -i localhost, -c local ) || die "Image build failed."
+    fi
 fi
 
 mkdir -p "$DOCKER_TAR_DIR"
@@ -148,7 +171,7 @@ failed=0
 # Built images: must already exist locally (never pulled).
 for image in "${BUILT_IMAGES[@]}"; do
     if ! $DOCKER_CMD image inspect "$image" >/dev/null 2>&1; then
-        echo "❌ $image is not built. Run: ansible-playbook playbooks/dxdfir-build-images.yml (or pass --build)"
+        echo "❌ $image is not built. Run: dxdfir build-docker (or pass --build)"
         failed=$((failed + 1)); continue
     fi
     fn="$(image_to_filename "$image")"
@@ -157,7 +180,7 @@ for image in "${BUILT_IMAGES[@]}"; do
         && echo "✅ $fn.tar" || { echo "❌ save failed: $image"; failed=$((failed + 1)); }
 done
 
-# Pulled images: fetch then save.
+# Pulled images (the Elastic stack): fetch then save.
 for image in "${PULL_IMAGES[@]}"; do
     echo "🔄 Pulling $image..."
     if ! $DOCKER_CMD pull "$image"; then

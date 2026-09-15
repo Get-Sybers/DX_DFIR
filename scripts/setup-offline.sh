@@ -2,21 +2,31 @@
 # ==============================================================================
 # Set up DX_DFIR on an AIR-GAPPED host from an offline package.
 #
-# Run this from inside an extracted offline bundle (produced by
-# scripts/package-offline.sh). With no network it:
+# The offline half of the two-host flow: on the CONNECTED host,
+# setup-environment.sh (online bootstrap) then package-offline.sh --build
+# (build every image + bundle everything); carry the bundle across; on the
+# AIR-GAPPED host, run THIS script alone — it replaces setup-environment.sh
+# there (that script's docker/apt/go/pip/galaxy steps all need the network;
+# this one installs the same pieces from the bundle).
+#
+# Run it from inside the extracted bundle. With no network it:
 #
 #   1. verifies every file against MANIFEST.sha256 (tamper / corruption check)
 #   2. unpacks the repository to the target dir (default: ./DX_DFIR), then
 #      restores data_store/dependencies from deps.tar — the signature rulesets
-#      (YARA/Suricata/Hayabusa), the Volatility symbol cache and EvtxECmd
+#      (YARA/Suricata/Hayabusa), the Volatility symbol cache
 #      (the Byakugan CAR engine is no longer a separate tarball — it is baked
 #      into the get-sybers/byakugan image and rides in the loaded images; the
 #      PIIAT-Mem volatility lane likewise ships in the get-sybers/piiat-mem image)
-#   4. loads the container images and runs the hardened-inventory guard
-#   5. installs the get_sybers_dxdfir processors + ansible into a venv from the
+#   3. loads the container images — the hardened get-sybers/* tool set AND the
+#      Elastic stack's docker.elastic.co images — via the repo's image engine
+#      (scripts/save-docker-images.sh --load), so `dxdfir stack deploy` works
+#      with zero pulls
+#   4. installs the get_sybers_dxdfir processors + ansible into a venv from the
 #      bundled wheels (no PyPI)
+#   5. builds the Go dxdfir front-end from the vendored modules (no proxy)
 #   6. installs the pinned ansible collections from the bundle (no Galaxy)
-#   7. prints how to run the pipeline
+#   7. runs the hardened-inventory guard and prints how to run the pipeline
 #
 # Nothing here reaches the network. Prerequisites on the offline host: docker,
 # python3 (+ venv), tar, sha256sum — all normally present on an analysis box.
@@ -41,7 +51,7 @@ while [[ $# -gt 0 ]]; do
         --target) TARGET="$(realpath -m "$2")"; shift ;;
         --venv) VENV="$(realpath -m "$2")"; shift ;;
         --skip-images) SKIP_IMAGES=1 ;;
-        -h|--help) sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) awk 'NR < 3 { next } /^# =+$/ { exit } { sub(/^# ?/, ""); print }' "$0"; exit 0 ;;
         *) echo "❌ Unknown option: $1" >&2; exit 1 ;;
     esac
     shift
@@ -69,9 +79,9 @@ mkdir -p "$TARGET"
 tar -xf "$BUNDLE/repo.tar" -C "$TARGET" || die "failed to unpack repo.tar"
 
 if [[ -f "$BUNDLE/deps.tar" ]]; then
-    echo "🧩 Restoring detection dependencies (signature rules, Hayabusa, symbols, EvtxECmd) ..."
+    echo "🧩 Restoring detection dependencies (signature rules, Hayabusa, symbols) ..."
     tar -xf "$BUNDLE/deps.tar" -C "$TARGET/data_store" || die "failed to unpack deps.tar"
-    for d in yara-rules suricata-rules hayabusa volatility3-symbols evtxecmd; do
+    for d in yara-rules suricata-rules hayabusa volatility3-symbols; do
         [[ -d "$TARGET/data_store/dependencies/$d" ]] \
             && echo "   ✅ dependencies/$d"
     done
@@ -91,23 +101,18 @@ fi
 # into the get-sybers/piiat-mem image, so it arrives with the loaded tool images
 # above. Nothing to unpack here.
 
-# ---- 3. images + inventory guard --------------------------------------------
-DOCKER_CMD=""
+# ---- 3. images (via the repo's image engine) --------------------------------
+# One load path for the whole lifecycle: the just-unpacked repo's
+# save-docker-images.sh (daemon resolution, per-tarball loading and errors all
+# live THERE, not in a second copy here). It loads the get-sybers/* tool set
+# and the Elastic stack images alike.
+IMAGES_LOADED=0
 if [[ "$SKIP_IMAGES" -eq 0 ]]; then
-    if docker info >/dev/null 2>&1; then DOCKER_CMD="docker"
-    elif command -v sudo >/dev/null 2>&1 && sudo docker info >/dev/null 2>&1; then DOCKER_CMD="sudo docker"
-    fi
-    [[ -n "$DOCKER_CMD" ]] || die "Docker daemon not reachable (start it, or pass --skip-images)."
     if [[ -d "$BUNDLE/images" ]]; then
-        echo "🐳 Loading container images ..."
-        loaded=0
-        for tarfile in "$BUNDLE"/images/*.tar; do
-            [[ -e "$tarfile" ]] || continue
-            $DOCKER_CMD load -i "$tarfile" >/dev/null \
-                && { echo "   ✅ ${tarfile##*/}"; loaded=$((loaded + 1)); } \
-                || die "failed to load ${tarfile##*/}"
-        done
-        echo "✅ Loaded $loaded image tarball(s)."
+        echo "🐳 Loading container images (scripts/save-docker-images.sh --load) ..."
+        DXDFIR_IMAGE_DIR="$BUNDLE/images" bash "$TARGET/scripts/save-docker-images.sh" --load \
+            || die "image load failed (start the docker daemon, or pass --skip-images)."
+        IMAGES_LOADED=1
     else
         echo "ℹ️  No images/ in the bundle (packaged with --no-images); skipping load."
     fi
@@ -134,13 +139,16 @@ echo "✅ get_sybers_dxdfir (+ ansible) installed into $VENV"
 
 # ---- 4b. the Go/termui front-end, offline (from vendored modules) -----------
 # The build pins GOTOOLCHAIN=local GOPROXY=off, so the host's toolchain must
-# satisfy go.mod's floor (Go >= 1.24) by itself — an older Go (e.g. the 1.22.x
+# satisfy go.mod's floor by itself — an older Go (e.g. the 1.22.x
 # an earlier setup-environment.sh installed) cannot build and, air-gapped,
 # cannot upgrade; it falls through to the no-front-end path instead of dying.
+# The floor comes from the unpacked repo's go/go.mod — no second copy here.
+_gofloor="$(awk '/^go /{split($2, v, "."); print v[2]; exit}' "$TARGET/go/go.mod" 2>/dev/null)"
+[[ "$_gofloor" =~ ^[0-9]+$ ]] || _gofloor=24
 _go_ok=0
 if command -v go >/dev/null 2>&1; then
     _gominor="$(go version 2>/dev/null | grep -oE 'go1\.[0-9]+' | head -1 | cut -d. -f2)"
-    [[ "$_gominor" =~ ^[0-9]+$ ]] && (( _gominor >= 24 )) && _go_ok=1
+    [[ "$_gominor" =~ ^[0-9]+$ ]] && (( _gominor >= _gofloor )) && _go_ok=1
 fi
 if (( _go_ok )) && [[ -f "$BUNDLE/go-vendor.tar" ]]; then
     echo "🐹 Building the dxdfir Go front-end (offline, -mod=vendor) ..."
@@ -187,7 +195,7 @@ if [[ -d "$BUNDLE/collections" ]] && ls "$BUNDLE"/collections/*.tar.gz >/dev/nul
 fi
 
 # ---- 6. verify the hardened inventory + report ------------------------------
-if [[ "$SKIP_IMAGES" -eq 0 && -n "$DOCKER_CMD" ]]; then
+if [[ "$IMAGES_LOADED" -eq 1 ]]; then
     echo "🔒 Verifying the hardened image inventory ..."
     if [[ -n "$DXDFIR" ]]; then
         # DXDFIR_PYTHON steers the front-end's ansible-playbook resolution to
@@ -210,6 +218,11 @@ fi
 echo ""
 echo "🎉 DX_DFIR is set up offline."
 echo "   Repo:  $TARGET"
+if [[ "$IMAGES_LOADED" -eq 1 ]]; then
+    echo "   Stack: the Elastic images arrived with the bundle — bring it up with zero pulls:"
+    echo "          cd $TARGET/docker/elastic && cp .env.example .env   # set the passwords/keys"
+    echo "          then: dxdfir stack deploy"
+fi
 if [[ -n "$DXDFIR" ]]; then
     echo "   CLI:   $DXDFIR"
     echo "   Try:   cd $TARGET && $DXDFIR --help"
