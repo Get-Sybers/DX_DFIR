@@ -15,7 +15,7 @@ evidence. See the [command reference](../getting-started/commands.md#processing)
 | **evtx** | Windows event logs (`raw/logs/winevt`, or pulled from disk images) | [goevtx](https://github.com/Get-Sybers/GoDFIR-toolz) (static-Go EvtxECmd) + Hayabusa Sigma | `get-sybers/goevtx` | `windows_logs/<host>/*_EvtxECmd_Output.json` |
 | **volatility** | Memory images (`raw/memory`) | [PIIAT-Mem](https://github.com/Get-Sybers/PIIAT-Mem) (Volatility 3) | `get-sybers/volatility` | `volatility/<image>/plugins/*.jsonl` |
 | **plaso** | Disk images + VM exports (`raw/disk_images`, `raw/VM_files`) | Plaso (`log2timeline` → `psort`) | `get-sybers/plaso` | `log2timeline/<host>.jsonl` |
-| **zimmerman** | Same disk-image family | [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) EZ-tools (gore, gomft, goese, goprefetch…) | `get-sybers/<tool>` + `get-sybers/plaso` for extraction | `zimmerman/<host>/` |
+| **godfir-toolz** | Same disk-image family | [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) EZ-tools (gore, gomft, goese, goprefetch…) | `get-sybers/<tool>` + `get-sybers/plaso` for extraction | `godfir-toolz/<host>/` |
 | **signatures** | PCAPs · disk · memory · `.evtx` | YARA · Suricata replay · Hayabusa Sigma (three sub-lanes) | `get-sybers/yara`, `get-sybers/suricata` | `signatures/<sub-lane>/` |
 
 Evidence is discovered by **magic bytes first**, extension as a fallback — so a

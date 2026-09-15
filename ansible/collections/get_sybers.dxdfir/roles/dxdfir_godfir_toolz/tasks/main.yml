@@ -1,5 +1,5 @@
 ---
-# dxdfir_zimmerman: disk images -> EZ-Tools artefact parse, one output dir per host.
+# dxdfir_godfir_toolz: disk images -> EZ-Tools artefact parse, one output dir per host.
 # The role GROUPS; the playbook DECIDES. Idempotence (skip a host dir that already
 # has output) lives in the Python processor, not in a task's `when:`. This role
 # asserts its own input rules, then delegates the shared preflight + process
@@ -7,41 +7,41 @@
 # set) is tolerated (dxdfir_lane_require_no_failures=false), so the gate is purely
 # "some host produced output, or there were no images / nothing but empties".
 
-- name: "zimmerman | assert inputs"
+- name: "godfir-toolz | assert inputs"
   ansible.builtin.assert:
     that:
-      - dxdfir_zimmerman_pipeline in ['elastic', 'sofelk']
-      - dxdfir_zimmerman_input_dir | length > 0
+      - dxdfir_godfir_toolz_pipeline in ['elastic', 'sofelk']
+      - dxdfir_godfir_toolz_input_dir | length > 0
     fail_msg: >-
-      dxdfir_zimmerman needs dxdfir_zimmerman_pipeline (elastic|sofelk) and a non-empty
-      dxdfir_zimmerman_input_dir.
+      dxdfir_godfir_toolz needs dxdfir_godfir_toolz_pipeline (elastic|sofelk) and a non-empty
+      dxdfir_godfir_toolz_input_dir.
     quiet: true
   tags: [always]
 
 # role_path resolves to THIS role here — capture the lane-specific gate file so
-# dxdfir_lane includes zimmerman's output gate, not its own.
-- name: "zimmerman | resolve lane-specific task paths"
+# dxdfir_lane includes godfir-toolz's output gate, not its own.
+- name: "godfir-toolz | resolve lane-specific task paths"
   ansible.builtin.set_fact:
-    dxdfir_zimmerman_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
+    dxdfir_godfir_toolz_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
   tags: [always]
 
 # The pipeline decision (elastic|sofelk) is carried by the resolved
-# dxdfir_zimmerman_out_dir default — the shared tasks are pipeline-agnostic. This
+# dxdfir_godfir_toolz_out_dir default — the shared tasks are pipeline-agnostic. This
 # lane drives ELEVEN get-sybers/* images (plaso for extraction, plus the ten Go
 # EZ-Tools/substitute containers the processor can run — including goese for SRUM
 # and goprefetch for Prefetch) — every one is supply-chain-guarded. gowxt is built
 # but deliberately not run yet (#88), so it is intentionally not in this list.
-# dxdfir_zimmerman_vm_dir is optional (the processor tolerates its absence) so it
+# dxdfir_godfir_toolz_vm_dir is optional (the processor tolerates its absence) so it
 # is not an input check.
-- name: "zimmerman | run the shared tool-lane skeleton"
+- name: "godfir-toolz | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
     name: dxdfir_lane
   vars:
-    dxdfir_lane_name: zimmerman
-    dxdfir_lane_module: get_sybers_dxdfir.zimmerman
-    dxdfir_lane_python_path: "{{ dxdfir_zimmerman_python_path }}"
+    dxdfir_lane_name: godfir-toolz
+    dxdfir_lane_module: get_sybers_dxdfir.godfir_toolz
+    dxdfir_lane_python_path: "{{ dxdfir_godfir_toolz_python_path }}"
     dxdfir_lane_images:
-      - "{{ dxdfir_zimmerman_plaso_image }}"
+      - "{{ dxdfir_godfir_toolz_plaso_image }}"
       - "get-sybers/gore:latest"
       - "get-sybers/gojle:latest"
       - "get-sybers/gole:latest"
@@ -54,10 +54,10 @@
       - "get-sybers/goprefetch:latest"
     dxdfir_lane_input_checks:
       - name: disk-image input dir
-        path: "{{ dxdfir_zimmerman_input_dir }}"
-    dxdfir_lane_argv: "{{ dxdfir_zimmerman_argv }}"
-    dxdfir_lane_verify_dir: "{{ dxdfir_zimmerman_out_dir }}"
+        path: "{{ dxdfir_godfir_toolz_input_dir }}"
+    dxdfir_lane_argv: "{{ dxdfir_godfir_toolz_argv }}"
+    dxdfir_lane_verify_dir: "{{ dxdfir_godfir_toolz_out_dir }}"
     dxdfir_lane_verify_glob: "*"
     dxdfir_lane_require_no_failures: false
-    dxdfir_lane_gate_extra: "{{ dxdfir_zimmerman_gate_extra }}"
+    dxdfir_lane_gate_extra: "{{ dxdfir_godfir_toolz_gate_extra }}"
   tags: [always]

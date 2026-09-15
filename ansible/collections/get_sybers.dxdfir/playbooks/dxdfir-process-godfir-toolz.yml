@@ -6,6 +6,6 @@
   connection: "{{ dxdfir_connection | default('local') }}"
   gather_facts: true
   tasks:
-    - name: "dxdfir-process-zimmerman | run the zimmerman role"
+    - name: "dxdfir-process-godfir-toolz | run the godfir-toolz role"
       ansible.builtin.include_role:
-        name: dxdfir_zimmerman
+        name: dxdfir_godfir_toolz

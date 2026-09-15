@@ -3,14 +3,14 @@
   hosts: localhost
   gather_facts: false
   vars:
-    molecule_out: /tmp/dxdfir_zimmerman_molecule/out
+    molecule_out: /tmp/dxdfir_godfir_toolz_molecule/out
   tasks:
-    - name: "molecule-verify | find any dxdfir_zimmerman_produced host output"
+    - name: "molecule-verify | find any dxdfir_godfir_toolz_produced host output"
       ansible.builtin.find:
         paths: "{{ molecule_out }}"
         recurse: true
         file_type: file
-      register: dxdfir_zimmerman_produced
+      register: dxdfir_godfir_toolz_produced
 
     # A sample image with no registry hive / Amcache.hve at all still extracts
     # cleanly (image_export just finds nothing) — the honest gate is "some
@@ -19,8 +19,8 @@
     - name: "molecule-verify | assert the lane produced host output"
       ansible.builtin.assert:
         that:
-          - dxdfir_zimmerman_produced.matched | int > 0
+          - dxdfir_godfir_toolz_produced.matched | int > 0
         fail_msg: >-
-          no output dxdfir_zimmerman_produced from the sample image (no zimmerman
+          no output dxdfir_godfir_toolz_produced from the sample image (no godfir-toolz
           artefact in it, or every EZ-Tools container failed).
         quiet: true

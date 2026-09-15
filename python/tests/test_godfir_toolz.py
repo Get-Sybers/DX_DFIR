@@ -1,4 +1,4 @@
-"""Unit tests for the pure logic of the zimmerman processor (no docker needed).
+"""Unit tests for the pure logic of the godfir-toolz processor (no docker needed).
 
 Every test here is offline: docker invocations are represented purely as argv
 lists (never executed) or, in the process_image tests, monkeypatched out.
@@ -8,7 +8,7 @@ import subprocess
 
 import yaml
 
-from get_sybers_dxdfir import zimmerman as z
+from get_sybers_dxdfir import godfir_toolz as z
 
 
 # ---- the YAML collection filter ---------------------------------------------

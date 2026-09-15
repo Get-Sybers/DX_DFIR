@@ -4,46 +4,46 @@ argument_specs:
     short_description: "disk images -> Eric Zimmerman EZ-Tools artefact parse, one output dir per host."
     description:
       - >-
-        Discovers disk images under dxdfir_zimmerman_input_dir (and VM exports under
-        dxdfir_zimmerman_vm_dir), extracts the zimmerman artefact set (registry hives +
+        Discovers disk images under dxdfir_godfir_toolz_input_dir (and VM exports under
+        dxdfir_godfir_toolz_vm_dir), extracts the zimmerman artefact set (registry hives +
         transaction logs, Amcache, jump lists/lnk, Recycle Bin $I records, Windows
         Timeline database, SRUM database, resident $MFT) with a plaso YAML collection
         filter, then runs each hardened EZ-Tools container over what was pulled out
         (RECmd, JLECmd, LECmd, AmcacheParser, AppCompatCacheParser, SBECmd, RBCmd,
         MFTECmd) plus a plaso log2timeline/psort two-step for SRUM. Idempotent at the
         host level: a host output dir that already holds any file is skipped unless
-        dxdfir_zimmerman_force.
+        dxdfir_godfir_toolz_force.
     options:
-      dxdfir_zimmerman_pipeline:
+      dxdfir_godfir_toolz_pipeline:
         type: str
         required: false
         default: elastic
         choices: [elastic, sofelk]
         description: "Which backend to target; selects the output destination."
-      dxdfir_zimmerman_input_dir:
+      dxdfir_godfir_toolz_input_dir:
         type: str
         required: false
         description: "Disk-image tree (E01/raw/img/dd/vmdk/vhd/vhdx/aff), recursed."
-      dxdfir_zimmerman_vm_dir:
+      dxdfir_godfir_toolz_vm_dir:
         type: str
         required: false
         description: "VMware VM export folders (one sub-folder per VM); optional."
-      dxdfir_zimmerman_elastic_out_dir:
+      dxdfir_godfir_toolz_elastic_out_dir:
         type: str
         required: false
-        description: "Elastic-path output dir (default data_store/processed/zimmerman)."
-      dxdfir_zimmerman_sofelk_out_dir:
+        description: "Elastic-path output dir (default data_store/processed/godfir-toolz)."
+      dxdfir_godfir_toolz_sofelk_out_dir:
         type: str
         required: false
         description: "SOF-ELK-path output dir (delivered into SOF-ELK by dxdfir_ingest_sofelk)."
-      dxdfir_zimmerman_out_dir:
+      dxdfir_godfir_toolz_out_dir:
         type: str
         required: false
         description: >-
           Resolved output base for the selected pipeline (defaults to the
-          elastic/sofelk out dir per dxdfir_zimmerman_pipeline); override to send
+          elastic/sofelk out dir per dxdfir_godfir_toolz_pipeline); override to send
           output to a custom location.
-      dxdfir_zimmerman_plaso_image:
+      dxdfir_godfir_toolz_plaso_image:
         type: str
         required: false
         default: "get-sybers/plaso:latest"
@@ -52,16 +52,16 @@ argument_specs:
           (image_export.py against a YAML collection filter). SRUM and Prefetch
           are parsed by the Linux-native Go substitutes (get-sybers/goese,
           get-sybers/goprefetch), not Plaso.
-      dxdfir_zimmerman_vss:
+      dxdfir_godfir_toolz_vss:
         type: bool
         required: false
         default: false
         description: "Also extract from Volume Shadow Copies during artefact extraction."
-      dxdfir_zimmerman_python_path:
+      dxdfir_godfir_toolz_python_path:
         type: str
         required: false
         description: "PYTHONPATH to the get_sybers_dxdfir package (in-repo/dev runs)."
-      dxdfir_zimmerman_force:
+      dxdfir_godfir_toolz_force:
         type: bool
         required: false
         default: false

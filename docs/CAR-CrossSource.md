@@ -44,7 +44,7 @@ verdict below is conditional on that.
 
 ## Data assessment (measured on the real per-source stores)
 
-Nine real `car.db` sources from the batch run, plus the memory and zimmerman
+Nine real `car.db` sources from the batch run, plus the memory and godfir-toolz
 stores. Key facts, measured:
 
 **1. Host identity is fragmented across lanes — the master blocker.**
@@ -54,7 +54,7 @@ sources carry no host at all:
 | source (LoneWolf host) | `source_host` values |
 |---|---|
 | event logs (EvtxECmd) | `WIN-1M3263ACE5D`, `DESKTOP-PM6C56D` |
-| zimmerman (SRUM/RECmd) | `LONEWOLF` (the `--host` arg), `desktop-pm6c56d` (from hive paths) |
+| godfir-toolz (SRUM/RECmd) | `LONEWOLF` (the `--host` arg), `desktop-pm6c56d` (from hive paths) |
 | memory | its own image hostname |
 | l2t dualserver / exfat / internaldns / pfsense | **empty** (Linux/appliance — no image_hostname) |
 | zeek captures | the capture-dir label (`ngdc-exterior-…`), not a host |
@@ -70,7 +70,7 @@ Measured `guid` forms for a process create:
 - event logs: `process-DESKTOP-PM6C56D-Security-2623` (audit-record identity)
 - Sysmon: `dfae8213-70eb-5cdd-0000-0010f66d0a00` (the real ProcessGuid)
 - memory: `proc-<_EPROCESS offset>`
-- SRUM (zimmerman): **None** — SRUM has no process-instance identity at all
+- SRUM (godfir-toolz): **None** — SRUM has no process-instance identity at all
 
 ⇒ **No definitive cross-lane process-instance join exists.** A process seen in
 two lanes cannot be proven the same instance by identity — only heuristically

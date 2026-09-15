@@ -37,7 +37,7 @@ func uniqueParents(paths []string) []string {
 }
 
 // hostDirsWithOutput returns the immediate subdirectories of outDir that contain
-// at least one non-empty regular file (a completed zimmerman host).
+// at least one non-empty regular file (a completed godfir-toolz host).
 func hostDirsWithOutput(outDir string) []string {
 	entries, err := os.ReadDir(outDir)
 	if err != nil {

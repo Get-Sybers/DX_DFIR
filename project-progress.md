@@ -49,7 +49,7 @@ Elastic-native backend reads.
 | [Log2timeline](https://github.com/log2timeline/plaso)         | ✅            | json_line       | ✅ `log2timeline/jsonl/`           |     ✅ (`file`) |
 | [Zeek](https://zeek.org/)                                     | ✅            | json            | ✅ `zeek/<capture>/` (`conn` + all other logs) | ✅ (`flow`) |
 | [WinEvent Logs](https://www.sans.org/white-papers/32949/) (goevtx) | ✅ (`get-sybers/goevtx`, static-Go go-evtx; 103 real LoneWolf logs) | evtx → json     | ✅ `windows_logs/<host>/` (55,638 rows)           |     ✅ (`process`/`user_session`/`service`) |
-| [EZ-Tools](https://ericzimmerman.github.io/) (Zimmerman) artefacts | ✅ the zimmerman lane (`dxdfir process zimmerman`) | json / csv | ✅ `zimmerman/` | ✅ (`registry`/`flow`/`process`) |
+| [EZ-Tools](https://ericzimmerman.github.io/) (Zimmerman) artefacts | ✅ the godfir-toolz lane (`dxdfir process godfir-toolz`) | json / csv | ✅ `godfir-toolz/` | ✅ (`registry`/`flow`/`process`) |
 | [Volatility 3](https://github.com/volatilityfoundation/volatility3) | ✅ the volatility lane | json (per plugin) | ✅ `volatility/<image>/` | n/a (memory ≠ CAR dead-box object) |
 | [Log2timeline/Plaso](https://github.com/log2timeline/plaso) (disk images, all formats + VM) | ✅ the plaso lane | json_line (+ `.plaso` db) | ✅ `log2timeline/jsonl/`, one file per host | ✅ (`file`, `process` prefetch/amcache/cron, `user_session` utmp/ssh) |
 | Linux Logs (syslog / utmp / ssh, via Plaso)                   | ✅            | json_line       | ✅ via the plaso lane | ✅ (`user_session` utmp+ssh, `process` cron) |
@@ -121,7 +121,7 @@ Things that are broken or unsafe right now.
 - ✅ A smoke test (`tests/smoke-test.sh`, the `smoke` workflow) runs the real
   evtx lane over sha256-pinned public Sysmon fixtures, normalises to CAR and
   asserts the extracted field values, then runs the `verify-car` gate.
-- ⬜ The same for a small public disk image (the plaso / zimmerman lanes).
+- ⬜ The same for a small public disk image (the plaso / godfir-toolz lanes).
 
 ### Environment & Dependencies
 - Create a guide for **setting up the development environment**.

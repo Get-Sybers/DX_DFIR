@@ -1,11 +1,11 @@
 ---
-# zimmerman output gate, included at the end of dxdfir_lane's process block: some
+# godfir-toolz output gate, included at the end of dxdfir_lane's process block: some
 # host produced output, UNLESS there were no images or nothing but empties
 # (images == empty — a non-Windows image with no artefact set is NORMAL, not a
 # failure). Per-image failures are tolerated (dxdfir_lane_require_no_failures is
 # false for this lane), so this gates on output. A trusted literal assert —
 # dxdfir_lane_run + dxdfir_lane_verify are in scope from the shared process step.
-- name: "zimmerman-process | assert output was produced for the images present"
+- name: "godfir-toolz-process | assert output was produced for the images present"
   ansible.builtin.assert:
     that:
       - >-
@@ -13,6 +13,6 @@
         ((dxdfir_lane_run.stdout | from_json).images | int ==
          (dxdfir_lane_run.stdout | from_json).empty | int)
     fail_msg: >-
-      zimmerman produced no output at all though disk images were present
+      godfir-toolz produced no output at all though disk images were present
       (every EZ-Tools container failed?).
     quiet: true

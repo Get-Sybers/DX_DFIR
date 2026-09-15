@@ -1,4 +1,4 @@
-# dxdfir_zimmerman
+# dxdfir_godfir_toolz
 
 Process **forensic disk images** and **VMware VM exports** with the artefact set
 Eric Zimmerman's **EZ-Tools** parse (RECmd, JLECmd, LECmd, AmcacheParser,
@@ -8,13 +8,13 @@ now runs as a Linux-native, static-Go `FROM scratch` substitute
 (Get-Sybers/GoDFIR-toolz: `gore`/`gojle`/`gole`/`goamcache`/`goappcompat`/`gosbe`/
 `gorb`/`gomft`), not .NET — including SRUM (`goese`) and Prefetch (`goprefetch`),
 which Plaso only **extracts** the bytes for; the parsing is all Go. The role is structure only — it asserts inputs, runs
-a preflight (docker, input dir, the `get_sybers_dxdfir.zimmerman` module, every
+a preflight (docker, input dir, the `get_sybers_dxdfir.godfir_toolz` module, every
 tool image it drives), then invokes the processor as a **single action** (the
 extraction + nine container runs happen inside Python). One output dir per host.
 
 ## How it works
 
-For each disk image, the processor (`get_sybers_dxdfir/zimmerman.py`):
+For each disk image, the processor (`get_sybers_dxdfir/godfir_toolz.py`):
 
 1. Extracts the zimmerman artefact set from the image with Plaso's
    `image_export.py`, using a **YAML collection filter** (not
@@ -52,25 +52,25 @@ as part of the normal disk-image timeline.
 Follows the CAR pipeline's rule (`docs/CAR-Pipeline.md` §2 — "one source, one
 database"): each image gets its own `<out_dir>/<host>/` (host = the image's
 filename stem), holding the raw extraction (`_extracted/`), one sub-dir per
-EZ-Tool, and a combined `zimmerman.log`.
+EZ-Tool, and a combined `godfir-toolz.log`.
 
 ## Role variables
 | Variable | Default | Description |
 |---|---|---|
-| `dxdfir_zimmerman_pipeline` | `elastic` | `elastic` or `sofelk` — selects the output destination (the **playbook** decides this). |
-| `dxdfir_zimmerman_input_dir` | `<repo>/data_store/raw/disk_images` | Disk-image tree (E01/raw/img/dd/vmdk/vhd/vhdx/aff), recursed. |
-| `dxdfir_zimmerman_vm_dir` | `<repo>/data_store/raw/VM_files` | VMware VM export folders (one per VM); optional. |
-| `dxdfir_zimmerman_elastic_out_dir` | `<repo>/data_store/processed/zimmerman` | Elastic-path output. |
-| `dxdfir_zimmerman_sofelk_out_dir` | `<repo>/data_store/processed/sofelk/zimmerman` | SOF-ELK-path output. |
-| `dxdfir_zimmerman_plaso_image` | `get-sybers/plaso:latest` | Used for both artefact extraction and the SRUM two-step. |
-| `dxdfir_zimmerman_vss` | `false` | Also extract from Volume Shadow Copies. |
-| `dxdfir_zimmerman_python_path` | `<repo>/python` | PYTHONPATH to `get_sybers_dxdfir` (in-repo runs). |
-| `dxdfir_zimmerman_force` | `false` | Reprocess hosts that already have output. |
+| `dxdfir_godfir_toolz_pipeline` | `elastic` | `elastic` or `sofelk` — selects the output destination (the **playbook** decides this). |
+| `dxdfir_godfir_toolz_input_dir` | `<repo>/data_store/raw/disk_images` | Disk-image tree (E01/raw/img/dd/vmdk/vhd/vhdx/aff), recursed. |
+| `dxdfir_godfir_toolz_vm_dir` | `<repo>/data_store/raw/VM_files` | VMware VM export folders (one per VM); optional. |
+| `dxdfir_godfir_toolz_elastic_out_dir` | `<repo>/data_store/processed/godfir-toolz` | Elastic-path output. |
+| `dxdfir_godfir_toolz_sofelk_out_dir` | `<repo>/data_store/processed/sofelk/godfir-toolz` | SOF-ELK-path output. |
+| `dxdfir_godfir_toolz_plaso_image` | `get-sybers/plaso:latest` | Used for both artefact extraction and the SRUM two-step. |
+| `dxdfir_godfir_toolz_vss` | `false` | Also extract from Volume Shadow Copies. |
+| `dxdfir_godfir_toolz_python_path` | `<repo>/python` | PYTHONPATH to `get_sybers_dxdfir` (in-repo runs). |
+| `dxdfir_godfir_toolz_force` | `false` | Reprocess hosts that already have output. |
 
 ## Idempotence
 
 Coarse-grained, at the **host** level: a host output dir that already holds any
-non-empty file is skipped whole, unless `dxdfir_zimmerman_force`. A partial prior
+non-empty file is skipped whole, unless `dxdfir_godfir_toolz_force`. A partial prior
 run (interrupted mid-way) is reprocessed entirely rather than resumed
 step-by-step — simpler and safer than guessing which EZ-Tool half-completed.
 The skip lives in the Python processor, never in a task `when:`.
@@ -89,11 +89,11 @@ Windows Timeline database to validate against).
 
 ## Example
 ```bash
-ansible-playbook playbooks/dxdfir-process-zimmerman.yml -e dxdfir_zimmerman_pipeline=elastic
+ansible-playbook playbooks/dxdfir-process-godfir-toolz.yml -e dxdfir_godfir_toolz_pipeline=elastic
 ```
 
 ## Testing
-Python unit tests (`python/tests/test_zimmerman.py`) cover the pure logic: the
+Python unit tests (`python/tests/test_godfir_toolz.py`) cover the pure logic: the
 YAML filter's shape and artefact coverage (including prefetch), every container
 argv builder's exact flags/mounts, discovery, host-level idempotent skip,
 per-artefact gating (amcache/appcompatcache/mftecmd/srum/prefetch only run when
