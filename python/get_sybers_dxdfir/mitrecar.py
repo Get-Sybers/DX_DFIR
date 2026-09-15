@@ -18,7 +18,7 @@ engine's three operations (docker/byakugan/byakugan-entry.py):
               engine on the analyst host, so the object model stays in the engine.
 
 This module maps the HOST paths in the engine's own flags to container mounts —
-processed evidence read-only, the car/ output read-write — exactly like the
+processed evidence read-only, the byakugan/ output read-write — exactly like the
 other processing lanes (see plaso.py). Every flag is otherwise the engine's own
 (see the Byakugan README); this lane only supplies the confinement.
 
@@ -94,16 +94,16 @@ def _run(argv: list[str], mounts: list[str]) -> subprocess.CompletedProcess:
 
 def run(tool_argv: list[str]) -> subprocess.CompletedProcess:
     """Materialise CAR (the engine build). Maps the host paths in the build flags
-    to container mounts: processed evidence read-only, the car/ output read-write."""
+    to container mounts: processed evidence read-only, the byakugan/ output read-write."""
     opts, bare, _pos = _split(tool_argv, _BUILD_VALUE_FLAGS)
 
     if "--batch" in opts:
         src = os.path.realpath(opts["--batch"])
-        out = os.path.realpath(opts.get("--out") or os.path.join(src, "car"))
+        out = os.path.realpath(opts.get("--out") or os.path.join(src, "byakugan"))
         _writable(out)
         # processed tree read-only (inputs are DX_DFIR's own prior outputs); only
-        # the car/ tree is writable, so a compromised engine cannot rewrite the
-        # other lanes' outputs.
+        # the byakugan/ tree is writable, so a compromised engine cannot rewrite
+        # the other lanes' outputs.
         argv = ["--batch", "/work", "--out", "/out", *bare]
         return _run(argv, [f"{src}:/work:ro", f"{out}:/out"])
 

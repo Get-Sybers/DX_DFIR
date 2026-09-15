@@ -83,7 +83,7 @@ dxdfir process evtx
 ```bash
 dxdfir build-car                             # every source under data_store/processed
 dxdfir verify-car                            # the promotion gate over the result
-dxdfir car-timeline data_store/processed/car # one time-ordered timeline across every source
+dxdfir car-timeline data_store/processed/byakugan # one time-ordered timeline across every source
 ```
 - `build-car` drives the external [Byakugan](https://github.com/Get-Sybers/byakugan)
   engine, run inside the hardened `get-sybers/byakugan` image — cloned + built at
@@ -91,12 +91,12 @@ dxdfir car-timeline data_store/processed/car # one time-ordered timeline across 
   source becomes its
   own `car.db` + `superset.db` and one `car_<object>.jsonl` per populated CAR
   object (plus `car_relationships.jsonl`) under
-  `data_store/processed/car/<source>/`. A source whose store exists is
+  `data_store/processed/byakugan/<source>/`. A source whose store exists is
   left alone; `--rebuild` re-derives it after a map change.
 - `verify-car` asserts what was written: each exercised object populated, values
   sane (IPs, ports, SIDs, `car_action` in the engine model's vocabulary), every
   row traceable to one artefact, the relationship edges naming real endpoints.
-  It reads `data_store/processed/car` by default, or `--car-dir DIR`.
+  It reads `data_store/processed/byakugan` by default, or `--car-dir DIR`.
 - The CAR JSON is the contract every sink reads — see
   [docs/CAR-Pipeline.md](/docs/CAR-Pipeline.md).
 
@@ -122,7 +122,7 @@ docker compose ps               # setup exits 0; the rest go (healthy)
   into a watch dir with a delivery ledger — point `ELASTIC_INGEST_DIR` at the same
   path (process with `--pipeline sofelk` for that tree, or mount your own
   `<type>/` tree).
-- The CAR→ECS load of `processed/car/` into the `logs-car.*` data streams and the
+- The CAR→ECS load of `processed/byakugan/` into the `logs-car.*` data streams and the
   `car-detections` lookup index is the next phase; the Phase-0
   [risk gate](/docs/riskgate.md) proves the two assumptions it rests on
   (evidence-time detection runs, ES|QL `LOOKUP JOIN`) and documents the

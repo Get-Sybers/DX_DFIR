@@ -6,8 +6,8 @@ dxdfir_signatures_pipeline: elastic
 # (roles/dxdfir_signatures -> get_sybers.dxdfir -> collections -> ansible -> repo).
 dxdfir_signatures_repo_root: "{{ role_path }}/../../../../.."
 
-dxdfir_signatures_elastic_out_dir: "{{ dxdfir_signatures_repo_root }}/data_store/processed/signatures"
-dxdfir_signatures_sofelk_out_dir: "{{ dxdfir_signatures_repo_root }}/data_store/processed/sofelk/signatures"
+dxdfir_signatures_elastic_out_dir: "{{ dxdfir_signatures_repo_root }}/data_store/processed/detections"
+dxdfir_signatures_sofelk_out_dir: "{{ dxdfir_signatures_repo_root }}/data_store/processed/sofelk/detections"
 # Resolved output base for the selected pipeline — consumed by
 # tasks/process.yml. Override directly to send output to a custom location.
 dxdfir_signatures_out_dir: "{{ dxdfir_signatures_elastic_out_dir if dxdfir_signatures_pipeline == 'elastic' else dxdfir_signatures_sofelk_out_dir }}"

@@ -9,7 +9,7 @@ The normalisation itself is done by the **external [Byakugan engine](https://git
 which runs entirely inside the hardened `get-sybers/byakugan` container — cloned + built
 into the image at the `byakugan.ref` pin (`docker/byakugan/Dockerfile`) by `dxdfir
 build-docker`, never vendored. DX_DFIR is a thin front over it: one Ansible role,
-`dxdfir_car`, with three actions. Each action runs the Python seam
+`dxdfir_byakugan`, with three actions. Each action runs the Python seam
 `get_sybers_dxdfir.mitrecar`, which holds **no CAR logic itself** — it only maps the host
 paths to container mounts (processed evidence read-only, the `car/` output read-write) and
 shells the engine image. (Grepping the code, `mitrecar` is the name you'll meet for the
@@ -32,7 +32,7 @@ source, one database). Per source: input → artefact map → normalise → its 
 (SQLite, one table per CAR object) + `superset.db` (the CAR + ATT&CK superset model and
 the relationship-instance edges linking the `car.db` rows) → enrich (within the source
 only) → export. `store.export_jsonl()` writes one `car_<object>.jsonl` per populated
-object plus `car_relationships.jsonl` under `data_store/processed/car/<source>/`.
+object plus `car_relationships.jsonl` under `data_store/processed/byakugan/<source>/`.
 
 By default it batches every source under `data_store/processed/`; a source whose store
 already exists is left alone unless you pass `--rebuild`.
@@ -68,7 +68,7 @@ gate checks the materialised output. **Run it before you trust the CAR.**
 ## Timeline
 
 ```bash
-dxdfir car-timeline data_store/processed/car --out timeline.jsonl [--after ISO] [--before ISO]
+dxdfir car-timeline data_store/processed/byakugan --out timeline.jsonl [--after ISO] [--before ISO]
 ```
 
 Unions the **object events** (`car.db` — every populated field plus the `native`

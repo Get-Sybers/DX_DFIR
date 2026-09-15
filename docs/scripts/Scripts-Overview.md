@@ -30,7 +30,7 @@ scripts remain.
 The three signature lanes (formerly `scripts/process-signatures.sh` +
 `scripts/signatures/`) are Python: `python -m get_sybers_dxdfir.signatures`, or the
 `dxdfir_signatures` role. Each lane emits self-describing JSONL to
-`data_store/processed/signatures/<tool>/`. Run all, or `--only <lane>`; `--fetch`
+`data_store/processed/detections/<tool>/`. Run all, or `--only <lane>`; `--fetch`
 provisions rules when online (the YARA lane fetches the pinned
 [DetectRaptor](https://github.com/mgreen27/DetectRaptor) ruleset). To supply
 your own YARA or Suricata rules (and tune Suricata's `HOME_NET`), see
@@ -65,7 +65,7 @@ No shell scripts here either:
   `dxdfir build-docker`) over the processed
   tree: one `car.db` + `superset.db` and
   one `car_<object>.jsonl` per populated object per source, under
-  `data_store/processed/car/<source>/`.
+  `data_store/processed/byakugan/<source>/`.
   **`dxdfir verify-car`** (`get_sybers_dxdfir.carcheck`) is the gate over what was
   written; **`dxdfir car-timeline`** unions a tree into one timeline JSONL.
 - The **Elastic-native backend** (`docker/elastic/`) is brought up with

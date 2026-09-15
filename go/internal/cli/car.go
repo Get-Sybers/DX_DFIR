@@ -8,7 +8,7 @@ import (
 	"github.com/get-sybers/dx_dfir/go/internal/run"
 )
 
-// The CAR stage is Ansible-orchestrated (dxdfir_car role): build / verify /
+// The CAR stage is Ansible-orchestrated (dxdfir_byakugan role): build / verify /
 // timeline each front a thin playbook so the CLI drives Ansible, not Python
 // directly. The processors still do the work — the role invokes them.
 
@@ -24,7 +24,7 @@ func newBuildCarCmd(env *Env) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "build-car [PROCESSED_DIR]",
 		Short: "Build the per-source CAR stores (car.db + superset.db) from processed evidence.",
-		Long: "Build the per-source CAR stores from processed evidence, via the dxdfir_car\n" +
+		Long: "Build the per-source CAR stores from processed evidence, via the dxdfir_byakugan\n" +
 			"Ansible role.\n\n" +
 			"Default (batch): discover every source under the processed tree (PROCESSED_DIR,\n" +
 			"or <repo>/data_store/processed) and build each one's car.db + superset.db.\n" +
@@ -36,19 +36,19 @@ func newBuildCarCmd(env *Env) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			vars := []string{"dxdfir_car_action=build"}
+			vars := []string{"dxdfir_byakugan_action=build"}
 			if inPath != "" {
-				vars = append(vars, "dxdfir_car_in="+inPath)
-				vars = appendVar(vars, "dxdfir_car_out", out)
-				vars = appendVar(vars, "dxdfir_car_host", host)
-				vars = appendVar(vars, "dxdfir_car_artefacts", artefacts)
+				vars = append(vars, "dxdfir_byakugan_in="+inPath)
+				vars = appendVar(vars, "dxdfir_byakugan_out", out)
+				vars = appendVar(vars, "dxdfir_byakugan_host", host)
+				vars = appendVar(vars, "dxdfir_byakugan_artefacts", artefacts)
 			} else {
 				if len(args) > 0 && args[0] != "" {
-					vars = append(vars, "dxdfir_car_processed_dir="+args[0])
+					vars = append(vars, "dxdfir_byakugan_processed_dir="+args[0])
 				}
-				vars = appendVar(vars, "dxdfir_car_out", out)
+				vars = appendVar(vars, "dxdfir_byakugan_out", out)
 				if rebuild {
-					vars = append(vars, "dxdfir_car_rebuild=true")
+					vars = append(vars, "dxdfir_byakugan_rebuild=true")
 				}
 			}
 			plan, err := ansiblePlan(r, ap, "dxdfir-build-car.yml", vars, false)
@@ -73,8 +73,8 @@ func newVerifyCarCmd(env *Env) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "verify-car",
 		Short: "Run the CAR correctness gate over the materialised CAR tree.",
-		Long: "Run the CAR correctness gate (dxdfir_car role, verify action) over the\n" +
-			"materialised CAR (default <repo>/data_store/processed/car). Run the pipeline\n" +
+		Long: "Run the CAR correctness gate (dxdfir_byakugan role, verify action) over the\n" +
+			"materialised CAR (default <repo>/data_store/processed/byakugan). Run the pipeline\n" +
 			"first (process -> build-car).",
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
@@ -82,8 +82,8 @@ func newVerifyCarCmd(env *Env) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			vars := []string{"dxdfir_car_action=verify"}
-			vars = appendVar(vars, "dxdfir_car_dir", carDir)
+			vars := []string{"dxdfir_byakugan_action=verify"}
+			vars = appendVar(vars, "dxdfir_byakugan_dir", carDir)
 			plan, err := ansiblePlan(r, ap, "dxdfir-verify-car.yml", vars, false)
 			if err != nil {
 				return err
@@ -92,7 +92,7 @@ func newVerifyCarCmd(env *Env) *cobra.Command {
 			return exitCode(code)
 		},
 	}
-	cmd.Flags().StringVar(&carDir, "car-dir", "", "The materialised CAR tree (default: <repo>/data_store/processed/car).")
+	cmd.Flags().StringVar(&carDir, "car-dir", "", "The materialised CAR tree (default: <repo>/data_store/processed/byakugan).")
 	return cmd
 }
 
@@ -107,7 +107,7 @@ func newCarTimelineCmd(env *Env) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "car-timeline CAR_DIR",
 		Short: "Build one property-rich, time-ordered CAR timeline from car.db + superset.db.",
-		Long: "Build one property-rich, time-ordered CAR timeline (dxdfir_car role, timeline\n" +
+		Long: "Build one property-rich, time-ordered CAR timeline (dxdfir_byakugan role, timeline\n" +
 			"action). Unions the object events and relationship edges from a source's CAR\n" +
 			"stores into <car_dir>/timeline.jsonl. Point it at one source's car directory, or\n" +
 			"a tree to aggregate every source under it.",
@@ -117,11 +117,11 @@ func newCarTimelineCmd(env *Env) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			vars := []string{"dxdfir_car_action=timeline", "dxdfir_car_timeline_dir=" + args[0]}
-			vars = appendVar(vars, "dxdfir_car_timeline_out", out)
-			vars = appendVar(vars, "dxdfir_car_timeline_host", host)
-			vars = appendVar(vars, "dxdfir_car_timeline_after", after)
-			vars = appendVar(vars, "dxdfir_car_timeline_before", before)
+			vars := []string{"dxdfir_byakugan_action=timeline", "dxdfir_byakugan_timeline_dir=" + args[0]}
+			vars = appendVar(vars, "dxdfir_byakugan_timeline_out", out)
+			vars = appendVar(vars, "dxdfir_byakugan_timeline_host", host)
+			vars = appendVar(vars, "dxdfir_byakugan_timeline_after", after)
+			vars = appendVar(vars, "dxdfir_byakugan_timeline_before", before)
 			plan, err := ansiblePlan(r, ap, "dxdfir-car-timeline.yml", vars, false)
 			if err != nil {
 				return err

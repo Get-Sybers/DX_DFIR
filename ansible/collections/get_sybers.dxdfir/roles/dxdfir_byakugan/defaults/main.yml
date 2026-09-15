@@ -1,0 +1,66 @@
+---
+# dxdfir_byakugan: materialise + verify + timeline the MITRE CAR from processed evidence.
+# One role, three actions (dxdfir_byakugan_action); the playbook picks the action.
+
+# Which CAR action to run: build (materialise stores), verify (correctness gate),
+# or timeline (unified time-ordered CAR).
+dxdfir_byakugan_action: build
+
+# Repo root is five levels up from this role
+# (roles/dxdfir_byakugan -> get_sybers.dxdfir -> collections -> ansible -> repo).
+dxdfir_byakugan_repo_root: "{{ role_path }}/../../../../.."
+
+# Processed evidence tree the batch build reads from, and the materialised CAR tree.
+dxdfir_byakugan_processed_dir: "{{ dxdfir_byakugan_repo_root }}/data_store/processed"
+dxdfir_byakugan_dir: "{{ dxdfir_byakugan_repo_root }}/data_store/processed/byakugan"
+
+# The CAR engine module the preflight import-checks (a thin, pure-Python front to
+# the external Byakugan engine, which now runs entirely inside the hardened
+# get-sybers/byakugan container — cloned + built at the repo-root byakugan.ref
+# pin); in-repo runs put the package on PYTHONPATH.
+dxdfir_byakugan_module: get_sybers_dxdfir.mitrecar
+dxdfir_byakugan_python_path: "{{ dxdfir_byakugan_repo_root }}/python"
+
+# The hardened engine image the lane shells (the supply-chain guard asserts it is
+# present + hardened before any evidence is touched — see get_sybers_dxdfir.images).
+dxdfir_byakugan_image: get-sybers/byakugan:latest
+
+# build: rebuild stores that already exist (maps to the engine's --force).
+dxdfir_byakugan_rebuild: false
+# build (single-source): one processed file/dir -> one car.db. Empty => batch.
+dxdfir_byakugan_in: ""
+dxdfir_byakugan_out: ""
+dxdfir_byakugan_host: ""
+dxdfir_byakugan_artefacts: ""
+
+# timeline: the source car dir (or a tree to aggregate) and optional filters.
+dxdfir_byakugan_timeline_dir: "{{ dxdfir_byakugan_dir }}"
+dxdfir_byakugan_timeline_out: ""
+dxdfir_byakugan_timeline_host: ""
+dxdfir_byakugan_timeline_after: ""
+dxdfir_byakugan_timeline_before: ""
+
+# The build argv, handed to tasks/build.yml. Single-source (--in) vs batch, with
+# the optional flags appended only when set — mirrors the CLI's build-car.
+dxdfir_byakugan_build_argv: >-
+  {{ ['python3', '-m', dxdfir_byakugan_module]
+  + (['--in', dxdfir_byakugan_in]
+     + (['--out', dxdfir_byakugan_out] if dxdfir_byakugan_out | length > 0 else [])
+     + (['--host', dxdfir_byakugan_host] if dxdfir_byakugan_host | length > 0 else [])
+     + (['--artefacts', dxdfir_byakugan_artefacts] if dxdfir_byakugan_artefacts | length > 0 else [])
+     if dxdfir_byakugan_in | length > 0
+     else ['--batch', dxdfir_byakugan_processed_dir]
+     + (['--out', dxdfir_byakugan_out] if dxdfir_byakugan_out | length > 0 else [])
+     + (['--force'] if dxdfir_byakugan_rebuild | bool else [])) }}
+
+# The verify (gate) argv: the CAR correctness check over the materialised tree.
+dxdfir_byakugan_verify_argv: >-
+  {{ ['python3', '-m', 'get_sybers_dxdfir.carcheck', '--car-dir', dxdfir_byakugan_dir] }}
+
+# The timeline argv: union a source's stores into one time-ordered CAR timeline.
+dxdfir_byakugan_timeline_argv: >-
+  {{ ['python3', '-m', dxdfir_byakugan_module, 'timeline', dxdfir_byakugan_timeline_dir]
+  + (['--out', dxdfir_byakugan_timeline_out] if dxdfir_byakugan_timeline_out | length > 0 else [])
+  + (['--host', dxdfir_byakugan_timeline_host] if dxdfir_byakugan_timeline_host | length > 0 else [])
+  + (['--after', dxdfir_byakugan_timeline_after] if dxdfir_byakugan_timeline_after | length > 0 else [])
+  + (['--before', dxdfir_byakugan_timeline_before] if dxdfir_byakugan_timeline_before | length > 0 else []) }}

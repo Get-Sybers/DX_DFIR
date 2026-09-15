@@ -223,7 +223,7 @@ def build_parser() -> argparse.ArgumentParser:
                         "finished CAR stores the detections are joined to. [required]")
     p.add_argument("--detections", type=Path, required=True, metavar="<path>",
                    help="The detection-lane output dir (its suricata/ hayabusa/ yara/ subdirs), "
-                        "e.g. data_store/processed/signatures. [required]")
+                        "e.g. data_store/processed/detections. [required]")
     p.add_argument("--out", type=Path, metavar="<path>", help="Write the bundle here (default: stdout).")
     p.add_argument("--case", required=True, metavar="<str>",
                    help="Case id scoping the observation/sighting ids. [required]")

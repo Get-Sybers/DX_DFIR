@@ -9,7 +9,7 @@ dxdfir_cleanup_action: processed
 dxdfir_cleanup_repo_root: "{{ role_path }}/../../../../.."
 
 dxdfir_cleanup_processed_dir: "{{ dxdfir_cleanup_repo_root }}/data_store/processed"
-dxdfir_cleanup_car_dir: "{{ dxdfir_cleanup_repo_root }}/data_store/processed/car"
+dxdfir_cleanup_car_dir: "{{ dxdfir_cleanup_repo_root }}/data_store/processed/byakugan"
 dxdfir_cleanup_python_path: "{{ dxdfir_cleanup_repo_root }}/python"
 
 # docker: also prune dangling layers; and target EVERY get-sybers/* image rather

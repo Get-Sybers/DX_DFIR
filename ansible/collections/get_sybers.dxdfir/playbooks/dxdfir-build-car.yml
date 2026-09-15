@@ -7,6 +7,6 @@
   tasks:
     - name: "dxdfir-build-car | run the car role (build)"
       ansible.builtin.include_role:
-        name: dxdfir_car
+        name: dxdfir_byakugan
       vars:
-        dxdfir_car_action: build
+        dxdfir_byakugan_action: build

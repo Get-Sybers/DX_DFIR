@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """Byakugan container ENTRYPOINT — ONE binary, three operations, selected by the
-first argument (the DX_DFIR mitrecar lane / the dxdfir_car ansible role supplies
+first argument (the DX_DFIR mitrecar lane / the dxdfir_byakugan ansible role supplies
 it), mirroring the lane's own dispatch:
 
     byakugan timeline <car_dir> [flags]   -> the unified, time-ordered CAR timeline

@@ -24,7 +24,7 @@ argument_specs:
       dxdfir_cleanup_car_dir:
         type: str
         required: false
-        description: "CAR tree to wipe (default data_store/processed/car)."
+        description: "CAR tree to wipe (default data_store/processed/byakugan)."
       dxdfir_cleanup_python_path:
         type: str
         required: false

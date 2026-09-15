@@ -32,7 +32,7 @@ import (
 //   - Containers: a ktop-style docker ps/stats table of the tool containers.
 //   - Kibana:     run ES|QL queries against Elasticsearch and render the results
 //     (the command box becomes the query input on this tab); stack status too.
-//   - Timeline:   the byakugan behaviour timeline (data_store/processed/car).
+//   - Timeline:   the byakugan behaviour timeline (data_store/processed/byakugan).
 type Shell struct {
 	self     string // path to this dxdfir binary, re-invoked with --no-tui per command
 	version  string

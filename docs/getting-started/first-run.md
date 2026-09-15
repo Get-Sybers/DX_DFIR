@@ -67,7 +67,7 @@ dxdfir build-car               # processed evidence → per-source MITRE CAR sto
 
 This drives the external [Byakugan engine](https://github.com/Get-Sybers/byakugan) to
 turn every processed source into its own CAR store — `car.db` plus one
-`car_<object>.jsonl` per object — under `data_store/processed/car/<source>/`. Changed a
+`car_<object>.jsonl` per object — under `data_store/processed/byakugan/<source>/`. Changed a
 map or coverage? Re-derive with `--rebuild`. See the
 [CAR pipeline](../architecture/car-pipeline.md).
 
@@ -83,11 +83,11 @@ every row traceable to one artefact. **Run this before you trust the CAR.**
 ## 5. Build a timeline
 
 ```bash
-dxdfir car-timeline data_store/processed/car    # writes data_store/processed/car/timeline.jsonl
+dxdfir car-timeline data_store/processed/byakugan    # writes data_store/processed/byakugan/timeline.jsonl
 ```
 
 Unions every source's object events and relationship edges into one time-ordered
-`timeline.jsonl` — the behaviour timeline. Written under `data_store/processed/car/` by
+`timeline.jsonl` — the behaviour timeline. Written under `data_store/processed/byakugan/` by
 default, which is exactly what the [Timeline tab](the-interface.md#timeline) reads. (Pass
 `--out PATH` to put it elsewhere — but the tab only reads the default location.)
 

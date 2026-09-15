@@ -7,6 +7,6 @@
   tasks:
     - name: "dxdfir-verify-car | run the car role (verify)"
       ansible.builtin.include_role:
-        name: dxdfir_car
+        name: dxdfir_byakugan
       vars:
-        dxdfir_car_action: verify
+        dxdfir_byakugan_action: verify

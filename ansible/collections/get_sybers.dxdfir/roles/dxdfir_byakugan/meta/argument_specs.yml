@@ -7,73 +7,73 @@ argument_specs:
         Normalises every processed source into the MITRE CAR data model via the
         external Byakugan engine, which runs entirely inside the hardened
         get-sybers/byakugan container (cloned + built at the repo-root
-        byakugan.ref pin). Three actions selected by dxdfir_car_action: build
+        byakugan.ref pin). Three actions selected by dxdfir_byakugan_action: build
         (per-source car.db + superset.db + car_<object>.jsonl +
         car_relationships.jsonl), verify (the CAR correctness promotion gate) and
         timeline (one property-rich, time-ordered CAR timeline). A pure-Python
         seam (mitrecar/carcheck) shells the engine image.
     options:
-      dxdfir_car_action:
+      dxdfir_byakugan_action:
         type: str
         required: false
         default: build
         choices: [build, verify, timeline]
         description: "Which CAR action to run."
-      dxdfir_car_processed_dir:
+      dxdfir_byakugan_processed_dir:
         type: str
         required: false
         description: "Processed evidence tree the batch build reads from (default data_store/processed)."
-      dxdfir_car_dir:
+      dxdfir_byakugan_dir:
         type: str
         required: false
-        description: "The materialised CAR tree (default data_store/processed/car)."
-      dxdfir_car_module:
+        description: "The materialised CAR tree (default data_store/processed/byakugan)."
+      dxdfir_byakugan_module:
         type: str
         required: false
         default: get_sybers_dxdfir.mitrecar
         description: "The CAR engine module the preflight import-checks."
-      dxdfir_car_python_path:
+      dxdfir_byakugan_python_path:
         type: str
         required: false
         description: "PYTHONPATH to the get_sybers_dxdfir package (in-repo/dev runs)."
-      dxdfir_car_rebuild:
+      dxdfir_byakugan_rebuild:
         type: bool
         required: false
         default: false
         description: "build: rebuild CAR stores that already exist (maps to the engine's --force)."
-      dxdfir_car_in:
+      dxdfir_byakugan_in:
         type: str
         required: false
         description: "build (single-source): one processed file/dir -> one car.db. Empty => batch."
-      dxdfir_car_out:
+      dxdfir_byakugan_out:
         type: str
         required: false
         description: "build: output dir (single-source: this source's car dir; batch: the car/ root)."
-      dxdfir_car_host:
+      dxdfir_byakugan_host:
         type: str
         required: false
         description: "build (single-source): fallback source_host where the map derives none."
-      dxdfir_car_artefacts:
+      dxdfir_byakugan_artefacts:
         type: str
         required: false
         description: "build (single-source): comma-separated artefact map keys (default: route by filename)."
-      dxdfir_car_timeline_dir:
+      dxdfir_byakugan_timeline_dir:
         type: str
         required: false
         description: "timeline: a source's car dir, or a tree to aggregate (default the whole car tree)."
-      dxdfir_car_timeline_out:
+      dxdfir_byakugan_timeline_out:
         type: str
         required: false
         description: "timeline: output path (default <car_dir>/timeline.jsonl)."
-      dxdfir_car_timeline_host:
+      dxdfir_byakugan_timeline_host:
         type: str
         required: false
         description: "timeline: only events whose source_host matches."
-      dxdfir_car_timeline_after:
+      dxdfir_byakugan_timeline_after:
         type: str
         required: false
         description: "timeline: only events at/after this ISO timestamp."
-      dxdfir_car_timeline_before:
+      dxdfir_byakugan_timeline_before:
         type: str
         required: false
         description: "timeline: only events at/before this ISO timestamp."
