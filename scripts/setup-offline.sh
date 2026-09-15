@@ -9,12 +9,12 @@
 #   2. unpacks the repository to the target dir (default: ./DX_DFIR), then
 #      restores data_store/dependencies from deps.tar — the signature rulesets
 #      (YARA/Suricata/Hayabusa), the Volatility symbol cache and EvtxECmd
-#   3. unpacks the external Byakugan engine (byakugan.tar — the CAR lane) next
-#      to the repo ($BYAKUGAN_ROOT, else <target>/../byakugan: where the CAR
-#      lane resolves it) and the piiat-mem tree (piiat-mem.tar — the volatility
-#      lane) into <target>/third_party/. Bundles from before these tarballs
-#      existed install with a warning: those two lanes are then unavailable
-#      offline until provisioned by hand, everything else still works
+#      (the Byakugan CAR engine is no longer a separate tarball — it is baked
+#      into the get-sybers/byakugan image and rides in the loaded images), and
+#   3. unpacks the piiat-mem tree (piiat-mem.tar — the volatility lane) into
+#      <target>/third_party/. A bundle from before that tarball existed installs
+#      with a warning: the volatility lane is then unavailable offline until
+#      provisioned by hand, everything else still works
 #   4. loads the container images and runs the hardened-inventory guard
 #   5. installs the get_sybers_dxdfir processors + ansible into a venv from the
 #      bundled wheels (no PyPI)
@@ -83,40 +83,12 @@ else
 fi
 
 # ---- 2b. the external Byakugan engine (the CAR lane) ------------------------
-# repo.tar carries NO submodule/engine content (git archive drops gitlinks), so
-# the engine ships as its own tarball. It unpacks to where the CAR lane
-# (get_sybers_dxdfir.mitrecar) resolves it: $BYAKUGAN_ROOT when set, else the
-# `byakugan` directory NEXT TO the repo — a sibling, deliberately outside
-# $TARGET. If you set $BYAKUGAN_ROOT here, keep it exported for every dxdfir
-# run too, or the runtime falls back to the sibling default and misses it.
-# An older bundle without the tarball is a warning, not a death: the rest of
-# the bundle still works, only build-car / verify-car are unavailable offline.
-BYAKUGAN_DEST="${BYAKUGAN_ROOT:-$(dirname "$TARGET")/byakugan}"
-if [[ -f "$BUNDLE/byakugan.tar" ]]; then
-    echo "🔭 Unpacking the Byakugan engine to $BYAKUGAN_DEST ..."
-    mkdir -p "$BYAKUGAN_DEST" || die "could not create $BYAKUGAN_DEST"
-    tar -xf "$BUNDLE/byakugan.tar" -C "$BYAKUGAN_DEST" || die "failed to unpack byakugan.tar"
-    # The engine's file ingestion REQUIRES its Go parse binary, which the bundle
-    # carries prebuilt for this bundle's architecture (package-offline.sh §1c)
-    # precisely because an air-gapped host may have no Go toolchain. Say so here
-    # rather than letting the analyst discover it on their first build-car.
-    if [[ -x "$BYAKUGAN_DEST/go/bin/byakugan-parse" ]]; then
-        echo "✅ Byakugan engine at $BYAKUGAN_DEST (pinned commit recorded in $TARGET/byakugan.ref)"
-    else
-        echo "⚠️  $BYAKUGAN_DEST/go/bin/byakugan-parse is missing or not executable —"
-        echo "    the engine cannot ingest files without it (build-car will fail with"
-        echo "    build instructions). Either this bundle predates the parse binary, or"
-        echo "    it was packaged for another architecture. Rebuild on this host with:"
-        echo "      make -C \"$BYAKUGAN_DEST/go\" build     (needs Go >= 1.24)"
-    fi
-else
-    echo "⚠️  No byakugan.tar in the bundle (packaged before the engine shipped) —"
-    echo "    the CAR lane (build-car / verify-car) is unavailable offline until a"
-    echo "    recursive engine checkout is provisioned at $BYAKUGAN_DEST by hand"
-    echo "    (a bundle this old predates byakugan.ref; take the pinned commit from"
-    echo "    a current DX_DFIR checkout's byakugan.ref, or use the engine repo:"
-    echo "    https://github.com/Get-Sybers/byakugan)."
-fi
+# The engine no longer ships as its own tarball: it is cloned + built into the
+# get-sybers/byakugan image (nested car + attack-datasources model sources and
+# the Go parse binary all baked in), which the image-load step below restores
+# like every other tool. Nothing to unpack here; the CAR lane
+# (get_sybers_dxdfir.mitrecar — build-car / verify-car / timeline) shells that
+# image, so the whole engine rides in the loaded images.
 
 # ---- 2c. the vendored piiat-mem tree (the volatility lane) ------------------
 # Same gitlink drop: third_party/piiat-mem never reached older bundles either.

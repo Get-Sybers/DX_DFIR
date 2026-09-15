@@ -49,21 +49,13 @@ Pred = Callable[[Row], bool]
 
 
 def _engine_actions():
-    """The canonical car_action vocabulary per object — RECONSTRUCTED from the
-    engine's model, exactly as the Byakugan engine builds it: generated from
-    the forked `car` repo we own (<engine root>/third_party/car/data_model),
-    never hardcoded here. The external engine checkout is resolved by the one
-    canonical resolver (mitrecar.engine_root). Returns {object: {actions}} or
-    None if the engine model can't be loaded (engine not provisioned)."""
-    eng = mitrecar.engine_root()
-    if eng not in sys.path:
-        sys.path.insert(0, eng)
-    try:
-        from byakugan import carmodel
-        m = carmodel.load()
-    except Exception:                       # noqa: BLE001 — model source unavailable
-        return None
-    return {obj: set(m[obj].get("actions", [])) for obj in m}
+    """The canonical car_action vocabulary per object — read from the hardened
+    Byakugan engine CONTAINER (mitrecar.car_vocab), which RECONSTRUCTS it from
+    the forked `car` repo the engine owns, exactly as the engine builds it. The
+    object model stays entirely inside the engine image; this host gate never
+    imports the engine. Returns {object: {actions}} or None if the engine image
+    is unavailable (verify-car degrades gracefully)."""
+    return mitrecar.car_vocab()
 
 
 # ---- the materialised CAR tree ---------------------------------------------

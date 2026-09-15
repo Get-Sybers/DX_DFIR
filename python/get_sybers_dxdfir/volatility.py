@@ -257,7 +257,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out-dir", required=True, help="output dir; one folder per image")
     ap.add_argument("--symbols-dir", required=True, help="Volatility symbol cache (VOLATILITY_SYMBOLS)")
     ap.add_argument("--image", default=_IMAGE, help="Volatility 3 container image")
-    ap.add_argument("--vol-native", default=None, help="native python (with volatility3) — skip the container")
+    ap.add_argument("--vol-native", default=None,
+                    help="UNCONFINED escape hatch: a native python (with volatility3) that "
+                         "parses the memory image directly ON THE HOST — no container, no "
+                         "cap-drop/read-only/network-none, and the hardened-image guard is "
+                         "skipped. Requires --accept-unconfined.")
+    ap.add_argument("--accept-unconfined", action="store_true",
+                    help="acknowledge that --vol-native runs the tool unconfined on the host")
     ap.add_argument("--plugins", default=None, help="comma-separated plugin override (default: the CAR set)")
     ap.add_argument("--force", action="store_true", help="rerun plugins that already have valid output")
     ap.add_argument("--symbols-online", action="store_true",
@@ -265,6 +271,29 @@ def main(argv: list[str] | None = None) -> int:
                          "one legitimate network need; default is fully offline "
                          "(pre-seed --symbols-dir instead)")
     args = ap.parse_args(argv)
+
+    # --vol-native bypasses the hardened container (the tool parses attacker memory
+    # on the host, unconfined). Gate it behind an explicit acknowledgement so it can
+    # never be reached by accident (e.g. a stray extra-var); the container is the
+    # only supported path otherwise.
+    if args.vol_native and not args.accept_unconfined:
+        msg = ("refusing --vol-native: it runs Volatility 3 UNCONFINED on the host "
+               "(no cap-drop/read-only/network-none, skips the hardened-image guard). "
+               "Re-run without it to use the hardened container, or pass "
+               "--accept-unconfined to override.")
+        # Keep the output contract: a machine-readable summary on stdout (the Ansible
+        # lane wrapper reads it) plus the error on stderr, like every other failure.
+        summary = {"tool": "volatility", "memory_dir": args.memory_dir,
+                   "out_dir": args.out_dir, "processed": 0, "skipped": 0,
+                   "failed": 0, "error": msg}
+        sys.stderr.write(msg + "\n")
+        json.dump(summary, sys.stdout)
+        sys.stdout.write("\n")
+        return 2
+    if args.vol_native:
+        sys.stderr.write(
+            "WARNING: --vol-native — parsing memory images UNCONFINED on the host, "
+            "outside the hardened container.\n")
 
     plugins = [p.strip() for p in args.plugins.split(",") if p.strip()] if args.plugins else None
     summary = process(

@@ -6,8 +6,9 @@ in the actual engine maps (not the upstream CAR sensor cards, which overclaim),
 in PIIAT-Mem's memory maps, and in real processed evidence.
 
 Path convention: `byakugan/…` cites a file inside the external Byakugan engine
-checkout (`$BYAKUGAN_ROOT`, default: the `byakugan` directory beside this repo,
-pinned by `byakugan.ref`); `third_party/piiat-mem/…` stays repo-relative. The
+repo (at the `byakugan.ref` pin — the engine is cloned + built into the
+`get-sybers/byakugan` image, no longer a host checkout); `third_party/piiat-mem/…`
+stays repo-relative. The
 engine's own import package was renamed `piiat_mitrecar` → `byakugan`, so the
 doubled prefix in `byakugan/byakugan/mappings/…` is not a typo: the outer
 segment is the checkout, the inner one the package. Engine paths with a single

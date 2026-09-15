@@ -34,8 +34,11 @@ DOCKER_TAR_DIR="${DXDFIR_IMAGE_DIR:-$REPO_ROOT_DIR/data_store/docker_images}"
 # Runtime tool images — BUILT in-repo (or from the GoDFIR-toolz submodule),
 # never pulled. Keep in sync with dxdfir_images_set (the image-build role).
 BUILT_IMAGES=(
-    "get-sybers/yara:latest"
-    "get-sybers/suricata:latest"
+    # the whole detection lane in one image (yara + suricata + hayabusa).
+    "get-sybers/signatures:latest"
+    # the external MITRE CAR engine, cloned + built in at the byakugan.ref pin —
+    # the engine ships INSIDE this image now, not as a separate byakugan.tar.
+    "get-sybers/byakugan:latest"
     "get-sybers/zeek:latest"
     "get-sybers/volatility:latest"
     "get-sybers/plaso:latest"

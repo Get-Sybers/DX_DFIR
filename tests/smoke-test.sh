@@ -11,8 +11,8 @@
 # What it does, entirely in throwaway temp dirs (never data_store/processed):
 #
 #   process pinned Sysmon .evtx through the real evtx lane (EvtxECmd) ->
-#   normalise the output into materialised CAR (the external Byakugan engine —
-#   $BYAKUGAN_ROOT, else the sibling dir of this repo, pinned by byakugan.ref —
+#   normalise the output into materialised CAR (the external Byakugan engine,
+#   run inside the hardened get-sybers/byakugan image at the byakugan.ref pin,
 #   via get_sybers_dxdfir.mitrecar) -> assert each Sysmon-sourced CAR object
 #   has rows AND its EvtxPayload-derived fields are populated with the expected
 #   values -> run the verify-car gate (get_sybers_dxdfir.carcheck) over the
@@ -41,6 +41,11 @@ FIXTURE_DIR="data_store/raw/logs/winevt/sysmon-attack-samples"
 OUT_DIR="$(mktemp -d)"     # the evtx lane's EvtxECmd JSON
 CAR_DIR="$(mktemp -d)"     # the materialised CAR built from it
 LOG_DIR="$(mktemp -d)"
+# The tool images run as a non-root uid (2000), so they must be able to traverse
+# the working tree — exactly as the real data_store is provisioned (g=rX + the
+# docker group; setup-environment.sh). mktemp defaults to 0700, which would block
+# the CAR engine container from reading the processed tree it normalises.
+chmod 0755 "$OUT_DIR" "$CAR_DIR"
 
 PASS=0; FAIL=0
 pass() { PASS=$((PASS+1)); echo "    ✓ $1"; }
@@ -107,12 +112,12 @@ docker info >/dev/null 2>&1 || die "docker daemon not reachable."
 command -v python3 >/dev/null 2>&1 || die "python3 not found."
 docker image inspect get-sybers/goevtx:latest >/dev/null 2>&1 \
     || die "image get-sybers/goevtx:latest missing — build it: docker build -t get-sybers/goevtx:latest -f third_party/GoDFIR-toolz/goevtx/Dockerfile third_party/GoDFIR-toolz/goevtx"
-# The CAR lane drives the EXTERNAL Byakugan engine ($BYAKUGAN_ROOT, else the
-# sibling dir of this repo), which rebuilds its model from ITS OWN nested
-# submodules — _model_sources_present() checks the resolved checkout end to end.
-python3 -c 'import sys; from get_sybers_dxdfir import mitrecar; sys.exit(0 if mitrecar._model_sources_present() else 1)' 2>/dev/null \
-    || die "the Byakugan engine (or its model sources) is missing — provision it at the byakugan.ref pin: run scripts/setup-environment.sh, or manually: git clone --recurse-submodules https://github.com/Get-Sybers/byakugan <root> && git -C <root> checkout <ref from byakugan.ref> && git -C <root> submodule update --init --recursive"
-pass "docker, python3, get-sybers/goevtx:latest and the external Byakugan engine present"
+# The CAR lane drives the external Byakugan engine inside the hardened
+# get-sybers/byakugan image (cloned + built at the byakugan.ref pin); the engine
+# reconstructs its model from its OWN nested submodules, all baked into the image.
+docker image inspect get-sybers/byakugan:latest >/dev/null 2>&1 \
+    || die "image get-sybers/byakugan:latest missing — build it: dxdfir build-docker (it clones Byakugan at the byakugan.ref pin and builds the hardened engine image)."
+pass "docker, python3, get-sybers/goevtx:latest and the Byakugan engine image present"
 
 # =============================================================================
 section "Fixtures (sha256-pinned Sysmon .evtx)"

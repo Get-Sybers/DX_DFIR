@@ -1,10 +1,11 @@
 ---
-# FIND FACTS -> check preconditions BEFORE the engine runs. The CAR stage is pure
-# Python + the external Byakugan engine checkout ($BYAKUGAN_ROOT, else byakugan/
-# beside the repo; no containers), so preflight is a module-import guard, not a
-# docker check. The lane's own _ensure_ready() surfaces a missing or
-# incompletely-provisioned engine checkout as a clear error, with the
-# provisioning command, if it slips past.
+# FIND FACTS -> check preconditions BEFORE the engine runs. The CAR stage drives
+# the external Byakugan engine, now entirely inside the hardened
+# get-sybers/byakugan container (cloned + built at the byakugan.ref pin) — the
+# DX_DFIR seam is the pure-Python mitrecar/carcheck modules, which shell the
+# image. So preflight checks BOTH: the seam modules import, and the engine image
+# is present + hardened (the same supply-chain guard the lane enforces at run
+# time via get_sybers_dxdfir.images.require).
 
 - name: "car-preflight | the CAR engine module imports"
   ansible.builtin.command:
@@ -20,4 +21,12 @@
   environment:
     PYTHONPATH: "{{ dxdfir_car_python_path }}"
   register: dxdfir_car_carcheck_import
+  changed_when: false
+
+- name: "car-preflight | the Byakugan engine image is present + hardened"
+  ansible.builtin.command:
+    argv: ["python3", "-m", "get_sybers_dxdfir.images", "--require", "{{ dxdfir_car_image }}"]
+  environment:
+    PYTHONPATH: "{{ dxdfir_car_python_path }}"
+  register: dxdfir_car_image_check
   changed_when: false

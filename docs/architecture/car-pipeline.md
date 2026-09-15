@@ -5,12 +5,15 @@ every processed source into one common shape — the
 [MITRE CAR](https://car.mitre.org/data_model/) data model — so evidence from a PCAP, a
 memory image and an event log describe the same entities in the same vocabulary.
 
-The normalisation itself is done by the **external [Byakugan engine](https://github.com/Get-Sybers/byakugan)**
-— a sibling checkout pinned by `byakugan.ref`, never vendored. DX_DFIR is a thin front
-over it: one Ansible role, `dxdfir_car`, with three actions. Each action runs the Python
-seam `get_sybers_dxdfir.mitrecar`, which holds **no CAR logic itself** — it only locates
-and drives the engine. (Grepping the code, `mitrecar` is the name you'll meet for the CAR
-lane.)
+The normalisation itself is done by the **external [Byakugan engine](https://github.com/Get-Sybers/byakugan)**,
+which runs entirely inside the hardened `get-sybers/byakugan` container — cloned + built
+into the image at the `byakugan.ref` pin (`docker/byakugan/Dockerfile`) by `dxdfir
+build-docker`, never vendored. DX_DFIR is a thin front over it: one Ansible role,
+`dxdfir_car`, with three actions. Each action runs the Python seam
+`get_sybers_dxdfir.mitrecar`, which holds **no CAR logic itself** — it only maps the host
+paths to container mounts (processed evidence read-only, the `car/` output read-write) and
+shells the engine image. (Grepping the code, `mitrecar` is the name you'll meet for the
+CAR lane.)
 
 ```
 processed/ ──build──▶ car/<source>/car.db + car_<object>.jsonl ──timeline──▶ timeline.jsonl

@@ -27,14 +27,17 @@ Code that ships inside this repository.
 `car_data_model.json` is the MITRE CAR object/field/action model. Apache-2.0,
 attribution required — hence `NOTICE`. It is the reference copy of the model
 the pipeline's CAR output follows (`docs/CAR-Pipeline.md` verifies it against
-`car.mitre.org`). The CAR engine itself (Byakugan) is an external checkout, not
-vendored in this repository; it reconstructs its model from the `car` repo its
-own pinned submodules carry, so nothing in the repository tree redistributes
-the engine or its model sources. The one distribution vector is the offline
-bundle: `scripts/package-offline.sh` ships `byakugan.tar` — the engine tree
-with MITRE's Apache-2.0 `car` and `attack-datasources` submodules — carrying
-their upstream `LICENSE`/`NOTICE` files unmodified, which satisfies the
-attribution terms (the same way the bundle's wheels are covered below).
+`car.mitre.org`). The CAR engine itself (Byakugan, MIT, Get-Sybers) is an
+external public project, not vendored in this repository's tree; it reconstructs
+its model from the `car` repo its own pinned submodules carry. The distribution
+vector is the hardened **`get-sybers/byakugan` image**: `docker/byakugan/Dockerfile`
+clones Byakugan at the `byakugan.ref` pin and bakes in its `car` and
+`attack-datasources` submodules (both MITRE, Apache-2.0), so the built image —
+and the offline bundle's saved copy of it (`scripts/save-docker-images.sh`) —
+redistributes those model sources with their upstream `LICENSE`/`NOTICE` files
+unmodified, which satisfies the attribution terms (the same way the bundle's
+wheels are covered below). The engine is no longer shipped as a separate
+`byakugan.tar`.
 
 ### DFIR test samples — catalogued, not redistributed
 

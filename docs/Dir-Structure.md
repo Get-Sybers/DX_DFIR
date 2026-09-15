@@ -86,10 +86,11 @@ per-item processing).
             └── sofelk/<tool>/                        # --pipeline sofelk output, delivered by dxdfir-ingest-sofelk.yml
 ```
 
-One engine lives **outside** this tree: the CAR lane drives the Byakugan engine
-from an external recursive checkout — `$BYAKUGAN_ROOT`, or a `byakugan/`
-directory beside the DX_DFIR repo — pinned by the repo-root `byakugan.ref` and
-provisioned by `scripts/setup-environment.sh`.
+The CAR engine lives **outside** this tree entirely: the Byakugan engine is
+cloned + built into the hardened `get-sybers/byakugan` image
+(`docker/byakugan/Dockerfile`) at the pin in the repo-root `byakugan.ref`, by
+`dxdfir build-docker`. The CAR lane only shells that image — nothing is checked
+out on the host.
 
 The Splunk-era tree (`splunk/` with its eight apps, and a since-removed
 in-container provisioning `ansible/` — **unrelated to today's

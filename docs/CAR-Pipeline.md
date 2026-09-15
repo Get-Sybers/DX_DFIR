@@ -61,22 +61,21 @@ skipping the newly-covered events. (`dxdfir build-car` fronts the same engine as
 ## 3. Components (the external Byakugan engine)
 
 The engine is the standalone public **[Byakugan](https://github.com/Get-Sybers/byakugan)**
-tool, driven via its CLI by the thin `get_sybers_dxdfir/mitrecar.py` lane —
-exactly the PIIAT-Mem pattern — from an **external checkout**: `$BYAKUGAN_ROOT`
-when set, else a `byakugan/` checkout beside the DX_DFIR repo. The repo-root
-`byakugan.ref` file pins the engine commit DX_DFIR is tested against;
-`scripts/setup-environment.sh` provisions the checkout at that pin, or manually:
-`git clone --recurse-submodules https://github.com/Get-Sybers/byakugan <root>
-&& git -C <root> checkout <ref from byakugan.ref>
-&& git -C <root> submodule update --init --recursive`.
+tool, driven via its CLI by the thin `get_sybers_dxdfir/mitrecar.py` lane — exactly
+the PIIAT-Mem pattern — inside the hardened **`get-sybers/byakugan` image**. The engine is
+cloned + built INTO that image at the commit pinned by the repo-root `byakugan.ref`
+(`docker/byakugan/Dockerfile`), by `dxdfir build-docker` alongside the other tool images;
+the DX_DFIR checkout holds no engine copy, and `mitrecar.py` only maps the host paths to
+container mounts (processed evidence read-only, the `car/` output read-write) and shells
+the image.
 
-**Recursive checkout (required).** The engine reconstructs its object model
-LIVE from its OWN pinned submodules (`third_party/car` = the CAR model,
-`third_party/attack-datasources` = the ATT&CK data-sources superset + relationship
-vocabulary, both resolved inside the engine checkout) — nothing is committed as
-a copy, so every provisioning path above is recursive. The `mitrecar.py` lane
-errors clearly, with that provisioning command, when the engine or its nested
-submodules are missing.
+**Model baked in.** The engine reconstructs its object model LIVE from its OWN pinned
+submodules (`third_party/car` = the CAR model, `third_party/attack-datasources` = the
+ATT&CK data-sources superset + relationship vocabulary) — nothing is committed as a copy,
+so the image clones the engine RECURSIVELY at build time and bakes those model sources and
+the Go parse binary (`BYAKUGAN_PARSE_BIN`) in. The `mitrecar.py` lane errors clearly, with
+the build command (`dxdfir build-docker`), when the engine image is missing or not
+hardened.
 
 **Two stores per source.** The lane produces, beside each `car.db`: a
 `superset.db` (the CAR+ATT&CK superset model + the relationship-instance timeline
