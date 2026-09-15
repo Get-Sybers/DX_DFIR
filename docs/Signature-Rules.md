@@ -6,7 +6,7 @@ operator-supplied rules from `data_store/dependencies/`. There is **no
 registration step** — drop the files in the right directory and run the lane;
 discovery is recursive.
 
-Outputs land in `data_store/processed/signatures/<lane>/` as self-describing
+Outputs land in `data_store/processed/detections/<lane>/` as self-describing
 JSONL. Lane basics are in
 [Scripts-Overview](/docs/scripts/Scripts-Overview.md#signature-detection-get_sybers_dxdfirsignatures).
 
@@ -39,7 +39,7 @@ cp my_malware.yar data_store/dependencies/yara-rules/mine/
 
 # run just the YARA lane (--yara-sources files,disk,memory narrows the sources)
 python3 -m get_sybers_dxdfir.signatures --only yara \
-    --output-dir data_store/processed/signatures --repo-root .
+    --output-dir data_store/processed/detections --repo-root .
 ```
 
 `--fetch` provisions the pinned
@@ -56,7 +56,7 @@ YARA-Forge-derived with per-rule provenance metadata. Enable either way:
 ```bash
 # implicitly — the Python YARA lane's --fetch (also dxdfir_signatures_fetch=true)
 python3 -m get_sybers_dxdfir.signatures --only yara --fetch \
-    --output-dir data_store/processed/signatures --repo-root .
+    --output-dir data_store/processed/detections --repo-root .
 
 # explicitly — the provisioning module itself
 python3 -m get_sybers_dxdfir.signatures.detectraptor \
@@ -89,7 +89,7 @@ so duplicates are dropped first-wins, and rules needing module features the
 check the output — each match is one JSON object naming your rule:
 
 ```bash
-jq -r '.rule' data_store/processed/signatures/yara/matches.jsonl | sort | uniq -c
+jq -r '.rule' data_store/processed/detections/yara/matches.jsonl | sort | uniq -c
 ```
 
 The **files** source scans `data_store/raw/other_raw_data/`. Plant an
@@ -129,7 +129,7 @@ mkdir -p data_store/dependencies/suricata-rules
 cat et-open.rules my-local.rules > data_store/dependencies/suricata-rules/suricata.rules
 
 python3 -m get_sybers_dxdfir.signatures --only suricata \
-    --output-dir data_store/processed/signatures --repo-root .
+    --output-dir data_store/processed/detections --repo-root .
 ```
 
 To provision ET Open while online, run `suricata-update` (or download the ET Open
@@ -142,7 +142,7 @@ output for alerts from your signatures:
 
 ```bash
 jq -r 'select(.event_type=="alert") | .alert.signature' \
-    data_store/processed/signatures/suricata/*.eve.jsonl | sort | uniq -c
+    data_store/processed/detections/suricata/*.eve.jsonl | sort | uniq -c
 ```
 
 **Gotchas**

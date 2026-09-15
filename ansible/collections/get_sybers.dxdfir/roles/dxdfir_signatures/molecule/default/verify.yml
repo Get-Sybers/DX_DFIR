@@ -3,7 +3,7 @@
   hosts: localhost
   gather_facts: false
   vars:
-    molecule_yara_out: /tmp/dxdfir_signatures_molecule/repo/data_store/processed/signatures/yara
+    molecule_yara_out: /tmp/dxdfir_signatures_molecule/repo/data_store/processed/detections/yara
   tasks:
     - name: "molecule-verify | read the yara matches"
       ansible.builtin.slurp:

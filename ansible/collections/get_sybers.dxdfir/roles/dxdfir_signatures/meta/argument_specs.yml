@@ -23,7 +23,7 @@ argument_specs:
       dxdfir_signatures_elastic_out_dir:
         type: str
         required: false
-        description: "Elastic-path output base (default data_store/processed/signatures)."
+        description: "Elastic-path output base (default data_store/processed/detections)."
       dxdfir_signatures_sofelk_out_dir:
         type: str
         required: false

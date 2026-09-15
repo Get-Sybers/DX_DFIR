@@ -58,6 +58,18 @@
 
 !/processed/
 !/processed/.gitkeep
+!/processed/byakugan/
+!/processed/byakugan/.gitkeep
+!/processed/detections/
+!/processed/detections/.gitkeep
+!/processed/detections/byakugan/
+!/processed/detections/byakugan/.gitkeep
+!/processed/detections/yara/
+!/processed/detections/yara/.gitkeep
+!/processed/detections/suricata/
+!/processed/detections/suricata/.gitkeep
+!/processed/detections/hayabusa/
+!/processed/detections/hayabusa/.gitkeep
 !/processed/volatility/
 !/processed/volatility/.gitkeep
 !/processed/csv/

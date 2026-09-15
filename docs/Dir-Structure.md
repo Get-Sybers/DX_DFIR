@@ -16,7 +16,7 @@ per-item processing).
     │   └── tests/                                    # pytest unit tests (pure logic, no Docker)
     │
     └── ansible/collections/get_sybers.dxdfir/         # the Ansible collection — orchestration
-    │   └── roles/                                    # one role per source + dxdfir_images / dxdfir_car / dxdfir_stack / dxdfir_cleanup + the SOF-ELK deploy/deliver roles
+    │   └── roles/                                    # one role per source + dxdfir_images / dxdfir_byakugan / dxdfir_stack / dxdfir_cleanup + the SOF-ELK deploy/deliver roles
     │   └── playbooks/                                # dxdfir-process-* / dxdfir-build-images / dxdfir-verify-images / dxdfir-build-car / dxdfir-verify-car / dxdfir-car-timeline / dxdfir-stack-* / dxdfir-cleanup / dxdfir-deploy-sofelk / dxdfir-ingest-sofelk
     │
     └── scripts/                                      # Host provisioning: setup, image save/load, the offline bundle (bash)

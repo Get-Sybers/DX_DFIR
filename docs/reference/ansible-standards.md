@@ -16,7 +16,7 @@ lives in the **playbook**, which is a thin, single-purpose wrapper (`hosts: loca
 ## One role per source or action
 
 `dxdfir_zeek`, `dxdfir_evtx`, `dxdfir_volatility`, `dxdfir_plaso`, `dxdfir_zimmerman`,
-`dxdfir_signatures` (the [lanes](../architecture/processing-lanes.md)), plus `dxdfir_car`,
+`dxdfir_signatures` (the [lanes](../architecture/processing-lanes.md)), plus `dxdfir_byakugan`,
 `dxdfir_images`, `dxdfir_stack`, `dxdfir_cleanup`, and the ingest/deploy roles. Every
 lane role carries only its own per-lane piece — asserting inputs and building the
 processor argv — and delegates the run to the shared **`dxdfir_lane`** skeleton
@@ -61,5 +61,5 @@ diagnostic. `ansible-lint --profile production` runs over the collection as a
 
 ## The one external seam
 
-The `dxdfir_car` role drives the external [Byakugan engine](https://github.com/Get-Sybers/byakugan),
+The `dxdfir_byakugan` role drives the external [Byakugan engine](https://github.com/Get-Sybers/byakugan),
 pinned by `byakugan.ref` — not vendored. See the [CAR pipeline](../architecture/car-pipeline.md).

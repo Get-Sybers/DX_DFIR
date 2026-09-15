@@ -185,7 +185,7 @@ wording that grounds each — are in `CAR-Relations.md`.
 
 `store.export_jsonl()` writes one `car_<object>.jsonl` per populated object (plus
 `car_relationships.jsonl` for the superset edges) under
-`data_store/processed/car/<source>/`; each line is a flat CAR event — the common
+`data_store/processed/byakugan/<source>/`; each line is a flat CAR event — the common
 header (`timestamp`, `car_action`, `guid`, `owning_guid`, `link_confidence`,
 `source_artefact`, `source_host`), `native` as a JSON object, then the object's
 CAR fields as strings. That JSON **is** the contract: `dxdfir verify-car` gates

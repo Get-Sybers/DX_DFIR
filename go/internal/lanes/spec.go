@@ -43,7 +43,7 @@ var Specs = []Spec{
 		InputSubdirs: []string{"disk_images", "VM_files"}, Exts: imageExts()},
 	{Name: "zimmerman", Title: "zimmerman", Kind: model.KindGauge, OutLeaf: "zimmerman",
 		InputSubdirs: []string{"disk_images", "VM_files"}, Exts: imageExts()},
-	{Name: "signatures", Title: "signatures", Kind: model.KindSpinner, OutLeaf: "signatures",
+	{Name: "signatures", Title: "signatures", Kind: model.KindSpinner, OutLeaf: "detections",
 		InputSubdirs: []string{"pcaps", "disk_images", "memory"}, Exts: nil},
 }
 

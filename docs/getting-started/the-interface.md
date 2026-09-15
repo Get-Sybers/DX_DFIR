@@ -88,7 +88,7 @@ health and the `logs-dxdfir.*` data streams.
 ## Timeline
 
 The [Byakugan behaviour timeline](../architecture/car-pipeline.md) read from
-`data_store/processed/car`, newest event first — the CAR object events and relationship
+`data_store/processed/byakugan`, newest event first — the CAR object events and relationship
 edges unioned into one time-ordered stream.
 
 ```

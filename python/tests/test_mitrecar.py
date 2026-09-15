@@ -43,10 +43,10 @@ def test_batch_reads_processed_readonly_and_writes_car_readwrite(tmp_path):
     processed.mkdir()
     after, mounts = _capture(mitrecar.run, ["--batch", str(processed), "--force"])
     assert after == ["--batch", "/work", "--out", "/out", "--force"]
-    # inputs read-only; only the car/ tree is writable (a compromised engine
+    # inputs read-only; only the byakugan/ tree is writable (a compromised engine
     # cannot rewrite the other lanes' outputs).
     assert f"{os.path.realpath(str(processed))}:/work:ro" in mounts
-    assert f"{os.path.realpath(str(processed / 'car'))}:/out" in mounts
+    assert f"{os.path.realpath(str(processed / 'byakugan'))}:/out" in mounts
 
 
 # ---- build: single source --------------------------------------------------

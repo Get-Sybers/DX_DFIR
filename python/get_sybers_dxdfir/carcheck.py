@@ -3,7 +3,7 @@
 The promotion gate for CAR correctness. CAR is MATERIALISED: the engine
 normalises each source into finished CAR events and writes one
 ``car_<object>.jsonl`` per object (plus ``car_relationships.jsonl``) under
-``data_store/processed/car/<source>/`` — the JSON is the contract every sink
+``data_store/processed/byakugan/<source>/`` — the JSON is the contract every sink
 reads (the Elastic-native path projects it to ECS). Extraction faithfulness (a
 CAR field == its single source record) is proven IN THE ENGINE's own test
 suite; this gate asserts what the pipeline actually wrote: each exercised
@@ -42,7 +42,7 @@ CAR = "*"
 
 _IP = re.compile(r"^[0-9a-fA-F:.]+$")
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DEFAULT_CAR_DIR = os.path.join(_REPO_ROOT, "data_store", "processed", "car")
+DEFAULT_CAR_DIR = os.path.join(_REPO_ROOT, "data_store", "processed", "byakugan")
 
 Row = dict
 Pred = Callable[[Row], bool]
@@ -294,7 +294,7 @@ def main(argv: list[str] | None = None) -> int:
         prog="get_sybers_dxdfir.carcheck",
         description="CAR run-through: expected field values in the materialised CAR (car_<object>.jsonl).")
     ap.add_argument("--car-dir", default=DEFAULT_CAR_DIR,
-                    help="the materialised CAR tree (default: data_store/processed/car)")
+                    help="the materialised CAR tree (default: data_store/processed/byakugan)")
     args = ap.parse_args(argv)
 
     if not any(car_files(args.car_dir, obj) for obj in (*_OBJECTS, RELATIONSHIPS)):

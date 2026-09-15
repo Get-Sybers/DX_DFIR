@@ -23,8 +23,8 @@ func newCleanupCmd(env *Env) *cobra.Command {
 			"Wipe everything under data_store/processed/ (all lanes + CAR).",
 			"Wipe everything under data_store/processed/? [y/N]: ", nil),
 		newCleanupActionCmd(env, "car",
-			"Wipe the materialised CAR (data_store/processed/car/).",
-			"Wipe the CAR tree under data_store/processed/car/? [y/N]: ", nil),
+			"Wipe the materialised CAR (data_store/processed/byakugan/).",
+			"Wipe the CAR tree under data_store/processed/byakugan/? [y/N]: ", nil),
 		newCleanupDockerCmd(env),
 	)
 	return parent

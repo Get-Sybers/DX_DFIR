@@ -18,12 +18,12 @@ type timelineRow struct {
 	ts, kind, object, host, summary string
 }
 
-// timeline default location (dxdfir_car role): the CAR stores + their unified,
-// time-ordered timeline.jsonl land under data_store/processed/car.
-const carSubdir = "data_store/processed/car"
+// timeline default location (dxdfir_byakugan role): the CAR stores + their unified,
+// time-ordered timeline.jsonl land under data_store/processed/byakugan.
+const carSubdir = "data_store/processed/byakugan"
 
 // readTimeline reads the byakugan behaviour timeline from every timeline.jsonl
-// under data_store/processed/car (one per source, plus an aggregate), newest
+// under data_store/processed/byakugan (one per source, plus an aggregate), newest
 // event first, capped. It is a pure on-disk read — the timeline is built by the
 // car lane (byakugan.timeline), not by this tab — and degrades to a note rather
 // than an error when nothing has been built yet.
@@ -34,7 +34,7 @@ func readTimeline(repoRoot string, limit int) ([]timelineRow, string) {
 	carDir := filepath.Join(repoRoot, carSubdir)
 	files := findTimelines(carDir)
 	if len(files) == 0 {
-		return nil, "no CAR timeline yet — run `process`, then the car lane (dxdfir_car timeline)"
+		return nil, "no CAR timeline yet — run `process`, then `dxdfir build-car` and `dxdfir car-timeline`"
 	}
 
 	var rows []timelineRow

@@ -40,7 +40,7 @@ dxdfir build-docker                 # build the hardened tool images (once per h
 dxdfir process evtx                 # zeek | evtx | volatility | plaso | zimmerman | signatures
 dxdfir build-car                    # normalise every source into per-source CAR stores (car_<object>.jsonl)
 dxdfir verify-car                   # the CAR correctness gate over what was written
-dxdfir car-timeline data_store/processed/car   # one property-rich, time-ordered timeline JSONL
+dxdfir car-timeline data_store/processed/byakugan   # one property-rich, time-ordered timeline JSONL
 ```
 
 Bring up the backend:
@@ -86,7 +86,7 @@ matching `dxdfir_<source>` role); processors are also runnable as
 The **CAR layer is materialised**: the [Byakugan](https://github.com/Get-Sybers/byakugan)
 engine (formerly PIIAT-MitreCar) normalises each processed source into finished
 CAR events — one `car_<object>.jsonl` per object (13 objects) plus
-`car_relationships.jsonl` — under `processed/car/<source>/`. The engine is an
+`car_relationships.jsonl` — under `processed/byakugan/<source>/`. The engine is an
 external recursive checkout, provisioned by `scripts/setup-environment.sh` at
 the commit pinned in `byakugan.ref` (`$BYAKUGAN_ROOT`, else `byakugan/` beside
 the repo). Extraction happens once, in the engine, so that JSON is the contract
