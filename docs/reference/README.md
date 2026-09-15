@@ -1,7 +1,7 @@
 # Reference — standards and conventions
 
 For contributors: the conventions the code holds to, the harness that enforces them, and
-a map of the repositories DX_DFIR is built on. Read [CONTRIBUTING.md](../../CONTRIBUTING.md)
+a map of the repositories DX_DFIR is built on. Read [CONTRIBUTING.md](../../.github/CONTRIBUTING.md)
 first for the workflow; these pages are the *house style*.
 
 - **[Go standards](go-standards.md)** — the `go-thonic` naming vocabulary, the `internal/`

@@ -44,7 +44,7 @@ man dxdfir                              # the manual (go/man/dxdfir.1)
 the matching `python -m get_sybers_dxdfir.<source>` for the tight loop). `build-car` and
 `verify-car` drive the CAR lane; the analysis backend is the Elastic-native stack
 (`docker/elastic`, brought up with compose), fed from the processed tree.
-`validate` runs the repo's check harness (`tests/run-checks.sh`). The repo is
+`validate` runs the repo's check harness (`.github/tests/run-checks.sh`). The repo is
 auto-detected (or pass `--repo-root` / `$DFIR_REPO_ROOT`).
 
 ## Install

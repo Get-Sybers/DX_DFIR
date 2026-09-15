@@ -12,8 +12,8 @@
 # container — every bind path the role hands the daemon must be valid on the
 # host.
 #
-#   ./tests/run-molecule.sh                  run the default scenario set
-#   ./tests/run-molecule.sh dxdfir_zeek ...    run specific roles only
+#   ./.github/tests/run-molecule.sh                  run the default scenario set
+#   ./.github/tests/run-molecule.sh dxdfir_zeek ...    run specific roles only
 #
 # Operator-supplied fixtures (large/binary; not shipped) come from env vars —
 # a scenario whose fixture is absent is SKIPPED with a note, not failed:
@@ -27,7 +27,7 @@
 set -o pipefail
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-REPO_ROOT="$(realpath "$SCRIPT_DIR/..")"
+REPO_ROOT="$(realpath "$SCRIPT_DIR/../..")"
 ROLES_DIR="$REPO_ROOT/ansible/collections/get_sybers.dxdfir/roles"
 IMAGE="${MOLECULE_IMAGE:-get-sybers/molecule:latest}"
 

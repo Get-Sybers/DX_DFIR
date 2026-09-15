@@ -16,11 +16,11 @@
 # volume — and hands over to riskgate.py, which loads a small synthetic fixture
 # into a `riskgate` namespace, runs the proofs and removes the fixture again.
 #
-#   ./tests/elastic-riskgate/riskgate.sh               # load, proof 1, proof 2, probe, clean
-#   ./tests/elastic-riskgate/riskgate.sh --keep        # ... leave the fixture for inspection
-#   ./tests/elastic-riskgate/riskgate.sh clean         # remove the fixture
-#   ./tests/elastic-riskgate/riskgate.sh selftest      # offline consistency check (no cluster)
-#   ./tests/elastic-riskgate/riskgate.sh load|proof1|proof2|probe
+#   ./.github/tests/elastic-riskgate/riskgate.sh               # load, proof 1, proof 2, probe, clean
+#   ./.github/tests/elastic-riskgate/riskgate.sh --keep        # ... leave the fixture for inspection
+#   ./.github/tests/elastic-riskgate/riskgate.sh clean         # remove the fixture
+#   ./.github/tests/elastic-riskgate/riskgate.sh selftest      # offline consistency check (no cluster)
+#   ./.github/tests/elastic-riskgate/riskgate.sh load|proof1|proof2|probe
 #
 # Overrides (all optional): ES_URL (https://127.0.0.1:9200), ES_USER (elastic),
 # ES_PASSWORD (else docker/elastic/.env), ES_CA (else fetched from the stack),
@@ -32,7 +32,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 cd "$REPO_ROOT" || exit 1
 
 ELASTIC_DIR="$REPO_ROOT/docker/elastic"

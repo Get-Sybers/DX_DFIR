@@ -84,4 +84,4 @@ jobs:
           echo "go          $(go version 2>&1 | head -1)"
 
       - name: Run repository checks
-        run: ./tests/run-checks.sh -v
+        run: ./.github/tests/run-checks.sh -v

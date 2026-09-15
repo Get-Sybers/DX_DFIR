@@ -10,14 +10,14 @@ import (
 )
 
 // newValidateCmd builds `dxdfir validate`, a thin front for the repository check
-// harness (tests/run-checks.sh). It requires bash on PATH and runs the script
+// harness (.github/tests/run-checks.sh). It requires bash on PATH and runs the script
 // with the repo root as cwd, propagating its exit code.
 func newValidateCmd(env *Env) *cobra.Command {
 	return &cobra.Command{
 		Use:   "validate",
-		Short: "Run the repository check harness (fronts tests/run-checks.sh).",
+		Short: "Run the repository check harness (fronts .github/tests/run-checks.sh).",
 		Long: "Run the repository check harness.\n\n" +
-			"Fronts tests/run-checks.sh from the repo root, streaming its output live and\n" +
+			"Fronts .github/tests/run-checks.sh from the repo root, streaming its output live and\n" +
 			"propagating its exit status. Requires bash on PATH.",
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
@@ -28,7 +28,7 @@ func newValidateCmd(env *Env) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			checks := r.Path("tests", "run-checks.sh")
+			checks := r.Path(".github", "tests", "run-checks.sh")
 			if !fileExists(checks) {
 				return Fail(2, "check harness not found: %s", checks)
 			}

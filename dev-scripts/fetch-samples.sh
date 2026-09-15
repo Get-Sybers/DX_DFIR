@@ -63,7 +63,7 @@
 #
 # Everything fetched lands under data_store/raw/, which is deny-by-default
 # gitignored. Nothing here is case evidence; the sources are public corpora.
-# The small curated samples under samples/ are committed and need none of this.
+# No samples are committed to the repo; every file is fetched here on demand.
 
 set -euo pipefail
 

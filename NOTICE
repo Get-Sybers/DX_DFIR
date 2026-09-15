@@ -21,4 +21,6 @@ Copyright The MITRE Corporation.
 Licensed under the Apache License, Version 2.0.
 Source: https://github.com/mitre-attack/car
 
-car_data_model.json is derived from the MITRE CAR data model.
+The MITRE CAR data model is redistributed via the get-sybers/byakugan image
+(docker/byakugan/Dockerfile), which bakes in MITRE's car repo at the byakugan.ref
+pin with its upstream LICENSE/NOTICE intact. See THIRD_PARTY_NOTICES.md.

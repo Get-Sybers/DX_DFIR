@@ -86,7 +86,7 @@ so the lane only shells the image \(em and the
 gate), while
 .B validate
 fronts the repository's check harness
-.RB ( tests/run-checks.sh ).
+.RB ( .github/tests/run-checks.sh ).
 The analysis backend itself (the Elastic stack under
 .IR docker/elastic )
 is brought up with docker compose; see its README.
@@ -126,7 +126,7 @@ car.db + superset.db (or aggregate a whole tree).
 .TP
 .B validate
 Run the repository check harness (fronts
-.IR tests/run-checks.sh ).
+.IR .github/tests/run-checks.sh ).
 .TP
 .B verify-images
 Audit the hardened

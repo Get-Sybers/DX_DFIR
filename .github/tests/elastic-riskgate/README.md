@@ -7,11 +7,11 @@ stands on: **manual detection runs over an evidence-time window** and **ES|QL
 must already be running — and it cleans up after itself.
 
 ```bash
-./tests/elastic-riskgate/riskgate.sh            # load fixture, proof 1, proof 2, probe, clean
-./tests/elastic-riskgate/riskgate.sh selftest   # offline: fixtures / queries / expected tables agree
+./.github/tests/elastic-riskgate/riskgate.sh            # load fixture, proof 1, proof 2, probe, clean
+./.github/tests/elastic-riskgate/riskgate.sh selftest   # offline: fixtures / queries / expected tables agree
 ```
 
-**The manual is [docs/riskgate.md](../../docs/riskgate.md)** — run steps, what
+**The manual is [docs/riskgate.md](../../../docs/riskgate.md)** — run steps, what
 each proof demonstrates, the pass/fail bar, and what to do when a check fails.
 
 | path | what |
@@ -26,5 +26,5 @@ each proof demonstrates, the pass/fail bar, and what to do when a check fails.
 Everything it creates is namespaced `riskgate` (`logs-car.*-riskgate`,
 `car-detections-riskgate`); the only shared object it writes is the contract's
 own `car-detections` index template, PUT verbatim from
-[`python/get_sybers_dxdfir/detect/rules/car-detections/`](../../python/get_sybers_dxdfir/detect/rules/car-detections/car-detections.index-template.json)
+[`python/get_sybers_dxdfir/detect/rules/car-detections/`](../../../python/get_sybers_dxdfir/detect/rules/car-detections/car-detections.index-template.json)
 (idempotent; `clean --drop-template` removes it).

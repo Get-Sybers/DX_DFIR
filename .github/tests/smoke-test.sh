@@ -27,13 +27,13 @@
 # would recreate exactly the "green tick that tested nothing" problem (#10). If a
 # prerequisite is missing it exits non-zero and says why.
 #
-#   ./tests/smoke-test.sh            # process, normalise, assert, gate
-#   KEEP=1 ./tests/smoke-test.sh     # leave the temp output in place for inspection
+#   ./.github/tests/smoke-test.sh            # process, normalise, assert, gate
+#   KEEP=1 ./.github/tests/smoke-test.sh     # leave the temp output in place for inspection
 # ==============================================================================
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$REPO_ROOT" || exit 1
 
 KEEP="${KEEP:-0}"

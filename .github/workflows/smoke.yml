@@ -45,7 +45,7 @@ on:
       - "byakugan.ref"
       - ".gitmodules"
       - "third_party/**"
-      - "tests/smoke-test.sh"
+      - ".github/tests/smoke-test.sh"
       - "dev-scripts/fetch-samples.sh"
       - "dev-scripts/samples-manifest.tsv"
       - ".github/workflows/smoke.yml"
@@ -103,4 +103,4 @@ jobs:
           docker build -t get-sybers/byakugan:latest --build-arg BYAKUGAN_REF="$ref" -f docker/byakugan/Dockerfile docker
 
       - name: Run the pipeline smoke test
-        run: ./tests/smoke-test.sh
+        run: ./.github/tests/smoke-test.sh
