@@ -26,11 +26,11 @@ Expect a slow response — this is a personal project, not a maintained product.
 These are already known. You do not need to report them.
 
 - **The analysis backend holds evidence.** The Elastic-native stack
-  (`docker/elastic`) runs with security **on** — authentication, RBAC, TLS on
+  (`stacks/elastic`) runs with security **on** — authentication, RBAC, TLS on
   the Elasticsearch API and transport — but Kibana is served over plain HTTP on
   the loopback interface, Filebeat writes as the `elastic` superuser for now
   (a least-privilege writer role is a follow-up), and every credential lives in
-  the gitignored `docker/elastic/.env`. The retiring SOF-ELK stack
+  the gitignored `stacks/elastic/.env`. The retiring SOF-ELK stack
   (`docker/sof-elk`) has no security at all — no authentication, no access
   control, plaintext HTTP. Every published port binds `127.0.0.1`; that
   binding is a real control, the rest is best effort.

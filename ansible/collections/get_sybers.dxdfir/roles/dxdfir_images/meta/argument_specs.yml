@@ -18,7 +18,7 @@ argument_specs:
         After each build the role asserts the contract statically (USER 2000:2000,
         pinned ENTRYPOINT, hardened label) AND from inside the running container. Nothing in the pipeline pulls a
         third-party tool image at runtime; the analysis backend (the Elastic
-        stack under docker/elastic) is deployed separately with compose.
+        stack under stacks/elastic) is deployed separately with compose.
     options:
       dxdfir_images_context:
         type: str

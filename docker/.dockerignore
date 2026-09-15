@@ -9,7 +9,6 @@
 # from the shared docker/ context.
 GoDFIR-toolz/
 
-# The Elastic and SOF-ELK stacks are docker-compose deployments, not tool-image
-# build inputs.
-elastic/
+# The SOF-ELK compose stack is a deployment, not a tool-image build input. (The
+# Elastic stack moved out to the repo-root stacks/; SOF-ELK is being retired.)
 sof-elk/

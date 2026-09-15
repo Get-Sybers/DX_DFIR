@@ -88,7 +88,7 @@ gate), while
 fronts the repository's check harness
 .RB ( .github/tests/run-checks.sh ).
 The analysis backend itself (the Elastic stack under
-.IR docker/elastic )
+.IR stacks/elastic )
 is brought up with docker compose; see its README.
 .SH COMMANDS
 .TP
@@ -302,7 +302,7 @@ The processing package (also runnable as
 Raw evidence and processed output (gitignored); the materialised CAR lands under
 .IR data_store/processed/byakugan/ .
 .TP
-.I docker/elastic/
+.I stacks/elastic/
 The Elastic-native analysis backend (docker compose).
 .SH SEE ALSO
 .BR ansible-playbook (1),

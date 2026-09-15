@@ -233,7 +233,7 @@ repository.**
 |---|---|---|---|
 | [Plaso / log2timeline](https://github.com/log2timeline/plaso) | `log2timeline/plaso:latest` container | Apache-2.0 | None |
 | [Zeek](https://zeek.org/) | `zeek/zeek:latest` container | BSD-3-Clause | None |
-| [Elastic Stack](https://www.elastic.co/) (Elasticsearch, Kibana, Elastic Agent / Fleet Server, Filebeat) | `docker.elastic.co/*` images at a pinned `ELASTIC_VERSION` — **the analysis backend** (`docker/elastic/`) | [Elastic License 2.0](https://www.elastic.co/licensing/elastic-license) (default distribution; only the free Basic-tier features are enabled) | See below |
+| [Elastic Stack](https://www.elastic.co/) (Elasticsearch, Kibana, Elastic Agent / Fleet Server, Filebeat) | `docker.elastic.co/*` images at a pinned `ELASTIC_VERSION` — **the analysis backend** (`stacks/elastic/`) | [Elastic License 2.0](https://www.elastic.co/licensing/elastic-license) (default distribution; only the free Basic-tier features are enabled) | See below |
 | [go-evtx](https://github.com/Velocidex/evtx) (Velociraptor) | `get_sybers_dxdfir.evtx` runs **goevtx** (`get-sybers/goevtx`, `docker/GoDFIR-toolz/goevtx`) — a static-Go `.evtx` parser on go-evtx; the .NET EvtxECmd is no longer used | Apache-2.0 | None |
 | [Velociraptor](https://github.com/Velocidex/velociraptor) | Formerly: JSON output normalised by `dev-scripts/` (the lane was removed in 0.6.0) | AGPL-3.0 | None — output ingestion does not trigger AGPL |
 
@@ -251,7 +251,7 @@ history.
 
 ### Elastic Stack — the analysis backend
 
-The Elastic-native stack (`docker/elastic/`) pulls the official
+The Elastic-native stack (`stacks/elastic/`) pulls the official
 `docker.elastic.co` images at a pinned `ELASTIC_VERSION`; nothing of it is
 vendored, so this is a constraint on you rather than on this code. The
 default distribution ships under the

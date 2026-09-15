@@ -15,12 +15,12 @@ ES_URL=https://elasticsearch:9200
 # (a .jar is a .zip) — no dependency on unzip being present in the image.
 JAR=/usr/share/elasticsearch/jdk/bin/jar
 
-: "${ELASTIC_PASSWORD:?ELASTIC_PASSWORD must be set (docker/elastic/.env)}"
-: "${KIBANA_SYSTEM_PASSWORD:?KIBANA_SYSTEM_PASSWORD must be set (docker/elastic/.env)}"
+: "${ELASTIC_PASSWORD:?ELASTIC_PASSWORD must be set (stacks/elastic/.env)}"
+: "${KIBANA_SYSTEM_PASSWORD:?KIBANA_SYSTEM_PASSWORD must be set (stacks/elastic/.env)}"
 for v in ELASTIC_PASSWORD KIBANA_SYSTEM_PASSWORD; do
   case "${!v}" in
     *change-me*)
-      echo "setup | ${v} still holds the .env.example placeholder — set a real value in docker/elastic/.env" >&2
+      echo "setup | ${v} still holds the .env.example placeholder — set a real value in stacks/elastic/.env" >&2
       exit 1 ;;
   esac
 done

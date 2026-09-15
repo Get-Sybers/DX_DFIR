@@ -78,7 +78,7 @@ dxdfir verify-car           # the correctness gate over what was written
 ```
 
 **4. Bring up the analysis backend** — the Elastic-native stack under
-[`docker/elastic/`](/docker/elastic/README.md) (docker compose, localhost-only,
+[`stacks/elastic/`](/stacks/elastic/README.md) (docker compose, localhost-only,
 security on). Filebeat ships the delivered evidence tree into `logs-dxdfir.<type>-*`
 data streams; see [Get-Started](/docs/Get-Started.md) steps 7–9.
 

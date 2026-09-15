@@ -7,7 +7,7 @@ security-less ELK delivery target) is retiring.
 
 ## What's in it
 
-`docker/elastic/` is a security-on, localhost-only Elastic stack:
+`stacks/elastic/` is a security-on, localhost-only Elastic stack:
 
 | Service | Role | Port (127.0.0.1) |
 |---|---|---|
@@ -20,7 +20,7 @@ Bring it up with `dxdfir stack deploy` or directly:
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144       # Elasticsearch requires this (persist in /etc/sysctl.conf)
-cd docker/elastic && cp .env.example .env    # then fill in the placeholders
+cd stacks/elastic && cp .env.example .env    # then fill in the placeholders
 docker compose up -d
 ```
 
@@ -28,7 +28,7 @@ docker compose up -d
 > `.env`, passwords need ≥ 6 chars and each encryption key must be `openssl rand -hex 32`
 > (the `.env.example` comments say which is which). The file holds credentials, binds
 > nothing off `127.0.0.1`, and is git-ignored — **never commit it.** Full details:
-> [docker/elastic/README.md](../../docker/elastic/README.md).
+> [stacks/elastic/README.md](../../stacks/elastic/README.md).
 
 ## How evidence gets in
 

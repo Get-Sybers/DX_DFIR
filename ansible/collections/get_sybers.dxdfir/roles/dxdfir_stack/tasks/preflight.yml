@@ -38,7 +38,7 @@
     that:
       - dxdfir_stack_env_stat.stat.exists
     fail_msg: >-
-      {{ dxdfir_stack_env_file }} is missing — copy docker/elastic/.env.example to
-      docker/elastic/.env and set the passwords/keys before running the stack.
+      {{ dxdfir_stack_env_file }} is missing — copy stacks/elastic/.env.example to
+      stacks/elastic/.env and set the passwords/keys before running the stack.
     quiet: true
   when: dxdfir_stack_name == 'elastic'

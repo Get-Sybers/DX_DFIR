@@ -41,10 +41,10 @@ func newStackCmd(env *Env) *cobra.Command {
 	var stack string
 	parent := &cobra.Command{
 		Use:   "stack",
-		Short: "Bring the analysis stack up/down (dxdfir_stack role around docker/elastic or docker/sof-elk).",
+		Short: "Bring the analysis stack up/down (dxdfir_stack role around stacks/elastic or docker/sof-elk).",
 		Long: "Bring the analysis stack up/down via the dxdfir_stack Ansible role.\n\n" +
-			"Lifecycle for the stacks under docker/elastic and docker/sof-elk. Select one\n" +
-			"with --stack/-s (elastic|sofelk). Elastic requires docker/elastic/.env.",
+			"Lifecycle for the stacks under stacks/elastic and docker/sof-elk. Select one\n" +
+			"with --stack/-s (elastic|sofelk). Elastic requires stacks/elastic/.env.",
 	}
 	parent.PersistentFlags().StringVarP(&stack, "stack", "s", "elastic", "Which stack to drive (elastic|sofelk).")
 

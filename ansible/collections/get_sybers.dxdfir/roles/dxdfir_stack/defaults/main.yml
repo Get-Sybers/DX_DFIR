@@ -4,7 +4,7 @@
 
 # Which lifecycle action: deploy | destroy | start | stop | status.
 dxdfir_stack_action: status
-# Which stack: elastic (docker/elastic, the default) or sofelk (docker/sof-elk).
+# Which stack: elastic (stacks/elastic, the default) or sofelk (docker/sof-elk).
 dxdfir_stack_name: elastic
 
 # Repo root is five levels up from this role.
@@ -12,7 +12,7 @@ dxdfir_stack_repo_root: "{{ role_path }}/../../../../.."
 
 # Compose dir for the selected stack.
 dxdfir_stack_compose_dir: >-
-  {{ dxdfir_stack_repo_root }}/docker/{{ 'elastic' if dxdfir_stack_name == 'elastic' else 'sof-elk' }}
+  {{ dxdfir_stack_repo_root }}/{{ 'stacks/elastic' if dxdfir_stack_name == 'elastic' else 'docker/sof-elk' }}
 
 # Env file for compose interpolation: elastic reads a committed-by-the-operator
 # .env next to its compose file; sofelk uses the data_store env the deploy writes.

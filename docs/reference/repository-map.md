@@ -41,7 +41,8 @@ The full directory map is [Dir-Structure.md](../Dir-Structure.md). The pieces th
 | `go/` | The [`dxdfir` Go front-end](go-standards.md) — CLI + TUI. |
 | `python/get_sybers_dxdfir/` | The Python processing package (one module per lane) + `detect/` + `stix/`. |
 | `ansible/collections/get_sybers.dxdfir/` | The [Ansible collection](ansible-standards.md) — roles + playbooks. |
-| `docker/` | Hardened tool-image Dockerfiles ([Containers.md](../Containers.md)) + `elastic/` ([the stack](../architecture/the-stack.md)). |
+| `docker/` | Hardened tool-image Dockerfiles ([Containers.md](../Containers.md)). |
+| `stacks/` | Compose deployment stacks — `elastic/` ([the stack](../architecture/the-stack.md)). |
 | `data_store/` | Evidence lifecycle: `raw/ → processed/ → processed/byakugan/` (git-ignored). |
 | `scripts/` | Host provisioning + offline packaging ([overview](../scripts/Scripts-Overview.md)). |
 | `.github/tests/` | The [check + smoke harnesses](build-and-test.md). |

@@ -56,7 +56,7 @@ See the [collection concept](../architecture/processing-lanes.md#collections).
 | `dxdfir stack destroy [--volumes] [-y]` | Remove the stack; `--volumes` also wipes ingested data. |
 
 See [the stack](../architecture/the-stack.md) and
-[docker/elastic/README.md](../../docker/elastic/README.md).
+[stacks/elastic/README.md](../../stacks/elastic/README.md).
 
 ## Housekeeping
 

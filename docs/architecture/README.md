@@ -29,7 +29,7 @@ flowchart TD
 | **Python** (`python/`) | Discover inputs, run one tool, emit a `{processed, skipped, failed}` summary | No orchestration or scheduling |
 | **Containers** (`docker/`) | Run one hardened tool over one input | Nothing else — fixed non-root user, no network, read-only rootfs |
 | **[Byakugan](https://github.com/Get-Sybers/byakugan)** (external) | Normalise processed evidence into MITRE CAR | Lives outside the repo entirely — cloned + built into the hardened `get-sybers/byakugan` image at the `sources.yml` pin, never vendored |
-| **[Elastic stack](the-stack.md)** (`docker/elastic/`) | Ingest, search, detect | A separate data plane — it reads the files the pipeline writes; neither drives the other |
+| **[Elastic stack](the-stack.md)** (`stacks/elastic/`) | Ingest, search, detect | A separate data plane — it reads the files the pipeline writes; neither drives the other |
 
 The call chain in one line: **you → `dxdfir` → `ansible-playbook` → `python3 -m
 get_sybers_dxdfir.<lane>` → `docker run get-sybers/<tool>` → deterministic output files.**

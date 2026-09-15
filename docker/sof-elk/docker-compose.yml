@@ -2,7 +2,7 @@ name: sof-elk
 
 # SOF-ELK stack for DX_DFIR: Elasticsearch + the from-source SOF-ELK image
 # (Logstash + Filebeat) + Kibana. Localhost-only, no security (dead-box analysis;
-# retiring in favour of docker/elastic, which runs with security on). Point
+# retiring in favour of stacks/elastic, which runs with security on). Point
 # SOFELK_INGEST_DIR at the same path dxdfir_ingest_sofelk delivers to.
 
 x-version: &version "${ELASTIC_VERSION:-9.4.3}"
