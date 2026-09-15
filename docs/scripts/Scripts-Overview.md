@@ -61,7 +61,7 @@ than needing a `/dev/fuse` mount.
 No shell scripts here either:
 
 - **`dxdfir build-car`** drives the external Byakugan engine inside the hardened
-  `get-sybers/byakugan` image (cloned + built at the `byakugan.ref` pin by
+  `get-sybers/byakugan` image (cloned + built at the `sources.yml` pin by
   `dxdfir build-docker`) over the processed
   tree: one `car.db` + `superset.db` and
   one `car_<object>.jsonl` per populated object per source, under

@@ -62,4 +62,4 @@ diagnostic. `ansible-lint --profile production` runs over the collection as a
 ## The one external seam
 
 The `dxdfir_byakugan` role drives the external [Byakugan engine](https://github.com/Get-Sybers/byakugan),
-pinned by `byakugan.ref` — not vendored. See the [CAR pipeline](../architecture/car-pipeline.md).
+pinned by `sources.yml` — not vendored. See the [CAR pipeline](../architecture/car-pipeline.md).

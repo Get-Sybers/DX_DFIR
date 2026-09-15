@@ -1,7 +1,7 @@
 ---
 # FIND FACTS -> check preconditions BEFORE the engine runs. The CAR stage drives
 # the external Byakugan engine, now entirely inside the hardened
-# get-sybers/byakugan container (cloned + built at the byakugan.ref pin) — the
+# get-sybers/byakugan container (cloned + built at the sources.yml pin) — the
 # DX_DFIR seam is the pure-Python mitrecar/carcheck modules, which shell the
 # image. So preflight checks BOTH: the seam modules import, and the engine image
 # is present + hardened (the same supply-chain guard the lane enforces at run

@@ -88,7 +88,7 @@ per-item processing).
 
 The CAR engine lives **outside** this tree entirely: the Byakugan engine is
 cloned + built into the hardened `get-sybers/byakugan` image
-(`docker/byakugan/Dockerfile`) at the pin in the repo-root `byakugan.ref`, by
+(`docker/byakugan/Dockerfile`) at the pin in the repo-root `sources.yml`, by
 `dxdfir build-docker`. The CAR lane only shells that image — nothing is checked
 out on the host.
 

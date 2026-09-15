@@ -63,7 +63,7 @@ skipping the newly-covered events. (`dxdfir build-car` fronts the same engine as
 The engine is the standalone public **[Byakugan](https://github.com/Get-Sybers/byakugan)**
 tool, driven via its CLI by the thin `get_sybers_dxdfir/mitrecar.py` lane — exactly
 the PIIAT-Mem pattern — inside the hardened **`get-sybers/byakugan` image**. The engine is
-cloned + built INTO that image at the commit pinned by the repo-root `byakugan.ref`
+cloned + built INTO that image at the commit pinned by the repo-root `sources.yml`
 (`docker/byakugan/Dockerfile`), by `dxdfir build-docker` alongside the other tool images;
 the DX_DFIR checkout holds no engine copy, and `mitrecar.py` only maps the host paths to
 container mounts (processed evidence read-only, the `car/` output read-write) and shells

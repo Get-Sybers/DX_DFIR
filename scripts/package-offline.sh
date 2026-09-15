@@ -108,7 +108,7 @@ echo "   $(du -sh "$STAGE/go-vendor.tar" | cut -f1) of Go modules vendored."
 
 # ---- 1c. the external Byakugan engine (the CAR lane) -------------------------
 # The engine no longer ships as its own byakugan.tar: it is cloned + built into
-# the hardened get-sybers/byakugan image at the byakugan.ref pin (model sources
+# the hardened get-sybers/byakugan image at the sources.yml pin (model sources
 # — car + attack-datasources — and the Go parse binary baked in), so it rides in
 # the saved container images below (section 2) exactly like every other tool.
 # Nothing to stage here; the image bundle carries the whole engine.

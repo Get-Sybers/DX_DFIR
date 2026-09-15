@@ -36,7 +36,7 @@ DOCKER_TAR_DIR="${DXDFIR_IMAGE_DIR:-$REPO_ROOT_DIR/data_store/docker_images}"
 BUILT_IMAGES=(
     # the whole detection lane in one image (yara + suricata + hayabusa).
     "get-sybers/signatures:latest"
-    # the external MITRE CAR engine, cloned + built in at the byakugan.ref pin —
+    # the external MITRE CAR engine, cloned + built in at the sources.yml pin —
     # the engine ships INSIDE this image now, not as a separate byakugan.tar.
     "get-sybers/byakugan:latest"
     "get-sybers/zeek:latest"

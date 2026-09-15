@@ -88,7 +88,7 @@ engine (formerly PIIAT-MitreCar) normalises each processed source into finished
 CAR events — one `car_<object>.jsonl` per object (13 objects) plus
 `car_relationships.jsonl` — under `processed/byakugan/<source>/`. The engine is an
 external recursive checkout, provisioned by `scripts/setup-environment.sh` at
-the commit pinned in `byakugan.ref` (`$BYAKUGAN_ROOT`, else `byakugan/` beside
+the commit pinned in `sources.yml` (`$BYAKUGAN_ROOT`, else `byakugan/` beside
 the repo). Extraction happens once, in the engine, so that JSON is the contract
 every sink reads and cannot drift from what the engine emits.
 

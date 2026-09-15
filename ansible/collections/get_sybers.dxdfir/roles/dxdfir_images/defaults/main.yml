@@ -37,7 +37,7 @@ dxdfir_images_eztools_context: "{{ dxdfir_images_repo_root }}/docker/GoDFIR-tool
 # against the hardening contract afterwards.
 dxdfir_images_set:
   - signatures    # the whole detection lane in one image: yara + suricata + hayabusa
-  - byakugan      # the external MITRE CAR engine, cloned + built in at the byakugan.ref pin
+  - byakugan      # the external MITRE CAR engine, cloned + built in at the byakugan pin in sources.yml
   - zeek
   - volatility
   - plaso
@@ -78,13 +78,12 @@ dxdfir_images_force: false
 #     the submodule root so eztool/Dockerfile reaches its hardening/harden.yml).
 #   - every goX tool: FROM scratch, so each context is its OWN subdir under the
 #     submodule (go.mod/main.go live there).
-# The Byakugan engine commit the byakugan image is built at: the first
-# non-comment, non-blank line of byakugan.ref (the same pin the host checkout
-# used to track). Passed to docker/byakugan/Dockerfile as --build-arg
-# BYAKUGAN_REF, so the image is reproducibly cloned + built at that sha.
+# The Byakugan engine commit the byakugan image is built at: the byakugan `ref`
+# in the repo-root sources.yml manifest. Passed to docker/byakugan/Dockerfile
+# as --build-arg BYAKUGAN_REF, so the image is reproducibly cloned + built at that sha.
 dxdfir_images_byakugan_ref: >-
-  {{ (lookup('file', dxdfir_images_repo_root ~ '/byakugan.ref', errors='ignore') | default('', true)).splitlines()
-     | map('trim') | reject('match', '^#') | reject('equalto', '') | first | default('main', true) }}
+  {{ ((lookup('file', dxdfir_images_repo_root ~ '/sources.yml', errors='ignore') | default('', true) | from_yaml)
+     or {}).get('byakugan', {}).get('ref', 'main') }}
 
 dxdfir_images_build_overrides:
   # The CAR engine: default docker/ context + byakugan/Dockerfile, but pass the

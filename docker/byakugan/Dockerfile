@@ -5,7 +5,7 @@
 # HOST off a sibling git checkout (a host-execution gap a container-safety audit
 # flagged, and a cross-repo checkout DX_DFIR had to provision + keep on-pin);
 # it now runs confined here, and the engine is cloned + built INTO the image at
-# the commit pinned by byakugan.ref, so the only thing the DX_DFIR checkout holds
+# the commit pinned by sources.yml, so the only thing the DX_DFIR checkout holds
 # is how it INVOKES this image (get_sybers_dxdfir.mitrecar).
 #
 # The engine's `byakugan` console binary IS the ENTRYPOINT (byakugan-entry.py):
@@ -15,7 +15,7 @@
 # else is stripped by the shared build-time hardener.
 #
 #   docker build -t get-sybers/byakugan:latest \
-#     --build-arg BYAKUGAN_REF=$(grep -vE '^\s*(#|$)' byakugan.ref | head -1) \
+#     --build-arg BYAKUGAN_REF=$(awk '/^byakugan:/{b=1;next} b&&/^[^[:space:]]/{b=0} b&&$1=="ref:"{print $2;exit}' sources.yml) \
 #     -f docker/byakugan/Dockerfile docker
 ARG BASE=debian:trixie-slim
 ARG GO_BASE=golang:1.24-bookworm
@@ -86,6 +86,6 @@ ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
 USER ${DFIR_UID}:${DFIR_GID}
 ENTRYPOINT ["byakugan"]
 LABEL org.opencontainers.image.title="get-sybers/byakugan" \
-      org.opencontainers.image.description="Minimal hardened MITRE CAR engine (Byakugan) for DX_DFIR: engine cloned + built into the image at the byakugan.ref pin, uid0 renamed+locked, no ansible/apt/pip/sudo/setuid/shell, runs as a fixed non-root uid (default 2000). python kept (the engine is python). One entrypoint binary dispatched to build/timeline/car-vocab." \
+      org.opencontainers.image.description="Minimal hardened MITRE CAR engine (Byakugan) for DX_DFIR: engine cloned + built into the image at the sources.yml pin, uid0 renamed+locked, no ansible/apt/pip/sudo/setuid/shell, runs as a fixed non-root uid (default 2000). python kept (the engine is python). One entrypoint binary dispatched to build/timeline/car-vocab." \
       com.get-sybers.hardened="true" \
       com.get-sybers.byakugan.ref="${BYAKUGAN_REF}"

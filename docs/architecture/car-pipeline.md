@@ -7,7 +7,7 @@ memory image and an event log describe the same entities in the same vocabulary.
 
 The normalisation itself is done by the **external [Byakugan engine](https://github.com/Get-Sybers/byakugan)**,
 which runs entirely inside the hardened `get-sybers/byakugan` container — cloned + built
-into the image at the `byakugan.ref` pin (`docker/byakugan/Dockerfile`) by `dxdfir
+into the image at the `sources.yml` pin (`docker/byakugan/Dockerfile`) by `dxdfir
 build-docker`, never vendored. DX_DFIR is a thin front over it: one Ansible role,
 `dxdfir_byakugan`, with three actions. Each action runs the Python seam
 `get_sybers_dxdfir.mitrecar`, which holds **no CAR logic itself** — it only maps the host

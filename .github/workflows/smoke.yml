@@ -4,7 +4,7 @@ name: smoke
 # deliberately does not provide (issue #10). It processes sha256-pinned Sysmon
 # .evtx through the real evtx lane (EvtxECmd), normalises the output into
 # materialised CAR with the external Byakugan engine (built into the
-# get-sybers/byakugan image below at the commit byakugan.ref pins), asserts every
+# get-sybers/byakugan image below at the commit sources.yml pins), asserts every
 # Sysmon-sourced CAR object has rows
 # with its EvtxPayload-derived fields correctly populated, and runs the
 # verify-car gate over the same tree.
@@ -39,10 +39,10 @@ on:
       # in-image hardening playbook it uses.
       - "docker/byakugan/**"
       - "docker/hardening/**"
-      # an engine bump is a pipeline change: byakugan.ref pins the external
+      # an engine bump is a pipeline change: sources.yml pins the external
       # Byakugan engine the CAR lane runs, so it must re-run this workflow.
       # third_party/** covers the piiat-mem AND GoDFIR-toolz submodules.
-      - "byakugan.ref"
+      - "sources.yml"
       - ".gitmodules"
       - "third_party/**"
       - ".github/tests/smoke-test.sh"
@@ -86,14 +86,14 @@ jobs:
 
       # The CAR lane (get_sybers_dxdfir.mitrecar) drives the external Byakugan
       # engine inside the get-sybers/byakugan image: the docker build clones the
-      # engine at the byakugan.ref pin (first non-comment line) and, in its own
+      # engine at the byakugan pin in sources.yml and, in its own
       # stages, checks out the engine's nested model submodules (third_party/car +
       # attack-datasources) and builds the Go parse binary — so nothing about the
-      # engine is provisioned on the runner. byakugan.ref is in the PR path filters
+      # engine is provisioned on the runner. sources.yml is in the PR path filters
       # above: bumping the pin re-runs this whole pipeline against the new engine.
-      - name: Build the Byakugan engine image (at the byakugan.ref pin)
+      - name: Build the Byakugan engine image (at the sources.yml pin)
         run: |
-          ref="$(grep -vE '^[[:space:]]*(#|$)' byakugan.ref | head -1 | tr -d '[:space:]')"
+          ref="$(awk '/^byakugan:/{b=1;next} b&&/^[^[:space:]]/{b=0} b&&$1=="ref:"{print $2;exit}' sources.yml)"
           test -n "$ref"
           # docker/hardening/harden.yml is gitignored — its canonical home is the
           # GoDFIR-toolz submodule, and the dxdfir_images preflight syncs it into
