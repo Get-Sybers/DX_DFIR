@@ -103,7 +103,7 @@ func SortInto(repoRoot, name string, dryRun bool, onItem ItemFn) (SortResult, er
 		dest, derr := safeLaneDest(root, subdir, nm)
 		if derr != nil {
 			res.Skipped = append(res.Skipped, [2]string{nm, derr.Error()})
-			note(nm, subdir, how, "skip")
+			note(nm, subdir, derr.Error(), "skip")
 			continue
 		}
 		if fsx.Exists(dest) {
@@ -142,14 +142,16 @@ func SortInto(repoRoot, name string, dryRun bool, onItem ItemFn) (SortResult, er
 // because containment is checked against the RESOLVED root.
 func safeLaneDest(root, subdir, name string) (string, error) {
 	if name != filepath.Base(name) || name == "." || name == ".." {
-		return "", fmt.Errorf("refusing evidence name with a path separator: %q", name)
+		return "", fmt.Errorf("refusing unsafe evidence name %q (not a plain file name)", name)
 	}
 	realRoot, err := filepath.EvalSymlinks(root)
 	if err != nil {
 		return "", fmt.Errorf("collection root unresolvable: %w", err)
 	}
 	laneDir := filepath.Join(root, subdir)
-	if fi, err := os.Lstat(laneDir); err == nil {
+	fi, err := os.Lstat(laneDir)
+	switch {
+	case err == nil:
 		if fi.Mode()&os.ModeSymlink != 0 {
 			return "", fmt.Errorf("refusing to move through symlinked lane dir %q", subdir)
 		}
@@ -160,6 +162,13 @@ func safeLaneDest(root, subdir, name string) (string, error) {
 		if realLane != realRoot && !strings.HasPrefix(realLane, realRoot+string(os.PathSeparator)) {
 			return "", fmt.Errorf("lane dir %q resolves outside the collection root", subdir)
 		}
+	case os.IsNotExist(err):
+		// Not created yet: MkdirAll will make a real dir under the resolved root
+		// (subdir is a single, constant lane name), so no symlink to traverse.
+	default:
+		// A safety guard must not move evidence it couldn't verify (e.g. an
+		// EACCES on the lane dir) — refuse rather than proceed blind.
+		return "", fmt.Errorf("cannot verify lane dir %q: %w", subdir, err)
 	}
 	return filepath.Join(laneDir, name), nil
 }

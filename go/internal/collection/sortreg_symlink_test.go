@@ -42,7 +42,9 @@ func TestSafeLaneDest_RefusesSymlinkedLaneDir(t *testing.T) {
 
 func TestSafeLaneDest_RefusesTraversalName(t *testing.T) {
 	root := t.TempDir()
-	os.MkdirAll(filepath.Join(root, "pcaps"), 0o755)
+	if err := os.MkdirAll(filepath.Join(root, "pcaps"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	for _, bad := range []string{"../evil", "a/b", "..", "."} {
 		if _, err := safeLaneDest(root, "pcaps", bad); err == nil {
 			t.Errorf("name %q was accepted; want refusal", bad)
