@@ -1,5 +1,5 @@
 ---
-# The playbook holds the decisions. It selects the role and passes the pipeline;
+# The playbook holds the decisions. It selects the role;
 # the role groups, the tasks act (one-action-per-task).
 - name: "DFIR | run the signature/detection lanes"
   hosts: "{{ dxdfir_hosts | default('localhost') }}"

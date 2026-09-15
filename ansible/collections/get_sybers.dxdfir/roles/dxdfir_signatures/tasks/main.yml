@@ -7,10 +7,9 @@
 - name: "signatures | assert inputs"
   ansible.builtin.assert:
     that:
-      - dxdfir_signatures_pipeline in ['elastic', 'sofelk']
       - dxdfir_signatures_lanes | difference(['yara', 'suricata', 'hayabusa']) | length == 0
     fail_msg: >-
-      dxdfir_signatures needs dxdfir_signatures_pipeline (elastic|sofelk); dxdfir_signatures_lanes
+      dxdfir_signatures_lanes
       may only contain yara/suricata/hayabusa.
     quiet: true
   tags: [always]
@@ -24,8 +23,7 @@
 
 # Per-lane inputs (rules, pcaps, evtx, images) are optional — each lane notes and
 # skips when its inputs/tools are missing — so only the data_store anchor is
-# declared as a required input; the pipeline decision (elastic|sofelk) is carried
-# by the resolved dxdfir_signatures_out_dir default.
+# declared as a required input.
 - name: "signatures | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
     name: dxdfir_lane

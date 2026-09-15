@@ -30,7 +30,7 @@ The Elastic detection rules live as data under `get_sybers_dxdfir/detect/rules/`
 The verbs live in the Go binary (`go/` — see [its README](../go/README.md)); it
 shells out to this package and never re-implements processing:
 ```bash
-dxdfir process zeek --pipeline elastic  # drive the dxdfir_zeek role (preflight → process → verify)
+dxdfir process zeek  # drive the dxdfir_zeek role (preflight → process → verify)
 dxdfir process signatures -e '{"dxdfir_signatures_lanes":["yara"]}'
 dxdfir build-car                        # normalise every processed source into per-source CAR stores
 dxdfir verify-car                       # the CAR correctness gate over the materialised CAR
@@ -42,7 +42,7 @@ man dxdfir                              # the manual (go/man/dxdfir.1)
 `process` drives the collection with `ansible-playbook` (the role's one action calls
 the matching `python -m get_sybers_dxdfir.<source>` for the tight loop). `build-car` and
 `verify-car` drive the CAR lane; the analysis backend is the Elastic-native stack
-(`stacks/elastic`, brought up with compose), fed from the processed tree.
+(`docker/elastic`, brought up with compose), fed from the processed tree.
 `validate` runs the repo's check harness (`.github/tests/run-checks.sh`). The repo is
 auto-detected (or pass `--repo-root` / `$DFIR_REPO_ROOT`).
 

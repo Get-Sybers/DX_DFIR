@@ -5,7 +5,7 @@ galaxy_info:
   author: Get-Sybers
   description: >-
     Run the YARA, Suricata and Hayabusa detection lanes over the evidence and land
-    their native events as JSON Lines for the Elastic-native or SOF-ELK pipeline. Invokes the
+    their native events as JSON Lines for the Elastic-native pipeline. Invokes the
     get_sybers_dxdfir.signatures Python processor; one <lane>/ folder of detections.
   company: Get-Sybers
   license: MIT

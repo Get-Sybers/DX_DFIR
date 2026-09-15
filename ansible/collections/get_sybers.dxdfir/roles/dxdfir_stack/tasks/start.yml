@@ -1,5 +1,5 @@
 ---
-- name: "stack-start | start existing stopped containers | {{ dxdfir_stack_name }}"
+- name: "stack-start | start existing stopped containers"
   ansible.builtin.command:
     argv: ["docker", "compose", "-f", "docker-compose.yml", "start"]
     chdir: "{{ dxdfir_stack_compose_dir }}"

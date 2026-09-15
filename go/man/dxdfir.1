@@ -9,8 +9,6 @@ dxdfir \- DX_DFIR forensic processing pipeline front-end
 .br
 .B dxdfir process
 .I SOURCE
-.RB [ --pipeline
-.IR elastic | sofelk ]
 .RB [ --force ]
 .RB [ --repo-root
 .IR PATH ]
@@ -88,7 +86,7 @@ gate), while
 fronts the repository's check harness
 .RB ( .github/tests/run-checks.sh ).
 The analysis backend itself (the Elastic stack under
-.IR stacks/elastic )
+.IR docker/elastic )
 is brought up with docker compose; see its README.
 .SH COMMANDS
 .TP
@@ -179,13 +177,6 @@ Show help and exit. Accepted at every level, e.g.\&
 Each level shows its own options.
 .SS process
 .TP
-.BR --pipeline ", " -p " " \fIelastic\fR|\fIsofelk\fR
-Backend to target; selects the output destination. Default:
-.BR elastic
-(the processed tree the CAR lane builds from);
-.B sofelk
-writes the retiring SOF-ELK delivery tree instead.
-.TP
 .B --force
 Reprocess inputs that already have output.
 .TP
@@ -274,8 +265,8 @@ Build every hardened tool image (first-run setup, or after touching docker/):
 Rebuild just the YARA image:
 .B dxdfir build-docker --image yara --force
 .TP
-Process packet captures for the Elastic-native path:
-.B dxdfir process zeek --pipeline elastic
+Process packet captures:
+.B dxdfir process zeek
 .TP
 Reprocess memory images, overriding the input directory:
 .B dxdfir process volatility --force -e dxdfir_volatility_memory_dir=/evidence/mem
@@ -302,7 +293,7 @@ The processing package (also runnable as
 Raw evidence and processed output (gitignored); the materialised CAR lands under
 .IR data_store/processed/byakugan/ .
 .TP
-.I stacks/elastic/
+.I docker/elastic/
 The Elastic-native analysis backend (docker compose).
 .SH SEE ALSO
 .BR ansible-playbook (1),

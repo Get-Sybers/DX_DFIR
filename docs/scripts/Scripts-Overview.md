@@ -12,7 +12,7 @@ collected with **the hardened EZ-tool containers**
 > Kusto backend (`scripts/lib/`). Their behaviour lives in the `get_sybers_dxdfir`
 > package and the collection's roles: `dxdfir process <source>` and the CAR lane
 > (`dxdfir build-car` / `dxdfir verify-car`); the analysis backend is the Elastic
-> stack under `stacks/elastic/`, brought up with docker compose.
+> stack under `docker/elastic/`, brought up with docker compose.
 
 ---
 
@@ -68,9 +68,9 @@ No shell scripts here either:
   `data_store/processed/byakugan/<source>/`.
   **`dxdfir verify-car`** (`get_sybers_dxdfir.carcheck`) is the gate over what was
   written; **`dxdfir car-timeline`** unions a tree into one timeline JSONL.
-- The **Elastic-native backend** (`stacks/elastic/`) is brought up with
-  `docker compose` (see its README). Filebeat ships the delivered evidence tree
-  (`playbooks/dxdfir-ingest-sofelk.yml` delivers it) into `logs-dxdfir.<type>-*` data
+- The **Elastic-native backend** (`docker/elastic/`) is brought up with
+  `docker compose` (see its README). Filebeat ships the per-type processed tree
+  under `data_store/processed/` (`zeek/`, `plaso/`, …) into `logs-dxdfir.<type>-*` data
   streams; the CAR→ECS load into `logs-car.*` is the next phase
   ([risk gate](/docs/riskgate.md)).
 

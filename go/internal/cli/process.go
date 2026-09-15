@@ -20,7 +20,6 @@ var validSources = map[string]bool{
 }
 
 func newProcessCmd(env *Env) *cobra.Command {
-	var pipeline string
 	var force, noRegister bool
 	var extraVars []string
 	cmd := &cobra.Command{
@@ -71,20 +70,16 @@ func newProcessCmd(env *Env) *cobra.Command {
 			if source == "" {
 				source = "all" // `process <collection>` runs every lane with evidence
 			}
-			if pipeline != "elastic" && pipeline != "sofelk" {
-				return Fail(2, "invalid --pipeline %q — use elastic or sofelk", pipeline)
-			}
-			return runProcess(env, source, collection, pipeline, force, noRegister, extraVars)
+			return runProcess(env, source, collection, force, noRegister, extraVars)
 		},
 	}
-	cmd.Flags().StringVarP(&pipeline, "pipeline", "p", "elastic", "Backend to target: elastic or sofelk.")
 	cmd.Flags().BoolVar(&force, "force", false, "Reprocess inputs that already have output.")
 	cmd.Flags().StringArrayVarP(&extraVars, "extra-var", "e", nil, "Extra Ansible var KEY=VALUE (repeatable).")
 	cmd.Flags().BoolVar(&noRegister, "no-register", false, "With a collection: process an unregistered one without registering.")
 	return cmd
 }
 
-func runProcess(env *Env, source, collection, pipeline string, force, noRegister bool, extraVars []string) error {
+func runProcess(env *Env, source, collection string, force, noRegister bool, extraVars []string) error {
 	r, err := env.resolveRepo()
 	if err != nil {
 		return err
@@ -164,12 +159,12 @@ func runProcess(env *Env, source, collection, pipeline string, force, noRegister
 		runs = append(runs, lr)
 	}
 
-	title := "process " + source + " -> " + pipeline
+	title := "process " + source
 	if collection != "" {
 		title += " (collection " + collection + ")"
 	}
 	if source == "all" {
-		title = "process all -> " + pipeline
+		title = "process all"
 		if collection != "" {
 			title += " (collection " + collection + ")"
 		}
@@ -179,7 +174,7 @@ func runProcess(env *Env, source, collection, pipeline string, force, noRegister
 	ctx, cancel := signalCtx()
 	defer cancel()
 	job := &lanes.Job{
-		Repo: r, Ansible: ap, Pipeline: pipeline, Force: force,
+		Repo: r, Ansible: ap, Force: force,
 		ExtraVars: extraVars, Runs: runs, Title: title,
 	}
 	updates := job.Execute(ctx)

@@ -10,7 +10,7 @@ authors:
 description: >-
   DX_DFIR forensic processing pipeline as Ansible roles. Each role invokes the
   get_sybers_dxdfir Python package as a single action; the playbook decides which
-  roles run and the --pipeline (elastic|sofelk) selection.
+  roles run.
 license:
   - MIT
 tags:

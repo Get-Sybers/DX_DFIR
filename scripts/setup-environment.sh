@@ -579,5 +579,5 @@ cmd "scripts/save-docker-images.sh" "(online host: pull + save)"
 cmd "scripts/save-docker-images.sh --load" "(offline host: load tarballs)"
 echo
 step "Run DX_DFIR:"
-cmd "dxdfir --help" "(process evidence, build + verify CAR, bring up stacks/elastic — see README.md)"
+cmd "dxdfir --help" "(process evidence, build + verify CAR, bring up docker/elastic — see README.md)"
 echo

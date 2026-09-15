@@ -9,15 +9,15 @@ The `get_sybers.dxdfir` collection (`ansible/collections/get_sybers.dxdfir/`, na
 ## A task does one action, with no logic
 
 A task runs one thing — usually invoking the `get_sybers_dxdfir` Python package as a
-single action. The *logic* — which lanes run, the `--pipeline elastic|sofelk` choice —
-lives in the **playbook**, which is a thin, single-purpose wrapper (`hosts: localhost`,
-`gather_facts: false`). This keeps every task legible and independently reasoned about.
+single action. The *logic* — which lanes run — lives in the **playbook**, which is a
+thin, single-purpose wrapper (`hosts: localhost`, `gather_facts: false`). This keeps every
+task legible and independently reasoned about.
 
 ## One role per source or action
 
 `dxdfir_zeek`, `dxdfir_evtx`, `dxdfir_volatility`, `dxdfir_plaso`, `dxdfir_godfir_toolz`,
 `dxdfir_signatures` (the [lanes](../architecture/processing-lanes.md)), plus `dxdfir_byakugan`,
-`dxdfir_images`, `dxdfir_stack`, `dxdfir_cleanup`, and the ingest/deploy roles. Every
+`dxdfir_images`, `dxdfir_stack`, and `dxdfir_cleanup`. Every
 lane role carries only its own per-lane piece — asserting inputs and building the
 processor argv — and delegates the run to the shared **`dxdfir_lane`** skeleton
 (`preflight → process → verify`). That's the collection-port template: to add a lane,

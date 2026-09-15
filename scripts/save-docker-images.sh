@@ -6,7 +6,7 @@
 # (`ansible-playbook playbooks/dxdfir-build-images.yml`), not pulled — so this
 # script `docker save`s the local builds. Only the one image that cannot be
 # built from source is pulled first: the stock .NET runtime for evtxecmd's
-# operator-supplied mode. (The Elastic-native analysis backend, stacks/elastic,
+# operator-supplied mode. (The Elastic-native analysis backend, docker/elastic,
 # is compose-managed — its images are not part of this set.)
 #
 # This is the image half of the offline lifecycle. For a complete portable

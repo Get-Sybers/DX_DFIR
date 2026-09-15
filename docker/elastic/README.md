@@ -1,10 +1,9 @@
 # Byakugan Elastic stack (security ON)
 
 Byakugan's **own Elastic-native stack** — the foundation for the Elastic-native
-DFIR detection engine. It **replaces SOF-ELK + Logstash** (`docker/sof-elk/`,
-retiring): the same Elasticsearch + Kibana pair, but built by us, with security
-**on**, Fleet, and Filebeat as the shipper instead of Logstash. Everything stays
-inside the Elastic ecosystem on a **Basic licence**.
+DFIR detection engine: Elasticsearch + Kibana built by us, with security **on**,
+Fleet, and Filebeat as the shipper. Everything stays inside the Elastic ecosystem
+on a **Basic licence**.
 
 | Service | Image | Role |
 |---|---|---|
@@ -22,7 +21,7 @@ published ports bind to **127.0.0.1**; data lives in named volumes (`certs`,
 ## Bring it up
 
 ```bash
-cd stacks/elastic
+cd docker/elastic
 cp .env.example .env            # then replace EVERY placeholder (see the file)
 sudo sysctl -w vm.max_map_count=262144
 docker compose up -d
@@ -40,7 +39,7 @@ still hold the `.env.example` placeholders. `.env` and `ingest/` are gitignored 
 
 ## Security posture
 
-| | retired `docker/sof-elk` | `stacks/elastic` |
+| | legacy dead-box ELK | this stack |
 |---|---|---|
 | licence | Basic | Basic (`xpack.license.self_generated.type: basic`) |
 | `xpack.security` | **off** (dead-box posture) | **on** — authentication + RBAC |
@@ -85,9 +84,9 @@ Kibana; other integrations are fetched from the Elastic Package Registry
 ## Shipping evidence
 
 `ELASTIC_INGEST_DIR` is mounted read-only at `/ingest`. Filebeat
-(`config/filebeat.yml`) tails `<type>/**/*.json` and `*.jsonl` — the tree
-`dxdfir_ingest_sofelk` already delivers (`zeek/`, `plaso/`, ...; keep type dirs
-lowercase) — stamps `labels.type` from the directory, and writes each line into
+(`config/filebeat.yml`) tails `<type>/**/*.json` and `*.jsonl` — the processed
+output tree (`zeek/`, `plaso/`, ...; keep type dirs lowercase) — stamps
+`labels.type` from the directory, and writes each line into
 the data stream `logs-dxdfir.<type>-<DFIR_NAMESPACE>` (one namespace per case works
 well). Data streams are created by Elasticsearch's built-in `logs-*-*` template;
 native -> ECS normalisation is Elastic-native too (ingest pipelines on those
@@ -98,8 +97,6 @@ rules that tag these evidence lines.
 
 - Elasticsearch needs `vm.max_map_count=262144` on the host.
 - Filebeat writes as `elastic` for now; a least-privilege writer role is a follow-up.
-- An **Ansible deploy role is intentionally deferred** to a follow-up; when it is
-  added it must conform to the bits-n-bobs Ansible standard (like the existing
-  `get_sybers.dxdfir` roles). Until then this compose file is the deployment.
-- `docker/sof-elk/` (and its `dxdfir_deploy_sofelk` role) is retiring in favour of
-  this stack; nothing here depends on it.
+- The **`dxdfir_stack` Ansible role** drives this stack's lifecycle
+  (`dxdfir stack deploy|destroy|start|stop|status`); this compose file is what it
+  brings up.

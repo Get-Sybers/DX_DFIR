@@ -442,10 +442,15 @@ def test_every_shipped_ported_rule_exports_and_stubs_are_skipped():
 
 
 def test_stack_version_default_matches_the_deployed_stack():
-    # pattern_version = the Elastic stack the rules run on (STIX 2.1 §4.7); one pin, ansible's
-    defaults = yaml.safe_load((REPO / "ansible/collections/get_sybers.dxdfir/roles/dxdfir_deploy_sofelk/defaults/main.yml")
-                              .read_text())
-    assert defaults["dxdfir_deploy_sofelk_elastic_version"] == config.DEFAULT_STACK_VERSION
+    # pattern_version = the Elastic stack the rules run on (STIX 2.1 §4.7); one pin,
+    # the compose stack's ELASTIC_VERSION in docker/elastic/.env.example.
+    env = (REPO / "docker/elastic/.env.example").read_text()
+    pins = dict(
+        line.split("=", 1)
+        for line in env.splitlines()
+        if "=" in line and not line.lstrip().startswith("#")
+    )
+    assert pins["ELASTIC_VERSION"] == config.DEFAULT_STACK_VERSION
     assert set(export.TRUST_GROUP_PATTERN_TYPES) >= {"esql", "eql", "kuery"}
     assert not set(export.TRUST_GROUP_PATTERN_TYPES) & set(export.PATTERN_TYPE_OV)
     readme = (REPO / "python/get_sybers_dxdfir/stix/README.md").read_text()

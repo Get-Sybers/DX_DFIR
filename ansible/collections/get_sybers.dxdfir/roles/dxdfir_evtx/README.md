@@ -1,7 +1,7 @@
 # dxdfir_evtx
 
 Parse **Windows Event Logs (`.evtx`)** with **goevtx** (the static-Go EvtxECmd
-substitute) into normalised JSON for the Elastic-native or SOF-ELK pipeline. The
+substitute) into normalised JSON for the Elastic-native pipeline. The
 role is structure only — it asserts inputs, runs a preflight (docker, input dir,
 **the goevtx image is present**), then invokes the `get_sybers_dxdfir.evtx` Python
 processor as a **single action** (one container run per log happens inside Python).
@@ -21,10 +21,8 @@ EventData). It does **not** reproduce EvtxECmd's Maps layer (`MapDescription` /
 ## Role variables
 | Variable | Default | Description |
 |---|---|---|
-| `dxdfir_evtx_pipeline` | `elastic` | `elastic` or `sofelk` — selects the output destination (the **playbook** decides this). |
 | `dxdfir_evtx_evtx_dir` | `<repo>/data_store/raw/logs/winevt` | `.evtx` tree to parse (recursed). |
-| `dxdfir_evtx_elastic_out_dir` | `<repo>/data_store/processed/windows_logs` | Elastic-path output. |
-| `dxdfir_evtx_sofelk_out_dir` | `<repo>/data_store/processed/sofelk/windows_logs` | SOF-ELK-path output. |
+| `dxdfir_evtx_out_dir` | `<repo>/data_store/processed/windows_logs` | Output base (override for a custom location). |
 | `dxdfir_evtx_image` | `get-sybers/goevtx:latest` | The goevtx image the processor runs; override to pin a digest. |
 | `dxdfir_evtx_python_path` | `<repo>/python` | PYTHONPATH to `get_sybers_dxdfir` (in-repo runs). |
 | `dxdfir_evtx_force` | `false` | Reparse logs that already have output. |
@@ -36,7 +34,7 @@ log; a zero-record output is removed and counted `failed`, not treated as done.
 
 ## Example
 ```bash
-ansible-playbook playbooks/dxdfir-process-evtx.yml -e dxdfir_evtx_pipeline=elastic
+ansible-playbook playbooks/dxdfir-process-evtx.yml
 ```
 
 ## Testing

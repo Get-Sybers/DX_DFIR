@@ -26,7 +26,6 @@ type LaneRun struct {
 type Job struct {
 	Repo      *repo.Repo
 	Ansible   string
-	Pipeline  string
 	Force     bool
 	ExtraVars []string
 	Runs      []LaneRun
@@ -121,7 +120,7 @@ func (j *Job) run(ctx context.Context, updates chan<- model.Update) {
 func (j *Job) runLane(ctx context.Context, updates chan<- model.Update, lane *model.Lane, lr LaneRun, emit func(string, []string)) error {
 	lane.State = model.Running
 	lane.Started = time.Now()
-	outDir := lr.Spec.outDir(j.Repo.Root, j.Pipeline)
+	outDir := lr.Spec.outDir(j.Repo.Root)
 	longPole := lr.Spec.Kind == model.KindHeartbeat || lr.Spec.Name == "volatility"
 
 	args, err := j.ansibleArgs(lr)
@@ -207,16 +206,16 @@ func (j *Job) runLane(ctx context.Context, updates chan<- model.Update, lane *mo
 
 // ansibleArgs builds the argv (after the binary) that drives one lane's
 // process playbook, honouring the collection playbook contract and the roles'
-// argument_specs: -e dxdfir_<lane>_pipeline / dxdfir_<lane>_force select the
-// role's behaviour, collection scope vars narrow the inputs.
+// argument_specs: -e dxdfir_<lane>_force selects the role's behaviour, collection
+// scope vars narrow the inputs.
 //
 // The base command (inventory localhost,/connection local + playbook path)
 // comes from the go-ansible typed builder. The -e vars are deliberately NOT
 // fed through AnsiblePlaybookOptions.ExtraVars (that would serialize them as
 // one JSON --extra-vars blob and lose ordering); they are appended manually as
-// ordered repeated -e pairs: pipeline/force first, then the collection
-// ScopeVars, then the user's --extra-var values LAST so ansible's last-wins
-// semantics let a user override any of them.
+// ordered repeated -e pairs: force first, then the collection ScopeVars, then
+// the user's --extra-var values LAST so ansible's last-wins semantics let a
+// user override any of them.
 func (j *Job) ansibleArgs(lr LaneRun) ([]string, error) {
 	name := lr.Spec.Name
 	cmd := playbook.NewAnsiblePlaybookCmd(
@@ -233,7 +232,6 @@ func (j *Job) ansibleArgs(lr LaneRun) ([]string, error) {
 	}
 	args := append([]string(nil), argv[1:]...)
 	args = append(args,
-		"-e", "dxdfir_"+name+"_pipeline="+j.Pipeline,
 		"-e", "dxdfir_"+name+"_force="+boolStr(j.Force),
 	)
 	for _, kv := range lr.ScopeVars { // collection scope first (an --extra-var can override)

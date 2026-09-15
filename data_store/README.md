@@ -24,7 +24,7 @@ data_store/
    │
    └── processed/                  # One subtree per source — what `dxdfir build-car` reads
        ├── log2timeline/
-       │   ├── plaso/              # .plaso databases (reusable by Timesketch / SOF-ELK)
+       │   ├── plaso/              # .plaso databases (reusable by Timesketch)
        │   ├── jsonl/              # Plaso json_line, one file per host
        │   └── logs/               # Job logs
        ├── windows_logs/           # EvtxECmd JSON, per host
@@ -33,8 +33,7 @@ data_store/
        ├── godfir-toolz/              # EZ-Tools artefacts (RECmd, SRUM, MFT, …)
        ├── signatures/             # yara/ suricata/ hayabusa/ detection JSONL
        ├── linux_logs/             # syslog/auth/utmp/… (not yet wired into the backend)
-       ├── car/<source>/           # the materialised CAR: car.db + car_<object>.jsonl (+ car_relationships.jsonl)
-       └── sofelk/<tool>/          # --pipeline sofelk output, delivered by dxdfir-ingest-sofelk.yml
+       └── car/<source>/           # the materialised CAR: car.db + car_<object>.jsonl (+ car_relationships.jsonl)
 ```
 
 ---
@@ -67,9 +66,6 @@ dxdfir process godfir-toolz    # EZ-Tools artefacts from disk images
 dxdfir process signatures   # yara / suricata / hayabusa
 ```
 
-Add `--pipeline sofelk` to write the retiring SOF-ELK delivery tree instead of the
-default processed tree (output lands under `processed/sofelk/<tool>/`).
-
 **3. Build and verify the CAR:**
 
 ```bash
@@ -78,7 +74,7 @@ dxdfir verify-car           # the correctness gate over what was written
 ```
 
 **4. Bring up the analysis backend** — the Elastic-native stack under
-[`stacks/elastic/`](/stacks/elastic/README.md) (docker compose, localhost-only,
+[`docker/elastic/`](/docker/elastic/README.md) (docker compose, localhost-only,
 security on). Filebeat ships the delivered evidence tree into `logs-dxdfir.<type>-*`
 data streams; see [Get-Started](/docs/Get-Started.md) steps 7–9.
 

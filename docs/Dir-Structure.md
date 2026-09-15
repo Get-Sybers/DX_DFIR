@@ -16,12 +16,12 @@ per-item processing).
     │   └── tests/                                    # pytest unit tests (pure logic, no Docker)
     │
     └── ansible/collections/get_sybers.dxdfir/         # the Ansible collection — orchestration
-    │   └── roles/                                    # one role per source + dxdfir_images / dxdfir_byakugan / dxdfir_stack / dxdfir_cleanup + the SOF-ELK deploy/deliver roles
-    │   └── playbooks/                                # dxdfir-process-* / dxdfir-build-images / dxdfir-verify-images / dxdfir-build-car / dxdfir-verify-car / dxdfir-car-timeline / dxdfir-stack-* / dxdfir-cleanup / dxdfir-deploy-sofelk / dxdfir-ingest-sofelk
+    │   └── roles/                                    # one role per source + dxdfir_images / dxdfir_byakugan / dxdfir_stack / dxdfir_cleanup
+    │   └── playbooks/                                # dxdfir-process-* / dxdfir-build-images / dxdfir-verify-images / dxdfir-build-car / dxdfir-verify-car / dxdfir-car-timeline / dxdfir-stack-* / dxdfir-cleanup
     │
     └── scripts/                                      # Host provisioning: setup, image save/load, the offline bundle (bash)
     │
-    └── docker/                                       # Container builds — the hardened dxdfir/* tool images, the GoDFIR-toolz submodule (static-Go EZ-tools + goevtx), Byakugan's Elastic-native stack (elastic/), the retiring SOF-ELK stack (sof-elk/)
+    └── docker/                                       # Container builds — the hardened dxdfir/* tool images, the GoDFIR-toolz submodule (static-Go EZ-tools + goevtx), Byakugan's Elastic-native stack (elastic/)
     │
     └── dev-scripts/                                  # Experimental/one-off helpers, unsupported (e.g. the Plaso output module)
     │
@@ -82,8 +82,6 @@ per-item processing).
             │
             └── car/
             │   └── <source>/                         # the materialised CAR: car.db + superset.db + car_<object>.jsonl (+ car_relationships.jsonl)
-            │
-            └── sofelk/<tool>/                        # --pipeline sofelk output, delivered by dxdfir-ingest-sofelk.yml
 ```
 
 The CAR engine lives **outside** this tree entirely: the Byakugan engine is

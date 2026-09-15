@@ -4,7 +4,7 @@ galaxy_info:
   namespace: get_sybers
   author: Get-Sybers
   description: >-
-    Process PCAPs into Zeek JSON logs for the Elastic-native or SOF-ELK pipeline. Invokes the
+    Process PCAPs into Zeek JSON logs for the Elastic-native pipeline. Invokes the
     get_sybers_dxdfir.zeek Python processor; one folder of *.json per capture.
   company: Get-Sybers
   license: MIT

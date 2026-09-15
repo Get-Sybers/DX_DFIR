@@ -13,12 +13,6 @@ argument_specs:
         substitute on go-evtx — no .NET runtime, no DLL to supply, built FROM
         scratch from docker/GoDFIR-toolz/goevtx.
     options:
-      dxdfir_evtx_pipeline:
-        type: str
-        required: false
-        default: elastic
-        choices: [elastic, sofelk]
-        description: "Which backend to target; selects the output destination."
       dxdfir_evtx_evtx_dir:
         type: str
         required: false
@@ -37,7 +31,7 @@ argument_specs:
         description: >-
           Where dxdfir_evtx_image_src extractions land (default
           data_store/processed/windows_logs/_extracted_evtx — one canonical stage
-          shared by both pipelines and the dxdfir_signatures hayabusa lane).
+          shared with the dxdfir_signatures hayabusa lane).
           Per-image subdirs; an image already staged is not re-extracted.
       dxdfir_evtx_vss:
         type: bool
@@ -65,21 +59,12 @@ argument_specs:
         type: str
         required: false
         description: "Sigma rules dir for Hayabusa (empty => rules/ beside the binary)."
-      dxdfir_evtx_elastic_out_dir:
-        type: str
-        required: false
-        description: "Elastic-path output dir (default data_store/processed/windows_logs)."
-      dxdfir_evtx_sofelk_out_dir:
-        type: str
-        required: false
-        description: "SOF-ELK-path output dir (delivered into SOF-ELK by dxdfir_ingest_sofelk)."
       dxdfir_evtx_out_dir:
         type: str
         required: false
         description: >-
-          Resolved output base for the selected pipeline (defaults to the
-          elastic/sofelk out dir per dxdfir_evtx_pipeline); override to send
-          output to a custom location.
+          Output base (default data_store/processed/windows_logs); override to
+          send output to a custom location.
       dxdfir_evtx_image:
         type: str
         required: false

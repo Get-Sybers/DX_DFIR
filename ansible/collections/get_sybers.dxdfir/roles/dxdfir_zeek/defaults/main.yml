@@ -1,17 +1,12 @@
 ---
-# Backend to target; the playbook overrides this to select the pipeline.
-dxdfir_zeek_pipeline: elastic
-
 # Repo root is five levels up from this role
 # (roles/dxdfir_zeek -> get_sybers.dxdfir -> collections -> ansible -> repo).
 dxdfir_zeek_repo_root: "{{ role_path }}/../../../../.."
 
 dxdfir_zeek_pcap_dir: "{{ dxdfir_zeek_repo_root }}/data_store/raw/pcaps"
-dxdfir_zeek_elastic_out_dir: "{{ dxdfir_zeek_repo_root }}/data_store/processed/zeek"
-dxdfir_zeek_sofelk_out_dir: "{{ dxdfir_zeek_repo_root }}/data_store/processed/sofelk/zeek"
-# Resolved output base for the selected pipeline — consumed by
-# tasks/process.yml. Override directly to send output to a custom location.
-dxdfir_zeek_out_dir: "{{ dxdfir_zeek_elastic_out_dir if dxdfir_zeek_pipeline == 'elastic' else dxdfir_zeek_sofelk_out_dir }}"
+# Output base — consumed by tasks/process.yml. Override directly to send output
+# to a custom location.
+dxdfir_zeek_out_dir: "{{ dxdfir_zeek_repo_root }}/data_store/processed/zeek"
 # The hardened in-repo image (build with playbooks/dxdfir-build-images.yml).
 dxdfir_zeek_image: "get-sybers/zeek:latest"
 # In-repo runs use PYTHONPATH; a deployed run installs the package instead.

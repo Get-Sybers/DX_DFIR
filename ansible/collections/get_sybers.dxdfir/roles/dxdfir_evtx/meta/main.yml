@@ -5,7 +5,7 @@ galaxy_info:
   author: Get-Sybers
   description: >-
     Parse Windows Event Logs (.evtx) with EvtxECmd into normalised JSON for the Elastic-native
-    or SOF-ELK pipeline. Invokes the get_sybers_dxdfir.evtx Python processor; one
+    pipeline. Invokes the get_sybers_dxdfir.evtx Python processor; one
     <base>_EvtxECmd_Output.json per log, grouped by source host.
   company: Get-Sybers
   license: MIT

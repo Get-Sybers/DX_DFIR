@@ -645,11 +645,11 @@ def test_audit_flags_unexpected_and_missing(monkeypatch):
     # host has all expected + a rogue dfir image + an allowed non-tool one
     monkeypatch.setattr(images, "_list_dxdfir_images",
                         lambda: list(images.HARDENED_IMAGES)
-                        + ["get-sybers/rogue:latest", "get-sybers/sof-elk:test"])
+                        + ["get-sybers/rogue:latest", "get-sybers/molecule:test"])
     result = images.audit()
     assert not result["ok"]
     assert any("get-sybers/rogue" in v and "unexpected" in v for v in result["violations"])
-    assert not any("sof-elk" in v for v in result["violations"])   # allow-listed
+    assert not any("molecule" in v for v in result["violations"])   # allow-listed
 
 
 # ---- suricata reads the pcap dir it is given (the collection-scoping fix) ----

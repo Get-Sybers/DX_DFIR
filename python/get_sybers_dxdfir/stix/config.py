@@ -48,7 +48,7 @@ ENV_CONTACT = "DXDFIR_STIX_CONTACT"
 ENV_CONFIDENCE = "DXDFIR_STIX_CONFIDENCE"
 ENV_CTI_INDEX = "DXDFIR_CTI_INDEX"
 DEFAULT_CTI_INDEX = "cti-opencti"
-# The Elastic stack this repo deploys (ansible: dxdfir_deploy_sofelk_elastic_version,
+# The Elastic stack this repo deploys (docker/elastic/.env.example ELASTIC_VERSION,
 # pinned equal by the tests): the version an ES|QL / EQL / KQL pattern is known
 # to run on — the indicator's pattern_version (STIX 2.1 §4.7).
 DEFAULT_STACK_VERSION = "9.4.3"

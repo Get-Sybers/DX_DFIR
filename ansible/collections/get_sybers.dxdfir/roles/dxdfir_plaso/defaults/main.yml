@@ -1,7 +1,4 @@
 ---
-# Backend to target; the playbook overrides this to select the pipeline.
-dxdfir_plaso_pipeline: elastic
-
 # Repo root is five levels up from this role
 # (roles/dxdfir_plaso -> get_sybers.dxdfir -> collections -> ansible -> repo).
 dxdfir_plaso_repo_root: "{{ role_path }}/../../../../.."
@@ -12,11 +9,8 @@ dxdfir_plaso_vm_dir: "{{ dxdfir_plaso_repo_root }}/data_store/raw/VM_files"
 # dumps, triage output) — parsed by log2timeline as directory sources. Empty =
 # no loose sources (opt-in: loose trees can be very large).
 dxdfir_plaso_loose_dir: ""
-dxdfir_plaso_elastic_out_dir: "{{ dxdfir_plaso_repo_root }}/data_store/processed/log2timeline"
-dxdfir_plaso_sofelk_out_dir: "{{ dxdfir_plaso_repo_root }}/data_store/processed/sofelk/log2timeline"
-# Resolved output base for the selected pipeline — consumed by
-# tasks/process.yml. Override directly to send output to a custom location.
-dxdfir_plaso_out_dir: "{{ dxdfir_plaso_elastic_out_dir if dxdfir_plaso_pipeline == 'elastic' else dxdfir_plaso_sofelk_out_dir }}"
+# Output base — override directly to send output to a custom location.
+dxdfir_plaso_out_dir: "{{ dxdfir_plaso_repo_root }}/data_store/processed/log2timeline"
 # The custom psort output module lives in the repo (dev-scripts), mounted into psort.
 dxdfir_plaso_module: "{{ dxdfir_plaso_repo_root }}/dev-scripts/plaso/l2t_json_dxdfir.py"
 # The hardened in-repo image (build with playbooks/dxdfir-build-images.yml).

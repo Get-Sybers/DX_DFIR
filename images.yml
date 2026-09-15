@@ -76,5 +76,4 @@ images:
 # get-sybers/* repos that legitimately exist but are NOT tool containers — exempt
 # from the hardened-tool contract, allow-listed so the inventory audit ignores them.
 non_tool_repos:
-  - get-sybers/sof-elk
   - get-sybers/molecule
