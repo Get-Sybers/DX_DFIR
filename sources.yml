@@ -1,0 +1,34 @@
+# ==============================================================================
+# External source pins — the ONE place DX_DFIR's external git dependencies are
+# versioned.
+#
+# Clone-at-build dependencies are pinned HERE: they are cloned + built into a
+# hardened image at the commit below, so — having no gitlink — this file is the
+# authoritative record of the commit DX_DFIR is tested against.
+#
+# Git SUBMODULES are pinned by their gitlink (.gitmodules + the tree entry); git
+# manages that natively, so they are NOT given a sha here (it would drift). They
+# are listed under `submodules:` only so this file is a complete inventory.
+#
+# To bump a clone-at-build pin: set `ref` to a full 40-hex sha (never a branch or
+# tag, so builds are reproducible), then rebuild — `dxdfir build-docker` (or
+# re-run scripts/setup-environment.sh). A PR touching this file triggers the
+# smoke workflow, which runs the real pipeline against the new pin.
+# ==============================================================================
+
+# Clone-at-build: cloned + built into a hardened image at the pinned commit.
+# byakugan reconstructs its object model from its own nested car +
+# attack-datasources submodules at build time (recursive clone required).
+byakugan:
+  url: https://github.com/Get-Sybers/byakugan
+  ref: bcd01c39ffbf40eea05ee09e25890d64a5d48593
+  consumed: "docker/byakugan/Dockerfile (BYAKUGAN_REF build-arg)"
+
+# Git submodules: pinned by their gitlink (.gitmodules). Inventory only.
+submodules:
+  godfir-toolz:
+    url: https://github.com/Get-Sybers/GoDFIR-toolz
+    path: docker/GoDFIR-toolz
+  piiat-mem:
+    url: https://github.com/Get-Sybers/PIIAT-Mem
+    path: third_party/piiat-mem

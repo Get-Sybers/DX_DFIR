@@ -7,7 +7,7 @@ argument_specs:
         Normalises every processed source into the MITRE CAR data model via the
         external Byakugan engine, which runs entirely inside the hardened
         get-sybers/byakugan container (cloned + built at the repo-root
-        byakugan.ref pin). Three actions selected by dxdfir_byakugan_action: build
+        sources.yml pin). Three actions selected by dxdfir_byakugan_action: build
         (per-source car.db + superset.db + car_<object>.jsonl +
         car_relationships.jsonl), verify (the CAR correctness promotion gate) and
         timeline (one property-rich, time-ordered CAR timeline). A pure-Python

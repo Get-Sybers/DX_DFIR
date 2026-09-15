@@ -216,7 +216,7 @@ func checkPiiatMem(r *repo.Repo) model.Check {
 
 // checkByakugan reports whether the hardened Byakugan CAR engine image is
 // present. The engine used to be a host checkout; it now runs entirely inside
-// the get-sybers/byakugan image (cloned + built at the byakugan.ref pin by
+// the get-sybers/byakugan image (cloned + built at the sources.yml pin by
 // `dxdfir build-docker`), so the CAR lane just shells that image. It is needed
 // only for the CAR build/timeline/verify verbs, so its absence is a warning,
 // never a process gate.

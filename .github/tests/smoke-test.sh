@@ -12,7 +12,7 @@
 #
 #   process pinned Sysmon .evtx through the real evtx lane (EvtxECmd) ->
 #   normalise the output into materialised CAR (the external Byakugan engine,
-#   run inside the hardened get-sybers/byakugan image at the byakugan.ref pin,
+#   run inside the hardened get-sybers/byakugan image at the sources.yml pin,
 #   via get_sybers_dxdfir.mitrecar) -> assert each Sysmon-sourced CAR object
 #   has rows AND its EvtxPayload-derived fields are populated with the expected
 #   values -> run the verify-car gate (get_sybers_dxdfir.carcheck) over the
@@ -113,10 +113,10 @@ command -v python3 >/dev/null 2>&1 || die "python3 not found."
 docker image inspect get-sybers/goevtx:latest >/dev/null 2>&1 \
     || die "image get-sybers/goevtx:latest missing — build it: docker build -t get-sybers/goevtx:latest -f docker/GoDFIR-toolz/goevtx/Dockerfile docker/GoDFIR-toolz/goevtx"
 # The CAR lane drives the external Byakugan engine inside the hardened
-# get-sybers/byakugan image (cloned + built at the byakugan.ref pin); the engine
+# get-sybers/byakugan image (cloned + built at the sources.yml pin); the engine
 # reconstructs its model from its OWN nested submodules, all baked into the image.
 docker image inspect get-sybers/byakugan:latest >/dev/null 2>&1 \
-    || die "image get-sybers/byakugan:latest missing — build it: dxdfir build-docker (it clones Byakugan at the byakugan.ref pin and builds the hardened engine image)."
+    || die "image get-sybers/byakugan:latest missing — build it: dxdfir build-docker (it clones Byakugan at the sources.yml pin and builds the hardened engine image)."
 pass "docker, python3, get-sybers/goevtx:latest and the Byakugan engine image present"
 
 # =============================================================================

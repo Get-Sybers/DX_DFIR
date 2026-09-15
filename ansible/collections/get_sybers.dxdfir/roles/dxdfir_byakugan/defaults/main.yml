@@ -16,7 +16,7 @@ dxdfir_byakugan_dir: "{{ dxdfir_byakugan_repo_root }}/data_store/processed/byaku
 
 # The CAR engine module the preflight import-checks (a thin, pure-Python front to
 # the external Byakugan engine, which now runs entirely inside the hardened
-# get-sybers/byakugan container — cloned + built at the repo-root byakugan.ref
+# get-sybers/byakugan container — cloned + built at the repo-root sources.yml
 # pin); in-repo runs put the package on PYTHONPATH.
 dxdfir_byakugan_module: get_sybers_dxdfir.mitrecar
 dxdfir_byakugan_python_path: "{{ dxdfir_byakugan_repo_root }}/python"

@@ -1,6 +1,6 @@
 """Drive the standalone **Byakugan** engine — now entirely inside the hardened
 ``get-sybers/byakugan`` container. Byakugan is a standalone public project; the
-engine is cloned + built INTO the image at the commit pinned by ``byakugan.ref``
+engine is cloned + built INTO the image at the commit pinned by ``sources.yml``
 (docker/byakugan/Dockerfile), so the DX_DFIR checkout no longer provisions or
 holds an engine checkout at all — the ONLY thing this repo has is how it INVOKES
 the image, which is this module.
@@ -41,7 +41,7 @@ _IMAGE = "get-sybers/byakugan:latest"
 # it): the engine now lives in a built image, not a host checkout.
 PROVISION_HINT = (
     "build the CAR engine image with: dxdfir build-docker — it clones Byakugan at "
-    "the byakugan.ref pin and builds get-sybers/byakugan:latest.")
+    "the sources.yml pin and builds get-sybers/byakugan:latest.")
 
 # Engine flags that TAKE a following value (so the argv walker consumes it).
 _BUILD_VALUE_FLAGS = {"--in", "--out", "--batch", "--artefacts", "--host"}

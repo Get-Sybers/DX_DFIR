@@ -13,7 +13,7 @@ it), mirroring the lane's own dispatch:
                                              default: --in/--out or --batch)
 
 This is `dxdfir`'s ENTIRE interaction surface with the external Byakugan engine:
-the engine is cloned at the pinned byakugan.ref and baked into this image at
+the engine is cloned at the pinned sources.yml and baked into this image at
 build time, so nothing about it leaks into the DX_DFIR checkout. The engine
 reconstructs its object model live from its own nested submodules and resolves
 that model RELATIVE TO ITS PACKAGE, so it runs from the baked source tree

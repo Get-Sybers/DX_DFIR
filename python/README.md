@@ -21,7 +21,7 @@ Every processor prints a machine-readable JSON summary (`processed`/`skipped`/
 The CAR lane sits on top of the processed tree: `python -m get_sybers_dxdfir.mitrecar`
 drives the external [Byakugan](https://github.com/Get-Sybers/byakugan) engine inside
 the hardened `get-sybers/byakugan` image (cloned + built at the repo-root
-`byakugan.ref` pin by `dxdfir build-docker`; the lane maps host paths to container
+`sources.yml` pin by `dxdfir build-docker`; the lane maps host paths to container
 mounts and shells the image — one `car.db` + `car_<object>.jsonl` per source), and
 `python -m get_sybers_dxdfir.carcheck` is the correctness gate over what it wrote.
 The Elastic detection rules live as data under `get_sybers_dxdfir/detect/rules/`
