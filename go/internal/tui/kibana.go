@@ -177,7 +177,7 @@ func readElasticEnv(repoRoot string) (user, pass string, ok bool) {
 	if repoRoot == "" {
 		return user, "", false
 	}
-	f, err := os.Open(filepath.Join(repoRoot, "docker", "elastic", ".env"))
+	f, err := os.Open(filepath.Join(repoRoot, "stacks", "elastic", ".env"))
 	if err != nil {
 		return user, "", false
 	}

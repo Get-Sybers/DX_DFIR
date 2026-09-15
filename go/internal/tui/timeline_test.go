@@ -91,7 +91,7 @@ func TestReadTimelineSkipsSymlink(t *testing.T) {
 
 func TestReadElasticEnv(t *testing.T) {
 	root := t.TempDir()
-	envDir := filepath.Join(root, "docker", "elastic")
+	envDir := filepath.Join(root, "stacks", "elastic")
 	if err := os.MkdirAll(envDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
