@@ -342,9 +342,9 @@ ok   "1. Check and install Docker"
 ok   "2. Install required userland tools"
 ok   "3. Set up Docker group permissions"
 step "4. Initialise the git submodules (recursively)"
-step "5. Provision the external Byakugan engine at its pinned commit"
-detail "and build its Go parse binary, once the Go toolchain is in place"
-step "6. Set ownership and permissions on the DX_DFIR repository"
+step "5. Set ownership and permissions on the DX_DFIR repository"
+detail "the Byakugan CAR engine is no longer a host checkout — it is built into"
+detail "the get-sybers/byakugan image by 'dxdfir build-docker'"
 echo
 
 confirm "Do you wish to proceed?" || { info "Setup cancelled."; exit 1; }
@@ -377,73 +377,6 @@ else
 fi
 
 ################################################################################
-# Provision the external Byakugan engine at its pinned commit.
-#
-# The CAR lane (get_sybers_dxdfir.mitrecar) drives the Byakugan engine from an
-# EXTERNAL checkout, resolved exactly as the python seam resolves it:
-# $BYAKUGAN_ROOT when set, else the `byakugan` directory next to (a sibling of)
-# this repository. The commit is pinned in byakugan.ref at the repo root (the
-# first non-comment line) — the version the pipeline is tested against; bump it
-# there, then re-run this script.
-#
-# The engine's OWN nested submodules (third_party/car, third_party/
-# attack-datasources) are REQUIRED at runtime — it reconstructs its object
-# model live from them — so every path below inits them recursively.
-#
-# Deliberately NO $SUDO here: the engine lives OUTSIDE the repository in the
-# invoking user's space, and the repo-scoped chown below does not cover it —
-# a root-owned sibling checkout would be exactly the permissions trap the
-# chown exists to avoid.
-section "Byakugan engine"
-BYAKUGAN_ROOT="${BYAKUGAN_ROOT:-$(dirname "$REPO_ROOT_DIR")/byakugan}"
-BYAKUGAN_URL="https://github.com/Get-Sybers/byakugan"
-# Same scoped safe.directory guard as the submodule step above: a re-run under
-# a different uid than the one that provisioned the checkout (root vs operator)
-# must not die at git's dubious-ownership check with a misleading origin error.
-git_safe_flags "$BYAKUGAN_ROOT"
-BYA_GIT=(git "${GIT_SAFE_FLAGS[@]}")
-BYAKUGAN_REF="$(grep -vE '^[[:space:]]*(#|$)' "$REPO_ROOT_DIR/byakugan.ref" 2>/dev/null | head -1 | tr -d '[:space:]')"
-[[ -n "$BYAKUGAN_REF" ]] \
-    || die "no pinned engine commit — byakugan.ref at the repo root must carry a sha on its first non-comment line."
-
-if [[ -e "$BYAKUGAN_ROOT/.git" ]]; then
-    # An existing checkout: only accept it if origin really is the engine repo
-    # (case-insensitive, .git suffix and trailing slash optional — https and
-    # ssh remotes both end [/:]owner/repo). Anything else at the resolved path
-    # is somebody else's directory; refusing beats silently rebasing it.
-    _origin="$("${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" remote get-url origin 2>/dev/null)"
-    _origin_norm="${_origin,,}"; _origin_norm="${_origin_norm%/}"; _origin_norm="${_origin_norm%.git}"
-    [[ "$_origin_norm" == *[/:]get-sybers/byakugan ]] \
-        || die "$BYAKUGAN_ROOT is a git repo but its origin ('$_origin') is not $BYAKUGAN_URL — move it aside, or point \$BYAKUGAN_ROOT elsewhere."
-    if [[ "$("${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" rev-parse HEAD 2>/dev/null)" == "$BYAKUGAN_REF" ]]; then
-        # Already on the pin: skip the fetch so a re-run works offline; the
-        # submodule update below is then a local no-op (or a first init).
-        ok "Byakugan engine already at the pinned commit ($BYAKUGAN_ROOT)."
-    else
-        step "Updating the Byakugan engine at $BYAKUGAN_ROOT to the pinned commit ..."
-        "${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" fetch origin \
-            || die "failed to fetch the Byakugan engine (need network + git access)."
-        "${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" checkout --quiet "$BYAKUGAN_REF" \
-            || die "failed to check out the pinned engine commit $BYAKUGAN_REF."
-    fi
-    "${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" submodule update --init --recursive \
-        || die "failed to initialise the engine's nested submodules (car + attack-datasources)."
-elif [[ -e "$BYAKUGAN_ROOT" ]]; then
-    die "$BYAKUGAN_ROOT exists but is not a git checkout — move it aside, or point \$BYAKUGAN_ROOT at the real engine checkout."
-else
-    step "Cloning the Byakugan engine to $BYAKUGAN_ROOT ..."
-    git clone "$BYAKUGAN_URL" "$BYAKUGAN_ROOT" \
-        || die "failed to clone the Byakugan engine (need network + git access)."
-    "${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" checkout --quiet "$BYAKUGAN_REF" \
-        || die "failed to check out the pinned engine commit $BYAKUGAN_REF."
-    "${BYA_GIT[@]}" -C "$BYAKUGAN_ROOT" submodule update --init --recursive \
-        || die "failed to initialise the engine's nested submodules (car + attack-datasources)."
-fi
-ok "Byakugan engine provisioned: $BYAKUGAN_ROOT @ $BYAKUGAN_REF"
-# NOTE: the engine's Go parse binary (go/bin/byakugan-parse) is built further
-# down, AFTER the Go toolchain section — `go` is not guaranteed on PATH here.
-
-################################################################################
 # Set ownership and permissions for DX_DFIR.
 #
 # u=rwX,g=rX — capital X applies the execute bit to directories and to files
@@ -474,15 +407,15 @@ fi
 #
 # --editable is REQUIRED, not a preference. The package still resolves paths
 # RELATIVE TO ITS OWN FILES (_REPO_ROOT = three dirs up from __file__):
-# volatility.py locates the vendored piiat-mem tree (third_party/piiat-mem),
-# carcheck.py defaults its --car-dir under the repo's data_store, and
-# mitrecar.py anchors the Byakugan engine's SIBLING-DIR default (and reads
-# byakugan.ref) at that same root. A plain copying install puts the package
-# under the venv's site-packages, three dirs up from which is .../lib/pythonX.Y
-# with no third_party/, data_store/ or byakugan.ref — the volatility lane dies
-# "not initialised" even though the submodule WAS initialised (above), and the
-# engine default degrades to a path nothing provisioned. Editable keeps the
-# installed module IN the repo tree, so every _REPO_ROOT-relative path resolves.
+# volatility.py locates the vendored piiat-mem tree (third_party/piiat-mem) and
+# carcheck.py defaults its --car-dir under the repo's data_store. A plain copying
+# install puts the package under the venv's site-packages, three dirs up from
+# which is .../lib/pythonX.Y with no third_party/ or data_store/ — the volatility
+# lane dies "not initialised" even though the submodule WAS initialised (above).
+# Editable keeps the installed module IN the repo tree, so every _REPO_ROOT-
+# relative path resolves. (The Byakugan CAR engine is no longer a host checkout —
+# it is cloned + built into the get-sybers/byakugan image, so mitrecar/carcheck
+# only shell that image.)
 ################################################################################
 section "Python package + Ansible"
 DXDFIR_VENV="${DXDFIR_VENV:-/opt/dxdfir/venv}"
@@ -609,41 +542,6 @@ $SUDO ln -sf "$GO_BIN_DIR/dxdfir" /usr/local/bin/dxdfir
 $SUDO install -Dm644 "$REPO_ROOT_DIR/go/man/dxdfir.1" /usr/local/share/man/man1/dxdfir.1 2>/dev/null \
     || warn "Could not install the man page — read it in-tree: man ./go/man/dxdfir.1"
 ok "dxdfir (Go front-end) installed: $(/usr/local/bin/dxdfir --version 2>/dev/null || echo "$GO_BIN_DIR/dxdfir")"
-
-################################################################################
-# Build the Byakugan engine's OWN Go parse binary (go/bin/byakugan-parse).
-#
-# The engine's file ingestion REQUIRES it: `python -m byakugan` refuses to parse
-# evidence and prints build instructions when the binary is missing, so an
-# engine checkout that is provisioned but unbuilt fails on the analyst's first
-# build-car instead of here. This is a build of the ENGINE's module
-# (github.com/get-sybers/byakugan/go), not of this repo's go/ front-end.
-#
-# It runs HERE, not next to the engine checkout above, purely because of script
-# order: the checkout step happens before the Go toolchain is installed, and
-# `go` is only guaranteed on PATH from this point on. $BYAKUGAN_ROOT and
-# $BYAKUGAN_REF are still in scope from that step.
-#
-# Deliberately NO $SUDO — same reason the checkout above has none: the engine
-# lives OUTSIDE the repository in the invoking user's space, and a root-owned
-# build artefact there is exactly the permissions trap the repo chown avoids.
-# GOTOOLCHAIN=local matches the front-end build: never auto-download a newer Go.
-#
-# The command below mirrors `make -C "$BYAKUGAN_ROOT/go" build` exactly (same
-# package, same output path) without making `make` a dependency of this script.
-################################################################################
-[[ -d "$BYAKUGAN_ROOT/go" ]] \
-    || die "the Byakugan engine at $BYAKUGAN_ROOT has no go/ directory — the pinned commit ($BYAKUGAN_REF) predates the Go parse binary, or the checkout is incomplete. Bump byakugan.ref, or re-provision the engine."
-step "Building the Byakugan engine's Go parse binary ($(go version 2>/dev/null | awk '{print $3}')) ..."
-# HOME="${HOME:-/root}" for the same reason the front-end build above sets it:
-# `go build` needs a writable HOME for its build cache and dies without one.
-( cd "$BYAKUGAN_ROOT/go" \
-    && env HOME="${HOME:-/root}" GOTOOLCHAIN=local \
-        go build -o bin/byakugan-parse ./cmd/byakugan-parse ) \
-    || die "failed to build the Byakugan engine's parse binary (equivalent: make -C \"$BYAKUGAN_ROOT/go\" build) — the engine's file ingestion requires go/bin/byakugan-parse."
-[[ -x "$BYAKUGAN_ROOT/go/bin/byakugan-parse" ]] \
-    || die "the engine build reported success but $BYAKUGAN_ROOT/go/bin/byakugan-parse is missing or not executable."
-ok "Byakugan parse binary built: $BYAKUGAN_ROOT/go/bin/byakugan-parse"
 
 ################################################################################
 # Install the collection's pinned Ansible dependencies (requirements.yml — never

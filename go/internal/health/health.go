@@ -214,42 +214,38 @@ func checkPiiatMem(r *repo.Repo) model.Check {
 	return c
 }
 
-// checkByakugan reports whether the external Byakugan engine is provisioned and
-// its parse binary built. It is needed only for the CAR build/timeline verbs, so
-// its absence is a warning, never a process gate. Resolution mirrors the python
-// seam and setup script: $BYAKUGAN_ROOT, else the `byakugan` dir beside the repo.
-func checkByakugan(r *repo.Repo) model.Check {
+// checkByakugan reports whether the hardened Byakugan CAR engine image is
+// present. The engine used to be a host checkout; it now runs entirely inside
+// the get-sybers/byakugan image (cloned + built at the byakugan.ref pin by
+// `dxdfir build-docker`), so the CAR lane just shells that image. It is needed
+// only for the CAR build/timeline/verify verbs, so its absence is a warning,
+// never a process gate.
+func checkByakugan(_ *repo.Repo) model.Check {
 	c := model.Check{Name: "byakugan", Gate: false}
-	root := byakuganRoot(r)
-	if root == "" {
+	const image = "get-sybers/byakugan:latest"
+	if _, err := exec.LookPath("docker"); err != nil {
 		c.State = model.CheckWarn
-		c.Detail = "engine root unknown (repo not located)"
+		c.Detail = "docker not on PATH - cannot check the " + image + " engine image"
 		return c
 	}
-	if !fsx.IsDir(root) {
+	// Same trust anchor the python guard uses (get_sybers_dxdfir.images): the
+	// image must exist, run as uid 2000 and carry the hardened label.
+	out, _, ok := capture("docker", "image", "inspect", "--format",
+		`{{.Config.User}} {{index .Config.Labels "com.get-sybers.hardened"}}`, image)
+	if !ok {
 		c.State = model.CheckWarn
-		c.Detail = "engine not provisioned at " + root + " (needed for build-car)"
+		c.Detail = "engine image " + image + " not built (needed for build-car: dxdfir build-docker)"
 		return c
 	}
-	if !isExecutable(filepath.Join(root, "go", "bin", "byakugan-parse")) {
+	f := strings.Fields(out)
+	if len(f) < 2 || f[0] != "2000:2000" || f[1] != "true" {
 		c.State = model.CheckWarn
-		c.Detail = "engine present, parse binary not built (make -C " + root + "/go build)"
+		c.Detail = "engine image " + image + " present but not hardened (rebuild: dxdfir build-docker)"
 		return c
 	}
 	c.State = model.CheckOK
-	c.Detail = "engine at " + root
+	c.Detail = "engine image " + image + " present + hardened"
 	return c
-}
-
-// byakuganRoot resolves the engine checkout the same way mitrecar.py does.
-func byakuganRoot(r *repo.Repo) string {
-	if v := os.Getenv("BYAKUGAN_ROOT"); v != "" {
-		return v
-	}
-	if r == nil {
-		return ""
-	}
-	return filepath.Join(filepath.Dir(r.Root), "byakugan")
 }
 
 // --- helpers ---

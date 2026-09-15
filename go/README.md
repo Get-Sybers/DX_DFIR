@@ -89,8 +89,10 @@ Environment / flags:
 - `--no-tui` / `$DXDFIR_NO_TUI` / `$CI` / `TERM=dumb` — force plain output.
 - `--tui` — force the dashboard even when auto-detection is unsure.
 - `$DXDFIR_PYTHON` — the Python interpreter to use (else `python3`/`python`).
-- `$BYAKUGAN_ROOT` — the external Byakugan engine checkout the CAR lane drives
-  (else `byakugan/` beside the repo; pinned by `byakugan.ref`).
+
+The external Byakugan CAR engine is no longer a host checkout: it is cloned +
+built into the hardened `get-sybers/byakugan` image at the `byakugan.ref` pin by
+`dxdfir build-docker`, and the CAR lane just shells that image.
 
 Keys in the dashboard: `q` / `Ctrl-C` abort · `Ctrl-L` redraw.
 

@@ -60,9 +60,9 @@ than needing a `/dev/fuse` mount.
 
 No shell scripts here either:
 
-- **`dxdfir build-car`** drives the external Byakugan engine (the recursive
-  checkout `setup-environment.sh` provisions at the `byakugan.ref` pin —
-  `$BYAKUGAN_ROOT`, else `byakugan/` beside the repo) over the processed
+- **`dxdfir build-car`** drives the external Byakugan engine inside the hardened
+  `get-sybers/byakugan` image (cloned + built at the `byakugan.ref` pin by
+  `dxdfir build-docker`) over the processed
   tree: one `car.db` + `superset.db` and
   one `car_<object>.jsonl` per populated object per source, under
   `data_store/processed/car/<source>/`.
@@ -80,10 +80,10 @@ The analysis container images are catalogued in [Containers](/docs/Containers.md
 
 | Script | Description |
 |---|---|
-| `setup-environment.sh` | Installs Docker and userland deps (distro-aware) and provisions the external Byakugan engine at the `byakugan.ref` pin (recursive), then builds the engine's Go parse binary (`go/bin/byakugan-parse`, which its file ingestion requires) once the Go toolchain is in place; image seeding split into `save-docker-images.sh`. |
+| `setup-environment.sh` | Installs Docker and userland deps (distro-aware) and the git submodules; the Python venv, the Go toolchain and the `dxdfir` front-end. The Byakugan CAR engine is no longer a host checkout — it is cloned + built into the `get-sybers/byakugan` image by `dxdfir build-docker`. Image seeding is split into `save-docker-images.sh`. |
 | `save-docker-images.sh` | Save the built hardened `dxdfir/*` images (+ the pulled .NET runtime) as tarballs; `--load` / `--verify` restore them and assert the hardened inventory. |
-| `package-offline.sh` | Build ONE portable air-gap bundle: images, the `get_sybers_dxdfir` processor package + deps as wheels, the Go front-end's vendored modules (`go-vendor.tar`), pinned collections, the repo, the Byakugan engine tree (`byakugan.tar`, at the `byakugan.ref` pin, nested model submodules **and** its prebuilt `go/bin/byakugan-parse` included — a native binary, so the bundle is arch-specific) and the PIIAT-Mem tree (`piiat-mem.tar`) — `git archive` drops submodule content, so `repo.tar` alone never carried either — and `data_store/dependencies/` (YARA/Suricata/Hayabusa rulesets + binary, Volatility symbols, EvtxECmd) under a `MANIFEST.sha256`. |
-| `setup-offline.sh` | Set up from that bundle with zero network: manifest-verify everything, unpack the repo + detection dependencies, the Byakugan engine (to `$BYAKUGAN_ROOT`, else `byakugan/` beside the repo) and `third_party/piiat-mem`, load images, install the package/collections offline, build the Go `dxdfir` front-end from the vendored modules, finish with `dxdfir verify-images` (or the same audit play via `ansible-playbook` when no Go toolchain is present). |
+| `package-offline.sh` | Build ONE portable air-gap bundle: images (the `get-sybers/byakugan` engine image — model sources and parse binary baked in — rides here with the rest, so there is no separate `byakugan.tar`), the `get_sybers_dxdfir` processor package + deps as wheels, the Go front-end's vendored modules (`go-vendor.tar`), pinned collections, the repo, the PIIAT-Mem tree (`piiat-mem.tar`) — `git archive` drops submodule content, so `repo.tar` alone never carried it — and `data_store/dependencies/` (YARA/Suricata/Hayabusa rulesets + binary, Volatility symbols, EvtxECmd) under a `MANIFEST.sha256`. The saved images are native, so the bundle is arch-specific. |
+| `setup-offline.sh` | Set up from that bundle with zero network: manifest-verify everything, unpack the repo + detection dependencies + `third_party/piiat-mem`, load images (the Byakugan CAR engine rides inside the `get-sybers/byakugan` image, so there is nothing extra to unpack), install the package/collections offline, build the Go `dxdfir` front-end from the vendored modules, finish with `dxdfir verify-images` (or the same audit play via `ansible-playbook` when no Go toolchain is present). |
 
 The Splunk-era and KAPE PowerShell scripts were retired (git history and the frozen
 `deprecated` branch keep them).

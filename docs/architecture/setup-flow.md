@@ -8,8 +8,8 @@ the source is the best reference.)
 ```mermaid
 flowchart LR
     A[1 Docker] --> B[2 Tools] --> C[3 docker group] --> D[4 Submodules]
-    D --> E[5 Byakugan engine] --> F[6 Permissions] --> G[7 Python + Ansible venv]
-    G --> H[8 Go + dxdfir] --> I[9 byakugan-parse] --> J[10 Ansible collections]
+    D --> E[5 Permissions] --> F[6 Python + Ansible venv]
+    F --> G[7 Go + dxdfir] --> H[8 Ansible collections]
 ```
 
 | # | Step | What it provisions |
@@ -18,12 +18,12 @@ flowchart LR
 | 2 | **Userland tools** | `ca-certificates curl git gnupg unzip python3 python3-venv tar`. |
 | 3 | **Docker group** | `groupadd docker` + `usermod -aG` the invoking user. |
 | 4 | **Git submodules** | `submodule update --init --recursive` — [PIIAT-Mem](https://github.com/Get-Sybers/PIIAT-Mem) (memory lane) and [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) (EZ-tools). |
-| 5 | **Byakugan engine** | Clone/fetch/checkout [byakugan](https://github.com/Get-Sybers/byakugan) at the sha pinned in `byakugan.ref`, into `$BYAKUGAN_ROOT` (else a `byakugan/` sibling dir), with its nested submodules. |
-| 6 | **Permissions** | `chown -R <user>:docker` + `chmod -R u=rwX,g=rX,o=` (capital `X` keeps dirs traversable for the group). |
-| 7 | **Python + Ansible** | Create `/opt/dxdfir/venv`, `pip install --editable python/` against `python/constraints.txt`; symlink `ansible*` onto PATH. |
-| 8 | **Go + dxdfir** | Install the pinned, SHA-256-verified Go toolchain (if absent/too old), then build the `dxdfir` binary from a clean ephemeral cache to `/opt/dxdfir/bin`, symlink onto PATH, install the man page. |
-| 9 | **byakugan-parse** | Build the engine's own Go parse binary (required, or the engine refuses to parse). |
-| 10 | **Ansible collections** | `ansible-galaxy install` the collection's pinned `requirements.yml` into `/opt/dxdfir/collections`. |
+| 5 | **Permissions** | `chown -R <user>:docker` + `chmod -R u=rwX,g=rX,o=` (capital `X` keeps dirs traversable for the group). |
+| 6 | **Python + Ansible** | Create `/opt/dxdfir/venv`, `pip install --editable python/` against `python/constraints.txt`; symlink `ansible*` onto PATH. |
+| 7 | **Go + dxdfir** | Install the pinned, SHA-256-verified Go toolchain (if absent/too old), then build the `dxdfir` binary from a clean ephemeral cache to `/opt/dxdfir/bin`, symlink onto PATH, install the man page. |
+| 8 | **Ansible collections** | `ansible-galaxy install` the collection's pinned `requirements.yml` into `/opt/dxdfir/collections`. |
+
+> The Byakugan CAR engine is **no longer provisioned on the host**. It is cloned + built into the hardened [`get-sybers/byakugan`](https://github.com/Get-Sybers/byakugan) image at the `byakugan.ref` pin (`docker/byakugan/Dockerfile`, parse binary and model sources baked in) by `dxdfir build-docker`, alongside the other tool images — so the CAR lane only shells that image.
 
 ## Why these choices
 

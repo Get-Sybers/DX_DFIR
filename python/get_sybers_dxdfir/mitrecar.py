@@ -1,172 +1,208 @@
-"""Drive the standalone **Byakugan** engine — DX_DFIR uses it in an automated
-fashion via its CLI, exactly like the PIIAT-Mem lane: the engine stays a
-standalone public project; this module only decides what to run and invokes
-``python -m byakugan`` (the package keeps upstream's import name, which
-upstream renamed from ``piiat_mitrecar`` to ``byakugan``; a forwarding compat
-shim under the old name survives upstream for ONE release, but this lane drives
-the real name so the shim's removal is a no-op here).
+"""Drive the standalone **Byakugan** engine — now entirely inside the hardened
+``get-sybers/byakugan`` container. Byakugan is a standalone public project; the
+engine is cloned + built INTO the image at the commit pinned by ``byakugan.ref``
+(docker/byakugan/Dockerfile), so the DX_DFIR checkout no longer provisions or
+holds an engine checkout at all — the ONLY thing this repo has is how it INVOKES
+the image, which is this module.
 
-The engine's file ingestion additionally requires its Go parse binary,
-``go/bin/byakugan-parse`` in the engine checkout — built by
-scripts/setup-environment.sh (and shipped inside the offline bundle's
-byakugan.tar) with ``make -C <engine root>/go build``. The engine itself is the
-authority on that: it errors with build instructions when the binary is absent,
-so this lane does not second-guess it here.
+The image's ENTRYPOINT is one binary dispatched on its first argument to the
+engine's three operations (docker/byakugan/byakugan-entry.py):
 
-The engine is an EXTERNAL recursive checkout, not vendored in this repo.
-:func:`engine_root` is the canonical resolver: ``$BYAKUGAN_ROOT`` when set,
-else the ``byakugan`` directory next to (a sibling of) the DX_DFIR checkout.
-The pinned engine commit lives in ``byakugan.ref`` at the repo root, and the
-resolved root is prepended to the child process's ``PYTHONPATH``.
+    build     the pipeline (``--in``/``--out`` single-source, or ``--batch``) —
+              one processed evidence SOURCE -> its own MITRE CAR database (one
+              SQLite table per CAR object) + per-object ``car_<object>.jsonl``,
+              the materialised CAR every sink reads (epic #86).
+    timeline  the unified, time-ordered CAR timeline from a source's stores.
+    car-vocab the canonical car_action vocabulary per object, as JSON — the
+              verify-car gate (carcheck) reads it here instead of importing the
+              engine on the analyst host, so the object model stays in the engine.
 
-The engine turns each processed evidence SOURCE into its own MITRE CAR database
-(one SQLite table per CAR object) plus per-object ``car_<object>.jsonl`` — the
-materialised CAR every sink reads (epic #86): ``dxdfir verify-car`` gates it,
-and the Elastic-native path projects it to ECS.
+This module maps the HOST paths in the engine's own flags to container mounts —
+processed evidence read-only, the car/ output read-write — exactly like the
+other processing lanes (see plaso.py). Every flag is otherwise the engine's own
+(see the Byakugan README); this lane only supplies the confinement.
 
     python -m get_sybers_dxdfir.mitrecar --batch data_store/processed
     python -m get_sybers_dxdfir.mitrecar --in <file-or-dir> --out <dir> [--host H]
+    python -m get_sybers_dxdfir.mitrecar timeline <car_dir> [--out F] [--host H]
 """
 from __future__ import annotations
 
-import argparse
+import json
 import os
 import subprocess
 import sys
 
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from get_sybers_dxdfir import container, images
 
-# The ONE provisioning hint, shared by every dead-end message (carcheck imports it).
+_IMAGE = "get-sybers/byakugan:latest"
+
+# The ONE provisioning hint, shared by every dead-end message (carcheck imports
+# it): the engine now lives in a built image, not a host checkout.
 PROVISION_HINT = (
-    "run scripts/setup-environment.sh, or manually: "
-    "git clone --recurse-submodules https://github.com/Get-Sybers/byakugan <root> "
-    "&& git -C <root> checkout <ref from byakugan.ref> "
-    "&& git -C <root> submodule update --init --recursive")
+    "build the CAR engine image: dxdfir build-docker (or "
+    "ansible-playbook playbooks/dxdfir-build-images.yml) — it clones Byakugan at "
+    "the byakugan.ref pin and builds get-sybers/byakugan:latest.")
+
+# Engine flags that TAKE a following value (so the argv walker consumes it).
+_BUILD_VALUE_FLAGS = {"--in", "--out", "--batch", "--artefacts", "--host"}
+_TIMELINE_VALUE_FLAGS = {"--out", "--host", "--after", "--before"}
 
 
-def engine_root() -> str:
-    """The canonical Byakugan engine root: ``$BYAKUGAN_ROOT`` when set (read at
-    call time, so tests can monkeypatch the environment), else the ``byakugan``
-    directory that is a sibling of the DX_DFIR checkout."""
-    env_root = os.environ.get("BYAKUGAN_ROOT")
-    if env_root:
-        return env_root
-    return os.path.join(os.path.dirname(_REPO_ROOT), "byakugan")
-
-
-def _env() -> dict:
-    env = dict(os.environ)
-    env["PYTHONPATH"] = engine_root() + (
-        os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
-    return env
-
-
-# Byakugan reconstructs its object model LIVE from ITS OWN nested submodules
-# (car + attack-datasources, resolved next to the package), so the engine
-# checkout must be RECURSIVE — a plain clone leaves the model sources missing.
-def _model_sources(root: str) -> tuple[str, str]:
-    return (os.path.join(root, "third_party", "car", "data_model"),
-            os.path.join(root, "third_party", "attack-datasources",
-                         "docs", "attack_data_sources_objects.yaml"))
-
-
-def _model_sources_present(root: str | None = None) -> bool:
-    car, ads = _model_sources(root if root is not None else engine_root())
-    return os.path.isdir(car) and bool(os.listdir(car)) and os.path.exists(ads)
-
-
-def _pinned_ref() -> str | None:
-    """The engine commit pinned by ``byakugan.ref`` at the DX_DFIR repo root:
-    the first non-comment, non-blank line. None when unreadable/absent."""
+def _writable(path: str) -> None:
+    """Create an output dir and make it container-writable — the engine runs as
+    the image's non-root uid and writes the CAR stores INTO the mounted output,
+    so the dir must be world-writable (the Docker uid-mismatch reason, as in the
+    other lanes; see plaso._ensure_writable)."""
+    os.makedirs(path, exist_ok=True)
     try:
-        with open(os.path.join(_REPO_ROOT, "byakugan.ref"), encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if line and not line.startswith("#"):
-                    return line
+        os.chmod(path, 0o777)
     except OSError:
-        return None
-    return None
-
-
-def _warn_if_off_pin(root: str) -> None:
-    """Best-effort version check: when byakugan.ref exists, the engine root is
-    a git checkout, and git is available, warn (stderr, NEVER fatal — a
-    deliberate branch test must stay possible) if the checkout's HEAD is not
-    the pinned commit. Every failure of the check itself is a silent no-op."""
-    try:
-        pinned = _pinned_ref()
-        if not pinned or not os.path.exists(os.path.join(root, ".git")):
-            return
-        proc = subprocess.run(["git", "-C", root, "rev-parse", "HEAD"],
-                              capture_output=True, text=True, check=False)
-        head = proc.stdout.strip()
-        if proc.returncode == 0 and head and head != pinned:
-            sys.stderr.write(
-                f"WARNING: Byakugan checkout at {root} is at commit {head}, but "
-                f"byakugan.ref pins {pinned} — results may differ from the tested "
-                "engine version.\n")
-    except Exception:  # noqa: BLE001 — best-effort only, never fatal
         pass
 
 
-def _ensure_ready() -> None:
-    """Verify the external engine is runnable: the resolved root present AND
-    its nested model submodules checked out — raising a precise, actionable
-    error if not. Also best-effort-warns when the checkout is off the pin."""
-    root = engine_root()
-    origin = ("$BYAKUGAN_ROOT" if os.environ.get("BYAKUGAN_ROOT")
-              else "the default: the byakugan directory next to the DX_DFIR checkout")
-    if not os.path.isdir(root):
-        raise RuntimeError(
-            f"Byakugan engine not found at {root} (resolved from {origin}) — "
-            f"{PROVISION_HINT}")
-    if not _model_sources_present(root):
-        raise RuntimeError(
-            f"the Byakugan engine at {root} (resolved from {origin}) is missing "
-            "its model sources (nested submodules car + attack-datasources) — "
-            f"{PROVISION_HINT}")
-    _warn_if_off_pin(root)
+def _split(argv: list[str], value_flags: set[str]) -> tuple[dict, list[str], list[str]]:
+    """Split a flat engine argv into ({value-flag: value}, [bare flags],
+    [positionals]) so the path-bearing flags can be remapped and everything else
+    passed through verbatim."""
+    opts: dict[str, str] = {}
+    bare: list[str] = []
+    pos: list[str] = []
+    i = 0
+    while i < len(argv):
+        tok = argv[i]
+        if tok in value_flags:
+            opts[tok] = argv[i + 1] if i + 1 < len(argv) else ""
+            i += 2
+            continue
+        if tok.startswith("-"):
+            bare.append(tok)
+        else:
+            pos.append(tok)
+        i += 1
+    return opts, bare, pos
 
 
-def _run_module(module: str, tool_argv: list[str]) -> subprocess.CompletedProcess:
-    _ensure_ready()
-    return subprocess.run([sys.executable, "-m", module] + tool_argv,
-                          env=_env(), capture_output=True, text=True, check=False)
+def _run(argv: list[str], mounts: list[str]) -> subprocess.CompletedProcess:
+    """One confined engine invocation. stdout is the engine's JSON summary
+    (returned, not swallowed). Raises RuntimeError (via images.require) if the
+    engine image is absent or not hardened."""
+    images.require(_IMAGE)
+    return subprocess.run(
+        container.run(_IMAGE, argv, mounts=mounts, workdir="/tmp"),
+        capture_output=True, text=True, check=False)
 
 
 def run(tool_argv: list[str]) -> subprocess.CompletedProcess:
-    """One ``python -m byakugan`` invocation with the given tool argv.
-    stdout is the tool's JSON summary (returned, not swallowed)."""
-    return _run_module("byakugan", tool_argv)
+    """Materialise CAR (the engine build). Maps the host paths in the build flags
+    to container mounts: processed evidence read-only, the car/ output read-write."""
+    opts, bare, _pos = _split(tool_argv, _BUILD_VALUE_FLAGS)
+
+    if "--batch" in opts:
+        src = os.path.realpath(opts["--batch"])
+        out = os.path.realpath(opts.get("--out") or os.path.join(src, "car"))
+        _writable(out)
+        # processed tree read-only (inputs are DX_DFIR's own prior outputs); only
+        # the car/ tree is writable, so a compromised engine cannot rewrite the
+        # other lanes' outputs.
+        argv = ["--batch", "/work", "--out", "/out", *bare]
+        return _run(argv, [f"{src}:/work:ro", f"{out}:/out"])
+
+    if "--in" in opts and opts.get("--out"):
+        src = os.path.realpath(opts["--in"])
+        out = os.path.realpath(opts["--out"])
+        _writable(out)
+        mounts = [f"{out}:/out"]
+        if os.path.isdir(src):
+            mounts.append(f"{src}:/in:ro")
+            in_arg = "/in"
+        else:
+            mounts.append(f"{os.path.dirname(src)}:/in:ro")
+            in_arg = f"/in/{os.path.basename(src)}"
+        argv = ["--in", in_arg, "--out", "/out"]
+        if "--host" in opts:
+            argv += ["--host", opts["--host"]]
+        if "--artefacts" in opts:
+            argv += ["--artefacts", opts["--artefacts"]]
+        argv += bare
+        return _run(argv, mounts)
+
+    # no runnable in/out (e.g. --help, or --in without --out): pass through
+    # unmapped so the engine emits its own usage error (it checks args first).
+    return _run(list(tool_argv) or ["--help"], [])
 
 
 def run_timeline(tool_argv: list[str]) -> subprocess.CompletedProcess:
-    """Build the unified CAR timeline (``python -m byakugan.timeline``) from
-    a source's car.db + superset.db."""
-    return _run_module("byakugan.timeline", tool_argv)
+    """Build the unified CAR timeline (the engine's timeline op) from a source's
+    car.db + superset.db. Maps the car_dir (and an optional --out) to mounts."""
+    opts, bare, pos = _split(tool_argv, _TIMELINE_VALUE_FLAGS)
+    if not pos:
+        return _run(["timeline", *tool_argv], [])  # engine errors: car_dir required
+
+    car_dir = os.path.realpath(pos[0])
+    argv = ["timeline"]
+    if opts.get("--out"):
+        out = os.path.realpath(opts["--out"])
+        out_dir = os.path.dirname(out)
+        _writable(out_dir)
+        mounts = [f"{car_dir}:/work:ro", f"{out_dir}:/out"]
+        argv += ["/work", "--out", f"/out/{os.path.basename(out)}"]
+    else:
+        # default output is <car_dir>/timeline.jsonl, so car_dir must be writable.
+        _writable(car_dir)
+        mounts = [f"{car_dir}:/work"]
+        argv += ["/work"]
+    for flag in ("--host", "--after", "--before"):
+        if flag in opts:
+            argv += [flag, opts[flag]]
+    argv += bare  # --objects-only / --edges-only
+    return _run(argv, mounts)
+
+
+def car_vocab() -> dict[str, set[str]] | None:
+    """The canonical car_action vocabulary per CAR object, ``{object: {actions}}``,
+    read from the engine container (``byakugan car-vocab``) — RECONSTRUCTED inside
+    the engine from the forked car repo it owns, exactly as the engine builds it.
+    The verify-car gate reads it here rather than importing the engine, so the
+    object model stays entirely in the container. Returns None when the image is
+    unavailable or the dump fails (verify-car degrades gracefully)."""
+    try:
+        images.require(_IMAGE)
+    except RuntimeError:
+        return None
+    proc = subprocess.run(
+        container.run(_IMAGE, ["car-vocab"], workdir="/tmp"),
+        capture_output=True, text=True, check=False)
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return None
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    return {obj: set(actions or []) for obj, actions in data.items()}
 
 
 def main(argv: list[str] | None = None) -> int:
-    """A transparent pass-through: every flag is the tool's own (see the
-    Byakugan README) — this lane only supplies the engine location.
+    """A transparent pass-through to the engine, confined in its image: every flag
+    is the engine's own (see the Byakugan README) — this lane only supplies the
+    container mounts.
 
     The one reserved word is the leading ``timeline`` subcommand, which routes to
-    ``byakugan.timeline`` so a non-Python front-end can build the unified
-    CAR timeline as ``python -m get_sybers_dxdfir.mitrecar timeline <car_dir> …``;
+    the engine's timeline op so a non-Python front-end can build the unified CAR
+    timeline as ``python -m get_sybers_dxdfir.mitrecar timeline <car_dir> …``;
     every other invocation flows to the Byakugan build unchanged.
     """
     args = list(sys.argv[1:] if argv is None else argv)
-    if args and args[0] == "timeline":
-        proc = run_timeline(args[1:])
-        sys.stdout.write(proc.stdout)
-        sys.stderr.write(proc.stderr)
-        return proc.returncode
-    ap = argparse.ArgumentParser(
-        prog="get_sybers_dxdfir.mitrecar", add_help=False,
-        description="drive the external Byakugan engine CLI (all flags pass through)")
-    _known, passthrough = ap.parse_known_args(args)
-    proc = run(passthrough if passthrough else ["--help"])
+    try:
+        if args and args[0] == "timeline":
+            proc = run_timeline(args[1:])
+        else:
+            proc = run(args)
+    except RuntimeError as exc:            # image absent / not hardened
+        sys.stderr.write(f"{exc}\n{PROVISION_HINT}\n")
+        return 2
     sys.stdout.write(proc.stdout)
     sys.stderr.write(proc.stderr)
     return proc.returncode

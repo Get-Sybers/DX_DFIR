@@ -26,6 +26,11 @@ import sys
 # The tool images the pipeline runs. Each MUST be hardened (label + uid 2000).
 HARDENED_IMAGES = (
     "get-sybers/signatures:latest",  # the whole detection lane: yara + suricata + hayabusa
+    # The external Byakugan MITRE CAR engine (dxdfir_car lane) — cloned + built
+    # into the image at the byakugan.ref pin (docker/byakugan/Dockerfile); the
+    # engine is python, so python stays. One entrypoint binary dispatched to
+    # build / timeline / car-vocab (get_sybers_dxdfir.mitrecar).
+    "get-sybers/byakugan:latest",
     "get-sybers/zeek:latest",
     "get-sybers/volatility:latest",
     "get-sybers/plaso:latest",
