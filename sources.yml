@@ -22,7 +22,7 @@
 byakugan:
   url: https://github.com/Get-Sybers/byakugan
   ref: bcd01c39ffbf40eea05ee09e25890d64a5d48593
-  consumed: "docker/byakugan/Dockerfile (BYAKUGAN_REF build-arg)"
+  consumed: "docker/GoDFIR-toolz/byakugan/Dockerfile (BYAKUGAN_REF build-arg)"
 
 # PIIAT-Mem (Volatility 3 memory forensics) — fused into get-sybers/piiat-mem in
 # the GoDFIR-toolz submodule, cloned + built at this pin (no longer vendored here).

@@ -1,7 +1,7 @@
-# Byakugan shipper — Filebeat replaces SOF-ELK's Logstash.
+# Byakugan shipper — Filebeat.
 #
-# Tails the delivered evidence tree mounted at /ingest (<type>/**/*.json[l], the
-# layout dxdfir_ingest_sofelk already produces) and writes each line straight into
+# Tails the processed evidence tree mounted at /ingest (<type>/**/*.json[l], the
+# layout the processors write) and writes each line straight into
 # an Elastic data stream, logs-dxdfir.<type>-<namespace>, over the secured
 # Elasticsearch API. No Logstash filters: native -> ECS normalisation is
 # Elastic-native too (ingest pipelines on the data streams — a later phase).
@@ -21,7 +21,7 @@ filebeat.inputs:
           expand_keys: true
     processors:
       # The first directory under /ingest is the evidence type (zeek, plaso, ...);
-      # it becomes labels.type (as SOF-ELK stamped it) and routes the data stream.
+      # it becomes labels.type and routes the data stream.
       - dissect:
           tokenizer: "/ingest/%{labels.type}/%{?rest}"
           field: log.file.path

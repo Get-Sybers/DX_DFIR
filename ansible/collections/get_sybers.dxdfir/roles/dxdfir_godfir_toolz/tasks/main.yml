@@ -10,10 +10,9 @@
 - name: "godfir-toolz | assert inputs"
   ansible.builtin.assert:
     that:
-      - dxdfir_godfir_toolz_pipeline in ['elastic', 'sofelk']
       - dxdfir_godfir_toolz_input_dir | length > 0
     fail_msg: >-
-      dxdfir_godfir_toolz needs dxdfir_godfir_toolz_pipeline (elastic|sofelk) and a non-empty
+      dxdfir_godfir_toolz needs a non-empty
       dxdfir_godfir_toolz_input_dir.
     quiet: true
   tags: [always]
@@ -25,8 +24,8 @@
     dxdfir_godfir_toolz_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
   tags: [always]
 
-# The pipeline decision (elastic|sofelk) is carried by the resolved
-# dxdfir_godfir_toolz_out_dir default — the shared tasks are pipeline-agnostic. This
+# Output lands under the resolved dxdfir_godfir_toolz_out_dir default — the shared
+# tasks only consume it. This
 # lane drives ELEVEN get-sybers/* images (plaso for extraction, plus the ten Go
 # EZ-Tools/substitute containers the processor can run — including goese for SRUM
 # and goprefetch for Prefetch) — every one is supply-chain-guarded. gowxt is built

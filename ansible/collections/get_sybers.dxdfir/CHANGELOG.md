@@ -5,6 +5,14 @@ root [CHANGELOG.md](../../../CHANGELOG.md).
 
 ## [Unreleased]
 
+### Removed
+
+- **The SOF-ELK path, entirely** — the `dxdfir_deploy_sofelk` and `dxdfir_ingest_sofelk` roles (with molecule scenarios), the `dxdfir-deploy-sofelk` / `dxdfir-ingest-sofelk` playbooks, and the whole `elastic|sofelk` pipeline axis: `dxdfir_<role>_pipeline`, `dxdfir_<role>_elastic_out_dir` and `dxdfir_<role>_sofelk_out_dir` collapse into the one `dxdfir_<role>_out_dir` default (`data_store/processed/<leaf>`), and `dxdfir_stack` drops `dxdfir_stack_name` (the Elastic backend is the only stack). The stack's Filebeat tails the processed tree directly, so no delivery role replaces the sofelk one.
+
+### Changed
+
+- **Every tool image now builds from the GoDFIR-toolz submodule**: the byakugan/plaso/signatures/zeek build items moved into the submodule (repo-root context, one dir per image), `dxdfir_images_context` defaults to `docker/GoDFIR-toolz`, the separate `dxdfir_images_eztools_context` is gone, and the preflight no longer syncs `hardening/harden.yml` into a `docker/hardening/` mirror — every Dockerfile COPYs the canonical copy straight from the shared context. The Elastic stack moved home to `docker/elastic/` (was `stacks/elastic/`).
+
 ### Fixed
 
 - The lane preflight **supply-chain guard was a dead no-op**: its `when: item is match('^dxdfir/')` filter predated the `dxdfir/* → get-sybers/*` image rename, so it matched no image and `images.require()` never ran for any lane — the hardened-image gate silently passed everything. Corrected to `^get-sybers/` (require() already no-ops on non-get-sybers images) and refreshed the stale `dxdfir/*` wording in the guard's comments/specs. Also added the two images the `dxdfir_zimmerman` lane actually drives but had omitted from its guard list — `get-sybers/goese` (SRUM) and `get-sybers/goprefetch` (Prefetch) — so all eleven images the processor can run are now guarded (gowxt stays out, deferred #88).

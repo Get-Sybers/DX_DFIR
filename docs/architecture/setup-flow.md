@@ -23,7 +23,7 @@ flowchart LR
 | 7 | **Go + dxdfir** | Install the pinned, SHA-256-verified Go toolchain (if absent/too old), then build the `dxdfir` binary from a clean ephemeral cache to `/opt/dxdfir/bin`, symlink onto PATH, install the man page. |
 | 8 | **Ansible collections** | `ansible-galaxy install` the collection's pinned `requirements.yml` into `/opt/dxdfir/collections`. |
 
-> The Byakugan CAR engine is **no longer provisioned on the host**. It is cloned + built into the hardened [`get-sybers/byakugan`](https://github.com/Get-Sybers/byakugan) image at the `sources.yml` pin (`docker/byakugan/Dockerfile`, parse binary and model sources baked in) by `dxdfir build-docker`, alongside the other tool images — so the CAR lane only shells that image.
+> The Byakugan CAR engine is **no longer provisioned on the host**. It is cloned + built into the hardened [`get-sybers/byakugan`](https://github.com/Get-Sybers/byakugan) image at the `sources.yml` pin (`docker/GoDFIR-toolz/byakugan/Dockerfile`, parse binary and model sources baked in) by `dxdfir build-docker`, alongside the other tool images — so the CAR lane only shells that image.
 
 ## Why these choices
 
@@ -33,7 +33,7 @@ knowing:
 - **`sudo` is resolved once and may be empty.** Minimal container images are often
   already root and carry no `sudo`; hardcoding it died on line one.
 - **`--editable` install is required, not a preference.** The Python package resolves
-  paths relative to its own files (the vendored `third_party/` trees, `data_store/`,
+  paths relative to its own files (the `docker/GoDFIR-toolz` submodule, `data_store/`,
   `sources.yml`). A copying install would put it under `site-packages` where none of
   those resolve.
 - **Capital-`X` permissions.** `u=rwX,g=rX` applies `+x` to directories and to files that

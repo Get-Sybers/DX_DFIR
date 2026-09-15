@@ -1,8 +1,8 @@
 name: byakugan
 
-# Byakugan's own Elastic-native stack — replaces SOF-ELK + Logstash (docker/sof-elk,
-# retiring). Elasticsearch single-node with security ON (Basic licence, TLS on the
-# HTTP + transport layers), Kibana with Fleet, a Fleet Server (elastic-agent) and
+# Byakugan's own Elastic-native stack. Elasticsearch single-node with security ON
+# (Basic licence, TLS on the HTTP + transport layers), Kibana with Fleet, a Fleet
+# Server (elastic-agent) and
 # Filebeat as the Elastic-native shipper. Every published port is bound to
 # 127.0.0.1. Credentials come from .env (copy .env.example; NEVER commit .env).
 # Pin the stack with ELASTIC_VERSION (default 9.4.3).
@@ -19,8 +19,8 @@ services:
     user: "0"
     command: ["bash", "/usr/local/bin/byakugan-setup"]
     environment:
-      ELASTIC_PASSWORD: "${ELASTIC_PASSWORD:?set it in stacks/elastic/.env (see .env.example)}"
-      KIBANA_SYSTEM_PASSWORD: "${KIBANA_SYSTEM_PASSWORD:?set it in stacks/elastic/.env (see .env.example)}"
+      ELASTIC_PASSWORD: "${ELASTIC_PASSWORD:?set it in docker/elastic/.env (see .env.example)}"
+      KIBANA_SYSTEM_PASSWORD: "${KIBANA_SYSTEM_PASSWORD:?set it in docker/elastic/.env (see .env.example)}"
     volumes:
       - ./config/setup.sh:/usr/local/bin/byakugan-setup:ro
       - certs:/usr/share/elasticsearch/config/certs
@@ -36,7 +36,7 @@ services:
       setup:
         condition: service_healthy
     environment:
-      ELASTIC_PASSWORD: "${ELASTIC_PASSWORD:?set it in stacks/elastic/.env (see .env.example)}"
+      ELASTIC_PASSWORD: "${ELASTIC_PASSWORD:?set it in docker/elastic/.env (see .env.example)}"
       ES_JAVA_OPTS: "${ES_JAVA_OPTS:--Xms1g -Xmx1g}"
     ulimits:
       memlock: {soft: -1, hard: -1}
@@ -62,10 +62,10 @@ services:
         condition: service_healthy
     environment:
       # Consumed by config/kibana.yml via ${VAR} substitution.
-      KIBANA_SYSTEM_PASSWORD: "${KIBANA_SYSTEM_PASSWORD:?set it in stacks/elastic/.env (see .env.example)}"
-      KIBANA_ENCRYPTED_SAVED_OBJECTS_KEY: "${KIBANA_ENCRYPTED_SAVED_OBJECTS_KEY:?set it in stacks/elastic/.env (see .env.example)}"
-      KIBANA_SECURITY_ENCRYPTION_KEY: "${KIBANA_SECURITY_ENCRYPTION_KEY:?set it in stacks/elastic/.env (see .env.example)}"
-      KIBANA_REPORTING_ENCRYPTION_KEY: "${KIBANA_REPORTING_ENCRYPTION_KEY:?set it in stacks/elastic/.env (see .env.example)}"
+      KIBANA_SYSTEM_PASSWORD: "${KIBANA_SYSTEM_PASSWORD:?set it in docker/elastic/.env (see .env.example)}"
+      KIBANA_ENCRYPTED_SAVED_OBJECTS_KEY: "${KIBANA_ENCRYPTED_SAVED_OBJECTS_KEY:?set it in docker/elastic/.env (see .env.example)}"
+      KIBANA_SECURITY_ENCRYPTION_KEY: "${KIBANA_SECURITY_ENCRYPTION_KEY:?set it in docker/elastic/.env (see .env.example)}"
+      KIBANA_REPORTING_ENCRYPTION_KEY: "${KIBANA_REPORTING_ENCRYPTION_KEY:?set it in docker/elastic/.env (see .env.example)}"
     volumes:
       - ./config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
       - certs:/usr/share/kibana/config/certs:ro
@@ -103,7 +103,7 @@ services:
       KIBANA_FLEET_SETUP: "1"
       KIBANA_FLEET_HOST: http://kibana:5601
       KIBANA_FLEET_USERNAME: elastic
-      KIBANA_FLEET_PASSWORD: "${ELASTIC_PASSWORD:?set it in stacks/elastic/.env (see .env.example)}"
+      KIBANA_FLEET_PASSWORD: "${ELASTIC_PASSWORD:?set it in docker/elastic/.env (see .env.example)}"
     volumes:
       - certs:/certs:ro
       - fleetdata:/usr/share/elastic-agent/state
@@ -115,8 +115,8 @@ services:
       timeout: 10s
       retries: 40
 
-  # The shipper that replaces Logstash: tails the delivered evidence tree
-  # (<type>/**/*.json[l], the same layout dxdfir_ingest_sofelk produces) and writes
+  # The shipper: tails the processed evidence tree
+  # (<type>/**/*.json[l], the layout the processors write) and writes
   # it straight into logs-dxdfir.<type>-<namespace> data streams over the secured
   # Elasticsearch API. Runs as root only to read operator-delivered files; the
   # ingest mount is read-only.
@@ -132,7 +132,7 @@ services:
     environment:
       ELASTICSEARCH_HOSTS: https://elasticsearch:9200
       ELASTICSEARCH_USERNAME: elastic
-      ELASTICSEARCH_PASSWORD: "${ELASTIC_PASSWORD:?set it in stacks/elastic/.env (see .env.example)}"
+      ELASTICSEARCH_PASSWORD: "${ELASTIC_PASSWORD:?set it in docker/elastic/.env (see .env.example)}"
       DFIR_NAMESPACE: "${DFIR_NAMESPACE:-default}"
     volumes:
       - ./config/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro

@@ -1,17 +1,13 @@
 ---
-# Backend to target; the playbook overrides this to select the pipeline.
-dxdfir_volatility_pipeline: elastic
 
 # Repo root is five levels up from this role
 # (roles/dxdfir_volatility -> get_sybers.dxdfir -> collections -> ansible -> repo).
 dxdfir_volatility_repo_root: "{{ role_path }}/../../../../.."
 
 dxdfir_volatility_memory_dir: "{{ dxdfir_volatility_repo_root }}/data_store/raw/memory"
-dxdfir_volatility_elastic_out_dir: "{{ dxdfir_volatility_repo_root }}/data_store/processed/volatility"
-dxdfir_volatility_sofelk_out_dir: "{{ dxdfir_volatility_repo_root }}/data_store/processed/sofelk/volatility"
+dxdfir_volatility_out_dir: "{{ dxdfir_volatility_repo_root }}/data_store/processed/volatility"
 # Resolved output base for the selected pipeline. Override directly to send output
 # to a custom location.
-dxdfir_volatility_out_dir: "{{ dxdfir_volatility_elastic_out_dir if dxdfir_volatility_pipeline == 'elastic' else dxdfir_volatility_sofelk_out_dir }}"
 # Kernel symbol cache (mounted at /symbols). Windows plugins fetch ISF tables from
 # the symbol servers on first use — pre-seed this on an isolated host.
 dxdfir_volatility_symbols_dir: "{{ dxdfir_volatility_repo_root }}/data_store/dependencies/volatility3-symbols"

@@ -305,7 +305,7 @@ for md in sorted(root.rglob("*.md")):
     # checkout outside the repo, so it never enters this walk).
     if ".git/" in str(md) or rel.startswith("data_store/"): continue
     if "/.ansible/" in str(md) or rel.startswith(".ansible/"): continue
-    if rel.startswith("third_party/") or "/third_party/" in str(md): continue
+    if rel.startswith("docker/GoDFIR-toolz/") or "/GoDFIR-toolz/" in str(md): continue
     # setuptools copies package-data docs into python/build/lib/ during
     # `pip install ./python`; that build output is generated, not source.
     if rel.startswith(("build/", "python/build/")): continue

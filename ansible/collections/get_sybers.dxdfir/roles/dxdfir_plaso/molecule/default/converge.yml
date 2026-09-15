@@ -3,10 +3,9 @@
   hosts: localhost
   gather_facts: true
   vars:
-    dxdfir_plaso_pipeline: elastic
     dxdfir_plaso_input_dir: /tmp/dxdfir_plaso_molecule/in
     dxdfir_plaso_vm_dir: /tmp/dxdfir_plaso_molecule/vm
-    dxdfir_plaso_elastic_out_dir: /tmp/dxdfir_plaso_molecule/out
+    dxdfir_plaso_out_dir: /tmp/dxdfir_plaso_molecule/out
   tasks:
     - name: "converge | run dxdfir_plaso (elastic)"
       ansible.builtin.include_role:

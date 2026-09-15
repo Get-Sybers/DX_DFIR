@@ -10,9 +10,9 @@
 #      contract under python/get_sybers_dxdfir/detect/rules/) flags logs-car.*
 #      rows in place — the tagged-evidence-line model — on Elasticsearch 9.4.3.
 #
-# Stands up NOTHING: stacks/elastic (the Byakugan stack: security on, TLS, Basic
+# Stands up NOTHING: docker/elastic (the Byakugan stack: security on, TLS, Basic
 # licence) must already be up. This wrapper only discovers how to reach it —
-# the password from stacks/elastic/.env and the CA from the stack's `certs`
+# the password from docker/elastic/.env and the CA from the stack's `certs`
 # volume — and hands over to riskgate.py, which loads a small synthetic fixture
 # into a `riskgate` namespace, runs the proofs and removes the fixture again.
 #
@@ -23,7 +23,7 @@
 #   ./.github/tests/elastic-riskgate/riskgate.sh load|proof1|proof2|probe
 #
 # Overrides (all optional): ES_URL (https://127.0.0.1:9200), ES_USER (elastic),
-# ES_PASSWORD (else stacks/elastic/.env), ES_CA (else fetched from the stack),
+# ES_PASSWORD (else docker/elastic/.env), ES_CA (else fetched from the stack),
 # RISKGATE_INSECURE=1 (skip TLS verification — last resort, loopback only).
 #
 # FAILS LOUDLY, never skips: a gate that no-ops when the stack is missing would
@@ -35,7 +35,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 cd "$REPO_ROOT" || exit 1
 
-ELASTIC_DIR="$REPO_ROOT/stacks/elastic"
+ELASTIC_DIR="$REPO_ROOT/docker/elastic"
 RUNNER="$SCRIPT_DIR/riskgate.py"
 
 die()  { echo "❌ riskgate | $*" >&2; exit 1; }
@@ -56,10 +56,10 @@ RISKGATE_INSECURE="${RISKGATE_INSECURE:-0}"
 if [[ -z "${ES_PASSWORD:-}" ]]; then
     if [[ -f "$ELASTIC_DIR/.env" ]]; then
         ES_PASSWORD="$(sed -n 's/^ELASTIC_PASSWORD=//p' "$ELASTIC_DIR/.env" | tail -n 1 | sed -e "s/^[\"']//" -e "s/[\"']\$//")"
-        note "ELASTIC_PASSWORD read from stacks/elastic/.env"
+        note "ELASTIC_PASSWORD read from docker/elastic/.env"
     fi
 fi
-[[ -n "${ES_PASSWORD:-}" ]] || die "ES_PASSWORD is not set and $ELASTIC_DIR/.env has no ELASTIC_PASSWORD — bring up stacks/elastic first (its README), or export ES_PASSWORD"
+[[ -n "${ES_PASSWORD:-}" ]] || die "ES_PASSWORD is not set and $ELASTIC_DIR/.env has no ELASTIC_PASSWORD — bring up docker/elastic first (its README), or export ES_PASSWORD"
 case "$ES_PASSWORD" in
     *change-me*) die "ELASTIC_PASSWORD still holds the .env.example placeholder — the stack would not have started with it" ;;
 esac
@@ -76,7 +76,7 @@ if [[ -z "${ES_CA:-}" && "$RISKGATE_INSECURE" != "1" && "$ES_URL" == https://* ]
             note "CA fetched from the elasticsearch container (certs volume)"
         fi
     fi
-    [[ -n "${ES_CA:-}" ]] || die "no CA for $ES_URL: is the elasticsearch container running? (docker compose -f stacks/elastic/docker-compose.yml ps) — or set ES_CA to the stack's ca.crt, or RISKGATE_INSECURE=1"
+    [[ -n "${ES_CA:-}" ]] || die "no CA for $ES_URL: is the elasticsearch container running? (docker compose -f docker/elastic/docker-compose.yml ps) — or set ES_CA to the stack's ca.crt, or RISKGATE_INSECURE=1"
 fi
 [[ -z "${ES_CA:-}" || -s "$ES_CA" ]] || die "ES_CA=$ES_CA is not a readable file"
 

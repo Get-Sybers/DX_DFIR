@@ -4,8 +4,8 @@ galaxy_info:
   namespace: get_sybers
   author: Get-Sybers
   description: >-
-    Process memory images with Volatility 3 into per-plugin JSON Lines for the Elastic-native
-    or SOF-ELK pipeline. docker-runs the hardened, env-driven get-sybers/piiat-mem image;
+    Process memory images with Volatility 3 into per-plugin JSON Lines.
+    docker-runs the hardened, env-driven get-sybers/piiat-mem image;
     one <plugin>.jsonl per image via the custom jsonl_dfir renderer.
   company: Get-Sybers
   license: MIT

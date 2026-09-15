@@ -12,7 +12,6 @@ bootstrap.memory_lock: true
 xpack.license.self_generated.type: basic
 
 # Security ON: authentication + RBAC, TLS on both the HTTP and transport layers.
-# (The retired SOF-ELK stack ran with xpack.security.enabled=false.)
 xpack.security.enabled: true
 xpack.security.http.ssl.enabled: true
 xpack.security.http.ssl.key: certs/es01/es01.key

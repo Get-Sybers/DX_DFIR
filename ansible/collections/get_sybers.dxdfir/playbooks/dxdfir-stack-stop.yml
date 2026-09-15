@@ -1,6 +1,6 @@
 ---
 # The playbook holds the decisions; the role groups, the tasks act.
-# Stack (elastic|sofelk) is selected via -e dxdfir_stack_name=...
+# Drives the dxdfir_stack role around docker/elastic.
 - name: "DFIR | stack stop"
   hosts: "{{ dxdfir_hosts | default('localhost') }}"
   connection: "{{ dxdfir_connection | default('local') }}"

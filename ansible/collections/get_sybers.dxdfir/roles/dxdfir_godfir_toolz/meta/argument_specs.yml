@@ -14,12 +14,6 @@ argument_specs:
         host level: a host output dir that already holds any file is skipped unless
         dxdfir_godfir_toolz_force.
     options:
-      dxdfir_godfir_toolz_pipeline:
-        type: str
-        required: false
-        default: elastic
-        choices: [elastic, sofelk]
-        description: "Which backend to target; selects the output destination."
       dxdfir_godfir_toolz_input_dir:
         type: str
         required: false
@@ -28,21 +22,10 @@ argument_specs:
         type: str
         required: false
         description: "VMware VM export folders (one sub-folder per VM); optional."
-      dxdfir_godfir_toolz_elastic_out_dir:
-        type: str
-        required: false
-        description: "Elastic-path output dir (default data_store/processed/godfir-toolz)."
-      dxdfir_godfir_toolz_sofelk_out_dir:
-        type: str
-        required: false
-        description: "SOF-ELK-path output dir (delivered into SOF-ELK by dxdfir_ingest_sofelk)."
       dxdfir_godfir_toolz_out_dir:
         type: str
         required: false
-        description: >-
-          Resolved output base for the selected pipeline (defaults to the
-          elastic/sofelk out dir per dxdfir_godfir_toolz_pipeline); override to send
-          output to a custom location.
+        description: "Output dir (default data_store/processed/godfir-toolz); override to send output to a custom location."
       dxdfir_godfir_toolz_plaso_image:
         type: str
         required: false

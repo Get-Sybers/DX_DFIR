@@ -31,20 +31,16 @@ on:
       - "python/get_sybers_dxdfir/mitrecar.py"
       - "python/get_sybers_dxdfir/carcheck.py"
       - "python/pyproject.toml"
-      # EvtxECmd + its image (and the shared hardening playbook) now live in the
-      # GoDFIR-toolz submodule, and the build wiring lives in the images role —
-      # both are covered by third_party/** and the role path below.
+      # Every tool image (byakugan/goevtx included) builds from the GoDFIR-toolz
+      # submodule, and the build wiring lives in the images role + manifest —
+      # a submodule bump (the gitlink) or a manifest/pin change re-runs this.
       - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_images/**"
-      # the CAR engine image (its Dockerfile + entrypoint binary) and the shared
-      # in-image hardening playbook it uses.
-      - "docker/byakugan/**"
-      - "docker/hardening/**"
+      - "docker/GoDFIR-toolz"
+      - "images.yml"
       # an engine bump is a pipeline change: sources.yml pins the external
       # Byakugan engine the CAR lane runs, so it must re-run this workflow.
-      # third_party/** covers the piiat-mem AND GoDFIR-toolz submodules.
       - "sources.yml"
       - ".gitmodules"
-      - "third_party/**"
       - ".github/tests/smoke-test.sh"
       - "dev-scripts/fetch-samples.sh"
       - "dev-scripts/samples-manifest.tsv"
@@ -94,12 +90,9 @@ jobs:
         run: |
           ref="$(awk '/^byakugan:/{b=1;next} b&&/^[^[:space:]]/{b=0} b&&$1=="ref:"{print $2;exit}' sources.yml)"
           [[ "$ref" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::sources.yml byakugan ref is not a 40-hex sha: '$ref'"; exit 1; }
-          # docker/hardening/harden.yml is gitignored — its canonical home is the
-          # GoDFIR-toolz submodule, and the dxdfir_images preflight syncs it into
-          # the docker/ build context. Do the same here so the raw `docker build`
-          # can COPY hardening/harden.yml on a clean checkout.
-          cp docker/GoDFIR-toolz/hardening/harden.yml docker/hardening/harden.yml
-          docker build -t get-sybers/byakugan:latest --build-arg BYAKUGAN_REF="$ref" -f docker/byakugan/Dockerfile docker
+          # The submodule root is the build context, so the Dockerfile COPYs the
+          # canonical hardening/harden.yml straight from it — nothing to sync.
+          docker build -t get-sybers/byakugan:latest --build-arg BYAKUGAN_REF="$ref" -f docker/GoDFIR-toolz/byakugan/Dockerfile docker/GoDFIR-toolz
 
       - name: Run the pipeline smoke test
         run: ./.github/tests/smoke-test.sh

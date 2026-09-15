@@ -1,12 +1,12 @@
 """Drive the standalone **Byakugan** engine — now entirely inside the hardened
 ``get-sybers/byakugan`` container. Byakugan is a standalone public project; the
 engine is cloned + built INTO the image at the commit pinned by ``sources.yml``
-(docker/byakugan/Dockerfile), so the DX_DFIR checkout no longer provisions or
+(docker/GoDFIR-toolz/byakugan/Dockerfile), so the DX_DFIR checkout no longer provisions or
 holds an engine checkout at all — the ONLY thing this repo has is how it INVOKES
 the image, which is this module.
 
 The image's ENTRYPOINT is one binary dispatched on its first argument to the
-engine's three operations (docker/byakugan/byakugan-entry.py):
+engine's three operations (docker/GoDFIR-toolz/byakugan/byakugan-entry.py):
 
     build     the pipeline (``--in``/``--out`` single-source, or ``--batch``) —
               one processed evidence SOURCE -> its own MITRE CAR database (one

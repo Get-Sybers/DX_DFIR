@@ -1,6 +1,4 @@
 ---
-# Backend to target; the playbook overrides this to select the pipeline.
-dxdfir_godfir_toolz_pipeline: elastic
 
 # Repo root is five levels up from this role
 # (roles/dxdfir_godfir_toolz -> get_sybers.dxdfir -> collections -> ansible -> repo).
@@ -12,11 +10,9 @@ dxdfir_godfir_toolz_repo_root: "{{ role_path }}/../../../../.."
 dxdfir_godfir_toolz_input_dir: "{{ dxdfir_godfir_toolz_repo_root }}/data_store/raw/disk_images"
 # VMware VM export folders (one per VM) — optional, mirrors dxdfir_plaso.
 dxdfir_godfir_toolz_vm_dir: "{{ dxdfir_godfir_toolz_repo_root }}/data_store/raw/VM_files"
-dxdfir_godfir_toolz_elastic_out_dir: "{{ dxdfir_godfir_toolz_repo_root }}/data_store/processed/godfir-toolz"
-dxdfir_godfir_toolz_sofelk_out_dir: "{{ dxdfir_godfir_toolz_repo_root }}/data_store/processed/sofelk/godfir-toolz"
-# Resolved output base for the selected pipeline — consumed by
+dxdfir_godfir_toolz_out_dir: "{{ dxdfir_godfir_toolz_repo_root }}/data_store/processed/godfir-toolz"
+# Output base — consumed by
 # tasks/process.yml. Override directly to send output to a custom location.
-dxdfir_godfir_toolz_out_dir: "{{ dxdfir_godfir_toolz_elastic_out_dir if dxdfir_godfir_toolz_pipeline == 'elastic' else dxdfir_godfir_toolz_sofelk_out_dir }}"
 # The hardened in-repo Plaso image, used for artefact extraction (image_export.py)
 # and the SRUM two-step (log2timeline.py/psort.py) — build with dxdfir-build-images.
 dxdfir_godfir_toolz_plaso_image: "get-sybers/plaso:latest"

@@ -1,15 +1,16 @@
 # dxdfir_images
 
 Build **every runtime tool container from source, hardened** — and verify it.
-No third-party tool image is pulled at runtime. The images come from two
-in-tree sources:
+No third-party tool image is pulled at runtime. Every image builds from the
+**[GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) submodule**
+(`docker/GoDFIR-toolz/`), one directory per image:
 
-- **DX_DFIR's own `docker/<name>/Dockerfile`**: yara, suricata, zeek, plaso
-  (volatility from the [PIIAT-Mem](https://github.com/Get-Sybers/PIIAT-Mem)
-  submodule's context).
-- **The [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz)
-  submodule** (`docker/GoDFIR-toolz/`): the whole **Eric Zimmerman tool
-  family**, now almost entirely **static-Go `FROM scratch` substitutes** (no
+- **The pipeline images** (`<name>/Dockerfile` against the submodule-root
+  context): byakugan, plaso, signatures, zeek — plus **piiat-mem** (volatility,
+  cloned from [PIIAT-Mem](https://github.com/Get-Sybers/PIIAT-Mem) at the
+  `sources.yml` pin).
+- **The Eric Zimmerman tool family**, now almost entirely
+  **static-Go `FROM scratch` substitutes** (no
   shell, no python, just the binary) — `goevtx` (EvtxECmd), `gomft` (MFTECmd),
   `goamcache`/`goappcompat` (Amcache/AppCompatCache), `gore`/`gosbe`
   (RECmd/SBECmd, with dirty-hive `.LOG` replay), `gole`/`gojle` (LECmd/JLECmd),
@@ -37,9 +38,8 @@ every run is confined hard. ansible does the hardening *at build time* and is
 then **removed from the final image** — it never ships at runtime. The hardening
 playbook has ONE canonical home,
 [`docker/GoDFIR-toolz/hardening/harden.yml`](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/hardening/harden.yml):
-the submodule's images use it directly, and this role's preflight syncs it into
-`docker/hardening/harden.yml` (git-ignored, generated) so DX_DFIR's own images
-can `COPY` it from their build context.
+every image builds from the submodule, so each Dockerfile `COPY`s it straight
+from the shared context — nothing is synced or generated.
 
 - the tool is the image **ENTRYPOINT**; no ansible, no run-role, no
   orchestration in the runtime image
@@ -91,7 +91,7 @@ not a convenient interpreter.
 ## What is not built here
 
 The analysis backend is not a tool image: the Elastic stack under
-`stacks/elastic/` (Elasticsearch, Kibana, Fleet Server, Filebeat — the official
+`docker/elastic/` (Elasticsearch, Kibana, Fleet Server, Filebeat — the official
 Elastic images, version-pinned) is brought up with docker compose, published on
 `127.0.0.1` only, with security on. No other third-party image is pulled at
 runtime (the stock .NET runtime image is used only by the evtx lane's
@@ -101,8 +101,7 @@ operator-supplied mode).
 | Variable | Default | Description |
 |---|---|---|
 | `dxdfir_images_namespace` | `get-sybers` | Image namespace — every image is tagged `<namespace>/<name>:latest`. |
-| `dxdfir_images_context` | `<repo>/docker` | DX_DFIR's own build context (yara/suricata/zeek/plaso; holds `<name>/Dockerfile` + the synced `hardening/harden.yml`). |
-| `dxdfir_images_eztools_context` | `<repo>/docker/GoDFIR-toolz` | The GoDFIR-toolz submodule root — evtxecmd, the EZ family, and the two Go substitutes build from here. |
+| `dxdfir_images_context` | `<repo>/docker/GoDFIR-toolz` | The GoDFIR-toolz submodule root — the default build context for every image; holds `<name>/Dockerfile` dirs + the canonical `hardening/harden.yml`. |
 | `dxdfir_runtime_uid` / `dxdfir_runtime_gid` | `2000` | Single run-as uid/gid, passed to every build as `DFIR_UID`/`DFIR_GID` and asserted in the contract. |
 | `dxdfir_images_set` | all eighteen | Images to build. |
 | `dxdfir_images_force` | `false` | Rebuild existing images (layer cache applies). |

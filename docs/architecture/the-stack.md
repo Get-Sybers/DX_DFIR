@@ -2,12 +2,11 @@
 
 The processing pipeline writes files; the analysis stack ingests and searches them. They
 are a **separate data plane** — Filebeat tails the processed tree, and neither side drives
-the other. The default stack is Elastic-native; the legacy **SOF-ELK** path (an older,
-security-less ELK delivery target) is retiring.
+the other.
 
 ## What's in it
 
-`stacks/elastic/` is a security-on, localhost-only Elastic stack:
+`docker/elastic/` is a security-on, localhost-only Elastic stack:
 
 | Service | Role | Port (127.0.0.1) |
 |---|---|---|
@@ -20,7 +19,7 @@ Bring it up with `dxdfir stack deploy` or directly:
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144       # Elasticsearch requires this (persist in /etc/sysctl.conf)
-cd stacks/elastic && cp .env.example .env    # then fill in the placeholders
+cd docker/elastic && cp .env.example .env    # then fill in the placeholders
 docker compose up -d
 ```
 
@@ -28,7 +27,7 @@ docker compose up -d
 > `.env`, passwords need ≥ 6 chars and each encryption key must be `openssl rand -hex 32`
 > (the `.env.example` comments say which is which). The file holds credentials, binds
 > nothing off `127.0.0.1`, and is git-ignored — **never commit it.** Full details:
-> [stacks/elastic/README.md](../../stacks/elastic/README.md).
+> [docker/elastic/README.md](../../docker/elastic/README.md).
 
 ## How evidence gets in
 

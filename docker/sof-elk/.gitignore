@@ -1,3 +1,0 @@
-# Runtime ingest staging + local env — never commit evidence or local overrides.
-ingest/
-.env

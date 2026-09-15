@@ -43,12 +43,10 @@ idempotence lives in the Python processor** — a source whose output already ex
 skipped in the processor, not in an Ansible `when:`. See
 [Ansible standards](../reference/ansible-standards.md).
 
-## Pipelines: elastic vs sofelk
+## Output
 
-The default `--pipeline elastic` writes the processed tree the [CAR pipeline](car-pipeline.md)
-builds from and [Filebeat](the-stack.md) ships. `--pipeline sofelk` writes the retiring,
-security-less SOF-ELK delivery tree instead — don't reach for it unless you specifically
-want it.
+Every lane writes the processed tree the [CAR pipeline](car-pipeline.md)
+builds from and [Filebeat](the-stack.md) ships.
 
 ## Collections
 

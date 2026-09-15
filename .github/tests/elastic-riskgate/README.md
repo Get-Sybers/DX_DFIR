@@ -3,7 +3,7 @@
 The proof harness for the two assumptions the Elastic-native detection design
 stands on: **manual detection runs over an evidence-time window** and **ES|QL
 `LOOKUP JOIN` flagging** against the `car-detections` lookup index, on the
-`stacks/elastic` stack (Elasticsearch 9.4.3). It stands up nothing — the stack
+`docker/elastic` stack (Elasticsearch 9.4.3). It stands up nothing — the stack
 must already be running — and it cleans up after itself.
 
 ```bash
@@ -16,7 +16,7 @@ each proof demonstrates, the pass/fail bar, and what to do when a check fails.
 
 | path | what |
 |---|---|
-| `riskgate.sh` | entry point: discovers the password (`stacks/elastic/.env`) and CA (the stack's `certs` volume), runs the runner |
+| `riskgate.sh` | entry point: discovers the password (`docker/elastic/.env`) and CA (the stack's `certs` volume), runs the runner |
 | `riskgate.py` | the runner (stdlib only): loads, queries `POST /_query`, compares with `expected/`, cleans |
 | `fixtures/logs-car.ndjson` | four synthetic CAR rows dated 2019-04-12 (bulk NDJSON, ECS per the CAR->ECS projection) |
 | `fixtures/car-detections.ndjson` | three detection rows for the lookup index (bulk NDJSON, strict to the contract template) |

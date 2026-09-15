@@ -11,23 +11,15 @@ import (
 )
 
 // The analysis-stack lifecycle is Ansible-orchestrated (dxdfir_stack role): each
-// verb fronts a thin dxdfir-stack-<action>.yml play. The stack (elastic|sofelk)
-// rides on -e dxdfir_stack_name.
+// verb fronts a thin dxdfir-stack-<action>.yml play around docker/elastic.
 
-var validStacks = map[string]bool{"elastic": true, "sofelk": true}
-
-// runStackAction drives one dxdfir-stack-<action>.yml with the stack selection
-// and any action-specific vars.
-func (env *Env) runStackAction(stack, action string, vars []string) error {
-	if !validStacks[stack] {
-		return Fail(2, "unknown stack %q — use one of: elastic, sofelk", stack)
-	}
+// runStackAction drives one dxdfir-stack-<action>.yml with any action-specific vars.
+func (env *Env) runStackAction(action string, vars []string) error {
 	r, ap, err := env.ansibleRepo()
 	if err != nil {
 		return err
 	}
-	all := append([]string{"dxdfir_stack_name=" + stack}, vars...)
-	plan, err := ansiblePlan(r, ap, "dxdfir-stack-"+action+".yml", all, false)
+	plan, err := ansiblePlan(r, ap, "dxdfir-stack-"+action+".yml", vars, false)
 	if err != nil {
 		return err
 	}
@@ -36,17 +28,15 @@ func (env *Env) runStackAction(stack, action string, vars []string) error {
 }
 
 // newStackCmd builds the `dxdfir stack` group (deploy/destroy/start/stop/status),
-// each driving the dxdfir_stack role. --stack/-s selects the stack.
+// each driving the dxdfir_stack role.
 func newStackCmd(env *Env) *cobra.Command {
-	var stack string
 	parent := &cobra.Command{
 		Use:   "stack",
-		Short: "Bring the analysis stack up/down (dxdfir_stack role around stacks/elastic or docker/sof-elk).",
-		Long: "Bring the analysis stack up/down via the dxdfir_stack Ansible role.\n\n" +
-			"Lifecycle for the stacks under stacks/elastic and docker/sof-elk. Select one\n" +
-			"with --stack/-s (elastic|sofelk). Elastic requires stacks/elastic/.env.",
+		Short: "Bring the Elastic analysis stack up/down (dxdfir_stack role around docker/elastic).",
+		Long: "Bring the Elastic analysis stack up/down via the dxdfir_stack Ansible role.\n\n" +
+			"Lifecycle for the compose stack under docker/elastic. Requires docker/elastic/.env\n" +
+			"(copy docker/elastic/.env.example and set the passwords).",
 	}
-	parent.PersistentFlags().StringVarP(&stack, "stack", "s", "elastic", "Which stack to drive (elastic|sofelk).")
 
 	var build, noBuild bool
 	deploy := &cobra.Command{
@@ -55,10 +45,10 @@ func newStackCmd(env *Env) *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			vars := []string{"dxdfir_stack_build=" + boolVar(build && !noBuild)}
-			if err := env.runStackAction(stack, "deploy", vars); err != nil {
+			if err := env.runStackAction("deploy", vars); err != nil {
 				return err
 			}
-			fmt.Println(style.Green(style.GlyphOK + " " + stack + " stack deployed."))
+			fmt.Println(style.Green(style.GlyphOK + " elastic stack deployed."))
 			return nil
 		},
 	}
@@ -72,16 +62,16 @@ func newStackCmd(env *Env) *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			if volumes && !destroyYes {
-				if !confirmYes(fmt.Sprintf(
-					"Remove '%s' containers AND named volumes? This DELETES ingested data. [y/N]: ", stack)) {
+				if !confirmYes(
+					"Remove the elastic stack's containers AND named volumes? This DELETES ingested data. [y/N]: ") {
 					return Fail(1, "Aborted.")
 				}
 			}
 			vars := []string{"dxdfir_stack_remove_volumes=" + boolVar(volumes)}
-			if err := env.runStackAction(stack, "destroy", vars); err != nil {
+			if err := env.runStackAction("destroy", vars); err != nil {
 				return err
 			}
-			fmt.Println(style.Green(style.GlyphOK + " " + stack + " stack destroyed."))
+			fmt.Println(style.Green(style.GlyphOK + " elastic stack destroyed."))
 			return nil
 		},
 	}
@@ -91,27 +81,27 @@ func newStackCmd(env *Env) *cobra.Command {
 	start := &cobra.Command{
 		Use: "start", Short: "Start EXISTING stopped containers.", Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := env.runStackAction(stack, "start", nil); err != nil {
+			if err := env.runStackAction("start", nil); err != nil {
 				return err
 			}
-			fmt.Println(style.Green(style.GlyphOK + " " + stack + " stack started."))
+			fmt.Println(style.Green(style.GlyphOK + " elastic stack started."))
 			return nil
 		},
 	}
 	stop := &cobra.Command{
 		Use: "stop", Short: "Stop containers but keep them.", Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := env.runStackAction(stack, "stop", nil); err != nil {
+			if err := env.runStackAction("stop", nil); err != nil {
 				return err
 			}
-			fmt.Println(style.Green(style.GlyphOK + " " + stack + " stack stopped."))
+			fmt.Println(style.Green(style.GlyphOK + " elastic stack stopped."))
 			return nil
 		},
 	}
 	status := &cobra.Command{
 		Use: "status", Short: "Show container status.", Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return env.runStackAction(stack, "status", nil)
+			return env.runStackAction("status", nil)
 		},
 	}
 

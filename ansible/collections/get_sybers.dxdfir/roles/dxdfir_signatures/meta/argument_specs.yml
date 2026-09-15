@@ -14,27 +14,10 @@ argument_specs:
         prerequisites are missing notes it and produces nothing. Idempotent: a lane
         whose output already exists is skipped.
     options:
-      dxdfir_signatures_pipeline:
-        type: str
-        required: false
-        default: elastic
-        choices: [elastic, sofelk]
-        description: "Which backend to target; selects the output destination."
-      dxdfir_signatures_elastic_out_dir:
-        type: str
-        required: false
-        description: "Elastic-path output base (default data_store/processed/detections)."
-      dxdfir_signatures_sofelk_out_dir:
-        type: str
-        required: false
-        description: "SOF-ELK-path output base (delivered into SOF-ELK by dxdfir_ingest_sofelk)."
       dxdfir_signatures_out_dir:
         type: str
         required: false
-        description: >-
-          Resolved output base for the selected pipeline (defaults to the
-          elastic/sofelk out dir per dxdfir_signatures_pipeline); override to send
-          output to a custom location.
+        description: "Output dir (default data_store/processed/detections); override to send output to a custom location."
       dxdfir_signatures_lanes:
         type: list
         elements: str

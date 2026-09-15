@@ -19,16 +19,12 @@ dxdfir_images_uid: "{{ dxdfir_runtime_uid | default(2000) }}"
 # still yields a matched USER <uid>:<uid>, never <uid>:2000.
 dxdfir_images_gid: "{{ dxdfir_runtime_gid | default(dxdfir_runtime_uid | default(2000)) }}"
 
-# DX_DFIR's own docker/ build context (yara, suricata, zeek, plaso) — each
-# Dockerfile COPYs the shared ansible hardening playbook
-# (docker/hardening/harden.yml) from here.
-dxdfir_images_context: "{{ dxdfir_images_repo_root }}/docker"
-
-# The GoDFIR-toolz submodule root. EvtxECmd, the whole Eric Zimmerman tool
-# family, and the GoDFIR Go tools (goevtx/gomft/gorb/goprefetch/goese/
-# goamcache/goappcompat) build from here; the
-# submodule carries its own hardening/harden.yml (COPYd by its Dockerfiles).
-dxdfir_images_eztools_context: "{{ dxdfir_images_repo_root }}/docker/GoDFIR-toolz"
+# The GoDFIR-toolz submodule root — the default build context for EVERY tool
+# image (the pipeline images byakugan/plaso/signatures/zeek, piiat-mem, the EZ
+# tool family and the GoDFIR Go tools alike). The submodule carries the
+# canonical hardening/harden.yml at its root, COPYd by the Dockerfiles that
+# build from the shared context.
+dxdfir_images_context: "{{ dxdfir_images_repo_root }}/docker/GoDFIR-toolz"
 
 # The tool-image inventory — the ONE source of truth (repo-root images.yml),
 # shared with the Python runtime guard (get_sybers_dxdfir.images). Each entry:
