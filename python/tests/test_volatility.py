@@ -1,4 +1,5 @@
 """Unit tests for the pure logic of the volatility processor (no docker needed)."""
+import json
 import os
 import sys
 
@@ -81,18 +82,24 @@ def test_car_set_covers_the_tools_default_plugins():
 
 
 def test_vol_native_requires_acknowledgement(tmp_path, capsys):
-    """--vol-native (unconfined host execution) is refused without --accept-unconfined."""
-    mem = tmp_path / "mem"; mem.mkdir()
+    """--vol-native (unconfined host execution) is refused without --accept-unconfined,
+    and still emits a JSON summary (the output contract callers rely on)."""
+    mem = tmp_path / "mem"
+    mem.mkdir()
     argv = ["--memory-dir", str(mem), "--out-dir", str(tmp_path / "out"),
             "--symbols-dir", str(tmp_path / "sym"), "--vol-native", "python3"]
     rc = vol.main(argv)
+    out = capsys.readouterr()
     assert rc == 2
-    assert "refusing --vol-native" in capsys.readouterr().err
+    assert "refusing --vol-native" in out.err
+    summary = json.loads(out.out)                 # stdout still carries a summary
+    assert summary["error"] and summary["failed"] == 0
 
 
 def test_vol_native_accepted_warns_and_proceeds(tmp_path, capsys):
     """With --accept-unconfined it proceeds (no images.require); no images => clean run."""
-    mem = tmp_path / "mem"; mem.mkdir()   # empty: process short-circuits, no host tool run
+    mem = tmp_path / "mem"                          # empty: process short-circuits
+    mem.mkdir()
     argv = ["--memory-dir", str(mem), "--out-dir", str(tmp_path / "out"),
             "--symbols-dir", str(tmp_path / "sym"),
             "--vol-native", "python3", "--accept-unconfined"]
