@@ -78,3 +78,24 @@ def test_car_set_covers_the_tools_default_plugins():
     engine = set(json.loads(out.stdout))
     missing = engine - set(vol.DEFAULT_PLUGINS)
     assert not missing, f"CAR set no longer covers the tool's plugins: {missing}"
+
+
+def test_vol_native_requires_acknowledgement(tmp_path, capsys):
+    """--vol-native (unconfined host execution) is refused without --accept-unconfined."""
+    mem = tmp_path / "mem"; mem.mkdir()
+    argv = ["--memory-dir", str(mem), "--out-dir", str(tmp_path / "out"),
+            "--symbols-dir", str(tmp_path / "sym"), "--vol-native", "python3"]
+    rc = vol.main(argv)
+    assert rc == 2
+    assert "refusing --vol-native" in capsys.readouterr().err
+
+
+def test_vol_native_accepted_warns_and_proceeds(tmp_path, capsys):
+    """With --accept-unconfined it proceeds (no images.require); no images => clean run."""
+    mem = tmp_path / "mem"; mem.mkdir()   # empty: process short-circuits, no host tool run
+    argv = ["--memory-dir", str(mem), "--out-dir", str(tmp_path / "out"),
+            "--symbols-dir", str(tmp_path / "sym"),
+            "--vol-native", "python3", "--accept-unconfined"]
+    rc = vol.main(argv)
+    assert rc == 0
+    assert "WARNING: --vol-native" in capsys.readouterr().err
