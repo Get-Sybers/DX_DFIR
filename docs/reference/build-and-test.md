@@ -20,7 +20,7 @@ Groups it runs:
 - **Ansible lint** — `ansible-lint --profile production`.
 - **Python** — `pytest` under the `python/constraints.txt` lock.
 - **Go front-end** — `gofmt -l go` must be empty, `go vet ./...`, `go build ./...`,
-  `go test` (all guarded on `go` being present; CI installs Go 1.24).
+  `go test ./...` (all guarded on `go` being present; CI installs Go 1.24).
 - Plus repo-path resolution, version/doc consistency, evidence-gitignore coverage, secret
   patterns, and documentation links.
 

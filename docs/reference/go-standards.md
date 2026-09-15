@@ -8,18 +8,21 @@ re-implements no processing — it builds a plan and shells out. These are its c
 Functions use a small set of **reserved verbs** and read as a phrase at the call site.
 There is no `Get*`, and a name never stutters its package.
 
-| Verb | Means | Example call site |
+| Verb | Means | Example |
 |---|---|---|
-| `Read` | read the contents of a file | `timeline.readTimeline(…)` |
-| `Load` | load a module / library / rule | — |
+| `Read` | read the contents of a file | `readTimeline(…)`, `readElasticEnv(…)` |
+| `Load` | load a module / library / rule | *(reserved)* |
 | `Check` | check a state / status | `collection.CheckStatus(…)`, `collection.CheckState(…)` |
 | `List` | return a plural collection | `collection.ListLanes(…)` |
-| `Run` | execute a command / job | `runProcess(…)` |
+| `Run` | execute a command / job | `runProcess(…)`, `runESQL(…)` |
 | `Classify` / `Detect` | classify evidence by content | `identify.Classify(…)`, `identify.IsPcap(…)` |
 
-`collection.CheckStatus(root)` reads as a phrase; `collection.GetCollectionStatus(root)`
-would stutter and is not the house style. This mirrors the Ansible best-practices the
-project follows.
+The rule bites hardest at **exported, cross-package** call sites:
+`collection.CheckStatus(root)` reads as a phrase, whereas
+`collection.GetCollectionStatus(root)` would both use `Get*` and stutter the package —
+not the house style. Package-private helpers (`readTimeline`, `runESQL`, `runProcess`)
+follow the same verb vocabulary but are called unqualified within their package. This
+mirrors the Ansible best-practices the project follows.
 
 ## Package layout
 
@@ -71,5 +74,5 @@ presentation differs, never the data.
 
 ## Enforced by
 
-`gofmt -l` clean, `go vet ./...`, `go build ./...`, `go test` — all in
+`gofmt -l` clean, `go vet ./...`, `go build ./...`, `go test ./...` — all in
 [the check harness](build-and-test.md).
