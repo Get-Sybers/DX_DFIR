@@ -83,7 +83,7 @@ so duplicates are dropped first-wins, and rules needing module features the
   digests into `ASSETS`.
 - **Not consumed:** DetectRaptor's VQL artifacts and CSV lookups (they need a
   Velociraptor server); it ships no Sigma or Suricata rules. Licensing and
-  attribution: [THIRD_PARTY_NOTICES.md](/THIRD_PARTY_NOTICES.md).
+  attribution: [THIRD_PARTY_NOTICES.md](/.github/THIRD_PARTY_NOTICES.md).
 
 **Verify:** the lane reports the rule-file count (confirm yours is counted), then
 check the output — each match is one JSON object naming your rule:

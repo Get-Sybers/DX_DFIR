@@ -95,7 +95,7 @@ The Splunk-era and KAPE PowerShell scripts were retired (git history and the fro
 The tools this pipeline runs are Apache/BSD/MIT; the Elastic stack runs under the
 Elastic License 2.0 with only the free Basic-tier features enabled; the fetched
 rulesets and sample corpora carry their own terms. Read
-[THIRD_PARTY_NOTICES.md](/THIRD_PARTY_NOTICES.md) before commercial use.
+[THIRD_PARTY_NOTICES.md](/.github/THIRD_PARTY_NOTICES.md) before commercial use.
 
 ## Usage
 

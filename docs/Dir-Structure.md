@@ -27,7 +27,7 @@ per-item processing).
     │
     └── third_party/                                  # Vendored as a submodule: PIIAT-Mem (memory)
     │
-    └── tests/                                        # run-checks.sh (the check harness that gates CI), smoke-test.sh, the Elastic risk gate
+    └── .github/                                      # CI workflows + the check harness (tests/: run-checks.sh, smoke-test.sh, the Elastic risk gate) + CONTRIBUTING / SECURITY / THIRD_PARTY_NOTICES
     │
     └── docs/                                         # Documentation for project usage and setup
     │

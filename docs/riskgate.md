@@ -16,7 +16,7 @@ built on top of them:
    the [rules-as-code contract](/python/get_sybers_dxdfir/detect/rules/README.md)
    — on Elasticsearch 9.4.3, Basic licence.
 
-The harness lives in [`tests/elastic-riskgate/`](/tests/elastic-riskgate/README.md).
+The harness lives in [`.github/tests/elastic-riskgate/`](/.github/tests/elastic-riskgate/README.md).
 It was **authored without a cluster**: the scripts are written to run as-is once
 `docker/elastic` is up, and an offline `selftest` pins the fixture, the queries
 and the expected tables to each other and to the contract. The first live run
@@ -30,15 +30,15 @@ healthy — its README covers `.env`, `vm.max_map_count` and `docker compose up`
 
 ```bash
 # 0. sanity, no cluster needed: fixtures, queries and expected tables agree
-./tests/elastic-riskgate/riskgate.sh selftest
+./.github/tests/elastic-riskgate/riskgate.sh selftest
 
 # 1. the gate: load the fixture, proof 1, proof 2, the probe, clean up
-./tests/elastic-riskgate/riskgate.sh
+./.github/tests/elastic-riskgate/riskgate.sh
 
 # variants
-./tests/elastic-riskgate/riskgate.sh --keep       # leave the fixture for inspection in Kibana
-./tests/elastic-riskgate/riskgate.sh clean        # remove it (add --drop-template to drop the contract template too)
-./tests/elastic-riskgate/riskgate.sh load         # or proof1 | proof2 | probe, one step at a time
+./.github/tests/elastic-riskgate/riskgate.sh --keep       # leave the fixture for inspection in Kibana
+./.github/tests/elastic-riskgate/riskgate.sh clean        # remove it (add --drop-template to drop the contract template too)
+./.github/tests/elastic-riskgate/riskgate.sh load         # or proof1 | proof2 | probe, one step at a time
 ```
 
 The wrapper reads `ELASTIC_PASSWORD` from `docker/elastic/.env` and copies the
@@ -90,7 +90,7 @@ find them.
 A scheduled Detection Engine rule looks back from *now* and can never see
 2019. The runner therefore executes the rule the way the phase-2 runner will:
 `POST /_query` with the evidence window written into the `WHERE` clause
-([`queries/10-manual-detection-window.esql`](/tests/elastic-riskgate/queries/10-manual-detection-window.esql)
+([`queries/10-manual-detection-window.esql`](/.github/tests/elastic-riskgate/queries/10-manual-detection-window.esql)
 — a line-shaped Byakugan rule: `METADATA _id, _index, _version`, identity and
 ATT&CK mapping `EVAL`'d inline, the trailing `KEEP` proof-only).
 
@@ -102,7 +102,7 @@ ATT&CK mapping `EVAL`'d inline, the trailing `KEEP` proof-only).
 | 1.4 | the rule, run over `2019-04-12` explicitly, hits | exactly this table |
 | 1.5 | the window is honoured: the same rule over the last 24 h | no rows |
 
-Expected table for 1.4 ([`expected/10-manual-detection-window.json`](/tests/elastic-riskgate/expected/10-manual-detection-window.json)):
+Expected table for 1.4 ([`expected/10-manual-detection-window.json`](/.github/tests/elastic-riskgate/expected/10-manual-detection-window.json)):
 
 | @timestamp | event.id | host.name | process.name | process.command_line | rule.id | rule.name | event.risk_score | threat.tactic.id | threat.technique.id |
 |---|---|---|---|---|---|---|---|---|---|
@@ -131,11 +131,11 @@ joins.
 | 2.1 | the contract template is valid on this cluster | `PUT _index_template/car-detections` acknowledged |
 | 2.2 | the lookup index really is a lookup index | created from the template on first write; `index.mode: lookup`, 1 shard, 3 rows |
 | 2.3 | join-key type parity | `event.id` and `process.entity_id` are `keyword` on both CAR streams and on the lookup index (the CAR side is mapped by the built-in `ecs@mappings`) |
-| 2.4 | the **direct join** `ON event.id` flags exactly the detected rows, stamped, with evidence time and owner link intact ([`queries/20`](/tests/elastic-riskgate/queries/20-lookup-join-flag.esql)) | exactly the table below |
-| 2.5 | the **cascade join** `ON process.entity_id` reaches the process row and the file it owns; a lookup row without the key joins nothing ([`queries/21`](/tests/elastic-riskgate/queries/21-lookup-join-cascade.esql)) | 4 lines: both process-level detections on `{…3c01}` and on `WS01-filestat-000ef2a1` |
-| 2.6 | fan-out semantics: one line per matching lookup row, collapsed by `STATS … BY event.id` ([`queries/22`](/tests/elastic-riskgate/queries/22-lookup-join-collapse.esql)) | `{…3c01}`: 2 detections / 2 rules; `WS01-filestat-000ef2a1`: 1 / 1 |
+| 2.4 | the **direct join** `ON event.id` flags exactly the detected rows, stamped, with evidence time and owner link intact ([`queries/20`](/.github/tests/elastic-riskgate/queries/20-lookup-join-flag.esql)) | exactly the table below |
+| 2.5 | the **cascade join** `ON process.entity_id` reaches the process row and the file it owns; a lookup row without the key joins nothing ([`queries/21`](/.github/tests/elastic-riskgate/queries/21-lookup-join-cascade.esql)) | 4 lines: both process-level detections on `{…3c01}` and on `WS01-filestat-000ef2a1` |
+| 2.6 | fan-out semantics: one line per matching lookup row, collapsed by `STATS … BY event.id` ([`queries/22`](/.github/tests/elastic-riskgate/queries/22-lookup-join-collapse.esql)) | `{…3c01}`: 2 detections / 2 rules; `WS01-filestat-000ef2a1`: 1 / 1 |
 
-Expected table for 2.4 ([`expected/20-lookup-join-flag.json`](/tests/elastic-riskgate/expected/20-lookup-join-flag.json)):
+Expected table for 2.4 ([`expected/20-lookup-join-flag.json`](/.github/tests/elastic-riskgate/expected/20-lookup-join-flag.json)):
 
 | @timestamp | event.id | car.object | host.name | process.entity_id | detection.id | detection.severity | detection.join_via | rule.id | threat.technique.id |
 |---|---|---|---|---|---|---|---|---|---|
@@ -171,7 +171,7 @@ harmless) and the intended stamps (`detection.*`, `rule.*`, `threat.*`,
 The proof queries therefore `RENAME` those fields aside before the join and
 restore them after it (`20`, `21`); the cascade query keeps the row identity as
 `car.guid` and leaves `event.id` meaning "the guid the detection cascaded
-from". The **probe** ([`queries/29`](/tests/elastic-riskgate/queries/29-lookup-join-shadowing-probe.esql),
+from". The **probe** ([`queries/29`](/.github/tests/elastic-riskgate/queries/29-lookup-join-shadowing-probe.esql),
 informational, never gated) runs the naive contract shape and reports what this
 cluster actually does to the two fields, so the decision below is taken on
 facts rather than on the documentation:

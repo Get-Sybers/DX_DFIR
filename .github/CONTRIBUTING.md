@@ -9,7 +9,7 @@ stale labels got in.
 
 ```bash
 ./dev-scripts/set-version.sh 0.3.0-beta.1   # CHANGELOG heading + app.conf only
-./tests/run-checks.sh
+./.github/tests/run-checks.sh
 git commit -am "Release v0.3.0-beta.1"
 git tag -a v0.3.0-beta.1 -m "v0.3.0-beta.1"
 git push origin main --follow-tags
@@ -36,9 +36,8 @@ loose process and slow responses.
 
 ## Before you start
 
-Read the [pipeline task board](/project-progress.md) and its
-[Known Limitations](/project-progress.md#-known-limitations). A lot of what
-looks broken is known to be broken, and some of it is deliberately deferred.
+A lot of what looks broken is known to be broken, and some of it is
+deliberately deferred — check the CHANGELOG and open issues before filing.
 
 The most useful contributions right now, roughly in order:
 
@@ -59,14 +58,14 @@ never use `git add -f` inside `data_store/`.
 
 **Don't add third-party code without recording it.** If you vendor anything —
 a script, a library, a data file — add it to
-[THIRD_PARTY_NOTICES.md](/THIRD_PARTY_NOTICES.md) with its upstream and licence.
+[THIRD_PARTY_NOTICES.md](/.github/THIRD_PARTY_NOTICES.md) with its upstream and licence.
 The project is Apache-2.0 and that only stays true if attribution keeps up. See
-[why](/THIRD_PARTY_NOTICES.md#why-apache-20).
+[why](/.github/THIRD_PARTY_NOTICES.md#why-apache-20).
 
-**Be honest in the task board.** `project-progress.md` uses ✅ for
-"ran end-to-end and produced correct output", ⚠️ for "runs but incomplete or
-unverified", ❌ for "doesn't work". Over-claiming is how the board got into the
-state that prompted the beta rewrite. If you haven't run it, it isn't ✅.
+**Be honest about status.** Distinguish "ran end-to-end and produced correct
+output" from "runs but incomplete or unverified" from "doesn't work".
+Over-claiming is how the project got into the state that prompted the beta
+rewrite. If you haven't run it, don't claim it works.
 
 ## Scripts
 
@@ -83,7 +82,7 @@ both.
 Run this before submitting anything:
 
 ```bash
-./tests/run-checks.sh          # static checks; -v to see each one
+./.github/tests/run-checks.sh          # static checks; -v to see each one
 ```
 
 It covers shell syntax, shellcheck, the collection's pinned requirements,
@@ -114,8 +113,8 @@ GitHub and on any case-sensitive filesystem.
 
 - Describe *why*, not just what. The reasoning is the part that isn't in the diff.
 - Keep unrelated changes in separate commits.
-- If something is too involved to finish, say so in the PR and add it to
-  `project-progress.md` rather than leaving it undocumented.
+- If something is too involved to finish, say so in the PR rather than
+  leaving it undocumented.
 
 ## Licensing of contributions
 

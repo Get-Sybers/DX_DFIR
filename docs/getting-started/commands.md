@@ -65,7 +65,7 @@ See [the stack](../architecture/the-stack.md) and
 | `dxdfir cleanup processed [--dry-run] [-y]` | Wipe `data_store/processed/` (all lanes + CAR). |
 | `dxdfir cleanup car [-y]` | Wipe the materialised CAR tree only. |
 | `dxdfir cleanup docker [-y]` | Remove the hardened `get-sybers/*` tool images. |
-| `dxdfir validate` | Run the repository [check harness](../reference/build-and-test.md) (`tests/run-checks.sh`). |
+| `dxdfir validate` | Run the repository [check harness](../reference/build-and-test.md) (`.github/tests/run-checks.sh`). |
 
 ## The command itself
 

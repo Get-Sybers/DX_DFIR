@@ -1,8 +1,7 @@
 # Get Started
 
-> These steps reflect the paths that actually work today. See the
-> [pipeline task board](/project-progress.md) before you start, and
-> read [THIRD_PARTY_NOTICES.md](/THIRD_PARTY_NOTICES.md) for the terms that bind
+> These steps reflect the paths that actually work today. Read
+> [THIRD_PARTY_NOTICES.md](/.github/THIRD_PARTY_NOTICES.md) for the terms that bind
 > you as the operator (the tools, the fetched rulesets, the Elastic licence).
 
 ### Driving the pipeline

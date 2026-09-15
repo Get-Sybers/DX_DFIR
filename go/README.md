@@ -24,7 +24,7 @@ The binary never re-implements processing. It shells out to what already exists:
 | `stack …` | `ansible-playbook … dxdfir-stack-<action>.yml` (the `dxdfir_stack` role) |
 | `cleanup …` | `ansible-playbook … dxdfir-cleanup.yml` (`--dry-run` maps to `--check`) |
 | `list` | native Go (filesystem only) |
-| `validate` | `bash tests/run-checks.sh` |
+| `validate` | `bash .github/tests/run-checks.sh` |
 
 Every `ansible-playbook` argv is built with
 [go-ansible](https://github.com/apenella/go-ansible) v2 (typed command options);

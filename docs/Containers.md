@@ -127,4 +127,4 @@ official image) — operator-supplied: download the pinned release into
 - [Elastic Stack](https://www.elastic.co/docs) — the analysis backend (`docker/elastic/`)
 
 The obligations the tools and the backend place on the operator are recorded in
-[THIRD_PARTY_NOTICES.md](/THIRD_PARTY_NOTICES.md).
+[THIRD_PARTY_NOTICES.md](/.github/THIRD_PARTY_NOTICES.md).

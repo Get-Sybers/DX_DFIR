@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Byakugan Phase-0 RISK GATE — the runner behind tests/elastic-riskgate/riskgate.sh.
+"""Byakugan Phase-0 RISK GATE — the runner behind .github/tests/elastic-riskgate/riskgate.sh.
 
 Proves the two load-bearing assumptions of the Elastic-native design against a
 RUNNING docker/elastic stack (Elasticsearch 9.4.3, security on, Basic licence):

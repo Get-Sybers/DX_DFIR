@@ -41,7 +41,7 @@ to the repo, but small, hash-pinned public samples are fetched on demand:
 ./dev-scripts/fetch-samples.sh --fetch drives-dftt-2004    # a few small disk images (~MBs)
 ```
 
-See [`samples/README.md`](../../samples/README.md) for the starter set, then process it
+Run `./dev-scripts/fetch-samples.sh --list` for the full sample catalogue, then process it
 like any evidence below.
 
 ## 2. Process

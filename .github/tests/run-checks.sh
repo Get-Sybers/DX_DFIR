@@ -10,15 +10,15 @@
 # actually bitten this repo: path-resolution bugs, literal-string config
 # values, stale documentation links, and evidence-gitignore gaps.
 #
-#   ./tests/run-checks.sh          run everything
-#   ./tests/run-checks.sh -v       show each passing check too
+#   ./.github/tests/run-checks.sh          run everything
+#   ./.github/tests/run-checks.sh -v       show each passing check too
 #
 # Exit code is non-zero if any check fails, so this can gate CI.
 # ==============================================================================
 set -uo pipefail
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-REPO_ROOT="$(realpath "$SCRIPT_DIR/..")"
+REPO_ROOT="$(realpath "$SCRIPT_DIR/../..")"
 cd "$REPO_ROOT" || exit 1
 
 VERBOSE=0
@@ -35,7 +35,7 @@ group "Shell syntax"
 # ------------------------------------------------------------------------------
 while IFS= read -r f; do
     if bash -n "$f" 2>/dev/null; then pass "$f"; else fail "$f does not parse"; fi
-done < <(find scripts dev-scripts tests -name "*.sh" -type f 2>/dev/null | sort)
+done < <(find scripts dev-scripts .github/tests -name "*.sh" -type f 2>/dev/null | sort)
 
 # ------------------------------------------------------------------------------
 group "Shellcheck"
@@ -44,7 +44,7 @@ if command -v shellcheck >/dev/null 2>&1; then
     while IFS= read -r f; do
         # -S error: only hard errors gate. Style warnings are noise for now.
         if shellcheck -S error "$f" >/dev/null 2>&1; then pass "$f"; else fail "shellcheck errors in $f"; fi
-    done < <(find scripts dev-scripts tests -name "*.sh" -type f 2>/dev/null | sort)
+    done < <(find scripts dev-scripts .github/tests -name "*.sh" -type f 2>/dev/null | sort)
 else
     skip "shellcheck not installed"
 fi
@@ -212,10 +212,10 @@ if [[ -n "$PROJECT_VERSION" ]]; then
     else
         fail "README has no release badge — the version would have to be hand-maintained"
     fi
-    if grep -qE '^> \*\*(Status|Release status):' README.md project-progress.md 2>/dev/null; then
+    if grep -qE '^> \*\*(Status|Release status):' README.md 2>/dev/null; then
         fail "a hardcoded status/version line is back — let the badge state it"
     else
-        pass "no hardcoded status line in README or task board"
+        pass "no hardcoded status line in README"
     fi
 else
     fail "could not read a version heading from CHANGELOG.md"

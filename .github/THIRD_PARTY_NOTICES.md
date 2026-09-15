@@ -16,20 +16,19 @@ Two categories matter, and they matter differently:
 
 ## Vendored components
 
-Code that ships inside this repository.
-
-| Component | Path | Upstream | Licence |
-|---|---|---|---|
-| MITRE CAR data model | `car_data_model.json` | [mitre-attack/car](https://github.com/mitre-attack/car) | Apache-2.0 |
+The project vendors no third-party source in its own tree. (The MITRE CAR data
+model, formerly kept as `car_data_model.json`, is no longer vendored — see
+**MITRE CAR** below; its attribution is now carried by the `get-sybers/byakugan`
+image that redistributes MITRE's `car` repo.)
 
 ### MITRE CAR
 
-`car_data_model.json` is the MITRE CAR object/field/action model. Apache-2.0,
-attribution required — hence `NOTICE`. It is the reference copy of the model
-the pipeline's CAR output follows (`docs/CAR-Pipeline.md` verifies it against
-`car.mitre.org`). The CAR engine itself (Byakugan, MIT, Get-Sybers) is an
-external public project, not vendored in this repository's tree; it reconstructs
-its model from the `car` repo its own pinned submodules carry. The distribution
+The MITRE CAR object/field/action model (Apache-2.0, attribution required — hence
+`NOTICE`) is the model the pipeline's CAR output follows (`docs/CAR-Pipeline.md`
+verifies it against `car.mitre.org`). It is **not vendored** in this repository's
+tree. The CAR engine (Byakugan, MIT, Get-Sybers) is an external public project
+that reconstructs its model from the `car` repo its own pinned submodules carry.
+The distribution
 vector is the hardened **`get-sybers/byakugan` image**: `docker/byakugan/Dockerfile`
 clones Byakugan at the `byakugan.ref` pin and bakes in its `car` and
 `attack-datasources` submodules (both MITRE, Apache-2.0), so the built image —

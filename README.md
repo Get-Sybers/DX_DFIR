@@ -106,7 +106,7 @@ the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
   security **on** — authentication, RBAC, TLS on the Elasticsearch API — but its
   credentials live in `docker/elastic/.env` (gitignored; never commit it) and
   every port binds `127.0.0.1`. The retiring SOF-ELK stack (`docker/sof-elk`) has
-  no security at all. See [SECURITY.md](/SECURITY.md).
+  no security at all. See [SECURITY.md](/.github/SECURITY.md).
 - **This handles real evidence.** `data_store/` is gitignored deny-by-default, so
   unknown/extensionless formats are covered — a safety net, not a guarantee. Check
   `git status` before you commit.
@@ -117,8 +117,8 @@ the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
 
 - **New here?** [What DX_DFIR is](/docs/getting-started/README.md) · [Install](/docs/getting-started/install.md) · [First run](/docs/getting-started/first-run.md) · [The interface](/docs/getting-started/the-interface.md) · [Command reference](/docs/getting-started/commands.md)
 - **How it works:** [Architecture overview](/docs/architecture/README.md) · [Processing lanes](/docs/architecture/processing-lanes.md) · [CAR pipeline](/docs/architecture/car-pipeline.md) · [The stack](/docs/architecture/the-stack.md)
-- **Contributing:** [Standards](/docs/reference/README.md) · [Repository map](/docs/reference/repository-map.md) · [Contributing](/CONTRIBUTING.md) · [Security](/SECURITY.md)
-- **Deep reference:** [CAR pipeline](/docs/CAR-Pipeline.md) · [extraction rules](/docs/CAR-Extraction-Rules.md) · [relations](/docs/CAR-Relations.md) · [risk gate](/docs/riskgate.md) · [detection rules-as-code](/python/get_sybers_dxdfir/detect/rules/README.md) · [Task board](/project-progress.md)
+- **Contributing:** [Standards](/docs/reference/README.md) · [Repository map](/docs/reference/repository-map.md) · [Contributing](/.github/CONTRIBUTING.md) · [Security](/.github/SECURITY.md)
+- **Deep reference:** [CAR pipeline](/docs/CAR-Pipeline.md) · [extraction rules](/docs/CAR-Extraction-Rules.md) · [relations](/docs/CAR-Relations.md) · [risk gate](/docs/riskgate.md) · [detection rules-as-code](/python/get_sybers_dxdfir/detect/rules/README.md)
 
 > The pre-beta code lives on the frozen
 > [`deprecated`](https://github.com/Get-Sybers/DX_DFIR/tree/deprecated) branch —
@@ -126,14 +126,15 @@ the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
 
 ## Licence
 
-Apache-2.0 at the repository root (see [LICENSE](/LICENSE)) — matched to the
-vendored `car_data_model.json` from [MITRE CAR](https://github.com/mitre-attack/car).
+Apache-2.0 at the repository root (see [LICENSE](/LICENSE)) — the terms of the
+[MITRE CAR](https://github.com/mitre-attack/car) model the pipeline follows,
+redistributed via the `get-sybers/byakugan` image (see [THIRD_PARTY_NOTICES.md](/.github/THIRD_PARTY_NOTICES.md)).
 The pipeline code is offered under the more permissive **MIT** licence as
 self-contained components: the `get_sybers_dxdfir` package (`python/`) and the
 `get_sybers.dxdfir` collection (`ansible/collections/`); each subtree carries its
 own declared licence. The Go `dxdfir` front-end (`go/`) declares none of its own
 and so carries the repository's Apache-2.0. Third-party tool obligations that fall
-on *you* are in [THIRD_PARTY_NOTICES.md](/THIRD_PARTY_NOTICES.md); Apache-2.0 §4
+on *you* are in [THIRD_PARTY_NOTICES.md](/.github/THIRD_PARTY_NOTICES.md); Apache-2.0 §4
 attribution is in [NOTICE](/NOTICE).
 
 ---

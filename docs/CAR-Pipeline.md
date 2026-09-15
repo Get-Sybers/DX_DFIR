@@ -97,8 +97,9 @@ manifest declaring what the source yields and how it was derived.
 
 ## 4. The CAR data model (13 objects)
 
-`car_data_model.json` is a **verified exact match** to `car.mitre.org` — every
-object, action, and field (diffed 13/13, 0 missing, 0 extra). The 13 objects:
+The pipeline's CAR object/field/action set is a **verified exact match** to
+`car.mitre.org` — every object, action, and field (diffed 13/13, 0 missing, 0
+extra), checked against the MITRE `car` model the Byakugan engine bakes in. The 13 objects:
 authentication, driver, email, file, flow, http, module, process, registry,
 service, socket, thread, user_session.
 
