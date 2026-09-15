@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 )
 
 // ansiRE matches ANSI/VT escape sequences; kept in step with run.Sanitize's
@@ -104,7 +105,10 @@ func newestMatch(root string, parts ...string) string {
 // file: it reads only the last maxBytes, strips redraw noise, collapses runs of
 // duplicate lines to "line (xN)", and keeps only lines likely to carry signal.
 func readTail(path string, n, maxBytes int) []string {
-	f, err := os.Open(path)
+	// O_NOFOLLOW: a watched output/log file is never legitimately a symlink, so
+	// refuse to open (and render) one a compromised tool may have planted at a host
+	// file. ELOOP => nil (no tail), same as any unreadable file.
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
 	if err != nil {
 		return nil
 	}

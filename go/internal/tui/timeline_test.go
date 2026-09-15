@@ -65,6 +65,30 @@ func TestReadTimelineDegrades(t *testing.T) {
 	}
 }
 
+// TestReadTimelineSkipsSymlink guards output-handling safety: a symlinked
+// timeline.jsonl (a compromised tool could plant one at a host file) is never read.
+func TestReadTimelineSkipsSymlink(t *testing.T) {
+	root := t.TempDir()
+	carDir := filepath.Join(root, carSubdir, "src")
+	if err := os.MkdirAll(carDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	secret := filepath.Join(root, "secret")
+	if err := os.WriteFile(secret, []byte(`{"timestamp":"2024","kind":"object","object":"leak"}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(secret, filepath.Join(carDir, "timeline.jsonl")); err != nil {
+		t.Fatal(err)
+	}
+	rows, note := readTimeline(root, 100)
+	if len(rows) != 0 {
+		t.Fatalf("symlinked timeline.jsonl was read (%d rows) — host-file disclosure open", len(rows))
+	}
+	if note == "" {
+		t.Error("want the no-timeline note when the only match is a symlink")
+	}
+}
+
 func TestReadElasticEnv(t *testing.T) {
 	root := t.TempDir()
 	envDir := filepath.Join(root, "docker", "elastic")

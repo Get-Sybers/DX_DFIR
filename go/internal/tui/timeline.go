@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 )
 
 // timelineRow is one entry of the byakugan behaviour timeline — a CAR object
@@ -64,7 +65,9 @@ func findTimelines(dir string) []string {
 		if err != nil {
 			return nil // unreadable subtree: skip it, never abort the walk
 		}
-		if !d.IsDir() && d.Name() == "timeline.jsonl" {
+		// Skip a symlinked timeline.jsonl: a CAR-tree entry is never legitimately a
+		// symlink, so following one would render an arbitrary host file into the TUI.
+		if !d.IsDir() && d.Type()&fs.ModeSymlink == 0 && d.Name() == "timeline.jsonl" {
 			out = append(out, p)
 			if len(out) >= maxTimelineFiles {
 				return filepath.SkipAll
@@ -79,7 +82,9 @@ func findTimelines(dir string) []string {
 // parseTimeline reads one timeline.jsonl, one JSON entry per line. A malformed
 // line is skipped, never fatal — a single bad record must not blank the tab.
 func parseTimeline(path string) []timelineRow {
-	f, err := os.Open(path)
+	// O_NOFOLLOW: refuse a symlinked timeline.jsonl (ELOOP => skip) so a planted
+	// link to a host file is never read into the TUI.
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
 	if err != nil {
 		return nil
 	}

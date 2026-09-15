@@ -39,3 +39,14 @@ def test_deliver_mirrors_and_is_idempotent(tmp_path):
 def test_deliver_missing_src(tmp_path):
     s = sofelk.deliver(str(tmp_path / "nope"), str(tmp_path / "t"))
     assert s.get("error") and s["delivered"] == 0
+
+
+def test_discover_skips_symlinked_files(tmp_path):
+    """sofelk.discover never yields a symlinked file — following one would sha1/copy
+    a host file's content into the Logstash-ingested watch dir."""
+    src = tmp_path / "processed"; src.mkdir()
+    (src / "real.json").write_text("{}\n")
+    secret = tmp_path / "secret"; secret.write_text("HOST SECRET\n")
+    os.symlink(secret, src / "leak.json")
+    found = sofelk.discover(str(src))
+    assert [os.path.basename(f) for f in found] == ["real.json"]
