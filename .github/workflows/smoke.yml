@@ -95,6 +95,11 @@ jobs:
         run: |
           ref="$(grep -vE '^[[:space:]]*(#|$)' byakugan.ref | head -1 | tr -d '[:space:]')"
           test -n "$ref"
+          # docker/hardening/harden.yml is gitignored — its canonical home is the
+          # GoDFIR-toolz submodule, and the dxdfir_images preflight syncs it into
+          # the docker/ build context. Do the same here so the raw `docker build`
+          # can COPY hardening/harden.yml on a clean checkout.
+          cp third_party/GoDFIR-toolz/hardening/harden.yml docker/hardening/harden.yml
           docker build -t get-sybers/byakugan:latest --build-arg BYAKUGAN_REF="$ref" -f docker/byakugan/Dockerfile docker
 
       - name: Run the pipeline smoke test

@@ -124,7 +124,7 @@ def require(image: str) -> None:
     if problems:
         raise RuntimeError(
             f"refusing to run {image}: it is not hardened — {'; '.join(problems)}. "
-            "Rebuild it with playbooks/dxdfir-build-images.yml.")
+            "Rebuild it with: dxdfir build-docker.")
 
 
 def _list_dxdfir_images() -> list[str]:

@@ -40,8 +40,7 @@ _IMAGE = "get-sybers/byakugan:latest"
 # The ONE provisioning hint, shared by every dead-end message (carcheck imports
 # it): the engine now lives in a built image, not a host checkout.
 PROVISION_HINT = (
-    "build the CAR engine image: dxdfir build-docker (or "
-    "ansible-playbook playbooks/dxdfir-build-images.yml) — it clones Byakugan at "
+    "build the CAR engine image with: dxdfir build-docker — it clones Byakugan at "
     "the byakugan.ref pin and builds get-sybers/byakugan:latest.")
 
 # Engine flags that TAKE a following value (so the argv walker consumes it).

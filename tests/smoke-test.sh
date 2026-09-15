@@ -111,7 +111,7 @@ docker image inspect get-sybers/goevtx:latest >/dev/null 2>&1 \
 # get-sybers/byakugan image (cloned + built at the byakugan.ref pin); the engine
 # reconstructs its model from its OWN nested submodules, all baked into the image.
 docker image inspect get-sybers/byakugan:latest >/dev/null 2>&1 \
-    || die "image get-sybers/byakugan:latest missing — build it: dxdfir build-docker (it clones Byakugan at the byakugan.ref pin and builds the engine image), or: docker build -t get-sybers/byakugan:latest --build-arg BYAKUGAN_REF=\$(grep -vE '^[[:space:]]*(#|\$)' byakugan.ref | head -1) -f docker/byakugan/Dockerfile docker"
+    || die "image get-sybers/byakugan:latest missing — build it: dxdfir build-docker (it clones Byakugan at the byakugan.ref pin and builds the hardened engine image)."
 pass "docker, python3, get-sybers/goevtx:latest and the Byakugan engine image present"
 
 # =============================================================================
