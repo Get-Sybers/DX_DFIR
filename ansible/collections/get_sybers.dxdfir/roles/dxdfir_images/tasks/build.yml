@@ -5,22 +5,41 @@
 # `docker export` scan proving the escalation/installer binaries and (for the
 # tool-only images) the shell and python are actually absent.
 
+# Fail fast (not a silent docker/<name>/Dockerfile fallback) if the requested
+# image isn't in the manifest — images.yml is the source of truth.
+- name: "images-build | assert the image is declared in images.yml — {{ dxdfir_images_name }}"
+  ansible.builtin.assert:
+    that:
+      - (dxdfir_images_manifest.images | default([])) | selectattr('name', 'equalto', dxdfir_images_name) | list | length == 1
+    fail_msg: >-
+      {{ dxdfir_images_name }} is not in images.yml — add it to the manifest (the
+      single source of truth), or correct the requested --image name.
+    quiet: true
+
 - name: "images-build | build the hardened image {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"
+  vars:
+    # This image's entry in the images.yml manifest (guaranteed present by the
+    # assert above). A `ref` (if present) is a sources.yml key whose sha is passed
+    # as the <NAME>_REF build-arg — named from the IMAGE (byakugan -> BYAKUGAN_REF,
+    # piiat-mem -> PIIAT_MEM_REF), the arg name the Dockerfile expects.
+    _img: "{{ (dxdfir_images_manifest.images | default([])) | selectattr('name', 'equalto', dxdfir_images_name) | first }}"
+    _ref_args: >-
+      {{ {(dxdfir_images_name | upper | replace('-', '_')) ~ '_REF':
+           ((dxdfir_images_sources[_img.ref] | default({})).ref | default('main'))}
+         if (_img.ref is defined) else {} }}
   community.docker.docker_image:
     name: "{{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"
     tag: latest
     source: build
     force_source: "{{ dxdfir_images_force | bool }}"
     build:
-      # Most images build from the shared docker/ context; an image may override
-      # its context+dockerfile (e.g. volatility builds from the PIIAT-Mem submodule).
-      path: "{{ (dxdfir_images_build_overrides[dxdfir_images_name] | default({})).context | default(dxdfir_images_context, true) }}"
-      dockerfile: "{{ (dxdfir_images_build_overrides[dxdfir_images_name] | default({})).dockerfile | default(dxdfir_images_name ~ '/Dockerfile', true) }}"
-      # Every build gets the single-source run-as uid/gid, and it WINS over any
-      # per-image override args (e.g. the shared eztool/Dockerfile's tool selector):
-      # the override is the base, the uid/gid are combined on top so they can't be
-      # replaced.
-      args: "{{ ((dxdfir_images_build_overrides[dxdfir_images_name] | default({})).args | default({}))
+      # context is repo-root-relative in the manifest (default: docker/); dockerfile
+      # is relative to it (default: <name>/Dockerfile, right for the docker/ context).
+      path: "{{ dxdfir_images_repo_root ~ '/' ~ (_img.context | default('docker')) }}"
+      dockerfile: "{{ _img.dockerfile | default(dxdfir_images_name ~ '/Dockerfile') }}"
+      # The single-source run-as uid/gid are combined ON TOP of the manifest args
+      # (and any ref arg), so they always WIN over a per-image build arg.
+      args: "{{ (_img.args | default({})) | combine(_ref_args)
                 | combine({'DFIR_UID': dxdfir_images_uid | string, 'DFIR_GID': dxdfir_images_gid | string}) }}"
 
 - name: "images-build | inspect {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"

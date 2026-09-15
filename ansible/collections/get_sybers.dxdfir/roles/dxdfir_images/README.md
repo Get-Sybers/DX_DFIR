@@ -18,8 +18,13 @@ in-tree sources:
   MAM-compressed included) and `goese` (SrumECmd/SumECmd — SRUDB.dat / SUM
   `Current.mdb`). Each builds from its OWN subdir in the submodule. The one
   remaining .NET tool, **sqlecmd** (SQLECmd), still builds from the ONE
-  parameterized `eztool/Dockerfile` (tool selected via
-  `dxdfir_images_build_overrides` args).
+  parameterized `eztool/Dockerfile` (tool selected via its `images.yml` entry's
+  `args`).
+
+The image inventory — names + per-image build context / dockerfile / args, and a
+`ref` linking to a `sources.yml` pin — lives in the repo-root **`images.yml`**,
+the single source of truth this role and the Python runtime guard
+(`get_sybers_dxdfir.images`) both read. Add or change an image there, in one place.
 
 Every image runs as uid 2000 (the single `dxdfir_runtime_uid` knob) and is
 verified against the hardening contract by this role.

@@ -30,78 +30,23 @@ dxdfir_images_context: "{{ dxdfir_images_repo_root }}/docker"
 # submodule carries its own hardening/harden.yml (COPYd by its Dockerfiles).
 dxdfir_images_eztools_context: "{{ dxdfir_images_repo_root }}/docker/GoDFIR-toolz"
 
-# The build-it-yourself image set. Every runtime tool container is built from
-# an in-repo (or submodule), ansible-hardened Dockerfile — nothing is pulled
-# from a third party at runtime. Each entry: name (the <namespace>/<name> tag,
-# and — for the docker/ context — the dir under docker/) — the build is verified
-# against the hardening contract afterwards.
-dxdfir_images_set:
-  - signatures    # the whole detection lane in one image: yara + suricata + hayabusa
-  - byakugan      # the external MITRE CAR engine, cloned + built in at the byakugan pin in sources.yml
-  - zeek
-  - volatility
-  - plaso
-  # The last still-.NET Eric Zimmerman tool — built from the ONE parameterized
-  # eztool/Dockerfile in the GoDFIR-toolz submodule, tool selected via build args
-  # (see dxdfir_images_build_overrides). Every other EZ tool is now a Go substitute.
-  - sqlecmd
-  # GoDFIR Go tools, each FROM scratch (no shell, no python, just the static Go
-  # binary) from its OWN subdir in the submodule:
-  #   goprefetch replaces PECmd            — XP->Win11 .pf, MAM-compressed included
-  #   goese      replaces SrumECmd/SumECmd — SRUDB.dat / SUM Current.mdb
-  #   gorb       replaces RBCmd (drops .NET) — Recycle Bin $I records
-  #   gomft      replaces MFTECmd (drops .NET, on go-ntfs) — $MFT
-  #   goevtx     replaces EvtxECmd (drops .NET, on go-evtx) — .evtx
-  #   goamcache/goappcompat replace AmcacheParser/AppCompatCacheParser (regparser)
-  #   gore/gosbe replace RECmd/SBECmd (regparser, dirty-hive .LOG replay)
-  #   gole/gojle replace LECmd/JLECmd (golnk/mscfb) — .lnk / jump lists
-  #   gowxt      replaces WxTCmd (modernc sqlite) — ActivitiesCache.db (built, #88)
-  - goprefetch
-  - goese
-  - gorb
-  - gomft
-  - goevtx
-  - goamcache
-  - goappcompat
-  - gore
-  - gosbe
-  - gole
-  - gojle
-  - gowxt
+# The tool-image inventory — the ONE source of truth (repo-root images.yml),
+# shared with the Python runtime guard (get_sybers_dxdfir.images). Each entry:
+# name (+ optional context / dockerfile / args / ref). Add or change an image in
+# images.yml, in ONE place. sources.yml carries the clone-at-build pins a `ref`
+# points at.
+dxdfir_images_manifest: >-
+  {{ (lookup('file', dxdfir_images_repo_root ~ '/images.yml', errors='ignore') | default('', true) | from_yaml) or {} }}
+dxdfir_images_sources: >-
+  {{ (lookup('file', dxdfir_images_repo_root ~ '/sources.yml', errors='ignore') | default('', true) | from_yaml) or {} }}
+# Names to build, in manifest order; build.yml resolves each one's build context,
+# dockerfile and args (incl. a sources.yml `ref` -> <NAME>_REF) from its entry.
+dxdfir_images_set: "{{ (dxdfir_images_manifest.images | default([])) | map(attribute='name') | list }}"
 
 # Rebuild even when an image already exists (docker build cache still applies).
 dxdfir_images_force: false
 
-# Per-image build context/dockerfile overrides.
-#   - volatility: the PIIAT-Mem submodule (its own docker/ context carries harden.yml).
-#   - sqlecmd (the last .NET EZ tool): the GoDFIR-toolz submodule root (context =
-#     the submodule root so eztool/Dockerfile reaches its hardening/harden.yml).
-#   - every goX tool: FROM scratch, so each context is its OWN subdir under the
-#     submodule (go.mod/main.go live there).
-# The Byakugan engine commit the byakugan image is built at: the byakugan `ref`
-# in the repo-root sources.yml manifest. Passed to docker/byakugan/Dockerfile
-# as --build-arg BYAKUGAN_REF, so the image is reproducibly cloned + built at that sha.
-dxdfir_images_byakugan_ref: >-
-  {{ ((lookup('file', dxdfir_images_repo_root ~ '/sources.yml', errors='ignore') | default('', true) | from_yaml)
-     or {}).get('byakugan', {}).get('ref', 'main') }}
-
-dxdfir_images_build_overrides:
-  # The CAR engine: default docker/ context + byakugan/Dockerfile, but pass the
-  # pinned engine sha so the build clones Byakugan reproducibly at that commit.
-  byakugan: {args: {BYAKUGAN_REF: "{{ dxdfir_images_byakugan_ref }}"}}
-  volatility:
-    context: "{{ dxdfir_images_repo_root }}/third_party/piiat-mem/docker"
-    dockerfile: "Dockerfile"
-  sqlecmd: {context: "{{ dxdfir_images_eztools_context }}", dockerfile: "eztool/Dockerfile", args: {EZTOOL: "SQLECmd"}}
-  goprefetch: {context: "{{ dxdfir_images_eztools_context }}/goprefetch", dockerfile: "Dockerfile"}
-  goese: {context: "{{ dxdfir_images_eztools_context }}/goese", dockerfile: "Dockerfile"}
-  gorb: {context: "{{ dxdfir_images_eztools_context }}/gorb", dockerfile: "Dockerfile"}
-  gomft: {context: "{{ dxdfir_images_eztools_context }}/gomft", dockerfile: "Dockerfile"}
-  goevtx: {context: "{{ dxdfir_images_eztools_context }}/goevtx", dockerfile: "Dockerfile"}
-  goamcache: {context: "{{ dxdfir_images_eztools_context }}/goamcache", dockerfile: "Dockerfile"}
-  goappcompat: {context: "{{ dxdfir_images_eztools_context }}/goappcompat", dockerfile: "Dockerfile"}
-  gore: {context: "{{ dxdfir_images_eztools_context }}/gore", dockerfile: "Dockerfile"}
-  gosbe: {context: "{{ dxdfir_images_eztools_context }}/gosbe", dockerfile: "Dockerfile"}
-  gole: {context: "{{ dxdfir_images_eztools_context }}/gole", dockerfile: "Dockerfile"}
-  gojle: {context: "{{ dxdfir_images_eztools_context }}/gojle", dockerfile: "Dockerfile"}
-  gowxt: {context: "{{ dxdfir_images_eztools_context }}/gowxt", dockerfile: "Dockerfile"}
+# Per-image build context / dockerfile / args now live in images.yml (one entry
+# per image); tasks/build.yml resolves them from the manifest entry, including a
+# `ref` -> <NAME>_REF build-arg whose sha comes from sources.yml (e.g. byakugan
+# -> BYAKUGAN_REF). No separate overrides map — the manifest is the single source.

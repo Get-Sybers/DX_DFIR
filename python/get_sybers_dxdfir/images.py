@@ -20,46 +20,53 @@ so the logic is unit-testable without docker.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
+from pathlib import Path
 
-# The tool images the pipeline runs. Each MUST be hardened (label + uid 2000).
-HARDENED_IMAGES = (
-    "get-sybers/signatures:latest",  # the whole detection lane: yara + suricata + hayabusa
-    # The external Byakugan MITRE CAR engine (dxdfir_byakugan lane) — cloned + built
-    # into the image at the sources.yml pin (docker/byakugan/Dockerfile); the
-    # engine is python, so python stays. One entrypoint binary dispatched to
-    # build / timeline / car-vocab (get_sybers_dxdfir.mitrecar).
-    "get-sybers/byakugan:latest",
-    "get-sybers/zeek:latest",
-    "get-sybers/volatility:latest",
-    "get-sybers/plaso:latest",
-    # The last still-.NET Eric Zimmerman tool (dxdfir_godfir_toolz lane) — built from
-    # the one parameterized docker/GoDFIR-toolz/eztool/Dockerfile. Every other
-    # EZ tool has been ported to a Go substitute in the GoDFIR block below.
-    "get-sybers/sqlecmd:latest",
-    # GoDFIR Go tools (FROM scratch; each built from its own subdir in the
-    # GoDFIR-toolz submodule): gorb (RBCmd), goprefetch/goese/gomft
-    # (PECmd/SrumECmd/MFTECmd), goevtx (EvtxECmd), goamcache/goappcompat
-    # (Amcache/AppCompatCache), gore/gosbe (RECmd/SBECmd — registry .LOG replay),
-    # gole/gojle (LECmd/JLECmd), gowxt (WxTCmd — built, deferred #88).
-    "get-sybers/gorb:latest",
-    "get-sybers/goprefetch:latest",
-    "get-sybers/goese:latest",
-    "get-sybers/gomft:latest",
-    "get-sybers/goevtx:latest",
-    "get-sybers/goamcache:latest",
-    "get-sybers/goappcompat:latest",
-    "get-sybers/gore:latest",
-    "get-sybers/gosbe:latest",
-    "get-sybers/gole:latest",
-    "get-sybers/gojle:latest",
-    "get-sybers/gowxt:latest",
-)
-# Other get-sybers/* images that legitimately exist but are not tool containers, so
-# they are exempt from the hardened-tool contract (but still allow-listed, so
-# they don't trip the "unexpected image" audit). Tags are matched by repo.
-ALLOWED_NON_TOOL_REPOS = ("get-sybers/sof-elk", "get-sybers/molecule")
+
+def _find_manifest() -> Path:
+    """Locate images.yml — the tool-image inventory at the repo root. Honour
+    DFIR_REPO_ROOT, else walk up from this file (the pipeline runs from the
+    source tree, so the repo root is always an ancestor)."""
+    root = os.environ.get("DFIR_REPO_ROOT")
+    if root and (Path(root) / "images.yml").is_file():
+        return Path(root) / "images.yml"
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "images.yml").is_file():
+            return parent / "images.yml"
+    raise RuntimeError(
+        "images.yml (the tool-image inventory) not found — set DFIR_REPO_ROOT or "
+        "run from the repository tree")
+
+
+def _load_inventory() -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """(HARDENED_IMAGES, ALLOWED_NON_TOOL_REPOS) from images.yml — the ONE source
+    of truth shared with the Ansible dxdfir_images role. Each `tool` image (the
+    default) MUST be hardened (label + uid 2000); non_tool_repos are exempt but
+    allow-listed so they don't trip the 'unexpected image' audit."""
+    import yaml
+    path = _find_manifest()
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise RuntimeError(f"{path}: tool-image manifest must be a YAML mapping")
+    ns = data.get("namespace", "get-sybers")
+    images = data.get("images") or []
+    if not isinstance(images, list):
+        raise RuntimeError(f"{path}: 'images' must be a list of image entries")
+    hardened = []
+    for img in images:
+        if not isinstance(img, dict) or not isinstance(img.get("name"), str) or not img["name"]:
+            raise RuntimeError(f"{path}: every image entry needs a non-empty 'name' "
+                               f"string (bad entry: {img!r})")
+        if img.get("tool", True):
+            hardened.append(f"{ns}/{img['name']}:latest")
+    non_tool = tuple(data.get("non_tool_repos") or ())
+    return tuple(hardened), non_tool
+
+
+HARDENED_IMAGES, ALLOWED_NON_TOOL_REPOS = _load_inventory()
 
 HARDENED_LABEL = "com.get-sybers.hardened"
 REQUIRED_USER = "2000:2000"

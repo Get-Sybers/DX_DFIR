@@ -28,7 +28,7 @@ argument_specs:
         type: list
         elements: str
         required: false
-        description: "Bare image names to build; each builds the get-sybers/<name>:latest tag. Default: the full runtime set."
+        description: "Bare image names to build; each builds the get-sybers/<name>:latest tag. Default: every image in the repo-root images.yml manifest."
       dxdfir_images_force:
         type: bool
         required: false
