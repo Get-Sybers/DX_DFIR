@@ -18,13 +18,13 @@ built on top of them:
 
 The harness lives in [`.github/tests/elastic-riskgate/`](/.github/tests/elastic-riskgate/README.md).
 It was **authored without a cluster**: the scripts are written to run as-is once
-`docker/elastic` is up, and an offline `selftest` pins the fixture, the queries
+`stacks/elastic` is up, and an offline `selftest` pins the fixture, the queries
 and the expected tables to each other and to the contract. The first live run
 is the gate.
 
 ## Run it
 
-Prerequisites: the Byakugan Elastic stack (`docker/elastic/`, wave 1) up and
+Prerequisites: the Byakugan Elastic stack (`stacks/elastic/`, wave 1) up and
 healthy — its README covers `.env`, `vm.max_map_count` and `docker compose up`.
 `python3` on the host; `docker` if the CA is to be fetched automatically.
 
@@ -41,7 +41,7 @@ healthy — its README covers `.env`, `vm.max_map_count` and `docker compose up`
 ./.github/tests/elastic-riskgate/riskgate.sh load         # or proof1 | proof2 | probe, one step at a time
 ```
 
-The wrapper reads `ELASTIC_PASSWORD` from `docker/elastic/.env` and copies the
+The wrapper reads `ELASTIC_PASSWORD` from `stacks/elastic/.env` and copies the
 CA out of the running `elasticsearch` container (`certs` volume); override with
 `ES_URL`, `ES_USER`, `ES_PASSWORD`, `ES_CA` (a PEM file) or, loopback-only and
 as a last resort, `RISKGATE_INSECURE=1`. Exit code 0 means every gated check
@@ -195,7 +195,7 @@ The gate fails a check, names it and prints why. The fallback per check:
 
 **0.1 — version.** Elasticsearch below 9.x: `LOOKUP JOIN` is a technical
 preview in 8.18 and absent before; upgrade the stack (`ELASTIC_VERSION` in
-`docker/elastic/.env`). A 9.x other than 9.4.3 runs the gate but the result is
+`stacks/elastic/.env`). A 9.x other than 9.4.3 runs the gate but the result is
 indicative — re-pin and re-run before relying on it.
 
 **1.1 — the streams reject the rows.** Read the item error. A mapping conflict
@@ -217,7 +217,7 @@ re-stamp evidence.
 phase would age a case out from under the analyst. Fallback: a `logs-car@custom`
 component template that sets `lifecycle: {}` with no `data_retention` (or an
 ILM policy without a delete phase) so the CAR streams are exempt — and note the
-cluster setting in `docker/elastic/config/elasticsearch.yml`.
+cluster setting in `stacks/elastic/config/elasticsearch.yml`.
 
 **1.4 — the window query does not hit.** With 1.1–1.3 green the row is there
 with its 2019 time, so the query is at fault: check the two `TO_DATETIME`

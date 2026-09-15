@@ -101,7 +101,7 @@ dxdfir car-timeline data_store/processed/byakugan # one time-ordered timeline ac
 
 ### Step 7: Bring up the Elastic-native backend
 ```bash
-cd docker/elastic
+cd stacks/elastic
 cp .env.example .env            # then replace EVERY placeholder (see the file)
 sudo sysctl -w vm.max_map_count=262144
 docker compose up -d
@@ -112,7 +112,7 @@ docker compose ps               # setup exits 0; the rest go (healthy)
   `ELASTIC_VERSION`, all published on `127.0.0.1`. Kibana is at
   `http://127.0.0.1:5601` (log in as `elastic`).
 - `.env` holds every credential and is gitignored — **never commit it**.
-- Full detail (Fleet enrolment, the CA, shipping): [docker/elastic/README.md](/docker/elastic/README.md).
+- Full detail (Fleet enrolment, the CA, shipping): [stacks/elastic/README.md](/stacks/elastic/README.md).
 
 ### Step 8: Deliver evidence to the backend
 - Filebeat tails the tree mounted at `ELASTIC_INGEST_DIR` (`<type>/**/*.json[l]`)

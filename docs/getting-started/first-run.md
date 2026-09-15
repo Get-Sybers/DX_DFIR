@@ -95,14 +95,14 @@ default, which is exactly what the [Timeline tab](the-interface.md#timeline) rea
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144        # Elasticsearch requires this, or it crash-loops
-cd docker/elastic && cp .env.example .env     # then fill in the placeholders (see below)
+cd stacks/elastic && cp .env.example .env     # then fill in the placeholders (see below)
 docker compose up -d                           # Elasticsearch + Kibana + Fleet + Filebeat
 ```
 
 Or drive the same stack with `dxdfir stack deploy`. Everything binds `127.0.0.1`;
 Filebeat ships the processed evidence into `logs-dxdfir.<type>-*` data streams. See
 [the stack](../architecture/the-stack.md) and
-[docker/elastic/README.md](../../docker/elastic/README.md).
+[stacks/elastic/README.md](../../stacks/elastic/README.md).
 
 > **Two things bite here on a first run:**
 > - `vm.max_map_count=262144` must be set on the host or Elasticsearch won't start

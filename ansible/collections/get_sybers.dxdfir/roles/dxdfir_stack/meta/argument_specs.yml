@@ -7,7 +7,7 @@ argument_specs:
         Lifecycle for the docker-compose analysis backends: deploy (build if
         needed + bring up + verify running), destroy (down, optionally with
         volumes), start, stop and status. Localhost-only. The Elastic-native
-        stack uses prebuilt images and requires docker/elastic/.env; SOF-ELK
+        stack uses prebuilt images and requires stacks/elastic/.env; SOF-ELK
         reuses the dxdfir_deploy_sofelk role for its from-source build.
     options:
       dxdfir_stack_action:
@@ -25,11 +25,11 @@ argument_specs:
       dxdfir_stack_compose_dir:
         type: str
         required: false
-        description: "Compose dir for the selected stack (default docker/elastic or docker/sof-elk)."
+        description: "Compose dir for the selected stack (default stacks/elastic or docker/sof-elk)."
       dxdfir_stack_env_file:
         type: str
         required: false
-        description: "Env file for compose interpolation (elastic: docker/elastic/.env; sofelk: data_store/sofelk.env)."
+        description: "Env file for compose interpolation (elastic: stacks/elastic/.env; sofelk: data_store/sofelk.env)."
       dxdfir_stack_build:
         type: bool
         required: false

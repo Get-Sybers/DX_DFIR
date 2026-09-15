@@ -6,7 +6,7 @@ galaxy_info:
   description: >-
     Lifecycle for the docker-compose analysis backends (Elastic-native and
     SOF-ELK): deploy/destroy/start/stop/status. Elastic uses prebuilt images and
-    docker/elastic/.env; SOF-ELK reuses dxdfir_deploy_sofelk for its build.
+    stacks/elastic/.env; SOF-ELK reuses dxdfir_deploy_sofelk for its build.
   company: Get-Sybers
   license: MIT
   min_ansible_version: "2.15"

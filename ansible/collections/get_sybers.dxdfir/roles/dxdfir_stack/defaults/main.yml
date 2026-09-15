@@ -4,7 +4,7 @@
 
 # Which lifecycle action: deploy | destroy | start | stop | status.
 dxdfir_stack_action: status
-# Which stack: elastic (docker/elastic, the default) or sofelk (docker/sof-elk).
+# Which stack: elastic (stacks/elastic, the default) or sofelk (docker/sof-elk).
 dxdfir_stack_name: elastic
 
 # Repo root is five levels up from this role.

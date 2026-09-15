@@ -91,7 +91,7 @@ not a convenient interpreter.
 ## What is not built here
 
 The analysis backend is not a tool image: the Elastic stack under
-`docker/elastic/` (Elasticsearch, Kibana, Fleet Server, Filebeat — the official
+`stacks/elastic/` (Elasticsearch, Kibana, Fleet Server, Filebeat — the official
 Elastic images, version-pinned) is brought up with docker compose, published on
 `127.0.0.1` only, with security on. No other third-party image is pulled at
 runtime (the stock .NET runtime image is used only by the evtx lane's

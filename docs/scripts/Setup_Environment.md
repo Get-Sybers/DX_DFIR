@@ -87,7 +87,7 @@ The images managed are:
   `ansible-playbook playbooks/dxdfir-build-images.yml` (see docs/Containers.md)
 - `mcr.microsoft.com/dotnet/runtime:9.0` — the stock .NET runtime for the evtx
   lane's operator-supplied mode (the only pulled image; the Elastic-native
-  backend under `docker/elastic/` is compose-managed and not part of this set)
+  backend under `stacks/elastic/` is compose-managed and not part of this set)
 
 Tarballs are written to `data_store/docker_images/`.
 

@@ -73,7 +73,7 @@ policing a large image from inside.
 mcr.microsoft.com/dotnet/runtime:9.0                         # evtxecmd operator-supplied mode only
 ```
 
-The analysis backend is not a tool image: the Elastic stack (`docker/elastic/`)
+The analysis backend is not a tool image: the Elastic stack (`stacks/elastic/`)
 is the official Elastic images, version-pinned (`ELASTIC_VERSION`), brought up
 with docker compose on `127.0.0.1` with security on — see its README.
 
@@ -111,7 +111,7 @@ the network.
 
 The SOF-ELK stack (`docker/sof-elk/`, from-source build) is handled separately
 by `dxdfir_deploy_sofelk`. It is retiring in favour of Byakugan's own Elastic-native
-stack (`docker/elastic/` — security on, Fleet, Filebeat instead of Logstash; see
+stack (`stacks/elastic/` — security on, Fleet, Filebeat instead of Logstash; see
 its README).
 
 **Not containers:** **Hayabusa** ships as a self-contained Rust binary (no
@@ -124,7 +124,7 @@ official image) — operator-supplied: download the pinned release into
 - [Zeek](https://zeek.org/) · [Suricata](https://suricata.io/) · [YARA](https://virustotal.github.io/yara/)
 - [Volatility 3](https://github.com/volatilityfoundation/volatility3) · [Plaso / GIFT PPA](https://launchpad.net/~gift)
 - [EvtxECmd (Eric Zimmerman)](https://github.com/EricZimmerman/evtx) · [Hayabusa (Yamato Security)](https://github.com/Yamato-Security/hayabusa)
-- [Elastic Stack](https://www.elastic.co/docs) — the analysis backend (`docker/elastic/`)
+- [Elastic Stack](https://www.elastic.co/docs) — the analysis backend (`stacks/elastic/`)
 
 The obligations the tools and the backend place on the operator are recorded in
 [THIRD_PARTY_NOTICES.md](/.github/THIRD_PARTY_NOTICES.md).

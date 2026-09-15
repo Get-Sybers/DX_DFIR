@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// kibanaStatus is one poll of the Elastic stack (docker/elastic): Kibana's
+// kibanaStatus is one poll of the Elastic stack (stacks/elastic): Kibana's
 // reachability + URL, Elasticsearch cluster health, and the dxdfir data-stream
 // doc counts. A terminal can't host Kibana's web UI, so the tab answers the
 // operator's real question instead — "is my evidence in Elastic yet, and how
@@ -32,7 +32,7 @@ type streamRow struct {
 }
 
 // Elastic stack endpoints — every published port is bound to 127.0.0.1 (see
-// docker/elastic/docker-compose.yml).
+// stacks/elastic/docker-compose.yml).
 const (
 	esURL     = "https://localhost:9200"
 	kibanaURL = "http://127.0.0.1:5601"
@@ -40,7 +40,7 @@ const (
 
 // pollKibana probes the stack, bounded, degrading to a note rather than an error
 // — the tab must never take the shell down. Credentials come from
-// docker/elastic/.env (never committed); without them only the unauthenticated
+// stacks/elastic/.env (never committed); without them only the unauthenticated
 // posture is visible.
 func pollKibana(ctx context.Context, repoRoot string) kibanaStatus {
 	st := kibanaStatus{kibanaURL: kibanaURL, kibanaState: "down", esState: "unreachable"}
@@ -58,15 +58,15 @@ func pollKibana(ctx context.Context, repoRoot string) kibanaStatus {
 		// answers "missing authentication credentials" when it is up).
 		if body, err := curl(ctx, esURL, "", ""); err == nil && strings.Contains(string(body), "missing authentication") {
 			st.esState = "up"
-			st.esDetail = "auth required — set docker/elastic/.env for health + doc counts"
+			st.esDetail = "auth required — set stacks/elastic/.env for health + doc counts"
 		}
-		st.note = "docker/elastic/.env not found — showing reachability only"
+		st.note = "stacks/elastic/.env not found — showing reachability only"
 		return st
 	}
 
 	health, err := curl(ctx, esURL+"/_cluster/health", user, pass)
 	if err != nil {
-		st.note = "elasticsearch unreachable: " + firstLineOf(err.Error()) + " — is docker/elastic up?"
+		st.note = "elasticsearch unreachable: " + firstLineOf(err.Error()) + " — is stacks/elastic up?"
 		return st
 	}
 	var h struct {
@@ -79,12 +79,12 @@ func pollKibana(ctx context.Context, repoRoot string) kibanaStatus {
 		st.esDetail = fmt.Sprintf("%d node(s), %d active shards", h.Nodes, h.ActiveShards)
 	} else if strings.Contains(string(health), "missing authentication") {
 		st.esState = "up"
-		st.esDetail = "authentication failed — check docker/elastic/.env credentials"
+		st.esDetail = "authentication failed — check stacks/elastic/.env credentials"
 		return st
 	}
 
 	// The dxdfir evidence lands in logs-dxdfir.<type>-<namespace> data streams
-	// (docker/elastic/config/filebeat.yml). List them with doc counts.
+	// (stacks/elastic/config/filebeat.yml). List them with doc counts.
 	if body, err := curl(ctx, esURL+"/_cat/indices/logs-dxdfir*?format=json&h=index,docs.count,store.size&s=index", user, pass); err == nil {
 		var idx []struct {
 			Index string `json:"index"`
@@ -170,7 +170,7 @@ func curlCode(ctx context.Context, url string) string {
 }
 
 // readElasticEnv reads the Elasticsearch username/password from
-// docker/elastic/.env (the file the compose stack itself consumes). Username
+// stacks/elastic/.env (the file the compose stack itself consumes). Username
 // defaults to "elastic"; the boolean is false when no password is found.
 func readElasticEnv(repoRoot string) (user, pass string, ok bool) {
 	user = "elastic" // the stack's default; returned even when no .env is found
@@ -228,12 +228,12 @@ func runESQL(ctx context.Context, repoRoot, query string) esqlResult {
 	}
 	user, pass, ok := readElasticEnv(repoRoot)
 	if !ok {
-		return esqlResult{ran: true, note: "no credentials — set docker/elastic/.env to query"}
+		return esqlResult{ran: true, note: "no credentials — set stacks/elastic/.env to query"}
 	}
 	body, _ := json.Marshal(map[string]any{"query": query})
 	out, err := curlDo(ctx, esURL+"/_query?format=json", user, pass, "POST", body)
 	if err != nil {
-		return esqlResult{ran: true, note: "query failed: " + firstLineOf(err.Error()) + " — is docker/elastic up?"}
+		return esqlResult{ran: true, note: "query failed: " + firstLineOf(err.Error()) + " — is stacks/elastic up?"}
 	}
 	return parseESQL(out)
 }

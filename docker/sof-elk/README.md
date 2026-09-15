@@ -1,7 +1,7 @@
 # SOF-ELK container (from source)
 
 > **Retiring.** Byakugan's own Elastic-native stack — security ON, Fleet, Filebeat
-> instead of Logstash — lives in [`docker/elastic/`](../elastic/README.md) and
+> instead of Logstash — lives in [`stacks/elastic/`](../../stacks/elastic/README.md) and
 > replaces this one. This directory stays only until `dxdfir_deploy_sofelk` (which
 > builds from it) is retired with it.
 
@@ -15,7 +15,7 @@ the `dxdfir_deploy_sofelk` role has a real stack to run.
   (as on the SOF-ELK box — Filebeat ships the `/logstash/<type>/` dirs to Logstash on
   `localhost:5044`). An entrypoint starts Filebeat, then Logstash.
 - **`docker-compose.yml`** — **Elasticsearch** + the SOF-ELK image + **Kibana**,
-  localhost-only, no security (dead-box posture; `docker/elastic` — which is
+  localhost-only, no security (dead-box posture; `stacks/elastic` — which is
   replacing this stack — runs with security on).
 
 Pinned to Elastic **9.4.3** (SOF-ELK `main`'s pin) — override with `ELASTIC_VERSION`.

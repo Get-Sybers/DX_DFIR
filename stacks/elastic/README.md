@@ -22,7 +22,7 @@ published ports bind to **127.0.0.1**; data lives in named volumes (`certs`,
 ## Bring it up
 
 ```bash
-cd docker/elastic
+cd stacks/elastic
 cp .env.example .env            # then replace EVERY placeholder (see the file)
 sudo sysctl -w vm.max_map_count=262144
 docker compose up -d
@@ -40,7 +40,7 @@ still hold the `.env.example` placeholders. `.env` and `ingest/` are gitignored 
 
 ## Security posture
 
-| | retired `docker/sof-elk` | `docker/elastic` |
+| | retired `docker/sof-elk` | `stacks/elastic` |
 |---|---|---|
 | licence | Basic | Basic (`xpack.license.self_generated.type: basic`) |
 | `xpack.security` | **off** (dead-box posture) | **on** — authentication + RBAC |
