@@ -1,5 +1,0 @@
-- ./samples directory should be removed. the shell script that downloads samples should download them into ./data_store/raw/sort
-- find a better home for ./tests
-- find a better home for ./third_party can probably live in data_store/dependencies if it's required. it's also not third party. I own those repos
-- the only markdown that should be in the root of the repo should be README.md. if those other markdown docs aren't stale, give them a propper home in docs/
-- if car_data_model.json is still required, move it to ./data_store/schema/
