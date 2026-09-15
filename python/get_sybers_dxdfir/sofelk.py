@@ -31,10 +31,22 @@ def _sha1(path: str) -> str:
 
 
 def discover(src_dir: str) -> list[str]:
+    # os.walk does not descend symlinked directories (followlinks=False). Skip
+    # symlinked FILES too: a processed-tree entry is never legitimately a symlink,
+    # so following one would sha1/copy the target's content (an arbitrary host
+    # file) into the Logstash-ingested watch dir. Belt-and-braces with a realpath
+    # containment check against src_dir.
+    root = os.path.realpath(src_dir)
     out = []
     for cur, _dirs, files in os.walk(src_dir):
         for name in files:
-            out.append(os.path.join(cur, name))
+            full = os.path.join(cur, name)
+            if os.path.islink(full):
+                continue
+            real = os.path.realpath(full)
+            if real != root and not real.startswith(root + os.sep):
+                continue
+            out.append(full)
     return sorted(out)
 
 
@@ -77,7 +89,7 @@ def deliver(src_dir: str, target_dir: str, force: bool = False) -> dict:
         dest = os.path.join(target_dir, rel)
         try:
             os.makedirs(os.path.dirname(dest), exist_ok=True)
-            shutil.copy2(f, dest)
+            shutil.copy2(f, dest, follow_symlinks=False)  # discover already skips links
         except OSError as exc:
             summary["failed"] += 1
             summary.setdefault("errors", []).append({"file": rel, "error": str(exc)})

@@ -101,8 +101,15 @@ def _collect(temp_dir: str, output_dir: str) -> list[str]:
     for name in sorted(os.listdir(temp_dir)):
         if not name.endswith(".log"):
             continue
+        src = os.path.join(temp_dir, name)
+        # Only relocate a regular file the tool actually wrote. A symlink in the
+        # container's output mount is never a legitimate zeek log — moving it would
+        # carry a link to an arbitrary host file into the processed/CAR tree, which
+        # every later reader would then follow. Skip it.
+        if os.path.islink(src) or not os.path.isfile(src):
+            continue
         dest = os.path.join(output_dir, name[: -len(".log")] + ".json")
-        shutil.move(os.path.join(temp_dir, name), dest)
+        shutil.move(src, dest)
         outputs.append(os.path.basename(dest))
     return outputs
 
