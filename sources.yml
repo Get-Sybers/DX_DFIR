@@ -20,8 +20,8 @@
 # byakugan reconstructs its object model from its own nested car +
 # attack-datasources submodules at build time (recursive clone required).
 byakugan:
-  url: https://github.com/Get-Sybers/byakugan
-  ref: bcd01c39ffbf40eea05ee09e25890d64a5d48593
+  url: https://github.com/Get-Sybers/Byakugan
+  ref: 8f808b5850e56a43c0a18d029fbf61777acb3020
   consumed: "docker/GoDFIR-toolz/byakugan/Dockerfile (BYAKUGAN_REF build-arg)"
 
 # PIIAT-Mem (Volatility 3 memory forensics) — fused into get-sybers/piiat-mem in
