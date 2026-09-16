@@ -10,7 +10,11 @@
 # playbook (what `dxdfir build-docker` runs) is the one build mechanism, and
 # scripts/save-docker-images.sh --build calls it and saves the results as
 # tarballs for transport. When this script finds no route to the internet it
-# falls back to loading those pre-seeded tarballs (see "Analysis images" below).
+# falls back to loading those pre-seeded tarballs (see "Analysis images"
+# below). That fallback covers the IMAGES only: the earlier steps (apt, the
+# Docker repo, submodules, pip, collections) still need the network on a FIRST
+# run, so the offline path assumes a host provisioned online first — set up
+# connected, save the tarballs, move/disconnect, re-run.
 #
 # Each guard below encodes a way the previous revision of this script failed on
 # a clean machine:
@@ -572,10 +576,13 @@ if ! curl -fsI --connect-timeout 4 --max-time 8 https://download.docker.com/ >/d
     section "Analysis images (offline fallback)"
     _tars="${DXDFIR_IMAGE_DIR:-$REPO_ROOT_DIR/data_store/docker_images}"
     if compgen -G "$_tars/*.tar" >/dev/null; then
-        step "No internet — loading the pre-seeded image tarballs from $_tars ..."
-        "$SCRIPT_DIR/save-docker-images.sh" --load \
-            || die "Loading the image tarballs failed (scripts/save-docker-images.sh --load)."
-        ok "Analysis images loaded from the tarballs."
+        step "No internet — loading + verifying the pre-seeded image tarballs from $_tars ..."
+        # --verify loads every tarball THEN runs the hardened-inventory audit
+        # with the venv just installed above, so a missing or corrupt tarball
+        # fails here, not at first pipeline use.
+        DXDFIR_PYTHON="$DXDFIR_VENV/bin/python3" "$SCRIPT_DIR/save-docker-images.sh" --verify \
+            || die "Offline image load/verify failed (scripts/save-docker-images.sh --verify)."
+        ok "Analysis images loaded and the hardened inventory verified."
     else
         warn "No internet and no image tarballs in $_tars — the analysis images cannot be provisioned."
         detail "On a connected host: scripts/save-docker-images.sh --build, then carry data_store/docker_images/ across."

@@ -35,6 +35,8 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 REPO_ROOT_DIR="$(realpath "$SCRIPT_DIR/..")"
 DOCKER_TAR_DIR="${DXDFIR_IMAGE_DIR:-$REPO_ROOT_DIR/data_store/docker_images}"
 
+die() { echo "❌ $*" >&2; exit 1; }
+
 # Runtime tool images — BUILT in-repo (or from the GoDFIR-toolz submodule), never
 # pulled. Derived from the repo-root images.yml manifest (the single source of
 # truth the Python guard and the dxdfir_images build role also read), so a new
@@ -56,6 +58,15 @@ if [[ -z "$_ever" ]]; then
 fi
 mapfile -t PULL_IMAGES < <(awk -F'"' '/^[[:space:]]*image:/{print $2}' "$_elastic_dir/docker-compose.yml" \
     | sed "s/\${ELASTIC_VERSION:-[^}]*}/$_ever/" | sort -u)
+
+# Fail closed: an unreadable manifest/compose or an unresolvable version must
+# not silently shrink the offline set the header promises.
+[[ ${#BUILT_IMAGES[@]} -gt 0 ]] \
+    || die "No images derived from $REPO_ROOT_DIR/images.yml — manifest missing or unreadable."
+[[ -n "$_ever" ]] \
+    || die "Could not resolve ELASTIC_VERSION from $_elastic_dir/.env.example or the compose default."
+[[ ${#PULL_IMAGES[@]} -gt 0 ]] \
+    || die "No image: lines found in $_elastic_dir/docker-compose.yml — cannot derive the Elastic set."
 
 MODE="save"
 BUILD_FIRST=0
@@ -81,8 +92,6 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-die() { echo "❌ $*" >&2; exit 1; }
-
 if [[ "$MODE" == "list" ]]; then
     echo "Built in-repo (images.yml → dxdfir-build-images.yml; docker save):"
     printf '   • %s\n' "${BUILT_IMAGES[@]}"
@@ -106,12 +115,15 @@ fi
 
 image_to_filename() { echo "$1" | tr '/' '_' | tr ':' '_'; }
 
-# The hardened-inventory guard, used by --verify after a load.
+# The hardened-inventory guard, used by --verify after a load. $DXDFIR_PYTHON
+# lets a caller with a ready venv (setup-environment.sh's offline fallback)
+# run the audit with it; bare python3 otherwise, degrading to a skip-notice
+# when the package is not importable there.
 verify_inventory() {
-    local py="$REPO_ROOT_DIR/python"
-    if PYTHONPATH="$py" python3 -c "import get_sybers_dxdfir.images" 2>/dev/null; then
+    local py="$REPO_ROOT_DIR/python" pybin="${DXDFIR_PYTHON:-python3}"
+    if PYTHONPATH="$py" "$pybin" -c "import get_sybers_dxdfir.images" 2>/dev/null; then
         echo "🔒 Verifying the hardened image inventory..."
-        PYTHONPATH="$py" python3 -m get_sybers_dxdfir.images --audit >/dev/null \
+        PYTHONPATH="$py" "$pybin" -m get_sybers_dxdfir.images --audit >/dev/null \
             && echo "✅ Inventory clean — all hardened tool images present, nothing unexpected." \
             || die "Image inventory verification FAILED (see: python3 -m get_sybers_dxdfir.images --audit)."
     else
