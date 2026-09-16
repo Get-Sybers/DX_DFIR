@@ -9,8 +9,9 @@ argument_specs:
         transaction logs, Amcache, jump lists/lnk, Recycle Bin $I records, Windows
         Timeline database, SRUM database, resident $MFT) with a plaso YAML collection
         filter, then runs each hardened GoDFIR-toolz container over what was pulled
-        out (gore, gojle, gole, goamcache, goappcompat, gosbe, gorb, gomft) plus a
-        plaso log2timeline/psort two-step for SRUM. Idempotent at the
+        out (gore, gojle, gole, goamcache, goappcompat, gosbe, gorb, gomft) plus
+        goese for SRUM (one JSONL per provider table, when SRUDB.dat was
+        extracted) and goprefetch for Prefetch. Idempotent at the
         host level: a host output dir that already holds any file is skipped unless
         dxdfir_godfir_toolz_force.
     options:

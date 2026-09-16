@@ -120,7 +120,7 @@ faked into a canonical column.
 | **Zeek** | `zeek_conn`, `zeek_http`, `zeek_smtp`, `zeek_files` | flow, http, email, file |
 | **Plaso execution** | `plaso_exec_prefetch/winreg/cron` | process |
 | **Plaso filesystem + Linux** | `l2t_filestat/mft/usnjrnl/utmp/utmpx/text` | file, user_session |
-| **Registry + SRUM** (the GoDFIR-toolz lane's output) | `recmd`, `plaso_registry`, `plaso_srum` | registry, flow, process |
+| **Registry + SRUM + Prefetch** (the GoDFIR-toolz lane's output) | `recmd`, `esedump_srum`, `prefetch_dump` | registry, flow, process |
 | **Memory** (PIIAT-Mem) | passthrough | all 10 memory objects (finished CAR) |
 
 Windows event-log EventIds covered: 4624/4625/4634/4647/4672/4688 (Security),
@@ -131,9 +131,11 @@ maps (verified: Plaso-parsed LoneWolf → byte-identical CAR to the goevtx run,
 including definitive Sysmon ProcessGuid links).
 
 SRUM and the registry batch are now covered: the **GoDFIR-toolz lane** (`get_sybers_dxdfir.godfir_toolz`)
-produces the real tool output — gore's batch JSON and, for SRUM, plaso's
-`esedb/srum` parse of `SRUDB.dat` — which the `recmd`,
-`plaso_registry` and `plaso_srum` maps turn into registry / flow / process CAR.
+produces the real tool output — gore's batch JSON (the `recmd` map), goese's
+per-provider-table SRUM JSONL (the `esedump_srum` map) and goprefetch's JSONL
+(the `prefetch_dump` map) — turned into registry / flow / process CAR. The main
+log2timeline lane's own registry/SRUM coverage (`plaso_registry`, `l2t_srum`)
+coexists, at lower fidelity, as its own data sources.
 
 Honest non-coverage: `email` has no live source yet (the only smtp capture is
 STARTTLS-encrypted); Zeek dns/ssl/x509/dhcp/ntp/snmp/ocsp/weird/pe have no

@@ -5,8 +5,8 @@ galaxy_info:
   author: Get-Sybers
   description: >-
     Process disk images with the GoDFIR-toolz parsers (gore, gojle, gole,
-    goamcache, goappcompat, gosbe, gorb, gomft) plus a plaso-driven
-    SRUM parse into per-host artefact output.
+    goamcache, goappcompat, gosbe, gorb, gomft) plus goese for SRUM and
+    goprefetch for Prefetch, into per-host artefact output.
     Invokes the get_sybers_dxdfir.godfir_toolz Python processor; one output dir per host.
   company: Get-Sybers
   license: MIT
