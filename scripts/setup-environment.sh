@@ -357,7 +357,7 @@ confirm "Do you wish to proceed?" || { info "Setup cancelled."; exit 1; }
 ################################################################################
 # Pull the git submodules — RECURSIVELY.
 #
-# The remaining submodule is docker/GoDFIR-toolz: the Go EZ-tool family, goevtx
+# The remaining submodule is docker/GoDFIR-toolz: the Go tool family, goevtx
 # and the PIIAT-Mem volatility image build. --recursive is kept on principle: it
 # means any submodule that DOES nest content checks out complete instead of
 # silently empty — the failure mode that bit the CAR engine while it was vendored
