@@ -18,10 +18,8 @@ No third-party tool image is pulled at runtime. Every image builds from the
   the two artefact families that had no Linux-viable parser at all before the
   Go ports — `goprefetch` (XP→Win11 `.pf`,
   MAM-compressed included) and `goese` (SRUDB.dat / SUM
-  `Current.mdb`). Each builds from its OWN subdir in the submodule. The one
-  remaining .NET tool, **sqlecmd** (SQLECmd), still builds from the ONE
-  parameterized `eztool/Dockerfile` (tool selected via its `images.yml` entry's
-  `args`).
+  `Current.mdb`). Each builds from its OWN subdir in the submodule. Nothing
+  .NET remains in the inventory.
 
 The image inventory — names + per-image build context / dockerfile / args, and a
 `ref` linking to a `sources.yml` pin — lives in the repo-root **`images.yml`**,

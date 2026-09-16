@@ -14,7 +14,7 @@
 #               from there).
 #   dockerfile  Dockerfile path relative to the context
 #               (default: <name>/Dockerfile — right for the submodule-root context).
-#   args        extra --build-arg map (e.g. {EZTOOL: SQLECmd}); DFIR_UID/GID are
+#   args        extra --build-arg map (rarely needed); DFIR_UID/GID are
 #               always added by the role on top.
 #   ref         a key in sources.yml — its pinned sha is passed as the
 #               <NAME>_REF build-arg (byakugan -> BYAKUGAN_REF).
@@ -31,9 +31,6 @@ images:
   - name: piiat-mem         # Volatility 3 memory forensics — self-orchestrating, env-driven
     ref: piiat-mem
   - name: plaso
-  - name: sqlecmd           # the last still-.NET tool (one parameterized Dockerfile)
-    dockerfile: eztool/Dockerfile
-    args: {EZTOOL: SQLECmd}
   # GoDFIR Go substitutes — each FROM scratch, from its own subdir in the submodule.
   - name: goprefetch        # prefetch         (XP->Win11 .pf, MAM-compressed)
     context: docker/GoDFIR-toolz/goprefetch

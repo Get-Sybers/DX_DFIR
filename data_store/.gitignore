@@ -46,9 +46,6 @@
 !/dependencies/volatility3-symbols/.gitkeep
 !/dependencies/yara-rules/
 !/dependencies/yara-rules/.gitkeep
-!/dependencies/evtxecmd/
-!/dependencies/evtxecmd/.gitkeep
-!/dependencies/evtxecmd/README.md
 # NOTE: /dependencies/hayabusa/ (fetched tool cache, embeds a git repo under
 # rules/) needs no special rule any more — like every other unlisted directory
 # it is ignored and pruned outright.
