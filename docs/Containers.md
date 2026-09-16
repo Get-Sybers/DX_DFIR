@@ -88,24 +88,12 @@ scripts/save-docker-images.sh --build     # online: build the get-sybers/* image
 scripts/save-docker-images.sh --verify    # offline: load every tarball, then assert the hardened inventory
 ```
 
-**Complete portable bundle** — `package-offline.sh` produces ONE artifact with
-everything an air-gapped host needs — the images, the `dxdfir` CLI + all Python
-deps as wheels, the pinned ansible collections, a clean archive of the repo, and
-a `MANIFEST.sha256` over all of it:
-
-```bash
-# online host:
-scripts/package-offline.sh --build            # -> dist/dxdfir-offline-<ver>-<arch>.tar.gz
-
-# air-gapped host (no network needed):
-tar -xzf dxdfir-offline-<ver>-<arch>.tar.gz
-cd dxdfir-offline-<ver>-<arch> && ./setup-offline.sh
-```
-
-`setup-offline.sh` verifies every checksum before doing anything, loads the
-images, installs the CLI from the bundled wheels (`pip --no-index`), installs
-the collections offline, and finishes by running `dxdfir verify-images` so the
-loaded inventory is confirmed to be the expected hardened set. Nothing reaches
+**Full provisioning** — `setup-environment.sh` itself is the offline path:
+provision the host connected first (it builds the images and installs the
+toolchain), save the tarballs, then move/disconnect. A re-run that finds no
+route to the internet falls back to loading the pre-seeded tarballs instead of
+building, and `dxdfir verify-images` confirms the loaded inventory is the
+expected hardened set. Nothing reaches
 the network.
 
 **Not containers:** **Hayabusa** ships as a self-contained Rust binary (no

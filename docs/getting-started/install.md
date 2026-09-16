@@ -12,8 +12,10 @@ Debian/Ubuntu codename). One script provisions everything.
   `raw → processed → car`, so budget a few times the size of your evidence).
 - Network access on first install — Docker's apt repo, the pinned Go toolchain, the
   Byakugan engine checkout, and the Python/Ansible dependencies are all fetched.
-  (Air-gapped installs are supported via `scripts/package-offline.sh` +
-  `scripts/setup-offline.sh` — see the [scripts overview](../scripts/Scripts-Overview.md).)
+  (Air-gapped installs: provision connected, save the image tarballs with
+  `scripts/save-docker-images.sh`, disconnect — a `setup-environment.sh` re-run
+  with no route out loads them instead of building. See the
+  [scripts overview](../scripts/Scripts-Overview.md).)
 
 ## 1. Clone with submodules
 

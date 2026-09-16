@@ -10,7 +10,7 @@
 # they only reference this file.
 #
 # Consumed as a pip constraints file (`pip install ... -c python/constraints.txt`)
-# by BOTH scripts/setup-environment.sh (online) and scripts/package-offline.sh
+# by scripts/setup-environment.sh (online and offline runs alike)
 # (the offline wheel bundle), so both resolve identical versions. The Ansible
 # COLLECTIONS are pinned separately in
 # ansible/collections/get_sybers.dxdfir/requirements.yml.
