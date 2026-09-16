@@ -4,13 +4,13 @@
 #
 # run-checks.sh proves the repo is internally consistent; it never runs the
 # pipeline, so a green tick there says nothing about correctness. The bug that
-# motivated this — EvtxPayload parsing XML while EvtxECmd emits JSON, silently
+# motivated this — EvtxPayload parsing XML while goevtx emits JSON, silently
 # zeroing every Sysmon/Security-derived CAR field — passes every static check.
 # Only running real evidence through and reading the CAR objects catches it.
 #
 # What it does, entirely in throwaway temp dirs (never data_store/processed):
 #
-#   process pinned Sysmon .evtx through the real evtx lane (EvtxECmd) ->
+#   process pinned Sysmon .evtx through the real evtx lane (goevtx) ->
 #   normalise the output into materialised CAR (the external Byakugan engine,
 #   run inside the hardened get-sybers/byakugan image at the sources.yml pin,
 #   via get_sybers_dxdfir.mitrecar) -> assert each Sysmon-sourced CAR object
@@ -38,7 +38,7 @@ cd "$REPO_ROOT" || exit 1
 
 KEEP="${KEEP:-0}"
 FIXTURE_DIR="data_store/raw/logs/winevt/sysmon-attack-samples"
-OUT_DIR="$(mktemp -d)"     # the evtx lane's EvtxECmd JSON
+OUT_DIR="$(mktemp -d)"     # the evtx lane's goevtx JSON
 CAR_DIR="$(mktemp -d)"     # the materialised CAR built from it
 LOG_DIR="$(mktemp -d)"
 # The tool images run as a non-root uid (2000), so they must be able to traverse
@@ -60,7 +60,7 @@ export PYTHONPATH="$REPO_ROOT/python${PYTHONPATH:+:$PYTHONPATH}"
 cleanup() {
     rm -rf "$LOG_DIR"
     if [[ "$KEEP" == "1" ]]; then
-        echo "   (KEEP=1: leaving $OUT_DIR (EvtxECmd JSON) and $CAR_DIR (CAR) in place)"
+        echo "   (KEEP=1: leaving $OUT_DIR (goevtx JSON) and $CAR_DIR (CAR) in place)"
         return
     fi
     rm -rf "$OUT_DIR" "$CAR_DIR"
@@ -133,14 +133,14 @@ n_fix=$(find "$FIXTURE_DIR" -iname '*.evtx' 2>/dev/null | wc -l)
 pass "$n_fix Sysmon .evtx fixtures present and verified"
 
 # =============================================================================
-section "Process fixtures through the real evtx lane (EvtxECmd)"
+section "Process fixtures through the real evtx lane (goevtx)"
 summary="$(python3 -m get_sybers_dxdfir.evtx --evtx-dir "$FIXTURE_DIR" --out-dir "$OUT_DIR" 2>"$LOG_DIR/evtx.err")"
 processed="$(printf '%s' "$summary" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("processed",0))' 2>/dev/null)"
 if ! [[ "$processed" =~ ^[0-9]+$ ]] || (( processed == 0 )); then
     tail -20 "$LOG_DIR/evtx.err" >&2
     die "evtx processor produced nothing (summary: $summary)"
 fi
-pass "EvtxECmd processed $processed log(s)"
+pass "goevtx processed $processed log(s)"
 
 # =============================================================================
 # Normalise the processed evtx into finished CAR (Byakugan engine): one

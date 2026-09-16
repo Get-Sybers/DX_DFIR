@@ -6,9 +6,9 @@
 
 Point DX_DFIR at a disk image or a PCAP; it processes the evidence with
 **[Plaso](https://github.com/log2timeline/plaso)**, **[Zeek](https://zeek.org/)**,
-**[EvtxECmd](https://github.com/EricZimmerman/evtx)**,
+**goevtx**,
 **[Volatility 3](https://github.com/volatilityfoundation/volatility3)** and the
-**[Zimmerman EZ-Tools](https://ericzimmerman.github.io/)**, normalises it into the
+**[GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz)**, normalises it into the
 **[MITRE CAR](https://car.mitre.org/data_model/)** data model — materialised, one
 `car_<object>.jsonl` per object — and feeds an **Elastic-native analysis backend**
 (`docker/elastic`: Elasticsearch + Kibana with security on, Fleet, Filebeat; Basic
@@ -77,9 +77,9 @@ matching `dxdfir_<source>` role); processors are also runnable as
 |:---|:---|:---|
 | Disk images / VM exports (Plaso) | `process plaso` | `log2timeline/jsonl/` (Plaso `json_line`, one file per host) |
 | PCAP (Zeek) | `process zeek` | `zeek/<capture>/` (`conn.json` + every other Zeek log) |
-| Windows event logs + Sysmon (EvtxECmd) | `process evtx` | `windows_logs/<host>/` (EvtxECmd JSON) |
+| Windows event logs + Sysmon (goevtx) | `process evtx` | `windows_logs/<host>/` (goevtx JSON) |
 | Memory (Volatility 3 / [PIIAT-Mem](https://github.com/Get-Sybers/PIIAT-Mem)) | `process volatility` | `volatility/<image>/` (per-plugin JSONL) |
-| EZ-Tools artefacts — SRUM, registry, … | `process godfir-toolz` | `godfir-toolz/` |
+| GoDFIR-toolz artefacts — SRUM, registry, … | `process godfir-toolz` | `godfir-toolz/` |
 | YARA / Suricata / Hayabusa | `process signatures` | `signatures/<lane>/` (JSONL) |
 
 The **CAR layer is materialised**: the [Byakugan](https://github.com/Get-Sybers/byakugan)
@@ -91,7 +91,7 @@ commit pinned in `sources.yml` by `dxdfir build-docker` — never a host checkou
 Extraction happens once, in the engine, so that JSON is the contract every sink
 reads and cannot drift from what the engine emits.
 
-**Validated** by the CI **smoke test** (the real EVTX → EvtxECmd → CAR path over
+**Validated** by the CI **smoke test** (the real EVTX → goevtx → CAR path over
 pinned Sysmon fixtures, asserting the extracted field values) and by
 **`dxdfir verify-car`** (each CAR object populated, values sane — IPs, ports, SIDs —
 `car_action` checked against the engine's model vocabulary, every row traceable to

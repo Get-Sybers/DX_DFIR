@@ -1,5 +1,5 @@
 ---
-# evtx output gate, included at the end of dxdfir_lane's process block: EvtxECmd
+# evtx output gate, included at the end of dxdfir_lane's process block: goevtx
 # produced JSON, UNLESS there genuinely were no logs to process (files == 0). A
 # trusted literal assert — dxdfir_lane_run + dxdfir_lane_verify are in scope from the
 # shared process step.

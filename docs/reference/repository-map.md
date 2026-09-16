@@ -9,7 +9,7 @@ repositories. This is what depends on what, and where each piece lives.
 flowchart TD
     DX["<b>DX_DFIR</b><br/>the pipeline"]
     BYA["byakugan<br/>CAR / STIX engine"]
-    TOOLZ["GoDFIR-toolz<br/>Go EZ-tools + goevtx"]
+    TOOLZ["GoDFIR-toolz<br/>the Go tool family + goevtx"]
     MEM["PIIAT-Mem<br/>Volatility 3 (get-sybers/piiat-mem)"]
     DX -->|"drives (get-sybers/byakugan image)"| BYA
     DX -->|"submodule docker/GoDFIR-toolz"| TOOLZ
@@ -19,7 +19,7 @@ flowchart TD
 | Repository | Link | How DX_DFIR uses it |
 |---|---|---|
 | **byakugan** | [Get-Sybers/byakugan](https://github.com/Get-Sybers/byakugan) | The external CAR / STIX engine the [`dxdfir_byakugan` lane](../architecture/car-pipeline.md) drives. **Not vendored, not a host checkout** — it is cloned + built into the hardened `get-sybers/byakugan` image (`docker/GoDFIR-toolz/byakugan/Dockerfile`) at the exact sha pinned by `sources.yml`, by `dxdfir build-docker` (the [image build](../architecture/setup-flow.md)) alongside the other tool images. The lane only shells that image. |
-| **GoDFIR-toolz** | [Get-Sybers/GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) | Git submodule at `docker/GoDFIR-toolz`. The source for the static-Go EZ-tool family (gore, gomft, goese, goprefetch…) and **goevtx** (the EvtxECmd substitute the [evtx lane](../architecture/processing-lanes.md) runs), plus the canonical hardening playbook. |
+| **GoDFIR-toolz** | [Get-Sybers/GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) | Git submodule at `docker/GoDFIR-toolz`. The source for the static-Go tool family (gore, gomft, goese, goprefetch…) and **goevtx** (the `.evtx` parser the [evtx lane](../architecture/processing-lanes.md) runs), plus the canonical hardening playbook. |
 | **PIIAT-Mem** | [Get-Sybers/PIIAT-Mem](https://github.com/Get-Sybers/PIIAT-Mem) | Volatility 3 memory-forensics tool. No longer vendored — cloned + built into the hardened `get-sybers/piiat-mem` image (`docker/GoDFIR-toolz/piiat-mem/Dockerfile`) at the `sources.yml` pin; the [memory lane](../architecture/processing-lanes.md) docker-runs it, and yara's `vadyarascan` too. |
 
 ### Renamed repositories

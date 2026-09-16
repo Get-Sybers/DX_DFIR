@@ -6,7 +6,7 @@
 # The calling lane supplies: dxdfir_lane_module (import-checked), the input dirs
 # that must exist (dxdfir_lane_input_checks: [{name, path}]), the tool images to
 # supply-chain-guard (dxdfir_lane_images), and — for lane-specific preconditions
-# such as evtx's bundled/operator EvtxECmd modes — an optional
+# such as evtx's bundled goevtx image — an optional
 # dxdfir_lane_preflight_extra task file, included at the point the per-lane checks
 # historically ran (after the input-dir asserts, before the module/image guards).
 

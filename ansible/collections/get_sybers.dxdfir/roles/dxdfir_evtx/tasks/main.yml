@@ -1,5 +1,5 @@
 ---
-# dxdfir_evtx: .evtx -> EvtxECmd JSON. The role GROUPS; the playbook DECIDES.
+# dxdfir_evtx: .evtx -> goevtx JSON. The role GROUPS; the playbook DECIDES.
 # Idempotence (skip logs whose .json output exists) lives in the Python
 # processor, not in a task's `when:`. This role asserts its own input rules, then
 # delegates the shared preflight + process skeleton to dxdfir_lane.

@@ -15,12 +15,12 @@
     # A sample image with no registry hive / Amcache.hve at all still extracts
     # cleanly (image_export just finds nothing) — the honest gate is "some
     # output was produced", not any one specific tool's file, since which
-    # EZ-Tools fire depends entirely on what the sample image contains.
+    # tools fire depends entirely on what the sample image contains.
     - name: "molecule-verify | assert the lane produced host output"
       ansible.builtin.assert:
         that:
           - dxdfir_godfir_toolz_produced.matched | int > 0
         fail_msg: >-
           no output dxdfir_godfir_toolz_produced from the sample image (no godfir-toolz
-          artefact in it, or every EZ-Tools container failed).
+          artefact in it, or every tool container failed).
         quiet: true

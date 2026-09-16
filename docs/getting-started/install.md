@@ -23,7 +23,7 @@ cd DX_DFIR
 ```
 
 `--recursive` matters: the memory lane ([PIIAT-Mem](https://github.com/Get-Sybers/PIIAT-Mem))
-and the Go EZ-tools ([GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz)) are
+and the Go tool family ([GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz)) are
 git submodules. Already cloned flat? `git submodule update --init --recursive`.
 
 ## 2. Run the setup script

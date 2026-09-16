@@ -1,5 +1,5 @@
 ---
-# dxdfir_godfir_toolz: disk images -> EZ-Tools artefact parse, one output dir per host.
+# dxdfir_godfir_toolz: disk images -> GoDFIR-toolz artefact parse, one output dir per host.
 # The role GROUPS; the playbook DECIDES. Idempotence (skip a host dir that already
 # has output) lives in the Python processor, not in a task's `when:`. This role
 # asserts its own input rules, then delegates the shared preflight + process
@@ -27,7 +27,7 @@
 # Output lands under the resolved dxdfir_godfir_toolz_out_dir default — the shared
 # tasks only consume it. This
 # lane drives ELEVEN get-sybers/* images (plaso for extraction, plus the ten Go
-# EZ-Tools/substitute containers the processor can run — including goese for SRUM
+# tool containers the processor can run — including goese for SRUM
 # and goprefetch for Prefetch) — every one is supply-chain-guarded. gowxt is built
 # but deliberately not run yet (#88), so it is intentionally not in this list.
 # dxdfir_godfir_toolz_vm_dir is optional (the processor tolerates its absence) so it

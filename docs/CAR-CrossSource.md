@@ -53,8 +53,8 @@ sources carry no host at all:
 
 | source (LoneWolf host) | `source_host` values |
 |---|---|
-| event logs (EvtxECmd) | `WIN-1M3263ACE5D`, `DESKTOP-PM6C56D` |
-| godfir-toolz (SRUM/RECmd) | `LONEWOLF` (the `--host` arg), `desktop-pm6c56d` (from hive paths) |
+| event logs (goevtx) | `WIN-1M3263ACE5D`, `DESKTOP-PM6C56D` |
+| godfir-toolz (SRUM/gore) | `LONEWOLF` (the `--host` arg), `desktop-pm6c56d` (from hive paths) |
 | memory | its own image hostname |
 | l2t dualserver / exfat / internaldns / pfsense | **empty** (Linux/appliance — no image_hostname) |
 | zeek captures | the capture-dir label (`ngdc-exterior-…`), not a host |

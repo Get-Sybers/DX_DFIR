@@ -48,7 +48,7 @@ The most useful contributions right now, roughly in order:
    which fields actually populate for the other lanes — and which are
    silently null — is worth more than adding more mappings. `dxdfir
    verify-car` is the gate; the ranked checklist is issue #14.
-3. **EVTX ingest.** Built via EvtxECmd, never run against a real event log.
+3. **EVTX ingest.** Built via goevtx, never run against a real event log.
 
 ## Ground rules
 

@@ -1,6 +1,6 @@
 ---
 # A .evtx is binary, so no fixture ships in-repo. Point this at a sample log to run
-# the scenario (goevtx is the bundled image — no EvtxECmd release needed):
+# the scenario (goevtx is the bundled image — nothing else needed):
 #   molecule test -- -e molecule_sample_evtx=/path/Security.evtx
 - name: Prepare
   hosts: localhost
@@ -10,7 +10,7 @@
     molecule_out: /tmp/dxdfir_evtx_molecule/out
     molecule_sample_evtx: ""
   tasks:
-    - name: "molecule-prepare | require a sample .evtx and an EvtxECmd release"
+    - name: "molecule-prepare | require a sample .evtx"
       ansible.builtin.assert:
         that:
           - molecule_sample_evtx | length > 0

@@ -1,7 +1,7 @@
 """EVTX lane (goevtx) — Windows Event Logs (.evtx) -> normalised JSON.
 
 The analysis backend cannot read binary ``.evtx``, so **goevtx** (the static-Go
-EvtxECmd substitute, ``get-sybers/goevtx``, on Velociraptor's go-evtx) converts
+.evtx parser, ``get-sybers/goevtx``, on Velociraptor's go-evtx) converts
 each log to ``<base>_EvtxECmd_Output.json`` (one JSON object per line ->
 host.EvtxEcmdJson) plus a best-effort ``.xml`` sidecar (manual review, not
 ingested). The output name stays ``*_EvtxECmd_Output.json`` — the CAR lane
@@ -41,7 +41,7 @@ from . import container, imageexport
 from .signatures import hayabusa as _hb
 
 # The Go substitute: get-sybers/goevtx — a static go-evtx binary (FROM scratch,
-# ENTRYPOINT /goevtx) that parses .evtx to the EvtxECmd *.json shape the CAR lane
+# ENTRYPOINT /goevtx) that parses .evtx to the ``*_EvtxECmd_Output.json`` shape the CAR lane
 # content-routes on. No .NET runtime, no DLL to supply, no operator release.
 _IMAGE = "get-sybers/goevtx:latest"
 
@@ -217,7 +217,7 @@ def run_hayabusa(sources, out_dir, *, hb_dir=None, hb_bin=None, rules_dir=None,
     only cover by mounting (``/dev/fuse``).
 
     Hayabusa here is enrichment: a missing binary or zero detections is a note, never a
-    failure — the evtx run's success is EvtxECmd's.
+    failure — the evtx run's success is goevtx's.
     """
     out = os.path.join(out_dir, "hayabusa")
     timeline = os.path.join(out, "timeline.jsonl")
@@ -252,7 +252,7 @@ def run_hayabusa(sources, out_dir, *, hb_dir=None, hb_bin=None, rules_dir=None,
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="get_sybers_dxdfir.evtx",
-        description="Windows Event Logs (.evtx) -> EvtxECmd normalised JSON",
+        description="Windows Event Logs (.evtx) -> goevtx normalised JSON",
     )
     ap.add_argument("--evtx-dir", help="directory tree of loose .evtx logs (recursed). "
                     "Optional if --image-src is given.")
@@ -268,7 +268,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out-dir", required=True, help="output dir; grouped by source sub-dir (host)")
     ap.add_argument(
         "--image", dest="image", default=None,
-        help="container image (default: get-sybers/goevtx, the static-Go EvtxECmd substitute).",
+        help="container image (default: get-sybers/goevtx, the static-Go .evtx parser).",
     )
     ap.add_argument("--force", action="store_true", help="reparse logs that already have output")
     ap.add_argument("--hayabusa", action="store_true",

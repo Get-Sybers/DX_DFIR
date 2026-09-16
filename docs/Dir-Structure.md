@@ -38,7 +38,7 @@ per-item processing).
         │   └── memory/                               # Raw memory captures
         │   └── other_raw_data/                       # Additional raw data sources (WinEvt/<host>/ for .evtx)
         │
-        └── dependencies/                             # Operator-supplied tools (EvtxECmd, Hayabusa, rulesets, Volatility symbols)
+        └── dependencies/                             # Operator-supplied rulesets/tools (Hayabusa, rulesets, Volatility symbols)
         │
         └── processed/                                # One subtree per source — what `dxdfir build-car` normalises to CAR
             └── linux_logs/                           # Linux Distro logs (not wired into the backend)
@@ -65,7 +65,7 @@ per-item processing).
             │   └── jsonl/                            # Plaso json_line, one file per host
             │   └── logs/                             # Job logs
             │
-            └── windows_logs/                         # EvtxECmd JSON, per host
+            └── windows_logs/                         # goevtx JSON, per host
             │
             └── zeek/
             │   └── <capture>/                        # Zeek JSON (conn.json + every other log)
@@ -73,7 +73,7 @@ per-item processing).
             └── volatility/
             │   └── <image>/                          # Volatility 3 JSONL per plugin
             │
-            └── godfir-toolz/                            # EZ-Tools artefacts (RECmd, SRUM, MFT, …)
+            └── godfir-toolz/                            # GoDFIR-toolz artefacts (registry, SRUM, MFT, …)
             │
             └── signatures/
             │   └── yara/ suricata/ hayabusa/         # detection JSONL (YARA matches / Suricata EVE / Hayabusa Sigma)
@@ -93,6 +93,6 @@ in-container provisioning `ansible/` — **unrelated to today's
 `get_sybers.dxdfir` collection** under `ansible/collections/`) was retired when
 the SIEM moved to the Kusto emulator (itself since retired in favour of the
 Elastic-native stack), and the KAPE automation (`processed/kape/`, the two
-PowerShell scripts) was removed in favour of the hardened EZ-tool containers.
+PowerShell scripts) was removed in favour of the hardened GoDFIR-toolz containers.
 All of it survives in git history and on the frozen
 [`deprecated`](https://github.com/Get-Sybers/DX_DFIR/tree/deprecated) branch.

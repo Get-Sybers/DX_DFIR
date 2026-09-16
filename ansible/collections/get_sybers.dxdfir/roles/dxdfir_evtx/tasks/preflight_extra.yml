@@ -1,7 +1,7 @@
 ---
 # Lane-specific evtx preflight, included by dxdfir_lane's shared preflight (after
 # the docker + input-dir checks, before the module/image guards). The parser is
-# goevtx (get-sybers/goevtx) — a static-Go EvtxECmd substitute, no .NET, no DLL
+# goevtx (get-sybers/goevtx) — a static-Go .evtx parser, no .NET, no DLL
 # to supply. The only precondition is that its image exists.
 
 - name: "evtx-preflight | inspect the goevtx image"

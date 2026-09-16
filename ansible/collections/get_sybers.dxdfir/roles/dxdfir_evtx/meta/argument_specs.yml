@@ -1,15 +1,15 @@
 ---
 argument_specs:
   main:
-    short_description: "Windows Event Logs (.evtx) -> EvtxECmd normalised JSON."
+    short_description: "Windows Event Logs (.evtx) -> goevtx normalised JSON."
     description:
       - >-
-        Discovers .evtx under dxdfir_evtx_evtx_dir, runs EvtxECmd (in a container) per
+        Discovers .evtx under dxdfir_evtx_evtx_dir, runs goevtx (in a container) per
         log, and writes <base>_EvtxECmd_Output.json (+ .xml sidecar) grouped by the
         source sub-dir (host). Idempotent: a log whose .json output already exists is
         skipped.
       - >-
-        .evtx are parsed by goevtx (get-sybers/goevtx), a static-Go EvtxECmd
+        .evtx are parsed by goevtx (get-sybers/goevtx), a static-Go .evtx
         substitute on go-evtx — no .NET runtime, no DLL to supply, built FROM
         scratch from docker/GoDFIR-toolz/goevtx.
     options:
@@ -68,7 +68,7 @@ argument_specs:
         required: false
         default: "get-sybers/goevtx:latest"
         description: >-
-          The image the processor runs: goevtx, the static-Go EvtxECmd substitute
+          The image the processor runs: goevtx, the static-Go .evtx parser
           (built FROM scratch from docker/GoDFIR-toolz/goevtx). Override to pin
           a digest.
       dxdfir_evtx_python_path:

@@ -1,16 +1,16 @@
 ---
 argument_specs:
   main:
-    short_description: "disk images -> Eric Zimmerman EZ-Tools artefact parse, one output dir per host."
+    short_description: "disk images -> GoDFIR-toolz artefact parse, one output dir per host."
     description:
       - >-
         Discovers disk images under dxdfir_godfir_toolz_input_dir (and VM exports under
-        dxdfir_godfir_toolz_vm_dir), extracts the zimmerman artefact set (registry hives +
+        dxdfir_godfir_toolz_vm_dir), extracts the godfir-toolz artefact set (registry hives +
         transaction logs, Amcache, jump lists/lnk, Recycle Bin $I records, Windows
         Timeline database, SRUM database, resident $MFT) with a plaso YAML collection
-        filter, then runs each hardened EZ-Tools container over what was pulled out
-        (RECmd, JLECmd, LECmd, AmcacheParser, AppCompatCacheParser, SBECmd, RBCmd,
-        MFTECmd) plus a plaso log2timeline/psort two-step for SRUM. Idempotent at the
+        filter, then runs each hardened GoDFIR-toolz container over what was pulled
+        out (gore, gojle, gole, goamcache, goappcompat, gosbe, gorb, gomft) plus a
+        plaso log2timeline/psort two-step for SRUM. Idempotent at the
         host level: a host output dir that already holds any file is skipped unless
         dxdfir_godfir_toolz_force.
     options:

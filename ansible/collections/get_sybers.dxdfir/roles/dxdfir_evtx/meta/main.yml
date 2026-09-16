@@ -4,7 +4,7 @@ galaxy_info:
   namespace: get_sybers
   author: Get-Sybers
   description: >-
-    Parse Windows Event Logs (.evtx) with EvtxECmd into normalised JSON.
+    Parse Windows Event Logs (.evtx) with goevtx into normalised JSON.
     Invokes the get_sybers_dxdfir.evtx Python processor; one
     <base>_EvtxECmd_Output.json per log, grouped by source host.
   company: Get-Sybers

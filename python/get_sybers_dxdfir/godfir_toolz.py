@@ -1,21 +1,19 @@
-"""GoDFIR-toolz EZ-Tools processor — disk images -> per-host EZ-Tool artefact parse.
+"""GoDFIR-toolz processor — disk images -> per-host Windows-artefact parse.
 
 The evtx/plaso lanes get their bytes straight off the image via Plaso's
 ``image_export.py`` (see ``imageexport``); this lane does the same for the
-artefact set Eric Zimmerman's EZ Tools understand, then runs a hardened
-``get-sybers/<tool>`` container over what was pulled out. Every tool is now a
-Linux-native, static-Go ``FROM scratch`` substitute (Get-Sybers/GoDFIR-toolz),
-not .NET: registry batch via ``gore`` (RECmd), jump lists via ``gojle``
-(JLECmd), ``.lnk`` via ``gole`` (LECmd), Amcache via ``goamcache``,
-AppCompatCache via ``goappcompat``, ShellBags via ``gosbe`` (SBECmd), Recycle
-Bin via ``gorb`` (RBCmd), MFT via ``gomft`` (MFTECmd), plus the two
-Windows-bound tools that were never Linux-viable under .NET at all: SRUM via
-``goese`` (SrumECmd P/Invokes the Windows ESE engine) and Prefetch via
-``goprefetch`` (PECmd refuses off-Windows). The registry-family tools
-(gore/gosbe/goamcache/goappcompat) replay each hive's .LOG1/.LOG2 dirty-hive
-transaction logs to match .NET fidelity. byakugan's ``esedump_srum`` /
-``prefetch_dump`` maps normalise the SRUM/Prefetch JSONL into CAR as their own
-MITRE data sources.
+Windows artefact families the GoDFIR-toolz images parse, then runs a hardened
+``get-sybers/<tool>`` container over what was pulled out. Every tool is a
+Linux-native, static-Go ``FROM scratch`` binary (Get-Sybers/GoDFIR-toolz):
+registry batch via ``gore``, jump lists via ``gojle``, ``.lnk`` via ``gole``,
+Amcache via ``goamcache``, AppCompatCache via ``goappcompat``, ShellBags via
+``gosbe``, Recycle Bin via ``gorb``, MFT via ``gomft``, plus the two artefact
+families that had no Linux-viable parser at all before the Go ports: SRUM via
+``goese`` (the ESE database needs no Windows engine here) and Prefetch via
+``goprefetch``. The registry-family tools (gore/gosbe/goamcache/goappcompat)
+replay each hive's .LOG1/.LOG2 dirty-hive transaction logs for full fidelity.
+byakugan's ``esedump_srum`` / ``prefetch_dump`` maps normalise the
+SRUM/Prefetch JSONL into CAR as their own MITRE data sources.
 
 Extraction uses a plaso **YAML** collection filter (``plaso.engine.yaml_filter_file``),
 NOT ``--artifact_filters`` (the WindowsEventLogs artifact set the evtx lane uses) —
@@ -38,12 +36,12 @@ fidelity (goese's second-precision timestamps, decoded device paths/SIDs).
 Output isolation follows the CAR pipeline's rule (docs/CAR-Pipeline.md §2 — "one
 source, one database"): each image gets its OWN
 ``data_store/processed/godfir-toolz/<host>/``, holding the raw extraction
-(``_extracted/``), the EZ-Tool container outputs (one sub-dir per tool), and a
+(``_extracted/``), the tool-container outputs (one sub-dir per tool), and a
 combined run log. Idempotent at the HOST level: a host dir that already holds any
 non-empty file is skipped whole unless ``--force`` — a partial prior run is
 reprocessed entirely rather than guessed at file-by-file.
 
-WxTCmd (Windows Timeline / ActivitiesCache.db) is wired as a pure argv builder
+gowxt (Windows Timeline / ActivitiesCache.db) is wired as a pure argv builder
 (``wxtcmd_argv``, unit-tested) but deliberately NOT invoked by ``process_image`` —
 its SQLite interop needs a writable unpack path the tool's own working directory
 provides, which the hardened read-only-rootfs base image does not; verifying that
@@ -73,16 +71,16 @@ _SBECMD_IMAGE = "get-sybers/gosbe:latest"
 _RBCMD_IMAGE = "get-sybers/gorb:latest"
 _MFTECMD_IMAGE = "get-sybers/gomft:latest"
 _WXTCMD_IMAGE = "get-sybers/gowxt:latest"  # TODO(#88): built but not invoked — see wxtcmd_argv()
-# The Linux-native Go substitutes for the Windows-bound EZ tools
-# (Get-Sybers/GoDFIR-toolz): goese parses SRUDB.dat where SrumECmd (.NET,
-# P/Invokes the Windows ESE engine) cannot; goprefetch parses .pf where PECmd
+# The Linux-native Go parsers for the Windows-bound artefact families
+# (Get-Sybers/GoDFIR-toolz): goese parses SRUDB.dat (no Windows ESE engine
+# needed); goprefetch parses .pf where no prior Linux parser
 # refuses off-Windows. byakugan's esedump_srum / prefetch_dump maps normalise
 # their JSONL into CAR (their own MITRE data sources).
 _ESEDUMP_IMAGE = "get-sybers/goese:latest"
 _PREFETCH_IMAGE = "get-sybers/goprefetch:latest"
 
 # gore bakes its OWN curated forensic-key batch at /batch/default.reb (its --bn
-# default) — a redistributable substitute for Eric Zimmerman's Kroll_Batch.reb
+# default) — a redistributable replacement for the non-redistributable Kroll batch
 # (not redistributable), so the lane no longer supplies a batch path at all.
 
 
@@ -122,7 +120,7 @@ ARTIFACT_GROUPS: list[dict] = [
         ],
     },
     {
-        # Dirty-hive replay (RECmd/SBECmd) needs the .LOG1/.LOG2 transaction logs
+        # Dirty-hive replay (gore/gosbe) needs the .LOG1/.LOG2 transaction logs
         # sitting ALONGSIDE the hive — never extract one without the other.
         "description": "Per-user registry hives (NTUSER.DAT / UsrClass.dat) + logs",
         "type": "include",
@@ -155,7 +153,7 @@ ARTIFACT_GROUPS: list[dict] = [
         ],
     },
     {
-        "description": "Windows Timeline activity database (WxTCmd input; see #88)",
+        "description": "Windows Timeline activity database (gowxt input; see #88)",
         "type": "include",
         "path_separator": "/",
         "paths": [
@@ -199,7 +197,7 @@ def build_filter_yaml(groups: list[dict] = ARTIFACT_GROUPS) -> str:
 def image_export_argv(image, out_dir, filter_file, *, plaso_image=PLASO_IMAGE,
                       vss=False) -> list[str]:
     """The ``docker run`` argv for one ``image_export.py`` extraction using a
-    filter FILE (``-f``) instead of ``--artifact_filters`` — the zimmerman artefact
+    filter FILE (``-f``) instead of ``--artifact_filters`` — the godfir-toolz artefact
     set has no named forensic-artifact-definitions entry, so it's declared as our
     own YAML filter (``build_filter_yaml``) and mounted in read-only. Pure (no I/O).
     """
@@ -217,7 +215,7 @@ def image_export_argv(image, out_dir, filter_file, *, plaso_image=PLASO_IMAGE,
 
 
 def extract_artifacts(image, stage_dir, *, plaso_image=PLASO_IMAGE, vss=False) -> list[str]:
-    """Extract the zimmerman artefact set from one image into ``stage_dir``
+    """Extract the godfir-toolz artefact set from one image into ``stage_dir``
     (the filter YAML is written alongside as ``_filter.yaml`` for debugging, and
     excluded from the returned file list). Returns files written (absolute
     paths). Raises ``CalledProcessError`` if image_export fails."""
@@ -286,7 +284,7 @@ def recmd_argv(hives_dir, out_dir) -> list[str]:
     every system + per-user hive in one batch pass against its baked
     ``/batch/default.reb`` — no per-hive invocation and no ``--bn`` needed.
 
-    Dirty-hive replay matches .NET RECmd fidelity: gore replays each hive's
+    Dirty-hive replay keeps full registry fidelity: gore replays each hive's
     sibling .LOG1/.LOG2 (regparser.RecoverHive) by default (no ``--nl``), writing
     the recovered copy under ``--work-dir`` — a writable tmpfs, since the rootfs
     is read-only — and falling back to the committed hive when logs are absent."""
@@ -300,7 +298,7 @@ def recmd_argv(hives_dir, out_dir) -> list[str]:
 
 
 def srum_esedump_argv(srudb_dir, out_dir) -> list[str]:
-    """SRUM: SrumECmd is Windows-only (.NET, P/Invokes the Windows ESE engine),
+    """SRUM: no Windows ESE engine exists off-Windows,
     so the Linux-native ``goese`` (get-sybers/goese, Go on go-ese) parses
     ``SRUDB.dat`` instead — one JSONL file per SRUM provider table
     (NetworkDataUsage.jsonl, ApplicationResourceUsage.jsonl, …). byakugan's
@@ -314,7 +312,7 @@ def srum_esedump_argv(srudb_dir, out_dir) -> list[str]:
 
 
 def prefetch_argv(scan_dir, out_dir) -> list[str]:
-    """Prefetch: PECmd carries a blanket non-Windows startup guard, so the
+    """Prefetch: no prior parser ran off-Windows, so the
     Linux-native ``goprefetch`` (get-sybers/goprefetch, Go on go-prefetch)
     parses ``.pf`` instead. ``-d`` walks ``scan_dir`` recursively for every
     ``.pf`` (the extraction root holds only the filtered artefact set), writing
@@ -332,7 +330,7 @@ def jlecmd_argv(recent_dir, out_dir) -> list[str]:
     (that tree holds only the filtered artefact set, never the rest of the
     filesystem) and needs no per-user Recent-folder lookup. It reads the
     AutomaticDestinations jump lists (an OLE compound file) and their DestList
-    stream, emitting the JLECmd shape byakugan's ``jlecmd_dest`` map consumes."""
+    stream, emitting the record shape byakugan's ``jlecmd_dest`` map consumes."""
     return container.run(
         _JLECMD_IMAGE,
         ["-d", "/in", "--json", "/out", "--jsonf", "jlecmd.json"],
@@ -343,7 +341,7 @@ def jlecmd_argv(recent_dir, out_dir) -> list[str]:
 def lecmd_argv(recent_dir, out_dir) -> list[str]:
     """gole's ``-d`` recurses the same way gojle's does, content-detecting ``.lnk``
     by the ``0x4C`` Shell Link header (so Plaso's ``$`` -> ``_`` rename doesn't
-    hide them). It emits the LECmd record shape as JSONL."""
+    hide them). It emits gole's lnk-record shape as JSONL."""
     return container.run(
         _LECMD_IMAGE,
         ["-d", "/in", "--json", "/out"],
@@ -385,7 +383,7 @@ def sbecmd_argv(user_dir, out_dir) -> list[str]:
     NTUSER.DAT/UsrClass.dat. Like gore, it replays each hive's sibling .LOG1/.LOG2
     (regparser.RecoverHive) by default, writing the recovered copy under
     ``--work-dir`` (a writable tmpfs — the rootfs is read-only), matching .NET
-    SBECmd's dirty-hive fidelity and falling back to the committed hive when
+    full dirty-hive fidelity and falling back to the committed hive when
     logs are absent."""
     return container.run(
         _SBECMD_IMAGE,
@@ -397,7 +395,7 @@ def sbecmd_argv(user_dir, out_dir) -> list[str]:
 
 
 def rbcmd_argv(recyclebin_dir, out_dir) -> list[str]:
-    """RBCmd's ``-d`` recurses looking for $I records; the whole extraction root
+    """gorb's ``-d`` recurses looking for $I records; the whole extraction root
     is safe to hand it (only $Recycle.Bin/*/$I* was ever extracted there)."""
     return container.run(
         _RBCMD_IMAGE,
@@ -466,7 +464,7 @@ def _run(argv: list[str], log_path: str) -> bool:
 
 
 def _run_step(argv: list[str], out_dir: str, log_path: str) -> dict:
-    """Run one EZ-Tool container into out_dir; report {ran, ok}. "ok" needs both
+    """Run one tool container into out_dir; report {ran, ok}. "ok" needs both
     a clean exit AND actual output — a tool that exits 0 having found nothing
     (e.g. no hives matched a filter) is not silently counted as done."""
     os.makedirs(out_dir, exist_ok=True)
@@ -480,7 +478,7 @@ def _run_step(argv: list[str], out_dir: str, log_path: str) -> dict:
 
 def process_image(image, host_out_dir, *, plaso_image=PLASO_IMAGE, force=False,
                   vss=False) -> dict:
-    """Extract + run every EZ-Tools step for one disk image into ``host_out_dir``
+    """Extract + run every godfir-toolz step for one disk image into ``host_out_dir``
     (== ``processed/godfir-toolz/<host>/`` — one host, one directory, per the CAR
     isolation rule in docs/CAR-Pipeline.md §2). Idempotent at the HOST level: a
     host dir that already holds any non-empty file is skipped whole unless
@@ -569,7 +567,7 @@ def process_image(image, host_out_dir, *, plaso_image=PLASO_IMAGE, force=False,
     result["steps"]["mftecmd"] = _run_step(
         mftecmd_argv(stage_dir, mftecmd_out), mftecmd_out, log_path)
 
-    # WxTCmd — TODO(#88): gowxt's --work-dir/tmpfs solves the read-only-rootfs
+    # gowxt — TODO(#88): its --work-dir/tmpfs solves the read-only-rootfs
     # blocker (see wxtcmd_argv()), but the step stays deferred until a real
     # ActivitiesCache.db confirms the end-to-end shape (no lab image carried one).
     result["steps"]["wxtcmd"] = {"ran": False, "reason": "deferred to #88 (needs a real ActivitiesCache.db to validate)"}
@@ -590,7 +588,7 @@ def process_source(image_src, out_dir, *, plaso_image=PLASO_IMAGE, force=False, 
         "images": len(images),
         "processed": 0,
         "skipped": 0,
-        # An image with none of the zimmerman artefact set (e.g. a non-Windows
+        # An image with none of the godfir-toolz artefact set (e.g. a non-Windows
         # image) is normal, not a failure — counted apart like evtx's "empty".
         "empty": 0,
         "failed": 0,
@@ -643,7 +641,7 @@ def process(input_dir, out_dir, *, vm_dir="", plaso_image=PLASO_IMAGE, force=Fal
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="get_sybers_dxdfir.godfir_toolz",
-        description="disk images -> Eric Zimmerman EZ-Tools artefact parse (registry, "
+        description="disk images -> godfir-toolz Windows-artefact parse (registry, "
                     "Amcache, AppCompatCache, jump lists/lnk, ShellBags, Recycle Bin, "
                     "MFT, SRUM), one output dir per host",
     )

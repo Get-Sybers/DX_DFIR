@@ -10,7 +10,7 @@ It ports ``sig_extract_artifacts`` from the retired shell lane library
 (``scripts/signatures/lib/disk-image.sh``, the Hayabusa lane's extractor) — same
 container, same flags — so the evtx and signature lanes source disk-image EVTX the
 one proven way. Reusing the pipeline's own hardened ``get-sybers/plaso`` image keeps the
-.NET evtxecmd image free of a dfVFS/pytsk3 stack.
+retired .NET evtx image free of a dfVFS/pytsk3 stack.
 
 ``image_export_argv`` is pure (no I/O) so the container invocation is unit-testable
 without docker.

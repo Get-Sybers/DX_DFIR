@@ -4,8 +4,8 @@ galaxy_info:
   namespace: get_sybers
   author: Get-Sybers
   description: >-
-    Process disk images with Eric Zimmerman's EZ-Tools (RECmd, JLECmd, LECmd,
-    AmcacheParser, AppCompatCacheParser, SBECmd, RBCmd, MFTECmd) plus a plaso-driven
+    Process disk images with the GoDFIR-toolz parsers (gore, gojle, gole,
+    goamcache, goappcompat, gosbe, gorb, gomft) plus a plaso-driven
     SRUM parse into per-host artefact output.
     Invokes the get_sybers_dxdfir.godfir_toolz Python processor; one output dir per host.
   company: Get-Sybers
@@ -14,6 +14,6 @@ galaxy_info:
   platforms:
     - name: Debian
       versions: [bookworm, trixie]
-  galaxy_tags: [dfir, zimmerman, eztools, registry, amcache, srum, forensics]
+  galaxy_tags: [dfir, godfir, registry, amcache, srum, forensics]
 
 dependencies: []
