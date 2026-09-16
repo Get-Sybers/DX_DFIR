@@ -6,10 +6,15 @@
 # shell out to, puts the invoking user in the docker group, and sets
 # ownership/permissions on the repository.
 #
-# Pre-seeding the analysis images as offline tarballs is a separate concern
-# with its own online/offline lifecycle — it now lives in
-# scripts/save-docker-images.sh. The processing scripts pull their images on
-# first use, so a host with registry access needs nothing further here.
+# The analysis images are BUILT, not pulled — the dxdfir-build-images.yml
+# playbook (what `dxdfir build-docker` runs) is the one build mechanism, and
+# scripts/save-docker-images.sh --build calls it and saves the results as
+# tarballs for transport. When this script finds no route to the internet it
+# falls back to loading those pre-seeded tarballs (see "Analysis images"
+# below). That fallback covers the IMAGES only: the earlier steps (apt, the
+# Docker repo, submodules, pip, collections) still need the network on a FIRST
+# run, so the offline path assumes a host provisioned online first — set up
+# connected, save the tarballs, move/disconnect, re-run.
 #
 # Each guard below encodes a way the previous revision of this script failed on
 # a clean machine:
@@ -49,8 +54,8 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 REPO_ROOT_DIR="$(realpath "$SCRIPT_DIR/..")"
 
 # Userland tools the pipeline shells out to. python3 runs the get_sybers_dxdfir
-# package, unzip backs the velociraptor lane, tar backs the image tarballs
-# written by save-docker-images.sh, curl fetches sample fixtures.
+# package, unzip backs dev-scripts/fetch-samples.sh, tar backs the image
+# tarballs written by save-docker-images.sh, curl fetches sample fixtures.
 # ca-certificates and gnupg are needed to add the Docker repo itself.
 APT_DEPS=(ca-certificates curl git gnupg unzip python3 python3-venv tar)
 REQUIRED_CMDS=(curl git python3 unzip tar realpath readlink)
@@ -424,7 +429,7 @@ $SUDO python3 -m venv "$DXDFIR_VENV" || die "Failed to create the venv (need pyt
 $SUDO "$DXDFIR_VENV/bin/pip" install --quiet --upgrade pip || die "pip upgrade in the venv failed."
 # --constraint pins the exact, tested dependency versions from python/constraints.txt
 # (pyproject carries the ">=" floors; the lock is the single source of truth this
-# installer AND scripts/package-offline.sh consume). Without it a fresh install pulls
+# installer consumes). Without it a fresh install pulls
 # whatever ansible-core / docker-SDK / PyYAML is newest and can shift the pipeline
 # under itself; with it there are no version literals to drift in this script.
 $SUDO "$DXDFIR_VENV/bin/pip" install --quiet --editable "$REPO_ROOT_DIR/python" \
@@ -508,8 +513,9 @@ $SUDO mkdir -p "$GO_BIN_DIR"
 # Build from a CLEAN, EPHEMERAL cache — a throwaway dir (module cache, build
 # cache and HOME all inside it) removed as soon as the build finishes. Every run
 # therefore resolves the dependency set from a SOURCE OF TRUTH — the in-tree
-# go/vendor/ (air-gapped installs, packaged by scripts/package-offline.sh), else
-# the module proxy — instead of trusting whatever a previous run left on disk.
+# go/vendor/ if present (an air-gapped host can pre-vendor with
+# 'cd go && go mod vendor' on a connected one), else the module proxy —
+# instead of trusting whatever a previous run left on disk.
 # A rebuild is honest (it never silently depends on stale cached modules) and
 # nothing is cached under the install prefix or the invoking user's ~/go; the
 # cost is a cold module fetch each run, which is the intent. GOTOOLCHAIN=local
@@ -560,6 +566,30 @@ $SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install \
 ok "Collections installed: $("$DXDFIR_VENV/bin/ansible-galaxy" collection list -p "$DXDFIR_COLLECTIONS" 2>/dev/null | grep -cE '^[a-z]' || echo '?') pinned"
 
 ################################################################################
+# Offline fallback: the analysis images are BUILT (dxdfir-build-images.yml) and
+# building needs the network (base images, apt, pinned clones). When the host
+# has no route out, fall back to the tarballs a connected host pre-seeded with
+# scripts/save-docker-images.sh --build. With internet this section stays
+# silent and the images are built normally (the commands printed below).
+################################################################################
+if ! curl -fsI --connect-timeout 4 --max-time 8 https://download.docker.com/ >/dev/null 2>&1; then
+    section "Analysis images (offline fallback)"
+    _tars="${DXDFIR_IMAGE_DIR:-$REPO_ROOT_DIR/data_store/docker_images}"
+    if compgen -G "$_tars/*.tar" >/dev/null; then
+        step "No internet — loading + verifying the pre-seeded image tarballs from $_tars ..."
+        # --verify loads every tarball THEN runs the hardened-inventory audit
+        # with the venv just installed above, so a missing or corrupt tarball
+        # fails here, not at first pipeline use.
+        DXDFIR_PYTHON="$DXDFIR_VENV/bin/python3" "$SCRIPT_DIR/save-docker-images.sh" --verify \
+            || die "Offline image load/verify failed (scripts/save-docker-images.sh --verify)."
+        ok "Analysis images loaded and the hardened inventory verified."
+    else
+        warn "No internet and no image tarballs in $_tars — the analysis images cannot be provisioned."
+        detail "On a connected host: scripts/save-docker-images.sh --build, then carry data_store/docker_images/ across."
+    fi
+fi
+
+################################################################################
 # cmd — a marigold command line, indented under a step, with a dim aside.
 cmd() { printf '       %s%s%s  %s%s%s\n' "$C_ACCENT" "$1" "$C_RESET" "$C_DIM" "${2:-}" "$C_RESET"; }
 
@@ -575,8 +605,8 @@ step "Build the hardened tool containers (everything the pipeline runs):"
 cmd "ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml"
 echo
 step "Pre-seed the analysis images as tarballs for an offline host:"
-cmd "scripts/save-docker-images.sh" "(online host: pull + save)"
-cmd "scripts/save-docker-images.sh --load" "(offline host: load tarballs)"
+cmd "scripts/save-docker-images.sh --build" "(connected host: build + save every image)"
+cmd "scripts/save-docker-images.sh --load" "(offline host: load tarballs — or just re-run this script)"
 echo
 step "Run DX_DFIR:"
 cmd "dxdfir --help" "(process evidence, build + verify CAR, bring up docker/elastic — see README.md)"
