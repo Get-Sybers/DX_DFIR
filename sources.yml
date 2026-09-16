@@ -21,7 +21,7 @@
 # attack-datasources submodules at build time (recursive clone required).
 byakugan:
   url: https://github.com/Get-Sybers/Byakugan
-  ref: 8f808b5850e56a43c0a18d029fbf61777acb3020
+  ref: 2c7eeeab1081b7583067f6bb8ee5eead2b176c8a
   consumed: "docker/GoDFIR-toolz/byakugan/Dockerfile (BYAKUGAN_REF build-arg)"
 
 # PIIAT-Mem (Volatility 3 memory forensics) — fused into get-sybers/piiat-mem in
@@ -29,7 +29,7 @@ byakugan:
 # Volatility runs in-process (--native), confined by the hardened image.
 piiat-mem:
   url: https://github.com/Get-Sybers/PIIAT-Mem
-  ref: d32b5d3c6068b50c778d7bf5a1480a46a96b1f8d
+  ref: b5c4f7c8ed2229c46884b2f9d1edfc30164fd157
   consumed: "docker/GoDFIR-toolz/piiat-mem/Dockerfile (PIIAT_MEM_REF build-arg)"
 
 # Git submodules: pinned by their gitlink (.gitmodules). Inventory only.
