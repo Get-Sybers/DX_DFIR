@@ -16,7 +16,7 @@ import (
 func newCleanupCmd(env *Env) *cobra.Command {
 	parent := &cobra.Command{
 		Use:   "cleanup",
-		Short: "Wipe processed evidence, CAR stores, or dxdfir/* docker images.",
+		Short: "Wipe processed evidence, CAR stores, or get-sybers/* docker images.",
 	}
 	parent.AddCommand(
 		newCleanupActionCmd(env, "processed",
@@ -70,8 +70,8 @@ func newCleanupActionCmd(env *Env, action, short, promptMsg string, extraVars fu
 func newCleanupDockerCmd(env *Env) *cobra.Command {
 	var dangling, allDxdfir bool
 	cmd := newCleanupActionCmd(env, "docker",
-		"Remove built dxdfir/* tool images so the next build is clean.",
-		"Remove the dxdfir/* tool images? [y/N]: ",
+		"Remove built get-sybers/* tool images so the next build is clean.",
+		"Remove the get-sybers/* tool images? [y/N]: ",
 		func() []string {
 			var v []string
 			if dangling {
@@ -82,11 +82,11 @@ func newCleanupDockerCmd(env *Env) *cobra.Command {
 			}
 			return v
 		})
-	cmd.Long = "Remove built dxdfir/* tool images (dxdfir_cleanup role, docker action).\n\n" +
+	cmd.Long = "Remove built get-sybers/* tool images (dxdfir_cleanup role, docker action).\n\n" +
 		"By default only the hardened tool set is removed (the source of truth is the\n" +
 		"Python get_sybers_dxdfir.images.HARDENED_IMAGES). --all-dxdfir removes EVERY\n" +
-		"dxdfir/* image present; --dangling also prunes dangling layers."
+		"get-sybers/* image present; --dangling also prunes dangling layers."
 	cmd.Flags().BoolVar(&dangling, "dangling", false, "Also prune dangling layers.")
-	cmd.Flags().BoolVar(&allDxdfir, "all-dxdfir", false, "Remove EVERY dxdfir/* image (default: only the hardened tool set).")
+	cmd.Flags().BoolVar(&allDxdfir, "all-dxdfir", false, "Remove EVERY get-sybers/* image (default: only the hardened tool set).")
 	return cmd
 }

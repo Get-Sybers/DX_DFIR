@@ -1,4 +1,4 @@
-"""Shared docker-run construction for the minimal hardened dxdfir/* tool images.
+"""Shared docker-run construction for the minimal hardened get-sybers/* tool images.
 
 Posture (chosen for strongest resistance to container escape AND a
 supply-chain-compromised tool): the images are stripped to the tool itself —
@@ -85,7 +85,7 @@ def _mount_group_ids(mounts) -> list[str]:
 
 def run(image, after_image=(), *, mounts=(), network=False, tmpfs=(),
         workdir=None, entrypoint=None) -> list[str]:
-    """``docker run`` argv for a minimal hardened dxdfir/* image.
+    """``docker run`` argv for a minimal hardened get-sybers/* image.
 
     ``after_image`` is appended verbatim after the image name: for a tool-as-
     ENTRYPOINT image these are just the tool's arguments; for an image with no

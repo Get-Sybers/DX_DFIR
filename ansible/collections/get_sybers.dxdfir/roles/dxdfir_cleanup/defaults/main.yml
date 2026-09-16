@@ -1,5 +1,5 @@
 ---
-# dxdfir_cleanup: wipe processed evidence, the CAR tree, or the dxdfir/* images.
+# dxdfir_cleanup: wipe processed evidence, the CAR tree, or the get-sybers/* images.
 # One role, three actions (dxdfir_cleanup_action); the playbook decides. The
 # front-end handles the destructive confirmation and passes --check for a dry run.
 

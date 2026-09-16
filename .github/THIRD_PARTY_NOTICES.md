@@ -242,8 +242,8 @@ pulled as a container image or built at image-build time from source (the GoDFIR
 Go tools compile their pinned Go-module deps).
 
 **Formerly invoked: KAPE** (Kroll Artifact Parser and Extractor). The KAPE
-PowerShell automation was removed in favour of the planned **Velociraptor
-offline collectors running the upstream parser suites** — the same parsers under
+PowerShell automation was removed; the hardened GoDFIR-toolz containers run
+the same artefact coverage under
 MIT-style licences, without KAPE Solo's non-commercial restriction, which was
 the sharpest licensing constraint this project carried. Nothing of KAPE was
 ever vendored, so no attribution debt remains; the scripts are in git

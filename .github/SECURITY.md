@@ -50,7 +50,7 @@ These are already known. You do not need to report them.
 - **Pulled images are version-pinned, not digest-pinned.** The Elastic images
   are pinned to `ELASTIC_VERSION`, the .NET runtime to a major version; there is
   no digest pinning and no signature verification. You are trusting the
-  registry at pull time. The `dxdfir/*` tool images are built in-repo.
+  registry at pull time. The `get-sybers/*` tool images are built in-repo.
 
 ## Handling evidence
 

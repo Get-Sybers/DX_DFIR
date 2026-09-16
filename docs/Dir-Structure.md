@@ -21,7 +21,7 @@ per-item processing).
     │
     └── scripts/                                      # Host provisioning: setup, image save/load, the offline bundle (bash)
     │
-    └── docker/                                       # Container builds — the hardened dxdfir/* tool images, the GoDFIR-toolz submodule (every tool-image build context), Byakugan's Elastic-native stack (elastic/)
+    └── docker/                                       # Container builds — the hardened get-sybers/* tool images, the GoDFIR-toolz submodule (every tool-image build context), Byakugan's Elastic-native stack (elastic/)
     │
     └── dev-scripts/                                  # Experimental/one-off helpers, unsupported (e.g. the Plaso output module)
     │

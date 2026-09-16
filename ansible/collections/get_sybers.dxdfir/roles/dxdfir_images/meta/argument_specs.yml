@@ -1,7 +1,7 @@
 ---
 argument_specs:
   main:
-    short_description: "Build + verify the ansible-hardened dxdfir/* tool images."
+    short_description: "Build + verify the ansible-hardened get-sybers/* tool images."
     description:
       - >-
         Builds every runtime tool container from its Dockerfile in the

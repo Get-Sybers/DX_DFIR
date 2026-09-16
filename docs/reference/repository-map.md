@@ -22,16 +22,6 @@ flowchart TD
 | **GoDFIR-toolz** | [Get-Sybers/GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) | Git submodule at `docker/GoDFIR-toolz`. The source for the static-Go tool family (gore, gomft, goese, goprefetch…) and **goevtx** (the `.evtx` parser the [evtx lane](../architecture/processing-lanes.md) runs), plus the canonical hardening playbook. |
 | **PIIAT-Mem** | [Get-Sybers/PIIAT-Mem](https://github.com/Get-Sybers/PIIAT-Mem) | Volatility 3 memory-forensics tool. No longer vendored — cloned + built into the hardened `get-sybers/piiat-mem` image (`docker/GoDFIR-toolz/piiat-mem/Dockerfile`) at the `sources.yml` pin; the [memory lane](../architecture/processing-lanes.md) docker-runs it, and yara's `vadyarascan` too. |
 
-### Renamed repositories
-
-You'll see the old names in history and internal git dirs:
-
-- **PIIAT-MitreCar → byakugan** — the CAR engine's repo and its Python package
-  (`piiat_mitrecar → byakugan`) were renamed. `docs/research/` and the CHANGELOG
-  reference `PIIAT-MitreCar#…` engine PRs.
-- **EZTools-Docker → GoDFIR-toolz** — the tool repo was renamed after the Go rewrite; the
-  submodule's internal gitdir still carries the old name.
-
 ## In-repo layout
 
 The full directory map is [Dir-Structure.md](../Dir-Structure.md). The pieces that matter:

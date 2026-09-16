@@ -5,7 +5,7 @@
 # Runs the collection's molecule scenarios inside a purpose-built container
 # (python + molecule + a STATIC docker CLI), so molecule never has to be
 # installed on the host. The scenarios use the delegated driver: the role under
-# test runs its tool containers (the hardened dxdfir/* images — build them first
+# test runs its tool containers (the hardened get-sybers/* images — build them first
 # with playbooks/dxdfir-build-images.yml,
 # ...) against the HOST docker daemon through the mounted socket. For that to
 # work, the repo and /tmp are mounted at IDENTICAL paths inside the molecule
@@ -31,9 +31,7 @@ REPO_ROOT="$(realpath "$SCRIPT_DIR/../..")"
 ROLES_DIR="$REPO_ROOT/ansible/collections/get_sybers.dxdfir/roles"
 IMAGE="${MOLECULE_IMAGE:-get-sybers/molecule:latest}"
 
-# Roles whose scenarios validate real behaviour. dxdfir_velociraptor's scenario
-# is layout-only (no engine) and is excluded from the default set — pass it
-# explicitly to run it anyway.
+# Roles whose scenarios validate real behaviour.
 DEFAULT_ROLES=(dxdfir_signatures dxdfir_zeek dxdfir_evtx dxdfir_plaso dxdfir_volatility)
 ROLES=("${@:-${DEFAULT_ROLES[@]}}")
 

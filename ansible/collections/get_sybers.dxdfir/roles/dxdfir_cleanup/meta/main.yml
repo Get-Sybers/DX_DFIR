@@ -4,7 +4,7 @@ galaxy_info:
   namespace: get_sybers
   author: Get-Sybers
   description: >-
-    Wipe processed evidence, the materialised CAR tree, or the built dxdfir/* tool
+    Wipe processed evidence, the materialised CAR tree, or the built get-sybers/* tool
     images so the next run is clean. Three actions (processed|car|docker); the
     playbook decides.
   company: Get-Sybers

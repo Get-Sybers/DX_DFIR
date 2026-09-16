@@ -1,8 +1,8 @@
 ---
-# Audit the hardened dxdfir/* tool-image inventory (get_sybers_dxdfir.images
+# Audit the hardened get-sybers/* tool-image inventory (get_sybers_dxdfir.images
 # --audit): fails if any expected image is missing/un-hardened, or an unexpected
-# dxdfir/* image is present. A thin audit — no role needed.
-- name: "DFIR | audit the hardened dxdfir/* tool-image inventory"
+# get-sybers/* image is present. A thin audit — no role needed.
+- name: "DFIR | audit the hardened get-sybers/* tool-image inventory"
   hosts: "{{ dxdfir_hosts | default('localhost') }}"
   connection: "{{ dxdfir_connection | default('local') }}"
   gather_facts: true

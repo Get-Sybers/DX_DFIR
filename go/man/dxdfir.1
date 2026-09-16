@@ -128,13 +128,13 @@ Run the repository check harness (fronts
 .TP
 .B verify-images
 Audit the hardened
-.I dxdfir/*
+.I get-sybers/*
 tool-image inventory: every expected image present and hardened, nothing
 unexpected in the namespace.
 .TP
 .B build-docker
 Build (and hardening-verify) the
-.I dxdfir/*
+.I get-sybers/*
 tool images from the in-repo Dockerfiles. Fronts
 .I playbooks/dxdfir-build-images.yml
 (the
@@ -215,7 +215,7 @@ Build only this image (e.g.\&
 .BR yara ,
 .BR zeek ,
 .BR volatility );
-repeatable. Default: every dxdfir/* tool image.
+repeatable. Default: every get-sybers/* tool image.
 .TP
 .B --force
 Rebuild even when the image already exists (docker layer cache still applies).

@@ -1,5 +1,5 @@
 ---
-# Build (and hardening-verify) the dxdfir/* tool images from their in-repo,
+# Build (and hardening-verify) the get-sybers/* tool images from their in-repo,
 # ansible-hardened Dockerfiles. Run before first processing on a fresh host,
 # or after changing anything under docker/.
 - name: Build the hardened DX_DFIR tool images

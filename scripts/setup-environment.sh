@@ -40,8 +40,8 @@
 #     had just given them. Capital X applies +x to directories and to files
 #     that are already executable, leaving the .sh files runnable and data
 #     files alone.
-#   - unzip is installed, not merely hoped for. the velociraptor lane hard
-#     exits without it and the old script never mentioned it.
+#   - unzip is installed, not merely hoped for. dev-scripts/fetch-samples.sh
+#     unpacks zip fixtures with it and the old script never mentioned it.
 #
 # Usage: scripts/setup-environment.sh [--yes] [--no-color] [--help]
 # ==============================================================================
@@ -305,9 +305,9 @@ fi
 ################################################################################
 # Install the userland tools the processing scripts need.
 #
-# The old script installed none of these. The velociraptor lane exits on a
-# missing unzip, and nothing in the pipeline runs without python3 — each one
-# an error the analyst hit halfway through an ingest instead of here.
+# The old script installed none of these. Nothing in the pipeline runs without
+# python3, and the sample fetcher exits on a missing unzip — each one an error
+# the analyst hit halfway through an ingest instead of here.
 MISSING_DEPS=()
 for cmd in "${REQUIRED_CMDS[@]}"; do
     command -v "$cmd" >/dev/null 2>&1 || MISSING_DEPS+=("$cmd")
