@@ -20,17 +20,17 @@ data_store/
    │   ├── memory/                 # Memory captures
    │   └── other_raw_data/         # e.g. WinEvt/<host>/*.evtx for the EVTX path
    │
-   ├── dependencies/               # Operator-supplied tools (e.g. EvtxECmd)
+   ├── dependencies/               # Operator-supplied rulesets/symbols
    │
    └── processed/                  # One subtree per source — what `dxdfir build-car` reads
        ├── log2timeline/
        │   ├── plaso/              # .plaso databases (reusable by Timesketch)
        │   ├── jsonl/              # Plaso json_line, one file per host
        │   └── logs/               # Job logs
-       ├── windows_logs/           # EvtxECmd JSON, per host
+       ├── windows_logs/           # goevtx JSON, per host
        ├── zeek/<capture>/         # Zeek JSON (conn.json, dns.json, …)
        ├── volatility/<image>/     # Volatility 3 JSONL per plugin
-       ├── godfir-toolz/              # EZ-Tools artefacts (RECmd, SRUM, MFT, …)
+       ├── godfir-toolz/              # GoDFIR-toolz artefacts (registry, SRUM, MFT, …)
        ├── signatures/             # yara/ suricata/ hayabusa/ detection JSONL
        ├── linux_logs/             # syslog/auth/utmp/… (not yet wired into the backend)
        └── car/<source>/           # the materialised CAR: car.db + car_<object>.jsonl (+ car_relationships.jsonl)
@@ -62,7 +62,7 @@ dxdfir process plaso        # disk images / VM exports
 dxdfir process zeek         # pcaps
 dxdfir process evtx         # Windows event logs
 dxdfir process volatility   # memory
-dxdfir process godfir-toolz    # EZ-Tools artefacts from disk images
+dxdfir process godfir-toolz    # GoDFIR-toolz artefacts from disk images
 dxdfir process signatures   # yara / suricata / hayabusa
 ```
 

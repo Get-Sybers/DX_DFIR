@@ -1,6 +1,6 @@
 ---
 driver:
-  name: default            # delegated — the role runs the EvtxECmd container itself
+  name: default            # delegated — the role runs the goevtx container itself
 platforms:
   - name: localhost
 provisioner:

@@ -14,5 +14,5 @@
          (dxdfir_lane_run.stdout | from_json).empty | int)
     fail_msg: >-
       godfir-toolz produced no output at all though disk images were present
-      (every EZ-Tools container failed?).
+      (every tool container failed?).
     quiet: true

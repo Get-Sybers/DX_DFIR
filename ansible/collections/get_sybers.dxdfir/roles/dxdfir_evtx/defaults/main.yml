@@ -36,7 +36,7 @@ dxdfir_evtx_hayabusa_dir: "{{ dxdfir_evtx_repo_root }}/data_store/dependencies/h
 # Sigma rules dir (empty => rules/ beside the binary).
 dxdfir_evtx_hayabusa_rules: ""
 
-# EvtxECmd is now the static-Go goevtx (get-sybers/goevtx, on go-evtx) — no .NET
+# The .evtx parser is the static-Go goevtx (get-sybers/goevtx, on go-evtx) — no .NET
 # runtime, no DLL to supply, no operator release. Built FROM scratch from
 # docker/GoDFIR-toolz/goevtx by the dxdfir_images role. Override the tag if
 # needed:

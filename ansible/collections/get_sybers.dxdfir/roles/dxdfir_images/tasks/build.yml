@@ -100,7 +100,7 @@
       {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }} still carries a shell or python though its tool
       needs neither.
     quiet: true
-  when: dxdfir_images_name in ['zeek', 'sqlecmd',
+  when: dxdfir_images_name in ['zeek',
                              'goprefetch', 'goese', 'gorb', 'gomft', 'goevtx',
                              'goamcache', 'goappcompat', 'gore', 'gosbe',
                              'gole', 'gojle', 'gowxt']

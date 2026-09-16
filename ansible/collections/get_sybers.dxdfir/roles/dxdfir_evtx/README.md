@@ -1,6 +1,6 @@
 # dxdfir_evtx
 
-Parse **Windows Event Logs (`.evtx`)** with **goevtx** (the static-Go EvtxECmd
+Parse **Windows Event Logs (`.evtx`)** with **goevtx** (the static-Go `.evtx`
 substitute) into normalised JSON. The
 role is structure only — it asserts inputs, runs a preflight (docker, input dir,
 **the goevtx image is present**), then invokes the `get_sybers_dxdfir.evtx` Python
@@ -12,10 +12,10 @@ grouped by the source sub-dir (host).
 `.evtx` are parsed by **`get-sybers/goevtx`** — a static Go binary on Velociraptor's
 go-evtx, built `FROM scratch` from
 [`docker/GoDFIR-toolz/goevtx`](https://github.com/Get-Sybers/GoDFIR-toolz/tree/main/goevtx)
-by the `dxdfir_images` role. No .NET runtime, no `EvtxECmd.dll` to supply. It emits
+by the `dxdfir_images` role. No .NET runtime, nothing to supply. It emits
 the same `*_EvtxECmd_Output.json` shape the CAR lane content-routes on (EventId,
 Provider, Channel, Computer, EventRecordId, TimeCreated, Payload with the raw
-EventData). It does **not** reproduce EvtxECmd's Maps layer (`MapDescription` /
+EventData). It does **not** reproduce the legacy Maps layer (`MapDescription` /
 `PayloadData1-6`) — byakugan reads the raw EventData, not those derived columns.
 
 ## Role variables
@@ -29,7 +29,7 @@ EventData). It does **not** reproduce EvtxECmd's Maps layer (`MapDescription` /
 
 ## Idempotence
 A log whose `.json` output already exists (non-empty) is skipped — the skip lives in
-the Python processor, never in a task `when:`. EvtxECmd exits 0 on an empty/corrupt
+the Python processor, never in a task `when:`. goevtx exits 0 on an empty/corrupt
 log; a zero-record output is removed and counted `failed`, not treated as done.
 
 ## Example
@@ -41,7 +41,7 @@ ansible-playbook playbooks/dxdfir-process-evtx.yml
 Python unit tests cover the pure logic (argv construction, host grouping, output
 naming, discovery, the records/empty/failed classification). The **Molecule**
 scenario needs a sample `.evtx` (binary; not redistributable), supplied as an
-extra-var (goevtx is the bundled image — no EvtxECmd release needed):
+extra-var (goevtx is the bundled image — nothing else needed):
 ```bash
 molecule test -- -e molecule_sample_evtx=/path/Security.evtx
 ```

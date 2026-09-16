@@ -72,7 +72,7 @@ def test_filter_covers_activitiescache_and_srum_and_mft():
 
 
 def test_filter_covers_prefetch():
-    """Prefetch IS extracted here now — goprefetch (the Linux-native PECmd
+    """Prefetch IS extracted here now — goprefetch (the Linux-native .pf
     substitute) parses the .pf; the filter must stage them."""
     paths = _all_paths()
     assert any("Prefetch" in p and ".pf" in p.lower() for p in paths)

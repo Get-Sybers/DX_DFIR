@@ -44,7 +44,7 @@ const (
 	KindBytes
 )
 
-// Step is a named sub-step within a lane (e.g. the ~9 EZ-Tools per godfir-toolz host).
+// Step is a named sub-step within a lane (e.g. the ~9 tool steps per godfir-toolz host).
 type Step struct {
 	Name  string
 	State State

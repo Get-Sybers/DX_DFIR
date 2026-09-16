@@ -88,7 +88,7 @@ manifest declaring what the source yields and how it was derived.
 | `build_data_model.py` | CAR (13) + the CAR+ATT&CK superset (~38) + the relationship catalogue, from the pinned submodules |
 | `mappings/` | per-artefact declarative maps (one file per family; auto-discovered; shared helpers in `mappings/_common.py`) |
 | `normalize.py` | the marker engine: `normalize(artefact, record) → CAR event`, or `None` if unmapped |
-| `adapters/` | format adapters (Plaso winevt(x) → EvtxECmd shape; l2t container split; jump lists) |
+| `adapters/` | format adapters (Plaso winevt(x) → the `*_EvtxECmd_Output` shape; l2t container split; jump lists) |
 | `enrich.py` | the within-source relationship + inheritance cascade (identity, joins, inheritance, dedupe, canonical accounts) |
 | `superset.py` | the `superset.db`: superset model + relationship-instance timeline |
 | `store.py` | the per-object SQLite CAR store + `export_jsonl()` |
@@ -116,24 +116,26 @@ faked into a canonical column.
 
 | artefact | map(s) | CAR objects filled |
 |---|---|---|
-| **Windows event logs** (EvtxECmd *and* Plaso winevtx — same maps) | `evtx_security`, `evtx_security_sessions`, `evtx_process`, `evtx_services`, `evtx_bits`, `evtx_rdp`, `evtx_sysmon` | authentication, user_session, process, service, http (BITS), module, driver, thread, registry, file, flow (Sysmon) |
+| **Windows event logs** (goevtx *and* Plaso winevtx — same maps) | `evtx_security`, `evtx_security_sessions`, `evtx_process`, `evtx_services`, `evtx_bits`, `evtx_rdp`, `evtx_sysmon` | authentication, user_session, process, service, http (BITS), module, driver, thread, registry, file, flow (Sysmon) |
 | **Zeek** | `zeek_conn`, `zeek_http`, `zeek_smtp`, `zeek_files` | flow, http, email, file |
 | **Plaso execution** | `plaso_exec_prefetch/winreg/cron` | process |
 | **Plaso filesystem + Linux** | `l2t_filestat/mft/usnjrnl/utmp/utmpx/text` | file, user_session |
-| **EZ-Tools registry + SRUM** (the GoDFIR-toolz lane's output) | `recmd`, `plaso_registry`, `plaso_srum` | registry, flow, process |
+| **Registry + SRUM + Prefetch** (the GoDFIR-toolz lane's output) | `recmd`, `esedump_srum`, `prefetch_dump` | registry, flow, process |
 | **Memory** (PIIAT-Mem) | passthrough | all 10 memory objects (finished CAR) |
 
 Windows event-log EventIds covered: 4624/4625/4634/4647/4672/4688 (Security),
 7045/4697 (service), BITS 59/60, TerminalServices 21/24/25, Sysmon
-1/3/5/6/7/8/11/12/13/23. **The same maps serve both EvtxECmd and log2timeline** —
-a Plaso record is adapted to the EvtxECmd shape and run through the identical
-maps (verified: Plaso-parsed LoneWolf → byte-identical CAR to the EvtxECmd run,
+1/3/5/6/7/8/11/12/13/23. **The same maps serve both goevtx and log2timeline** —
+a Plaso record is adapted to the `*_EvtxECmd_Output` shape and run through the identical
+maps (verified: Plaso-parsed LoneWolf → byte-identical CAR to the goevtx run,
 including definitive Sysmon ProcessGuid links).
 
-SRUM and RECmd are now covered: the **GoDFIR-toolz lane** (`get_sybers_dxdfir.godfir_toolz`)
-produces the real EZ-tool output — RECmd's batch JSON and, for SRUM, plaso's
-`esedb/srum` parse of `SRUDB.dat` (SrumECmd is .NET-only) — which the `recmd`,
-`plaso_registry` and `plaso_srum` maps turn into registry / flow / process CAR.
+SRUM and the registry batch are now covered: the **GoDFIR-toolz lane** (`get_sybers_dxdfir.godfir_toolz`)
+produces the real tool output — gore's batch JSON (the `recmd` map), goese's
+per-provider-table SRUM JSONL (the `esedump_srum` map) and goprefetch's JSONL
+(the `prefetch_dump` map) — turned into registry / flow / process CAR. The main
+log2timeline lane's own registry/SRUM coverage (`plaso_registry`, `l2t_srum`)
+coexists, at lower fidelity, as its own data sources.
 
 Honest non-coverage: `email` has no live source yet (the only smtp capture is
 STARTTLS-encrypted); Zeek dns/ssl/x509/dhcp/ntp/snmp/ocsp/weird/pe have no
@@ -147,7 +149,7 @@ objects): the CAR `object`, `action`, `ts`, the identity that becomes `guid`,
 keys), and a `host` (the enrich scope). **Markers** do the small transforms and
 nest freely: `first`, `const`, `basename`, `ext`, `lower`, `regex1`,
 `domain_of`, `epoch_ts`, `map_value`, `concat`, `exe_path`, `hex_int`, `at`
-(positional), `payload`/`userdata` (EvtxECmd shapes), `host_label`.
+(positional), `payload`/`userdata` (the evtx JSON payload shapes), `host_label`.
 
 **Extract maximally; never fake.** Map any record that carries a valid CAR
 object/action/property; a canonical field with no honest source is left null

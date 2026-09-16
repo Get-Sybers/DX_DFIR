@@ -1,7 +1,7 @@
 ---
 # The playbook holds the decisions. It selects the role and passes the pipeline;
 # the role groups, the tasks act (one-action-per-task).
-- name: "DFIR | process disk images with Eric Zimmerman's EZ-Tools"
+- name: "DFIR | process disk images with the GoDFIR-toolz parsers"
   hosts: "{{ dxdfir_hosts | default('localhost') }}"
   connection: "{{ dxdfir_connection | default('local') }}"
   gather_facts: true

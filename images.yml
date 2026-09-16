@@ -14,7 +14,7 @@
 #               from there).
 #   dockerfile  Dockerfile path relative to the context
 #               (default: <name>/Dockerfile — right for the submodule-root context).
-#   args        extra --build-arg map (e.g. {EZTOOL: SQLECmd}); DFIR_UID/GID are
+#   args        extra --build-arg map (rarely needed); DFIR_UID/GID are
 #               always added by the role on top.
 #   ref         a key in sources.yml — its pinned sha is passed as the
 #               <NAME>_REF build-arg (byakugan -> BYAKUGAN_REF).
@@ -31,44 +31,41 @@ images:
   - name: piiat-mem         # Volatility 3 memory forensics — self-orchestrating, env-driven
     ref: piiat-mem
   - name: plaso
-  - name: sqlecmd           # the last still-.NET EZ tool (one parameterized Dockerfile)
-    dockerfile: eztool/Dockerfile
-    args: {EZTOOL: SQLECmd}
   # GoDFIR Go substitutes — each FROM scratch, from its own subdir in the submodule.
-  - name: goprefetch        # PECmd            (XP->Win11 .pf, MAM-compressed)
+  - name: goprefetch        # prefetch         (XP->Win11 .pf, MAM-compressed)
     context: docker/GoDFIR-toolz/goprefetch
     dockerfile: Dockerfile
-  - name: goese             # SrumECmd/SumECmd (SRUDB.dat / SUM Current.mdb)
+  - name: goese             # ESE databases    (SRUDB.dat / SUM Current.mdb)
     context: docker/GoDFIR-toolz/goese
     dockerfile: Dockerfile
-  - name: gorb              # RBCmd            (Recycle Bin $I records)
+  - name: gorb              # Recycle Bin      ($I records)
     context: docker/GoDFIR-toolz/gorb
     dockerfile: Dockerfile
-  - name: gomft             # MFTECmd          ($MFT, go-ntfs)
+  - name: gomft             # $MFT             (go-ntfs)
     context: docker/GoDFIR-toolz/gomft
     dockerfile: Dockerfile
-  - name: goevtx            # EvtxECmd         (.evtx, go-evtx)
+  - name: goevtx            # event logs       (.evtx, go-evtx)
     context: docker/GoDFIR-toolz/goevtx
     dockerfile: Dockerfile
-  - name: goamcache         # AmcacheParser    (regparser)
+  - name: goamcache         # Amcache          (regparser)
     context: docker/GoDFIR-toolz/goamcache
     dockerfile: Dockerfile
-  - name: goappcompat       # AppCompatCacheParser (regparser)
+  - name: goappcompat       # AppCompatCache   (regparser)
     context: docker/GoDFIR-toolz/goappcompat
     dockerfile: Dockerfile
-  - name: gore              # RECmd            (regparser, dirty-hive .LOG replay)
+  - name: gore              # registry batch   (regparser, dirty-hive .LOG replay)
     context: docker/GoDFIR-toolz/gore
     dockerfile: Dockerfile
-  - name: gosbe             # SBECmd           (regparser, shellbags)
+  - name: gosbe             # ShellBags        (regparser)
     context: docker/GoDFIR-toolz/gosbe
     dockerfile: Dockerfile
-  - name: gole              # LECmd            (.lnk, golnk)
+  - name: gole              # .lnk             (golnk)
     context: docker/GoDFIR-toolz/gole
     dockerfile: Dockerfile
-  - name: gojle             # JLECmd           (jump lists, mscfb)
+  - name: gojle             # jump lists       (mscfb)
     context: docker/GoDFIR-toolz/gojle
     dockerfile: Dockerfile
-  - name: gowxt             # WxTCmd           (ActivitiesCache.db, modernc sqlite; built, #88)
+  - name: gowxt             # Windows Timeline (ActivitiesCache.db, modernc sqlite; built, #88)
     context: docker/GoDFIR-toolz/gowxt
     dockerfile: Dockerfile
 

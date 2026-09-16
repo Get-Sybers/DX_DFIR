@@ -1,8 +1,8 @@
 # dxdfir_godfir_toolz
 
 Process **forensic disk images** and **VMware VM exports** with the artefact set
-Eric Zimmerman's **EZ-Tools** parse (RECmd, JLECmd, LECmd, AmcacheParser,
-AppCompatCacheParser, SBECmd, RBCmd, MFTECmd) plus SRUM and Prefetch, into
+the **GoDFIR-toolz** parse (gore, gojle, gole, goamcache,
+goappcompat, gosbe, gorb, gomft) plus SRUM and Prefetch, into
 per-host artefact output. Every tool
 now runs as a Linux-native, static-Go `FROM scratch` substitute
 (Get-Sybers/GoDFIR-toolz: `gore`/`gojle`/`gole`/`goamcache`/`goappcompat`/`gosbe`/
@@ -16,22 +16,22 @@ extraction + nine container runs happen inside Python). One output dir per host.
 
 For each disk image, the processor (`get_sybers_dxdfir/godfir_toolz.py`):
 
-1. Extracts the zimmerman artefact set from the image with Plaso's
+1. Extracts the godfir-toolz artefact set from the image with Plaso's
    `image_export.py`, using a **YAML collection filter** (not
    `--artifact_filters` — the set has no named forensic-artifact-definitions
    entry): registry hives (SYSTEM/SOFTWARE/SAM/SECURITY + per-user
    NTUSER.DAT/UsrClass.dat) **with their .LOG1/.LOG2 transaction logs**, Amcache,
    jump lists/`.lnk` (Explorer "Recent"), Recycle Bin `$I` records, the Windows
    Timeline database, the SRUM database, and a resident `$MFT`.
-2. Runs the hardened Go containers over what was pulled out: `gore` (RECmd —
-   registry batch), `gojle`/`gole` (JLECmd/LECmd — jump lists/lnk), `goamcache`,
-   `goappcompat`, `gosbe` (SBECmd — ShellBags), `gorb` (RBCmd — Recycle Bin),
-   `gomft` (MFTECmd — when a `$MFT` was extracted). The registry-family tools
+2. Runs the hardened Go containers over what was pulled out: `gore`
+   (registry batch), `gojle`/`gole` (jump lists / `.lnk`), `goamcache`,
+   `goappcompat`, `gosbe` (ShellBags), `gorb` (Recycle Bin),
+   `gomft` (when a `$MFT` was extracted). The registry-family tools
    (`gore`/`gosbe`/`goamcache`/`goappcompat`) replay each hive's `.LOG1/.LOG2`
    dirty-hive transaction logs into a writable `/work` tmpfs to match .NET
    fidelity. The two tools that were never Linux-viable under .NET at all run as
-   Go substitutes too: **SRUM** via `get-sybers/goese` (SrumECmd P/Invokes
-   Windows' ESE engine) and **Prefetch** via `get-sybers/goprefetch` (PECmd
+   Go parsers too: **SRUM** via `get-sybers/goese` (the ESE database needs
+   no Windows engine here) and **Prefetch** via `get-sybers/goprefetch` (nothing prior
    refuses off-Windows), each run only when its artefact (`SRUDB.dat` / any
    `.pf`) was extracted.
 
@@ -39,11 +39,11 @@ Directory-recursive tools (`gore`, `gojle`, `gole`, `gosbe`, `gorb`) are pointed
 the **whole per-image extraction root**, not a hand-picked sub-directory: that
 tree holds only the filtered artefact set (never the rest of the filesystem), so
 scanning it whole is both correct and needs no per-user directory lookup for a
-multi-user image. AmcacheParser / AppCompatCacheParser / MFTECmd need one
+multi-user image. goamcache / goappcompat / gomft need one
 specific file (`Amcache.hve` / `SYSTEM` / `$MFT`) and are only run when that file
 was actually extracted.
 
-Prefetch is **deliberately not** extracted or parsed a second time here: PECmd
+Prefetch is **deliberately not** extracted or parsed a second time here: goprefetch
 is Windows-only and the main log2timeline lane already parses `.pf` files inline
 as part of the normal disk-image timeline.
 
@@ -52,7 +52,7 @@ as part of the normal disk-image timeline.
 Follows the CAR pipeline's rule (`docs/CAR-Pipeline.md` §2 — "one source, one
 database"): each image gets its own `<out_dir>/<host>/` (host = the image's
 filename stem), holding the raw extraction (`_extracted/`), one sub-dir per
-EZ-Tool, and a combined `godfir-toolz.log`.
+tool, and a combined `godfir-toolz.log`.
 
 ## Role variables
 | Variable | Default | Description |
@@ -70,10 +70,10 @@ EZ-Tool, and a combined `godfir-toolz.log`.
 Coarse-grained, at the **host** level: a host output dir that already holds any
 non-empty file is skipped whole, unless `dxdfir_godfir_toolz_force`. A partial prior
 run (interrupted mid-way) is reprocessed entirely rather than resumed
-step-by-step — simpler and safer than guessing which EZ-Tool half-completed.
+step-by-step — simpler and safer than guessing which tool half-completed.
 The skip lives in the Python processor, never in a task `when:`.
 
-## What is deliberately NOT run: WxTCmd
+## What is deliberately NOT run: gowxt
 
 `wxtcmd_argv()` exists as a pure, unit-tested argv builder, but
 `process_image()` does **not** invoke it yet. `gowxt`'s SQLite interop needs a
@@ -106,5 +106,5 @@ molecule test -- -e molecule_sample_image=/path/tiny.raw
 This lane's build + unit tests are complete, but a full end-to-end run against a
 real disk image is deliberately deferred to issue #88 (see the epic). Treat the
 container argv as *proven-by-recipe* (each was independently confirmed against
-the built `get-sybers/plaso` and EZ-Tools images this session — see the module
+the built `get-sybers/plaso` and GoDFIR-toolz images this session — see the module
 docstrings) rather than validated end-to-end.

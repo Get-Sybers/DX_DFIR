@@ -30,7 +30,7 @@ func newProcessCmd(env *Env) *cobra.Command {
 			"reconstructed live by watching the deterministic output files land on disk.\n\n" +
 			"Lanes:\n" +
 			"  zeek         PCAPs -> Zeek JSON logs\n" +
-			"  evtx         Windows event logs -> EvtxECmd JSON\n" +
+			"  evtx         Windows event logs -> goevtx JSON\n" +
 			"  volatility   memory images -> plugin JSONL\n" +
 			"  plaso        disk images/VMs -> super timeline\n" +
 			"  godfir-toolz disk images/VMs -> registry/MFT/… artefacts\n" +

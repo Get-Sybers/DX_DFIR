@@ -70,7 +70,7 @@ policing a large image from inside.
 ## Pulled (unbuildable) images
 
 ```sh
-mcr.microsoft.com/dotnet/runtime:9.0                         # evtxecmd operator-supplied mode only
+mcr.microsoft.com/dotnet/runtime:9.0                         # legacy .NET runtime (retirement in flight — PR #222)
 ```
 
 The analysis backend is not a tool image: the Elastic stack (`docker/elastic/`)
@@ -118,7 +118,7 @@ official image) — operator-supplied: download the pinned release into
 
 - [Zeek](https://zeek.org/) · [Suricata](https://suricata.io/) · [YARA](https://virustotal.github.io/yara/)
 - [Volatility 3](https://github.com/volatilityfoundation/volatility3) · [Plaso / GIFT PPA](https://launchpad.net/~gift)
-- [EvtxECmd (Eric Zimmerman)](https://github.com/EricZimmerman/evtx) · [Hayabusa (Yamato Security)](https://github.com/Yamato-Security/hayabusa)
+- [go-evtx (Velociraptor)](https://github.com/Velocidex/evtx) · [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) · [Hayabusa (Yamato Security)](https://github.com/Yamato-Security/hayabusa)
 - [Elastic Stack](https://www.elastic.co/docs) — the analysis backend (`docker/elastic/`)
 
 The obligations the tools and the backend place on the operator are recorded in

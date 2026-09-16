@@ -234,7 +234,7 @@ repository.**
 | [Plaso / log2timeline](https://github.com/log2timeline/plaso) | `log2timeline/plaso:latest` container | Apache-2.0 | None |
 | [Zeek](https://zeek.org/) | `zeek/zeek:latest` container | BSD-3-Clause | None |
 | [Elastic Stack](https://www.elastic.co/) (Elasticsearch, Kibana, Elastic Agent / Fleet Server, Filebeat) | `docker.elastic.co/*` images at a pinned `ELASTIC_VERSION` — **the analysis backend** (`docker/elastic/`) | [Elastic License 2.0](https://www.elastic.co/licensing/elastic-license) (default distribution; only the free Basic-tier features are enabled) | See below |
-| [go-evtx](https://github.com/Velocidex/evtx) (Velociraptor) | `get_sybers_dxdfir.evtx` runs **goevtx** (`get-sybers/goevtx`, `docker/GoDFIR-toolz/goevtx`) — a static-Go `.evtx` parser on go-evtx; the .NET EvtxECmd is no longer used | Apache-2.0 | None |
+| [go-evtx](https://github.com/Velocidex/evtx) (Velociraptor) | `get_sybers_dxdfir.evtx` runs **goevtx** (`get-sybers/goevtx`, `docker/GoDFIR-toolz/goevtx`) — a static-Go `.evtx` parser on go-evtx | Apache-2.0 | None |
 | [Velociraptor](https://github.com/Velocidex/velociraptor) | Formerly: JSON output normalised by `dev-scripts/` (the lane was removed in 0.6.0) | AGPL-3.0 | None — output ingestion does not trigger AGPL |
 
 No tool binaries are vendored in this repository — every tool above is either
@@ -243,7 +243,7 @@ Go tools compile their pinned Go-module deps).
 
 **Formerly invoked: KAPE** (Kroll Artifact Parser and Extractor). The KAPE
 PowerShell automation was removed in favour of the planned **Velociraptor
-offline collectors running the EZ Tools** — the same Zimmerman parsers under
+offline collectors running the upstream parser suites** — the same parsers under
 MIT-style licences, without KAPE Solo's non-commercial restriction, which was
 the sharpest licensing constraint this project carried. Nothing of KAPE was
 ever vendored, so no attribution debt remains; the scripts are in git

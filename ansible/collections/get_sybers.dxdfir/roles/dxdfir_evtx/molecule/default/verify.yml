@@ -5,7 +5,7 @@
   vars:
     molecule_out: /tmp/dxdfir_evtx_molecule/out
   tasks:
-    - name: "molecule-verify | find the dxdfir_evtx_produced EvtxECmd JSON"
+    - name: "molecule-verify | find the dxdfir_evtx_produced evtx JSON"
       ansible.builtin.find:
         paths: "{{ molecule_out }}"
         patterns: "*_EvtxECmd_Output.json"
@@ -17,5 +17,5 @@
         that:
           - dxdfir_evtx_produced.matched | int > 0
           - dxdfir_evtx_produced.files | map(attribute='path') | select('search', '/HOST01/') | list | length > 0
-        fail_msg: "no EvtxECmd JSON dxdfir_evtx_produced from the sample log under the host group"
+        fail_msg: "no evtx JSON dxdfir_evtx_produced from the sample log under the host group"
         quiet: true
