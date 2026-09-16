@@ -98,7 +98,7 @@ host   DESKTOP-1                                    // hostname from SYSTEM hive
        └─ volume  Volume{9f3c…}   owns              // offset 0x100000, NTFS
             ├─ file  \Windows\System32\winevt\Logs\Security.evtx   // sha256
             └─ file  \pagefile.sys                                 // state-on-disk (§6)
-       extraction  evtxecmd@1.2   produces ▸  windows_logs/DESKTOP-1/Security_EvtxECmd_Output.json
+       extraction  goevtx@1.2     produces ▸  windows_logs/DESKTOP-1/Security_EvtxECmd_Output.json
 ```
 
 Each object is keyed by something **intrinsic**, so the same disk imaged twice is

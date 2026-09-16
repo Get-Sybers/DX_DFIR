@@ -48,9 +48,9 @@ These are already known. You do not need to report them.
   grew up on) and reverted: it blocks published ports as well, making the
   service unreachable.
 - **Pulled images are version-pinned, not digest-pinned.** The Elastic images
-  are pinned to `ELASTIC_VERSION`, the .NET runtime to a major version; there is
-  no digest pinning and no signature verification. You are trusting the
-  registry at pull time. The `dxdfir/*` tool images are built in-repo.
+  — the only pulled set — are pinned to `ELASTIC_VERSION`; there is no digest
+  pinning and no signature verification. You are trusting the registry at pull
+  time. The `get-sybers/*` tool images are built in-repo.
 
 ## Handling evidence
 

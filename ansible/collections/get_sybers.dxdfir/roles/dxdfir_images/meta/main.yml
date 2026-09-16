@@ -2,7 +2,7 @@
 galaxy_info:
   role_name: dxdfir_images
   author: Get-Sybers
-  description: Build and verify the ansible-hardened dxdfir/* tool images from in-repo Dockerfiles.
+  description: Build and verify the ansible-hardened get-sybers/* tool images from in-repo Dockerfiles.
   license: MIT
   min_ansible_version: "2.16"
   platforms:

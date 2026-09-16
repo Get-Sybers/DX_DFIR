@@ -1,13 +1,13 @@
 ---
 argument_specs:
   main:
-    short_description: "Wipe processed evidence, the CAR tree, or the dxdfir/* tool images."
+    short_description: "Wipe processed evidence, the CAR tree, or the get-sybers/* tool images."
     description:
       - >-
         Teardown for a re-run. Three actions (dxdfir_cleanup_action): processed
         (everything under data_store/processed, preserving .gitkeep), car (the
-        materialised CAR tree), and docker (built dxdfir/* images — the hardened
-        set by default, or every dxdfir/* with all_dxdfir; only images present on
+        materialised CAR tree), and docker (built get-sybers/* images — the hardened
+        set by default, or every get-sybers/* with all_dxdfir; only images present on
         the host). The front-end confirms destructive runs and can pass --check
         for a dry run.
     options:
@@ -38,4 +38,4 @@ argument_specs:
         type: bool
         required: false
         default: false
-        description: "docker: remove EVERY dxdfir/* image, not only the hardened tool set."
+        description: "docker: remove EVERY get-sybers/* image, not only the hardened tool set."

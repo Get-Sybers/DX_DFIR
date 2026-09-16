@@ -34,7 +34,7 @@ dxdfir process zeek --pipeline elastic  # drive the dxdfir_zeek role (preflight 
 dxdfir process signatures -e '{"dxdfir_signatures_lanes":["yara"]}'
 dxdfir build-car                        # normalise every processed source into per-source CAR stores
 dxdfir verify-car                       # the CAR correctness gate over the materialised CAR
-dxdfir build-docker                     # build (and hardening-verify) every dxdfir/* tool image
+dxdfir build-docker                     # build (and hardening-verify) every get-sybers/* tool image
 dxdfir validate                         # run the check harness
 dxdfir list                             # list processable sources
 man dxdfir                              # the manual (go/man/dxdfir.1)

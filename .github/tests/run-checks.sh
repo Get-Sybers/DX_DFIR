@@ -300,9 +300,9 @@ for md in sorted(root.rglob("*.md")):
     # processed forensic samples (whole disk images, vendored OS docs), whose
     # internal links are not this project's documentation to validate — third-
     # party caches (ansible-lint installs the collection's pinned deps under
-    # .ansible/), and third_party/ (the vendored PIIAT-Mem submodule: upstream
-    # docs, not ours to validate; the Byakugan CAR engine lives in an external
-    # checkout outside the repo, so it never enters this walk).
+    # .ansible/), and the GoDFIR-toolz submodule (its docs are validated in its
+    # own repo; the Byakugan CAR engine lives in an external checkout outside
+    # the repo, so it never enters this walk).
     if ".git/" in str(md) or rel.startswith("data_store/"): continue
     if "/.ansible/" in str(md) or rel.startswith(".ansible/"): continue
     if rel.startswith("docker/GoDFIR-toolz/") or "/GoDFIR-toolz/" in str(md): continue

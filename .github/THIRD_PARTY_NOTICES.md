@@ -127,7 +127,7 @@ Hayabusa under its own GPL-3.0 terms.
 The `dxdfir` front-end (`go/`) is a Go program; these modules are pinned in
 `go/go.mod` + `go/go.sum` and compiled into the built binary (so they are
 redistributed if the binary is shipped). All are permissive. `go/go.sum` is the
-integrity lock; `go mod vendor` (run by `scripts/package-offline.sh`) captures
+integrity lock; `go mod vendor` (pre-run on a connected host) captures
 them under `go/vendor/` for reproducible, air-gapped builds.
 
 | Module | Version | Licence |
@@ -167,8 +167,8 @@ The `get_sybers_dxdfir` package's direct dependencies, declared in
 `python/pyproject.toml` and installed beside it (never vendored — this closes a
 tracing gap: the Python dependencies were not recorded here before). Exact
 tested versions, transitive closure included, are pinned in
-`python/constraints.txt`; the offline bundle (`scripts/package-offline.sh`)
-carries them as unmodified wheels.
+`python/constraints.txt`; an air-gapped install consumes them as unmodified,
+pinned versions through `setup-environment.sh`'s constraint-locked install.
 
 | Package | Licence |
 |---|---|
@@ -242,8 +242,8 @@ pulled as a container image or built at image-build time from source (the GoDFIR
 Go tools compile their pinned Go-module deps).
 
 **Formerly invoked: KAPE** (Kroll Artifact Parser and Extractor). The KAPE
-PowerShell automation was removed in favour of the planned **Velociraptor
-offline collectors running the upstream parser suites** — the same parsers under
+PowerShell automation was removed; the hardened GoDFIR-toolz containers run
+the same artefact coverage under
 MIT-style licences, without KAPE Solo's non-commercial restriction, which was
 the sharpest licensing constraint this project carried. Nothing of KAPE was
 ever vendored, so no attribution debt remains; the scripts are in git

@@ -28,7 +28,7 @@ images, the shell and python) are absent.
 
 A start-time **inventory guard** then refuses to process against anything but a
 known hardened image: each processor preflight asserts the image it will run is
-a hardened `dxdfir/*` image, and `dxdfir verify-images` audits the whole `dxdfir/*`
+a hardened `get-sybers/*` image, and `dxdfir verify-images` audits the whole `get-sybers/*`
 namespace for missing, un-hardened, or **unexpected** images (something added
 that shouldn't be).
 
@@ -67,46 +67,33 @@ orchestrator to police it only enlarges the supply-chain and execution surface.
 So the design minimises what is present and confines what runs, rather than
 policing a large image from inside.
 
-## Pulled (unbuildable) images
+## Pulled images
 
-```sh
-mcr.microsoft.com/dotnet/runtime:9.0                         # legacy .NET runtime (retirement in flight — PR #222)
-```
-
-The analysis backend is not a tool image: the Elastic stack (`docker/elastic/`)
-is the official Elastic images, version-pinned (`ELASTIC_VERSION`), brought up
-with docker compose on `127.0.0.1` with security on — see its README.
+No tool image is pulled — every `get-sybers/*` image is built from source. The
+one pulled set is the analysis backend: the Elastic stack (`docker/elastic/`)
+is the official `docker.elastic.co/*` images, version-pinned
+(`ELASTIC_VERSION`), brought up with docker compose on `127.0.0.1` with
+security on — see its README. `scripts/save-docker-images.sh` includes them in
+the offline tarball set, so the stack deploys air-gapped with zero pulls.
 
 ## Offline / air-gapped hosts
 
 Two levels:
 
-**Images only** — `save-docker-images.sh` saves the built `dxdfir/*` images plus
-the pulled .NET runtime into `data_store/docker_images/`:
+**Images only** — `save-docker-images.sh` saves the built `get-sybers/*` images
+plus the pulled Elastic-stack images into `data_store/docker_images/`:
 
 ```bash
-scripts/save-docker-images.sh --build     # online: build the dxdfir/* images, then save all
+scripts/save-docker-images.sh --build     # online: build the get-sybers/* images, then save all
 scripts/save-docker-images.sh --verify    # offline: load every tarball, then assert the hardened inventory
 ```
 
-**Complete portable bundle** — `package-offline.sh` produces ONE artifact with
-everything an air-gapped host needs — the images, the `dxdfir` CLI + all Python
-deps as wheels, the pinned ansible collections, a clean archive of the repo, and
-a `MANIFEST.sha256` over all of it:
-
-```bash
-# online host:
-scripts/package-offline.sh --build            # -> dist/dxdfir-offline-<ver>-<arch>.tar.gz
-
-# air-gapped host (no network needed):
-tar -xzf dxdfir-offline-<ver>-<arch>.tar.gz
-cd dxdfir-offline-<ver>-<arch> && ./setup-offline.sh
-```
-
-`setup-offline.sh` verifies every checksum before doing anything, loads the
-images, installs the CLI from the bundled wheels (`pip --no-index`), installs
-the collections offline, and finishes by running `dxdfir verify-images` so the
-loaded inventory is confirmed to be the expected hardened set. Nothing reaches
+**Full provisioning** — `setup-environment.sh` itself is the offline path:
+provision the host connected first (it builds the images and installs the
+toolchain), save the tarballs, then move/disconnect. A re-run that finds no
+route to the internet falls back to loading the pre-seeded tarballs instead of
+building, and `dxdfir verify-images` confirms the loaded inventory is the
+expected hardened set. Nothing reaches
 the network.
 
 **Not containers:** **Hayabusa** ships as a self-contained Rust binary (no

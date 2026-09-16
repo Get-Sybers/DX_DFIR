@@ -81,9 +81,7 @@ The analysis container images are catalogued in [Containers](/docs/Containers.md
 | Script | Description |
 |---|---|
 | `setup-environment.sh` | Installs Docker and userland deps (distro-aware) and the git submodules; the Python venv, the Go toolchain and the `dxdfir` front-end. The Byakugan CAR engine is no longer a host checkout — it is cloned + built into the `get-sybers/byakugan` image by `dxdfir build-docker`. Image seeding is split into `save-docker-images.sh`. |
-| `save-docker-images.sh` | Save the built hardened `dxdfir/*` images (+ the pulled .NET runtime) as tarballs; `--load` / `--verify` restore them and assert the hardened inventory. |
-| `package-offline.sh` | Build ONE portable air-gap bundle: images (the `get-sybers/byakugan` engine image — model sources and parse binary baked in — rides here with the rest, so there is no separate `byakugan.tar`), the `get_sybers_dxdfir` processor package + deps as wheels, the Go front-end's vendored modules (`go-vendor.tar`), pinned collections, the repo, and `data_store/dependencies/` (YARA/Suricata/Hayabusa rulesets + binary, Volatility symbols) under a `MANIFEST.sha256`. The saved images are native, so the bundle is arch-specific. |
-| `setup-offline.sh` | Set up from that bundle with zero network: manifest-verify everything, unpack the repo + detection dependencies, load images (the Byakugan CAR engine rides inside the `get-sybers/byakugan` image, so there is nothing extra to unpack), install the package/collections offline, build the Go `dxdfir` front-end from the vendored modules, finish with `dxdfir verify-images` (or the same audit play via `ansible-playbook` when no Go toolchain is present). |
+| `save-docker-images.sh` | Save the built hardened `get-sybers/*` images (+ the pulled Elastic-stack images) as tarballs; `--load` / `--verify` restore them and assert the hardened inventory. |
 
 The Splunk-era and KAPE PowerShell scripts were retired (git history and the frozen
 `deprecated` branch keep them).
