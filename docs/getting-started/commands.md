@@ -4,8 +4,14 @@ Every command, grouped by task. `dxdfir --help` (and `--help` on any subcommand)
 live source of truth — when this page and the CLI disagree, trust the CLI and open an
 issue.
 
+Commands read verb first — `<verb> <noun> [NAME]`: `register collection case-a`,
+`deploy stack`, `list collections`. The collection verbs also take a bare NAME in place
+of the noun (`register case-a` is `register collection case-a`). The former noun-first
+spellings (`collection register`, `stack deploy`) still run, hidden, and print the
+verb-first form to use.
+
 Two commands sit outside `dxdfir`: the [setup script](install.md) and `docker compose`
-for the [stack](../architecture/the-stack.md) (which `dxdfir stack` also drives).
+for the [stack](../architecture/the-stack.md) (which the `dxdfir … stack` verbs also drive).
 
 ## Setup
 
@@ -20,12 +26,12 @@ for the [stack](../architecture/the-stack.md) (which `dxdfir stack` also drives)
 | Command | What it does |
 |---|---|
 | `dxdfir list [lanes\|raw\|processed]` | Show staged evidence — per-lane counts (default), or a directory view of raw/processed. |
-| `dxdfir register NAME [--no-hash]` | Promote a `data_store/raw/sort/<NAME>/` dropzone folder into a tracked collection (or create an empty one) and SHA-1 hash it. |
-| `dxdfir collection list` | List collections — registered, detected, and dropzone candidates; the active one is starred. |
-| `dxdfir collection register [NAME] [--from PATH] [--no-hash]` | Register a collection (long form of `register`); `--from` symlinks an external dir. |
-| `dxdfir collection sort [NAME] [--dry-run]` | Magic-byte-sort the dropzone into a collection's lane subdirs (content beats extension). |
-| `dxdfir collection select NAME` / `unselect` | Set / clear the active collection (later commands scope to it). |
-| `dxdfir collection unregister NAME` | Drop the registry row + marker (evidence and log preserved). |
+| `dxdfir list collections` | List collections — registered, detected, and dropzone candidates; the active one is starred. |
+| `dxdfir register [collection] [NAME] [--no-hash]` | Promote a `data_store/raw/sort/<NAME>/` dropzone folder into a tracked collection (or create an empty one) and SHA-1 hash it. |
+| `dxdfir register … --from PATH` | Symlink an external directory in as the collection; NAME defaults to its basename. |
+| `dxdfir sort [collection] [NAME] [--dry-run]` | Magic-byte-sort the dropzone into a collection's lane subdirs (content beats extension); no NAME means the active one. |
+| `dxdfir select [collection] NAME` / `dxdfir unselect [collection]` | Set / clear the active collection (later commands scope to it). |
+| `dxdfir unregister [collection] NAME` | Drop the registry row + marker (evidence and log preserved). |
 
 See the [collection concept](../architecture/processing-lanes.md#collections).
 
@@ -50,9 +56,9 @@ See the [collection concept](../architecture/processing-lanes.md#collections).
 
 | Command | What it does |
 |---|---|
-| `dxdfir stack deploy [--no-build]` | Build (if needed), start, and verify the analysis stack. |
-| `dxdfir stack start` / `stop` / `status` | Start / stop / show the selected stack's containers. |
-| `dxdfir stack destroy [--volumes] [-y]` | Remove the stack; `--volumes` also wipes ingested data. |
+| `dxdfir deploy stack [--no-build]` | Build (if needed), start, and verify the analysis stack. |
+| `dxdfir start stack` / `stop stack` / `status stack` | Start / stop / show the stack's containers. |
+| `dxdfir destroy stack [--volumes] [-y]` | Remove the stack; `--volumes` also wipes ingested data. |
 
 See [the stack](../architecture/the-stack.md) and
 [docker/elastic/README.md](../../docker/elastic/README.md).

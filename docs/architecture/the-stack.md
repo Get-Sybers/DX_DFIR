@@ -15,7 +15,7 @@ the other.
 | **Fleet Server** | Manages the agent (an elastic-agent) | `8220` |
 | **Filebeat** | Ships the processed evidence into data streams | — |
 
-Bring it up with `dxdfir stack deploy` or directly:
+Bring it up with `dxdfir deploy stack` or directly:
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144       # Elasticsearch requires this (persist in /etc/sysctl.conf)
@@ -71,7 +71,7 @@ objects. OpenCTI is the wire. Deep reference:
 ## Lifecycle
 
 ```bash
-dxdfir stack status                  # what's running
-dxdfir stack stop                    # stop, keep containers
-dxdfir stack destroy --volumes -y    # remove everything, INCLUDING ingested data
+dxdfir status stack                  # what's running
+dxdfir stop stack                    # stop, keep containers
+dxdfir destroy stack --volumes -y    # remove everything, INCLUDING ingested data
 ```

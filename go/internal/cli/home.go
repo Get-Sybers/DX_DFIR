@@ -71,7 +71,7 @@ func gatherCollections(r *repo.Repo) (colls []model.CollInfo, note, hardErr stri
 	st, err := collection.CheckStatus(r.Root)
 	if err != nil {
 		if fast := fastCollections(r); len(fast) > 0 {
-			return fast, "registry unavailable (" + firstNonEmptyLine(err.Error()) + ") - names only; `dxdfir collection list` for detail", ""
+			return fast, "registry unavailable (" + firstNonEmptyLine(err.Error()) + ") - names only; `dxdfir list collections` for detail", ""
 		}
 		return nil, "", "collection registry unavailable: " + firstNonEmptyLine(err.Error())
 	}

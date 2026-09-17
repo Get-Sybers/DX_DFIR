@@ -13,7 +13,7 @@ pipeline without leaving the UI.
 
 The box at the bottom is always live. Type a command, press **Enter**, and its output
 streams into the pane above. Built-ins: `clear`, `quit` / `exit`. Everything else
-(`list`, `collection list`, `process case-a zeek`, …) runs the real CLI verb.
+(`list`, `list collections`, `process case-a zeek`, …) runs the real CLI verb.
 
 | Key | Action |
 |---|---|

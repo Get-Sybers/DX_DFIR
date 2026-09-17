@@ -20,6 +20,7 @@ func newStixCmd(env *Env) *cobra.Command {
 		Use:                "stix",
 		Short:              "STIX 2.1 / OpenCTI exchange (export | behaviour-sightings | pull | sightings). Data → stdout, summary → stderr.",
 		Long:               "STIX 2.1 / OpenCTI exchange (export | behaviour-sightings | pull | sightings).\n\nAll arguments pass through to `python -m get_sybers_dxdfir.stix`. Data → stdout, summary → stderr.",
+		GroupID:            groupCAR,
 		DisableFlagParsing: true,
 		RunE: func(_ *cobra.Command, args []string) error {
 			py, err := repo.Python()

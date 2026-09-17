@@ -60,10 +60,10 @@ The **dropzone** is `data_store/raw/sort/`. Drop a mixed pile there and:
 
 ```bash
 dxdfir register case-a          # promote data_store/raw/sort/case-a/ → a tracked collection + hash it
-dxdfir collection sort case-a   # magic-byte-sort loose files into the lane subdirs
-dxdfir collection select case-a # make it the active target
+dxdfir sort case-a              # magic-byte-sort loose files into the lane subdirs
+dxdfir select case-a            # make it the active target
 ```
 
-The registry read path (`collection list`/`lanes`/`state`) is native Go — no subprocess
+The registry read path (`list collections`, the lane and state reads) is native Go — no subprocess
 — and shares the SQLite schema as its contract with the Python writers. Full command
 list: [commands → evidence and collections](../getting-started/commands.md#evidence-and-collections).

@@ -30,7 +30,8 @@ func newBuildCarCmd(env *Env) *cobra.Command {
 			"or <repo>/data_store/processed) and build each one's car.db + superset.db.\n" +
 			"Single-source (--in): one processed file/dir -> one car.db. A source whose car.db\n" +
 			"already exists is left as-is; pass --rebuild to re-derive it from the current maps.",
-		Args: cobra.MaximumNArgs(1),
+		GroupID: groupCAR,
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			r, ap, err := env.ansibleRepo()
 			if err != nil {
@@ -76,7 +77,8 @@ func newVerifyCarCmd(env *Env) *cobra.Command {
 		Long: "Run the CAR correctness gate (dxdfir_byakugan role, verify action) over the\n" +
 			"materialised CAR (default <repo>/data_store/processed/byakugan). Run the pipeline\n" +
 			"first (process -> build-car).",
-		Args: cobra.NoArgs,
+		GroupID: groupCAR,
+		Args:    cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			r, ap, err := env.ansibleRepo()
 			if err != nil {
@@ -111,7 +113,8 @@ func newCarTimelineCmd(env *Env) *cobra.Command {
 			"action). Unions the object events and relationship edges from a source's CAR\n" +
 			"stores into <car_dir>/timeline.jsonl. Point it at one source's car directory, or\n" +
 			"a tree to aggregate every source under it.",
-		Args: cobra.ExactArgs(1),
+		GroupID: groupCAR,
+		Args:    cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			r, ap, err := env.ansibleRepo()
 			if err != nil {

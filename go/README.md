@@ -37,7 +37,7 @@ in-repo `internal/run` engine executes it.
 Presentation adapts to the work and the terminal:
 
 - **Processing progress** (`process`) and **collection creation** (`register`,
-  `collection sort`) render a **live termui dashboard** — an overall gauge, a
+  `sort`) render a **live termui dashboard** — an overall gauge, a
   per-lane board, a bounded *filtered* log-tail for the long-pole lanes
   (volatility, plaso), and an exceptions panel. Progress is truthful: a gauge
   appears only where a real *i/N* exists (files landed, bytes hashed); heartbeat

@@ -264,7 +264,7 @@ func pruneEmptyDirs(root string, subdirs []string) {
 // to write THROUGH a lane subdir that is a symlink (or that otherwise resolves
 // outside the collection root). data_store is group-writable, so a hostile
 // evidence stager could replace, say, collections/<c>/pcaps with a symlink to
-// /etc/cron.d; without this guard the operator's `collection sort` / promote would
+// /etc/cron.d; without this guard the operator's `dxdfir sort` / promote would
 // rename an attacker-named, attacker-content file through the link and write
 // outside the tree — an arbitrary-write → host-code-execution primitive. An
 // externally-linked collection (root itself a legitimate symlink) still works,

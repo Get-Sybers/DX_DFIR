@@ -48,9 +48,9 @@ a mislabelled `.raw` E01 still lands in `disk_images/`; a header-less `.raw` wit
 no signature is left in the dropzone for you to place by hand):
 
 ```bash
-dxdfir collection create --name case-a   # -> data_store/raw/collections/case-a/
+dxdfir register case-a                   # -> data_store/raw/collections/case-a/ (+ SHA-1 hash)
 #   ...drop mixed files into data_store/raw/sort/...
-dxdfir collection sort case-a            # magic-first sort into the lane subdirs
+dxdfir sort case-a                       # magic-first sort into the lane subdirs
 dxdfir process all case-a                # run every lane over just this collection
 ```
 

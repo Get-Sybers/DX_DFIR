@@ -28,7 +28,7 @@ type Check struct {
 }
 
 // CollInfo is one tracked collection summarised for the home dashboard, mirroring
-// the fields `dxdfir collection list` shows.
+// the fields `dxdfir list collections` shows.
 type CollInfo struct {
 	Name   string
 	Total  int

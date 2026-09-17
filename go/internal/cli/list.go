@@ -87,41 +87,52 @@ func countFilesByExt(dir string, exts map[string]bool) int {
 	return n
 }
 
-// newListCmd builds `dxdfir list [KIND]`, a native (no-subprocess) view of the
-// staged evidence: lane counts over raw/ (default), or a directory view of
-// raw/ or processed/.
+// newListCmd builds `dxdfir list [VIEW]`: native (no-subprocess) views of the
+// staged evidence — lane counts over raw/ (the default, bare `list`), a
+// directory view of raw/ or processed/ — and of the tracked collections.
 func newListCmd(env *Env) *cobra.Command {
-	return &cobra.Command{
-		Use:   "list [KIND]",
-		Short: "List staged evidence (lanes | raw | processed).",
-		Long: "List staged evidence.\n\n" +
+	// view builds one evidence view as a subcommand.
+	view := func(use, short string, render func(r *repo.Repo)) *cobra.Command {
+		return &cobra.Command{
+			Use:   use,
+			Short: short,
+			Args:  cobra.NoArgs,
+			RunE: func(*cobra.Command, []string) error {
+				r, err := env.resolveRepo()
+				if err != nil {
+					return err
+				}
+				render(r)
+				return nil
+			},
+		}
+	}
+	lanes := view("lanes", "Per-lane counts over data_store/raw/ (what `process` reads) — the default.", printLanesView)
+	cmd := &cobra.Command{
+		Use:     "list [VIEW]",
+		Short:   "List staged evidence (lanes | raw | processed) or collections.",
+		GroupID: groupEvidence,
+		Long: "List staged evidence, or the tracked collections.\n\n" +
 			"Views:\n" +
 			"  lanes (default) — per-lane counts over data_store/raw/ (what `process` reads).\n" +
 			"  raw             — a directory view of data_store/raw/ top-level subdirs.\n" +
-			"  processed       — a directory view of data_store/processed/ top-level subdirs.",
-		Args: cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			r, err := env.resolveRepo()
-			if err != nil {
-				return err
-			}
-			kind := "lanes"
-			if len(args) > 0 {
-				kind = args[0]
-			}
-			switch kind {
-			case "lanes":
-				printLanesView(r)
-			case "raw":
-				printDirView(r.Path("data_store", "raw"), rawSubdirs, "data_store/raw")
-			case "processed":
-				printDirView(r.Path("data_store", "processed"), processedSubdirs, "data_store/processed")
-			default:
-				return Fail(2, "unknown list view %q — use one of: lanes, raw, processed", kind)
-			}
-			return nil
-		},
+			"  processed       — a directory view of data_store/processed/ top-level subdirs.\n" +
+			"  collections     — registered, detected and dropzone-candidate collections;\n" +
+			"                    the active one is starred.",
+		Args: cobra.NoArgs,
+		RunE: lanes.RunE,
 	}
+	cmd.AddCommand(
+		lanes,
+		view("raw", "A directory view of data_store/raw/ top-level subdirs.", func(r *repo.Repo) {
+			printDirView(r.Path("data_store", "raw"), rawSubdirs, "data_store/raw")
+		}),
+		view("processed", "A directory view of data_store/processed/ top-level subdirs.", func(r *repo.Repo) {
+			printDirView(r.Path("data_store", "processed"), processedSubdirs, "data_store/processed")
+		}),
+		collectionsLeaf(env, "collections"),
+	)
+	return cmd
 }
 
 // printLanesView prints the per-lane evidence counts over data_store/raw/.
@@ -150,7 +161,7 @@ func printLanesView(r *repo.Repo) {
 	fmt.Printf("  %-13s %5s          scans pcaps / files / disk images / evtx (the lanes above)\n", "signatures", "-")
 	fmt.Println("")
 	fmt.Println("Process one with:  dxdfir process <source>   (see  dxdfir process -h)")
-	fmt.Println("Other views:       dxdfir list raw   |   dxdfir list processed")
+	fmt.Println("Other views:       dxdfir list raw   |   dxdfir list processed   |   dxdfir list collections")
 }
 
 // printDirView prints a directory-oriented file count over each of subs beneath
