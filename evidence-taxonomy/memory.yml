@@ -3,10 +3,12 @@
 # Raw RAM dumps have no universal header, so this lane is mostly extension-led;
 # Windows crash/minidumps do carry magic. `dramimage` is a dotless suffix on
 # purpose: matching is by suffix, so it claims the M57 corpus's `*.mddramimage`
-# captures as well as a plain `.dramimage`.
+# captures as well as a plain `.dramimage`. pagefile.sys and hiberfil.sys are the
+# Windows page and hibernation files — memory that lands on disk — matched by full
+# name so ordinary .sys drivers are not swept in.
 name: memory
 subdir: memory
-ext: [.mem, .dmp, .lime, .vmem, .dump, .bin, .vmsn, .crash, dramimage]
+ext: [.mem, .dmp, .lime, .vmem, .dump, .bin, .vmsn, .crash, dramimage, pagefile.sys, hiberfil.sys]
 signatures:
   - {hex: "4D 44 4D 50", offset: 0, ext: dmp, desc: "Windows minidump (MDMP)"}
   - {hex: "50 41 47 45 44 55 4D 50", offset: 0, ext: dmp, desc: "Windows full crash dump (PAGEDUMP)"}
