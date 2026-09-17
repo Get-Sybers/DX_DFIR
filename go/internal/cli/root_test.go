@@ -67,6 +67,8 @@ func TestRootFind(t *testing.T) {
 		{[]string{"stix", "export"}, "dxdfir stix", []string{"export"}, false},
 		{[]string{"process", "LS24", "zeek"}, "dxdfir process", []string{"LS24", "zeek"}, false},
 		{[]string{"build-car"}, "dxdfir build-car", nil, false},
+		{[]string{"build-timeline", "CAR"}, "dxdfir build-timeline", []string{"CAR"}, false},
+		{[]string{"car-timeline", "CAR"}, "dxdfir build-timeline", []string{"CAR"}, false}, // alias
 		// hidden noun-first aliases still route
 		{[]string{"collection", "list"}, "dxdfir collection list", nil, true},
 		{[]string{"collection", "register", "LS24"}, "dxdfir collection register", []string{"LS24"}, true},
