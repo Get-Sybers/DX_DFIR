@@ -64,31 +64,44 @@ func WriteManifest(repoRoot, name string, p HashProgress) (rollup string, files 
 	type fileHash struct{ rel, sum string }
 	perFile := make([]fileHash, len(rels))
 	var (
-		bytesDone, filesDone int64
-		firstErr             error
-		errOnce              sync.Once
-		wg                   sync.WaitGroup
+		bytesDone int64
+		firstErr  error
+		errOnce   sync.Once
+		wg        sync.WaitGroup
 	)
+	// starts carries each file's relpath as a worker begins it, so the progress
+	// still lists files as they are hashed. It is buffered to the file count, so a
+	// worker never blocks handing one off. A single progress goroutine drains it
+	// (→ OnFile) and the byte counter (→ OnChunk), keeping the caller's progress
+	// callbacks single-threaded even though the hashing runs in parallel.
+	starts := make(chan string, len(rels))
 	stopProg := make(chan struct{})
 	progDone := make(chan struct{})
 	go func() {
 		defer close(progDone)
 		t := time.NewTicker(120 * time.Millisecond)
 		defer t.Stop()
-		var emitted int64
+		var emitted, shown int64
 		flush := func() {
+			for p.OnFile != nil {
+				select {
+				case rel := <-starts:
+					shown++
+					p.OnFile(rel, sizes[rel], int(shown)-1, len(rels))
+					continue
+				default:
+				}
+				break
+			}
 			if cur := atomic.LoadInt64(&bytesDone); p.OnChunk != nil && cur > emitted {
 				p.OnChunk(cur - emitted)
 				emitted = cur
-			}
-			if p.OnFile != nil {
-				p.OnFile("", 0, int(atomic.LoadInt64(&filesDone))-1, len(rels))
 			}
 		}
 		for {
 			select {
 			case <-stopProg:
-				flush() // final, exact snapshot
+				flush() // drain remaining starts + final byte snapshot
 				return
 			case <-t.C:
 				flush()
@@ -103,6 +116,7 @@ func WriteManifest(repoRoot, name string, p HashProgress) (rollup string, files 
 		go func(idx int, rel string) {
 			defer wg.Done()
 			defer func() { <-sem }()
+			starts <- rel // announce this file before hashing it
 			sum, herr := hashFile(filepath.Join(root, rel), func(n int64) {
 				atomic.AddInt64(&bytesDone, n)
 			})
@@ -111,7 +125,6 @@ func WriteManifest(repoRoot, name string, p HashProgress) (rollup string, files 
 				return
 			}
 			perFile[idx] = fileHash{rel, sum}
-			atomic.AddInt64(&filesDone, 1)
 		}(idx, rel)
 	}
 	wg.Wait()
