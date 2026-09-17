@@ -1,0 +1,6 @@
+# SQLite / SQL databases. Lane subdir: other_raw_data/sql/
+name: other_raw_data_sql
+subdir: other_raw_data/sql
+ext: [.sql, .sqlite, .sqlite3, .db]
+signatures:
+  - {hex: "53 51 4C 69 74 65 20 66 6F 72 6D 61 74 20 33 00", offset: 0, ext: sqlite, desc: "SQLite 3 database"}

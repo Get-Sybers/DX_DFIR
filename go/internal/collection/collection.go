@@ -13,8 +13,11 @@
 package collection
 
 import (
+	"path"
 	"path/filepath"
 	"regexp"
+
+	"github.com/get-sybers/dx_dfir/go/internal/identify"
 )
 
 // Lane mirrors get_sybers_dxdfir.collection.Lane: a processing lane, the raw/
@@ -40,10 +43,34 @@ var LANES = []Lane{
 			"dxdfir_signatures_memory_dir"}},
 }
 
-// laneSubdirs is the set of raw/ subdirs a collection materialises — the union
-// walked once per collection so per-lane counts are summed without re-walking a
-// shared subdir (disk_images feeds plaso, godfir-toolz AND signatures).
-var laneSubdirs = []string{"pcaps", "logs/winevt", "memory", "disk_images", "VM_files"}
+// evidenceSubdirs returns the canonical lane subdirs a collection materialises,
+// counts, and sorts into — every lane's subdir plus the catch-all, in taxonomy
+// precedence order. Derived from the shared evidence taxonomy (evidence-taxonomy/),
+// never hardcoded. Returns nil when the taxonomy can't be loaded, so callers
+// degrade to zero counts rather than crash.
+func evidenceSubdirs(repoRoot string) []string {
+	tax, err := identify.Load(repoRoot)
+	if err != nil {
+		return nil
+	}
+	return tax.Subdirs()
+}
+
+// evidenceTypeInfo is one collection-summary bucket: a lane subdir and the short
+// label shown for it (the subdir's leaf, e.g. "logs/winevt" -> "winevt").
+type evidenceTypeInfo struct{ subdir, label string }
+
+// evidenceTypesFor returns the summary buckets (lane subdirs + catch-all, in
+// taxonomy order) with their display labels. The KIND identify sorted a file
+// into — not the processing lane(s) that later read it.
+func evidenceTypesFor(repoRoot string) []evidenceTypeInfo {
+	subs := evidenceSubdirs(repoRoot)
+	out := make([]evidenceTypeInfo, 0, len(subs))
+	for _, s := range subs {
+		out = append(out, evidenceTypeInfo{s, path.Base(s)})
+	}
+	return out
+}
 
 // Registry / dropzone locations and control-file names — mirror collection.py.
 const (
@@ -59,13 +86,22 @@ var (
 	nameRe         = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 )
 
-// Summary mirrors the Python per-collection summary (status rows). JSON tags
-// match the retired subprocess contract so the cli's alias types stay valid.
+// TypeCount is one evidence-type bucket in a collection summary: a short lane
+// label (the subdir leaf) and how many files identify sorted into it.
+type TypeCount struct {
+	Label string `json:"label"`
+	Count int    `json:"count"`
+}
+
+// Summary is the per-collection status row. Types breaks the evidence down by
+// identified KIND — the canonical lanes a file's content sorts it into, in
+// taxonomy order, nonzero only — and Total is the distinct evidence-file count
+// (the sum of Types; each file is counted once, under its most specific lane).
 type Summary struct {
-	Name  string         `json:"name"`
-	Lanes map[string]int `json:"lanes"`
-	Total int            `json:"total"`
-	Sha1  *string        `json:"sha1"`
+	Name  string      `json:"name"`
+	Types []TypeCount `json:"types"`
+	Total int         `json:"total"`
+	Sha1  *string     `json:"sha1"`
 }
 
 // Status mirrors `collection status`.

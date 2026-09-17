@@ -73,11 +73,11 @@ func PrintHome(w io.Writer, h model.Home) {
 			default:
 				count = style.Grey(count)
 			}
-			lanes := c.Lanes
-			if lanes == "" {
-				lanes = "-"
+			types := c.Types
+			if types == "" {
+				types = "-"
 			}
-			line := fmt.Sprintf(" %s %-22s %s file(s)  [%s]", mark, c.Name, count, lanes)
+			line := fmt.Sprintf(" %s %-22s %s file(s)  [%s]", mark, c.Name, count, types)
 			if c.Sha1 != "" {
 				line += "  sha1:" + c.Sha1
 			}

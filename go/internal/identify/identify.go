@@ -3,228 +3,140 @@
 // file(1)/libmagic, deliberately NOT "detect" (which in this project means
 // threat detections).
 //
-// It is the single home for the pipeline's content typers, lifted out of the
-// collection classifier (epic #174, phase 4) so both the sort-time classifier
-// AND any lane that walks its own inputs reuse the exact same detectors instead
-// of re-implementing them: pcap magic (zeek), disk-image/VM magic + extension
-// (the plaso module's detect_format/ext_format — pure header/extension sniffing,
-// NOT the log2timeline PROCESSOR, which stays in Docker/Ansible), memory-dump and
-// EVTX extensions. Content beats extension, so a mislabelled image is filed by
-// its real type.
+// The lane taxonomy AND the magic signatures are DATA (evidence-taxonomy/, loaded
+// by Load — see taxonomy.go). This file holds only the byte-matching primitives
+// and the few content probes a `kind: special:*` signature dispatches to, because
+// they need real logic rather than a fixed byte compare at a fixed offset.
 package identify
 
 import (
+	"bytes"
 	"os"
-	"path/filepath"
-	"regexp"
-	"sort"
-	"strings"
 )
 
-// pcapMagic mirrors zeek._PCAP_MAGIC (4-byte header hex).
-var pcapMagic = map[string]bool{
-	"a1b2c3d4": true, "d4c3b2a1": true, "a1b23c4d": true, "4d3cb2a1": true, "0a0d0d0a": true,
-}
-
-var pcapExts = []string{".pcap", ".pcapng", ".cap"}
-
-// memoryExts mirrors volatility._MEMORY_EXTS (plus the "*dramimage" suffix).
-var memoryExts = []string{".raw", ".mem", ".dmp", ".lime", ".vmem", ".bin", ".dump", ".vmsn", ".crash"}
-
-// diskFormats / vmFormats mirror _DISK_FORMATS / _VM_FORMATS.
-var diskFormats = map[string]bool{"ewf1": true, "ewf2": true, "ewf-cont": true, "qcow2": true, "aff": true, "raw": true}
-var vmFormats = map[string]bool{"vmdk": true, "vmdk-extent": true, "vhd": true, "vhdx": true}
-
-var vmdkExtentRe = regexp.MustCompile(`-flat\.vmdk$|-delta\.vmdk$|-s[0-9]+\.vmdk$`)
-
-// ewfContRe matches an EWF continuation-segment name (.e02…). Compiled once at
-// package load, not per ExtFormat call.
-var ewfContRe = regexp.MustCompile(`\.e[0-9][0-9]$`)
-
-// headHex reads the first n bytes of a file and returns them lower-hex.
-func headHex(path string, n int) string {
+// readAt reads exactly n bytes at byte offset off; ok=false on a short/failed read.
+func readAt(path string, off, n int) (buf []byte, ok bool) {
+	if n <= 0 || off < 0 {
+		return nil, false
+	}
 	f, err := os.Open(path)
 	if err != nil {
-		return ""
+		return nil, false
 	}
 	defer f.Close()
-	buf := make([]byte, n)
+	b := make([]byte, n)
+	m, _ := f.ReadAt(b, int64(off))
+	if m < n {
+		return nil, false
+	}
+	return b, true
+}
+
+// maskedEqual reports whether buf matches pattern under mask (a 0x00 mask byte is
+// an `nn` wildcard position). pattern is stored already AND-ed with mask.
+func maskedEqual(buf, pattern, mask []byte) bool {
+	if len(buf) < len(pattern) {
+		return false
+	}
+	for i := range pattern {
+		if buf[i]&mask[i] != pattern[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// scanFor searches the first maxScan bytes for pattern (under mask) — for an
+// `offset: any` signature.
+func scanFor(path string, pattern, mask []byte) bool {
+	if len(pattern) == 0 {
+		return false
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	buf := make([]byte, maxScan)
 	m, _ := f.Read(buf)
-	return hexLower(buf[:m])
-}
-
-func hexLower(b []byte) string {
-	const hexdigits = "0123456789abcdef"
-	out := make([]byte, len(b)*2)
-	for i, c := range b {
-		out[2*i] = hexdigits[c>>4]
-		out[2*i+1] = hexdigits[c&0x0f]
-	}
-	return string(out)
-}
-
-// IsPcap mirrors zeek.is_pcap: content magic first, extension fallback.
-func IsPcap(path string) bool {
-	if pcapMagic[headHex(path, 4)] {
-		return true
-	}
-	low := strings.ToLower(path)
-	for _, e := range pcapExts {
-		if strings.HasSuffix(low, e) {
+	buf = buf[:m]
+	for i := 0; i+len(pattern) <= len(buf); i++ {
+		if maskedEqual(buf[i:], pattern, mask) {
 			return true
 		}
 	}
 	return false
 }
 
-// IsMemoryImage mirrors volatility.is_memory_image (extension-based).
-func IsMemoryImage(name string) bool {
-	low := strings.ToLower(name)
-	for _, e := range memoryExts {
-		if strings.HasSuffix(low, e) {
-			return true
-		}
+// matchSpecial dispatches a `kind: special:*` signature to its Go probe.
+func matchSpecial(kind, path string) bool {
+	switch kind {
+	case "special:vmdk-descriptor":
+		return isVMDKDescriptor(path)
+	case "special:vhd-footer":
+		return isVHDFooter(path)
+	case "special:ooxml":
+		return isOOXML(path)
+	case "special:odf":
+		return isODF(path)
+	case "special:apk":
+		return isAPK(path)
+	case "special:dmg-footer":
+		return isDMGFooter(path)
 	}
-	return strings.HasSuffix(low, "dramimage")
+	return false
 }
 
-// DetectFormat mirrors plaso.detect_format: identify a disk-image/VM file by
-// content (a few header bytes + a VHD footer) → ewf1|ewf-cont|ewf2|vmdk|qcow2|
-// vhdx|vhd, "" when no signature matches.
-func DetectFormat(path string) string {
+// isVMDKDescriptor matches a VMDK text descriptor ("# Disk DescriptorFile"), the
+// sidecar that points at a set of -flat/-s00N extents.
+func isVMDKDescriptor(path string) bool {
+	buf, ok := readAt(path, 0, 21)
+	return ok && string(buf) == "# Disk DescriptorFile"
+}
+
+// isVHDFooter matches a fixed-format VHD, which carries "conectix" only in its
+// 512-byte end-of-file footer.
+func isVHDFooter(path string) bool {
 	fi, err := os.Stat(path)
-	if err != nil || fi.IsDir() {
-		return ""
+	if err != nil || fi.Size() < 512 {
+		return false
 	}
-	h := headHex(path, 8)
-	switch {
-	case h == "455646090d0aff00": // EWF "EVF\x09\x0d\x0a\xff\x00"
-		// segment number: uint16 LE at offset 9; only segment 1 heads the set.
-		segno := 0
-		if f, e := os.Open(path); e == nil {
-			seg := make([]byte, 2)
-			if _, e := f.ReadAt(seg, 9); e == nil {
-				segno = int(seg[0]) | int(seg[1])<<8
-			}
-			f.Close()
-		}
-		if segno == 1 {
-			return "ewf1"
-		}
-		return "ewf-cont"
-	case h == "455646320d0a8100": // EWF2
-		return "ewf2"
-	case strings.HasPrefix(h, "4b444d56"): // "KDMV" monolithic sparse VMDK
-		return "vmdk"
-	case strings.HasPrefix(h, "514649fb"): // "QFI\xfb"
-		return "qcow2"
-	case h == "7668647866696c65": // "vhdxfile"
-		return "vhdx"
-	case h == "636f6e6563746978": // "conectix" (dynamic VHD header)
-		return "vhd"
-	}
-	// VMDK text descriptor.
-	if f, e := os.Open(path); e == nil {
-		d := make([]byte, 64)
-		n, _ := f.Read(d)
-		f.Close()
-		if strings.HasPrefix(string(d[:n]), "# Disk DescriptorFile") {
-			return "vmdk"
-		}
-	}
-	// A fixed-format VHD carries "conectix" only in its 512-byte footer.
-	if fi.Size() >= 512 {
-		if f, e := os.Open(path); e == nil {
-			foot := make([]byte, 8)
-			if _, e := f.ReadAt(foot, fi.Size()-512); e == nil && hexLower(foot) == "636f6e6563746978" {
-				f.Close()
-				return "vhd"
-			}
-			f.Close()
-		}
-	}
-	return ""
+	buf, ok := readAt(path, int(fi.Size()-512), 8)
+	return ok && string(buf) == "conectix"
 }
 
-// ExtFormat mirrors plaso.ext_format: the format implied by the file name.
-func ExtFormat(name string) string {
-	n := strings.ToLower(filepath.Base(name))
-	switch {
-	case vmdkExtentRe.MatchString(n):
-		return "vmdk-extent"
-	case strings.HasSuffix(n, ".e01"):
-		return "ewf1"
-	case ewfContRe.MatchString(n):
-		return "ewf-cont"
-	case strings.HasSuffix(n, ".vmdk"):
-		return "vmdk"
-	case strings.HasSuffix(n, ".vhd"):
-		return "vhd"
-	case strings.HasSuffix(n, ".vhdx"):
-		return "vhdx"
-	case strings.HasSuffix(n, ".aff"):
-		return "aff"
-	case strings.HasSuffix(n, ".raw"), strings.HasSuffix(n, ".img"), strings.HasSuffix(n, ".dd"):
-		return "raw"
+// headContains reports whether the first maxScan bytes contain needle — used to
+// tell ZIP-based formats apart by an inner member name near the archive start,
+// so a bare archive is not misfiled.
+func headContains(path, needle string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false
 	}
-	return ""
+	defer f.Close()
+	buf := make([]byte, maxScan)
+	m, _ := f.Read(buf)
+	return bytes.Contains(buf[:m], []byte(needle))
 }
 
-// contentSubdir mirrors _content_subdir: the lane subdir from magic bytes alone.
-func contentSubdir(path string) string {
-	if pcapMagic[headHex(path, 4)] {
-		return "pcaps"
-	}
-	switch f := DetectFormat(path); {
-	case diskFormats[f]:
-		return "disk_images"
-	case vmFormats[f]:
-		return "VM_files"
-	}
-	return ""
-}
+// isOOXML confirms a ZIP (PK\x03\x04) is an OOXML Office document by its
+// [Content_Types].xml member (docx/xlsx/pptx/vsdx).
+func isOOXML(path string) bool { return headContains(path, "[Content_Types].xml") }
 
-// extSubdirs mirrors _ext_subdirs: the lane subdirs claiming a file by name.
-func extSubdirs(path string) map[string]bool {
-	claims := map[string]bool{}
-	if IsPcap(path) {
-		claims["pcaps"] = true
-	}
-	switch f := ExtFormat(path); {
-	case diskFormats[f]:
-		claims["disk_images"] = true
-	case vmFormats[f]:
-		claims["VM_files"] = true
-	}
-	if IsMemoryImage(filepath.Base(path)) {
-		claims["memory"] = true
-	}
-	if strings.HasSuffix(strings.ToLower(filepath.Base(path)), ".evtx") {
-		claims["logs/winevt"] = true
-	}
-	return claims
-}
+// isODF confirms a ZIP is an OpenDocument file by its vnd.oasis.opendocument
+// mimetype member (odt/ods/odp), stored uncompressed near the archive start.
+func isODF(path string) bool { return headContains(path, "vnd.oasis.opendocument") }
 
-// Classify mirrors classify(): (subdir, detectedBy). subdir is "" for
-// ambiguous/unknown. detectedBy is "magic" | "ext" | "ambiguous:a,b" | "unknown".
-func Classify(path string) (subdir, detectedBy string) {
-	if magic := contentSubdir(path); magic != "" {
-		return magic, "magic"
+// isAPK confirms a ZIP is an Android package by its AndroidManifest.xml member.
+func isAPK(path string) bool { return headContains(path, "AndroidManifest.xml") }
+
+// isDMGFooter matches an Apple DMG, which carries its "koly" trailer block in the
+// last 512 bytes of the file.
+func isDMGFooter(path string) bool {
+	fi, err := os.Stat(path)
+	if err != nil || fi.Size() < 512 {
+		return false
 	}
-	claims := extSubdirs(path)
-	if len(claims) == 0 {
-		return "", "unknown"
-	}
-	if len(claims) > 1 {
-		keys := make([]string, 0, len(claims))
-		for k := range claims {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		return "", "ambiguous:" + strings.Join(keys, ",")
-	}
-	for k := range claims {
-		return k, "ext"
-	}
-	return "", "unknown"
+	buf, ok := readAt(path, int(fi.Size()-512), 4)
+	return ok && string(buf) == "koly"
 }

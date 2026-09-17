@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"sort"
 	"strings"
 	"syscall"
 
@@ -157,7 +156,7 @@ func printCollectionList(st collStatus) {
 		if c.Name == st.Active {
 			mark = style.Yellow(style.GlyphStar)
 		}
-		detail := laneDetail(c.Lanes)
+		detail := typeDetail(c.Types)
 		sha := ""
 		if c.Sha1 != nil && *c.Sha1 != "" {
 			sha = "  sha1:" + trunc(*c.Sha1, 12)
@@ -185,23 +184,15 @@ func printCollectionList(st collStatus) {
 	}
 }
 
-func laneDetail(lanes map[string]int) string {
-	if len(lanes) == 0 {
+// typeDetail renders a collection's Types as "pcaps:3, memory:2" — the identified
+// evidence lanes and their counts, in taxonomy order (nonzero only).
+func typeDetail(types []collection.TypeCount) string {
+	if len(types) == 0 {
 		return "empty"
 	}
-	keys := make([]string, 0, len(lanes))
-	for k := range lanes {
-		if lanes[k] > 0 {
-			keys = append(keys, k)
-		}
-	}
-	if len(keys) == 0 {
-		return "empty"
-	}
-	sort.Strings(keys)
-	parts := make([]string, len(keys))
-	for i, k := range keys {
-		parts[i] = fmt.Sprintf("%s:%d", k, lanes[k])
+	parts := make([]string, len(types))
+	for i, t := range types {
+		parts[i] = fmt.Sprintf("%s:%d", t.Label, t.Count)
 	}
 	return strings.Join(parts, ", ")
 }

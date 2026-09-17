@@ -1,0 +1,12 @@
+# Mobile-device extractions. Lane subdir: mobile/
+#
+# Extractions are heterogeneous multi-file sets (UFED/GrayKey/tar dumps), so a
+# directory here is treated as one set and moved WHOLE (set_folder). Single-file
+# archives (tar) are typed by content.
+name: mobile
+subdir: mobile
+set_folder: true
+ext: [.ufd, .ufdr, .tar]
+signatures:
+  - {hex: "75 73 74 61 72", offset: 257, ext: tar, desc: "POSIX tar (ustar at offset 257)"}
+  - {hex: "50 4B 03 04", offset: 0, kind: "special:apk", ext: apk, desc: "Android package (ZIP with AndroidManifest.xml)"}

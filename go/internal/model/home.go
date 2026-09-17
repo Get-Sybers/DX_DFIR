@@ -32,7 +32,7 @@ type Check struct {
 type CollInfo struct {
 	Name   string
 	Total  int
-	Lanes  string // "evtx:3, zeek:1", or "empty"
+	Types  string // identified evidence types, e.g. "pcap:3, memory:2", or "empty"
 	Sha1   string // short sha1, or "" when the evidence is not hashed yet
 	Active bool   // the selected active collection
 	Tag    string // "", "unregistered", or "candidate"

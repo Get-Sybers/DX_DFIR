@@ -52,8 +52,34 @@ func seedRegistry(t *testing.T, path string, rows map[string]bool) {
 	}
 }
 
+// stageTaxonomy writes a minimal evidence-taxonomy/ under repo so the collection
+// layer's taxonomy-derived subdirs, counts and classification have a source of
+// truth to load (mirrors the real per-lane schema).
+func stageTaxonomy(t *testing.T, repo string) {
+	t.Helper()
+	dir := filepath.Join(repo, "evidence-taxonomy")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]string{
+		"_index.yml": "catch_all_subdir: other_raw_data\n" +
+			"order: [pcaps, logs_winevt, disk_images, vm_files, memory]\n",
+		"pcaps.yml":       "name: pcaps\nsubdir: pcaps\next: [.pcap, .pcapng]\nsignatures:\n  - {hex: \"A1 B2 C3 D4\", offset: 0}\n",
+		"logs_winevt.yml": "name: logs_winevt\nsubdir: logs/winevt\next: [.evtx]\nsignatures:\n  - {hex: \"45 6C 66 46 69 6C 65 00\", offset: 0}\n",
+		"disk_images.yml": "name: disk_images\nsubdir: disk_images\next: [.e01, .raw, .dd]\nsignatures:\n  - {hex: \"45 56 46 09 0D 0A FF 00\", offset: 0}\n",
+		"vm_files.yml":    "name: vm_files\nsubdir: VM_files\nset_marker: [.vmx]\next: [.vmdk]\nsignatures:\n  - {hex: \"4B 44 4D 56\", offset: 0}\n",
+		"memory.yml":      "name: memory\nsubdir: memory\next: [.mem, .dmp]\nsignatures:\n  - {hex: \"4D 44 4D 50\", offset: 0}\n",
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestReader(t *testing.T) {
 	repo := t.TempDir()
+	stageTaxonomy(t, repo)
 	colls := filepath.Join(repo, "data_store", "raw", "collections")
 
 	// Registered + selected collection "reg" with a spread of evidence.
@@ -89,17 +115,24 @@ func TestReader(t *testing.T) {
 		t.Fatalf("registered = %+v, want one [reg]", st.Registered)
 	}
 	reg := st.Registered[0]
-	// Per-lane counts: zeek=pcaps(1), evtx=winevt(0), volatility=memory(1),
-	// plaso=disk_images(2)+VM_files(0)=2, godfir-toolz=2, signatures=pcaps(1)+
-	// disk_images(2)+memory(1)=4. Total = sum with overlaps = 10.
-	want := map[string]int{"zeek": 1, "evtx": 0, "volatility": 1, "plaso": 2, "godfir-toolz": 2, "signatures": 4}
-	for lane, n := range want {
-		if reg.Lanes[lane] != n {
-			t.Errorf("reg lane %s = %d, want %d", lane, reg.Lanes[lane], n)
+	// Per-type counts (each file bucketed once, by its subdir): pcaps(1),
+	// disk_images(2), memory(1); no winevt/VM_files staged, so those lanes are
+	// absent. Types are in taxonomy order. Total = distinct files = 1+2+1 = 4.
+	gotTypes := map[string]int{}
+	for _, tc := range reg.Types {
+		gotTypes[tc.Label] = tc.Count
+	}
+	want := map[string]int{"pcaps": 1, "disk_images": 2, "memory": 1}
+	for label, n := range want {
+		if gotTypes[label] != n {
+			t.Errorf("reg type %s = %d, want %d (types=%+v)", label, gotTypes[label], n, reg.Types)
 		}
 	}
-	if reg.Total != 10 {
-		t.Errorf("reg total = %d, want 10", reg.Total)
+	if len(reg.Types) != len(want) {
+		t.Errorf("reg types = %+v, want exactly %d nonzero buckets", reg.Types, len(want))
+	}
+	if reg.Total != 4 {
+		t.Errorf("reg total = %d, want 4", reg.Total)
 	}
 	if reg.Sha1 == nil || *reg.Sha1 != "abc123def456" {
 		t.Errorf("reg sha1 = %v, want abc123def456", reg.Sha1)
@@ -355,6 +388,7 @@ func TestSchemaEvolutionAddsSelected(t *testing.T) {
 
 func TestHash(t *testing.T) {
 	repo := t.TempDir()
+	stageTaxonomy(t, repo)
 	colls := filepath.Join(repo, "data_store", "raw", "collections")
 	write := func(rel string, data []byte) {
 		p := filepath.Join(colls, "h", rel)
@@ -492,6 +526,7 @@ func TestHashUnregistered(t *testing.T) {
 
 func TestSortRegisterPromoteLink(t *testing.T) {
 	repo := t.TempDir()
+	stageTaxonomy(t, repo)
 	colls := filepath.Join(repo, "data_store", "raw", "collections")
 	dz := filepath.Join(repo, "data_store", "raw", "sort")
 	stage := func(p string, data []byte) {
@@ -536,8 +571,11 @@ func TestSortRegisterPromoteLink(t *testing.T) {
 	}
 	db.Close()
 
-	// --- sort: drop a loose evtx into the dropzone, sort into the registered coll ---
-	stage(filepath.Join(dz, "win.evtx"), []byte("ElfFile\x00"))
+	// --- sort: a misplaced evtx sitting inside the collection is filed into
+	// logs/winevt by content, in place; a .raw disk image nested in an oddly-named
+	// folder is filed into disk_images by extension. ---
+	stage(filepath.Join(colls, "promoted", "win.evtx"), []byte("ElfFile\x00"))
+	stage(filepath.Join(colls, "promoted", "loose-images", "d.raw"), []byte("headerless"))
 	sr, err := SortInto(repo, "promoted", false, nil)
 	if err != nil {
 		t.Fatalf("sort: %v", err)
@@ -547,6 +585,12 @@ func TestSortRegisterPromoteLink(t *testing.T) {
 	}
 	if !fsx.IsRegularFile(filepath.Join(colls, "promoted", "logs/winevt", "win.evtx")) {
 		t.Error("sort: evtx not on disk in logs/winevt/")
+	}
+	if !fsx.IsRegularFile(filepath.Join(colls, "promoted", "disk_images", "d.raw")) {
+		t.Error("sort: nested .raw not filed into disk_images/")
+	}
+	if fsx.Exists(filepath.Join(colls, "promoted", "loose-images")) {
+		t.Error("sort: emptied non-lane folder loose-images/ not pruned")
 	}
 	db, _ = sql.Open("sqlite", "file:"+filepath.Join(colls, registryName)+"?mode=ro")
 	if assertRow("SELECT COUNT(*) FROM events WHERE name='promoted' AND event='sorted'") != 1 {
