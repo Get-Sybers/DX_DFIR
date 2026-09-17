@@ -79,7 +79,7 @@ dxdfir process evtx
 ```bash
 dxdfir build-car                             # every source under data_store/processed
 dxdfir verify-car                            # the promotion gate over the result
-dxdfir car-timeline data_store/processed/byakugan # one time-ordered timeline across every source
+dxdfir build-timeline data_store/processed/byakugan # one time-ordered timeline across every source
 ```
 - `build-car` drives the external [Byakugan](https://github.com/Get-Sybers/byakugan)
   engine, run inside the hardened `get-sybers/byakugan` image — cloned + built at

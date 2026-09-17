@@ -68,7 +68,7 @@ gate checks the materialised output. **Run it before you trust the CAR.**
 ## Timeline
 
 ```bash
-dxdfir car-timeline data_store/processed/byakugan --out timeline.jsonl [--after ISO] [--before ISO]
+dxdfir build-timeline data_store/processed/byakugan --out timeline.jsonl [--after ISO] [--before ISO]
 ```
 
 Unions the **object events** (`car.db` — every populated field plus the `native`

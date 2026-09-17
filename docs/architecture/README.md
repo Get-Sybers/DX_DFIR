@@ -41,7 +41,7 @@ a lane's stdout until it exits.
 Everything is file-driven, so any stage can be inspected on disk:
 
 ```
-raw ──process──▶ processed ──build-car──▶ car ──car-timeline──▶ timeline.jsonl
+raw ──process──▶ processed ──build-car──▶ car ──build-timeline──▶ timeline.jsonl
  │                   │                      │                          │
  │ data_store/raw/   │ data_store/          │ data_store/processed/    │  (also read live in
  │ <type>/           │ processed/<leaf>/    │ car/<source>/            │   the Timeline tab)
@@ -55,7 +55,7 @@ raw ──process──▶ processed ──build-car──▶ car ──car-time
    plus a JSON summary the lane verifies and the UI watches.
 3. **car** — [`build-car`](car-pipeline.md) materialises per-source CAR stores via the
    Byakugan engine.
-4. **timeline** — [`car-timeline`](car-pipeline.md#timeline) unions object events +
+4. **timeline** — [`build-timeline`](car-pipeline.md#timeline) unions object events +
    relationship edges into one time-ordered stream.
 5. **elastic** — [Filebeat](the-stack.md) ships processed evidence into
    `logs-dxdfir.<type>-*` data streams; detections run there.

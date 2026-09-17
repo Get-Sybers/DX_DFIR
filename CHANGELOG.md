@@ -36,7 +36,10 @@ is `0`, anything may change without notice.
   minor. `dxdfir --help` is sectioned (Setup / Evidence and collections /
   Processing / CAR / Analysis stack / Housekeeping) to mirror the command
   reference, and the man page now documents the collection, stack and cleanup
-  verbs.
+  verbs. The noun takes either spelling — singular or plural
+  (`list collection` == `list collections`, `register collections` ==
+  `register collection`) — and `car-timeline` became `build-timeline` (the
+  verb-first spelling; `car-timeline` stays as an alias).
 - **All tool-image builds live in the GoDFIR-toolz submodule; the Elastic stack
   is back home at `docker/elastic/`.** The byakugan/plaso/signatures/zeek build
   items moved from `docker/<name>/` into the submodule (one dir per image,

@@ -67,7 +67,7 @@ No shell scripts here either:
   one `car_<object>.jsonl` per populated object per source, under
   `data_store/processed/byakugan/<source>/`.
   **`dxdfir verify-car`** (`get_sybers_dxdfir.carcheck`) is the gate over what was
-  written; **`dxdfir car-timeline`** unions a tree into one timeline JSONL.
+  written; **`dxdfir build-timeline`** unions a tree into one timeline JSONL.
 - The **Elastic-native backend** (`docker/elastic/`) is brought up with
   `docker compose` (see its README). Filebeat tails the processed tree directly
   (`ELASTIC_INGEST_DIR` is the knob) into `logs-dxdfir.<type>-*` data
