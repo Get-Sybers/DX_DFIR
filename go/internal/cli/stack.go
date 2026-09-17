@@ -43,9 +43,11 @@ const stackLong = "The Elastic analysis stack under docker/elastic, driven by th
 // prints its targets), `<verb> stack` the leaf that runs the action.
 func stackVerb(env *Env, leaf leafFn, verb, short string) *cobra.Command {
 	cmd := nounGroup(verb, short, short+"\n\n"+stackLong+"\n\n"+
-		"The noun is required: `dxdfir "+verb+" stack`.")
+		"The noun is required: `dxdfir "+verb+" stack` (or `stacks`).")
 	cmd.GroupID = groupStack
-	cmd.AddCommand(leaf(env, "stack"))
+	child := leaf(env, "stack")
+	child.Aliases = []string{"stacks"}
+	cmd.AddCommand(child)
 	return cmd
 }
 
@@ -84,6 +86,7 @@ func newStackCmd(env *Env) *cobra.Command {
 			"  stack stop     ->  stop stack\n"+
 			"  stack status   ->  status stack")
 	parent.Hidden = true
+	parent.Aliases = []string{"stacks"}
 	for _, alias := range []struct {
 		leaf leafFn
 		verb string

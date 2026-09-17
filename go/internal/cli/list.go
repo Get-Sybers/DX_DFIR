@@ -108,6 +108,7 @@ func newListCmd(env *Env) *cobra.Command {
 		}
 	}
 	lanes := view("lanes", "Per-lane counts over data_store/raw/ (what `process` reads) — the default.", printLanesView)
+	lanes.Aliases = []string{"lane"} // singular is accepted too
 	cmd := &cobra.Command{
 		Use:     "list [VIEW]",
 		Short:   "List staged evidence (lanes | raw | processed) or collections.",
@@ -131,6 +132,8 @@ func newListCmd(env *Env) *cobra.Command {
 			return lanes.RunE(c, args)
 		},
 	}
+	collections := collectionsLeaf(env, "collections")
+	collections.Aliases = []string{"collection"} // singular is accepted too
 	cmd.AddCommand(
 		lanes,
 		view("raw", "A directory view of data_store/raw/ top-level subdirs.", func(r *repo.Repo) {
@@ -139,7 +142,7 @@ func newListCmd(env *Env) *cobra.Command {
 		view("processed", "A directory view of data_store/processed/ top-level subdirs.", func(r *repo.Repo) {
 			printDirView(r.Path("data_store", "processed"), processedSubdirs, "data_store/processed")
 		}),
-		collectionsLeaf(env, "collections"),
+		collections,
 	)
 	return cmd
 }

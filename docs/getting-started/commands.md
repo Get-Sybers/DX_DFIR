@@ -5,10 +5,12 @@ live source of truth — when this page and the CLI disagree, trust the CLI and 
 issue.
 
 Commands read verb first — `<verb> <noun> [NAME]`: `register collection case-a`,
-`deploy stack`, `list collections`. The collection verbs also take a bare NAME in place
-of the noun (`register case-a` is `register collection case-a`). The former noun-first
-spellings (`collection register`, `stack deploy`) still run, hidden, and print the
-verb-first form to use.
+`deploy stack`, `list collections`. The noun is singular or plural interchangeably
+(`list collection` == `list collections`, `register collections` == `register
+collection`). The collection verbs also take a bare NAME in place of the noun
+(`register case-a` is `register collection case-a`). The former noun-first spellings
+(`collection register`, `stack deploy`) still run, hidden, and print the verb-first
+form to use.
 
 Two commands sit outside `dxdfir`: the [setup script](install.md) and `docker compose`
 for the [stack](../architecture/the-stack.md) (which the `dxdfir … stack` verbs also drive).
