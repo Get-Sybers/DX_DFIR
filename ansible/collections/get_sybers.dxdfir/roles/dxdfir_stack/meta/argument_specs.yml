@@ -33,3 +33,24 @@ argument_specs:
         required: false
         default: false
         description: "destroy: also remove named volumes (WIPES ingested data)."
+      dxdfir_stack_required_services:
+        type: list
+        elements: str
+        required: false
+        default: [elasticsearch, kibana]
+        description: "Compose services the ensure_running gate brings up and requires for the stack to count as up."
+  ensure_running:
+    short_description: "Ensure the required compose services are running (bring the stack up)."
+    description:
+      - >-
+        Reusable, idempotent gate (tasks/ensure_running.yml): brings the stack up
+        (state present — a no-op when already running) and verifies every required
+        service came up, before a play depends on the live stack. A stopped stack
+        self-heals; deploy and start both run through it.
+    options:
+      dxdfir_stack_required_services:
+        type: list
+        elements: str
+        required: false
+        default: [elasticsearch, kibana]
+        description: "Compose services that must be running."

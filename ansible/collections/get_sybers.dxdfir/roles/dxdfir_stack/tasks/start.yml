@@ -1,7 +1,7 @@
 ---
-- name: "stack-start | start existing stopped containers"
-  ansible.builtin.command:
-    argv: ["docker", "compose", "-f", "docker-compose.yml", "start"]
-    chdir: "{{ dxdfir_stack_compose_dir }}"
-  register: dxdfir_stack_start
-  changed_when: dxdfir_stack_start.rc == 0
+# Start resumes the stack. The shared ensure_running gate is idempotent — it
+# brings up whatever is not already running and verifies the required services
+# came up — so start IS that gate: a stopped stack self-heals, an already-up one
+# is a no-op.
+- name: "stack-start | ensure the stack is up"
+  ansible.builtin.include_tasks: ensure_running.yml

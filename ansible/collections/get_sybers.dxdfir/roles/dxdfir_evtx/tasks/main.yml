@@ -15,11 +15,12 @@
     quiet: true
   tags: [always]
 
-# role_path resolves to THIS role here — capture the lane-specific preflight file
-# so dxdfir_lane includes evtx's check (the goevtx image is present), not its own.
+# role_path resolves to THIS role here — capture the lane-specific gate file so
+# dxdfir_lane includes evtx's output gate. The goevtx-image-present check is no
+# longer lane-specific: the shared preflight's built gate asserts every
+# dxdfir_lane_images entry (goevtx included) is built.
 - name: "evtx | resolve lane-specific task paths"
   ansible.builtin.set_fact:
-    dxdfir_evtx_preflight_extra: "{{ role_path }}/tasks/preflight_extra.yml"
     dxdfir_evtx_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
   tags: [always]
 
@@ -39,6 +40,5 @@
     dxdfir_lane_argv: "{{ dxdfir_evtx_argv }}"
     dxdfir_lane_verify_dir: "{{ dxdfir_evtx_out_dir }}"
     dxdfir_lane_verify_glob: "*_EvtxECmd_Output.json"
-    dxdfir_lane_preflight_extra: "{{ dxdfir_evtx_preflight_extra }}"
     dxdfir_lane_gate_extra: "{{ dxdfir_evtx_gate_extra }}"
   tags: [always]
