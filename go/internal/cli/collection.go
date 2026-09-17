@@ -157,7 +157,7 @@ func runListCollections(env *Env) error {
 	}
 	st, err := collection.CheckStatus(r.Root)
 	if err != nil {
-		return Fail(2, "collection status: %v", err)
+		return Fail(2, "list collections: %v", err)
 	}
 	printCollectionList(st)
 	return nil

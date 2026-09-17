@@ -119,8 +119,17 @@ func newListCmd(env *Env) *cobra.Command {
 			"  processed       — a directory view of data_store/processed/ top-level subdirs.\n" +
 			"  collections     — registered, detected and dropzone-candidate collections;\n" +
 			"                    the active one is starred.",
-		Args: cobra.NoArgs,
-		RunE: lanes.RunE,
+		Args: cobra.MaximumNArgs(1),
+		// A bare `list` shows the lanes view; a KNOWN view routes to its
+		// subcommand before reaching here, so any arg that lands here is an
+		// unknown view — name the valid ones rather than cobra's generic
+		// "accepts 0 arg(s)".
+		RunE: func(c *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return Fail(2, "unknown list view %q — use one of: lanes, raw, processed, collections", args[0])
+			}
+			return lanes.RunE(c, args)
+		},
 	}
 	cmd.AddCommand(
 		lanes,
