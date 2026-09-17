@@ -40,7 +40,7 @@ dxdfir build-docker                 # build the hardened tool images (once per h
 dxdfir process evtx                 # zeek | evtx | volatility | plaso | godfir-toolz | signatures
 dxdfir build-car                    # normalise every source into per-source CAR stores (car_<object>.jsonl)
 dxdfir verify-car                   # the CAR correctness gate over what was written
-dxdfir car-timeline data_store/processed/byakugan   # one property-rich, time-ordered timeline JSONL
+dxdfir build-timeline data_store/processed/byakugan # one property-rich, time-ordered timeline JSONL
 ```
 
 Bring up the backend:

@@ -5,10 +5,12 @@ live source of truth — when this page and the CLI disagree, trust the CLI and 
 issue.
 
 Commands read verb first — `<verb> <noun> [NAME]`: `register collection case-a`,
-`deploy stack`, `list collections`. The collection verbs also take a bare NAME in place
-of the noun (`register case-a` is `register collection case-a`). The former noun-first
-spellings (`collection register`, `stack deploy`) still run, hidden, and print the
-verb-first form to use.
+`deploy stack`, `list collections`. The noun is singular or plural interchangeably
+(`list collection` == `list collections`, `register collections` == `register
+collection`). The collection verbs also take a bare NAME in place of the noun
+(`register case-a` is `register collection case-a`). The former noun-first spellings
+(`collection register`, `stack deploy`) still run, hidden, and print the verb-first
+form to use.
 
 Two commands sit outside `dxdfir`: the [setup script](install.md) and `docker compose`
 for the [stack](../architecture/the-stack.md) (which the `dxdfir … stack` verbs also drive).
@@ -49,7 +51,7 @@ See the [collection concept](../architecture/processing-lanes.md#collections).
 |---|---|
 | `dxdfir build-car [DIR] [--rebuild]` | Build per-source CAR stores from the processed tree via the [Byakugan engine](https://github.com/Get-Sybers/byakugan). `--rebuild` re-derives existing stores. |
 | `dxdfir verify-car [--car-dir DIR]` | The [CAR correctness gate](../architecture/car-pipeline.md#verify). Run before trusting the CAR. |
-| `dxdfir car-timeline CAR_DIR [--out PATH] [--after ISO] [--before ISO]` | Build one time-ordered `timeline.jsonl` across a source or a whole tree. |
+| `dxdfir build-timeline CAR_DIR [--out PATH] [--after ISO] [--before ISO]` | Build one time-ordered `timeline.jsonl` across a source or a whole tree (alias: `car-timeline`). |
 | `dxdfir stix export --hits FILE --out FILE [--push]` | Turn detection hits into a STIX 2.1 bundle (OpenCTI on the wire). See [stix/README](../../python/get_sybers_dxdfir/stix/README.md). |
 
 ## Analysis stack

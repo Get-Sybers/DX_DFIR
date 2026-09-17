@@ -76,9 +76,12 @@ func collectionVerb(env *Env, leaf leafFn, verb, nameUse string) *cobra.Command 
 	cmd := leaf(env, verb+nameUse)
 	cmd.GroupID = groupEvidence
 	cmd.Long = strings.TrimRight(cmd.Long, "\n") + "\n\n" +
-		"The noun is optional — `dxdfir " + verb + nameUse + "` is `dxdfir " + verb + " collection" + nameUse + "`.\n" +
-		"A collection named exactly `collection` needs the spelled-out form."
-	cmd.AddCommand(leaf(env, "collection"+nameUse))
+		"The noun is optional and takes either spelling — `dxdfir " + verb + nameUse + "` is\n" +
+		"`dxdfir " + verb + " collection" + nameUse + "` (or `collections`).\n" +
+		"A collection named exactly `collection`/`collections` needs the spelled-out form."
+	child := leaf(env, "collection"+nameUse)
+	child.Aliases = []string{"collections"}
+	cmd.AddCommand(child)
 	return cmd
 }
 
@@ -118,6 +121,7 @@ func newCollectionCmd(env *Env) *cobra.Command {
 			"  collection unselect          ->  unselect collection           (or: unselect)\n"+
 			"  collection sort [NAME]       ->  sort collection [NAME]        (or: sort [NAME])")
 	parent.Hidden = true
+	parent.Aliases = []string{"collections"}
 	for _, alias := range []struct {
 		cmd *cobra.Command
 		now string

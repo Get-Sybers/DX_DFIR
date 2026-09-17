@@ -8,7 +8,7 @@ The command journey from raw evidence to searchable analysis. Each step is one
 ## The path at a glance
 
 ```
-stage evidence → process → build-car → verify-car → car-timeline → bring up stack → explore
+stage evidence → process → build-car → verify-car → build-timeline → bring up stack → explore
 ```
 
 ## 1. Stage evidence
@@ -83,7 +83,7 @@ every row traceable to one artefact. **Run this before you trust the CAR.**
 ## 5. Build a timeline
 
 ```bash
-dxdfir car-timeline data_store/processed/byakugan    # writes data_store/processed/byakugan/timeline.jsonl
+dxdfir build-timeline data_store/processed/byakugan  # writes data_store/processed/byakugan/timeline.jsonl
 ```
 
 Unions every source's object events and relationship edges into one time-ordered
@@ -133,7 +133,7 @@ More in the [command reference](commands.md) and the [collection concept](../arc
 
 ## When something's off
 
-- `build-car` / `car-timeline` fail → the Byakugan engine checkout is missing; re-run
+- `build-car` / `build-timeline` fail → the Byakugan engine checkout is missing; re-run
   the [setup script](install.md).
 - A lane finds nothing → evidence is in the wrong `data_store/raw/` subdir (step 1).
 - Empty or stale CAR → you ran the steps out of order; the sequence is

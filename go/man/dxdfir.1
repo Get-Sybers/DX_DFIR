@@ -28,7 +28,7 @@ dxdfir \- DX_DFIR forensic processing pipeline front-end
 .RB [ --car-dir
 .IR DIR ]
 .br
-.B dxdfir car-timeline
+.B dxdfir build-timeline
 .I CAR_DIR
 .RB [ --out
 .IR PATH ]
@@ -104,7 +104,7 @@ drives a source's role with
 \(em preflight, then process, then verify \(em and the role's single action calls
 .RB \(lq python \-m get_sybers_dxdfir. SOURCE \(rq
 for the tight loop.
-.BR build-car ", " verify-car " and " car-timeline
+.BR build-car ", " verify-car " and " build-timeline
 drive the CAR lane the same way (the
 .B dxdfir_byakugan
 role over the external Byakugan engine, run inside the hardened
@@ -165,9 +165,10 @@ in the engine model's vocabulary), every row traceable to one artefact, the
 relationship edges naming real endpoints. Run the pipeline first
 (process, then build-car).
 .TP
-.BI "car-timeline " CAR_DIR
+.BI "build-timeline " CAR_DIR
 Build one property-rich, time-ordered CAR timeline JSONL from a source's
-car.db + superset.db (or aggregate a whole tree).
+car.db + superset.db (or aggregate a whole tree). Alias:
+.BR car-timeline .
 .TP
 .B validate
 Run the repository check harness (fronts
@@ -420,7 +421,7 @@ Normalise everything processed into CAR, then gate it:
 .B dxdfir build-car && dxdfir verify-car
 .TP
 One timeline across every source:
-.B dxdfir car-timeline data_store/processed/byakugan --out /tmp/timeline.jsonl
+.B dxdfir build-timeline data_store/processed/byakugan --out /tmp/timeline.jsonl
 .SH FILES
 .TP
 .I ansible/collections/get_sybers.dxdfir/

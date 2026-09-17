@@ -31,6 +31,16 @@ func TestRootFind(t *testing.T) {
 		{[]string{"unselect", "collection"}, "dxdfir unselect collection", nil, false},
 		{[]string{"sort", "collection", "LS24"}, "dxdfir sort collection", []string{"LS24"}, false},
 		{[]string{"sort", "collection", "LS24", "--dry-run"}, "dxdfir sort collection", []string{"LS24", "--dry-run"}, false},
+		// the noun takes either spelling — singular or plural (collection/collections)
+		{[]string{"register", "collections", "LS24"}, "dxdfir register collection", []string{"LS24"}, false},
+		{[]string{"sort", "collections", "LS24"}, "dxdfir sort collection", []string{"LS24"}, false},
+		{[]string{"select", "collections", "LS24"}, "dxdfir select collection", []string{"LS24"}, false},
+		{[]string{"unregister", "collections", "LS24"}, "dxdfir unregister collection", []string{"LS24"}, false},
+		{[]string{"list", "collection"}, "dxdfir list collections", nil, false},
+		{[]string{"list", "lane"}, "dxdfir list lanes", nil, false},
+		{[]string{"unselect", "collections"}, "dxdfir unselect collection", nil, false},
+		{[]string{"deploy", "stacks"}, "dxdfir deploy stack", nil, false},
+		{[]string{"status", "stacks"}, "dxdfir status stack", nil, false},
 		// collection verbs: the bare NAME stands in for the noun
 		{[]string{"register", "LS24"}, "dxdfir register", []string{"LS24"}, false},
 		{[]string{"register", "LS24", "--no-hash"}, "dxdfir register", []string{"LS24", "--no-hash"}, false},
@@ -59,6 +69,8 @@ func TestRootFind(t *testing.T) {
 		{[]string{"stix", "export"}, "dxdfir stix", []string{"export"}, false},
 		{[]string{"process", "LS24", "zeek"}, "dxdfir process", []string{"LS24", "zeek"}, false},
 		{[]string{"build-car"}, "dxdfir build-car", nil, false},
+		{[]string{"build-timeline", "CAR"}, "dxdfir build-timeline", []string{"CAR"}, false},
+		{[]string{"car-timeline", "CAR"}, "dxdfir build-timeline", []string{"CAR"}, false}, // alias
 		// hidden noun-first aliases still route
 		{[]string{"collection", "list"}, "dxdfir collection list", nil, true},
 		{[]string{"collection", "register", "LS24"}, "dxdfir collection register", []string{"LS24"}, true},
@@ -68,6 +80,9 @@ func TestRootFind(t *testing.T) {
 		{[]string{"collection", "sort", "LS24", "--dry-run"}, "dxdfir collection sort", []string{"LS24", "--dry-run"}, true},
 		{[]string{"stack", "deploy"}, "dxdfir stack deploy", nil, true},
 		{[]string{"stack", "destroy"}, "dxdfir stack destroy", nil, true},
+		// the hidden alias groups accept the plural spelling too
+		{[]string{"collections", "register", "LS24"}, "dxdfir collection register", []string{"LS24"}, true},
+		{[]string{"stacks", "deploy"}, "dxdfir stack deploy", nil, true},
 		{[]string{"stack", "start"}, "dxdfir stack start", nil, true},
 		{[]string{"stack", "stop"}, "dxdfir stack stop", nil, true},
 		{[]string{"stack", "status"}, "dxdfir stack status", nil, true},

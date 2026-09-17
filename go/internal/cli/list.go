@@ -108,6 +108,7 @@ func newListCmd(env *Env) *cobra.Command {
 		}
 	}
 	lanes := view("lanes", "Per-lane counts over data_store/raw/ (what `process` reads) — the default.", printLanesView)
+	lanes.Aliases = []string{"lane"} // singular is accepted too
 	cmd := &cobra.Command{
 		Use:     "list [VIEW]",
 		Short:   "List staged evidence (lanes | raw | processed) or collections.",
@@ -126,11 +127,13 @@ func newListCmd(env *Env) *cobra.Command {
 		// "accepts 0 arg(s)".
 		RunE: func(c *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				return Fail(2, "unknown list view %q — use one of: lanes, raw, processed, collections", args[0])
+				return Fail(2, "unknown list view %q — the views are: %s", args[0], viewNames(c))
 			}
 			return lanes.RunE(c, args)
 		},
 	}
+	collections := collectionsLeaf(env, "collections")
+	collections.Aliases = []string{"collection"} // singular is accepted too
 	cmd.AddCommand(
 		lanes,
 		view("raw", "A directory view of data_store/raw/ top-level subdirs.", func(r *repo.Repo) {
@@ -139,9 +142,27 @@ func newListCmd(env *Env) *cobra.Command {
 		view("processed", "A directory view of data_store/processed/ top-level subdirs.", func(r *repo.Repo) {
 			printDirView(r.Path("data_store", "processed"), processedSubdirs, "data_store/processed")
 		}),
-		collectionsLeaf(env, "collections"),
+		collections,
 	)
 	return cmd
+}
+
+// viewNames lists the accepted `list` view spellings — each view subcommand's
+// name and its aliases — so the unknown-view error stays exhaustive and never
+// drifts as views (or their singular/plural aliases) change.
+func viewNames(list *cobra.Command) string {
+	var parts []string
+	for _, sub := range list.Commands() {
+		if sub.Name() == "help" { // the auto-generated help command is not a view
+			continue
+		}
+		name := sub.Name()
+		if len(sub.Aliases) > 0 {
+			name += " (or " + strings.Join(sub.Aliases, ", ") + ")"
+		}
+		parts = append(parts, name)
+	}
+	return strings.Join(parts, ", ")
 }
 
 // printLanesView prints the per-lane evidence counts over data_store/raw/.

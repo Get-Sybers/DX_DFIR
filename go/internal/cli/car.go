@@ -98,7 +98,8 @@ func newVerifyCarCmd(env *Env) *cobra.Command {
 	return cmd
 }
 
-// newCarTimelineCmd — `dxdfir car-timeline CAR_DIR` → dxdfir-car-timeline.yml.
+// newCarTimelineCmd — `dxdfir build-timeline CAR_DIR` → dxdfir-car-timeline.yml.
+// Verb-first spelling; `car-timeline` stays as an alias.
 func newCarTimelineCmd(env *Env) *cobra.Command {
 	var (
 		out    string
@@ -107,8 +108,9 @@ func newCarTimelineCmd(env *Env) *cobra.Command {
 		before string
 	)
 	cmd := &cobra.Command{
-		Use:   "car-timeline CAR_DIR",
-		Short: "Build one property-rich, time-ordered CAR timeline from car.db + superset.db.",
+		Use:     "build-timeline CAR_DIR",
+		Aliases: []string{"car-timeline"},
+		Short:   "Build one property-rich, time-ordered CAR timeline from car.db + superset.db.",
 		Long: "Build one property-rich, time-ordered CAR timeline (dxdfir_byakugan role, timeline\n" +
 			"action). Unions the object events and relationship edges from a source's CAR\n" +
 			"stores into <car_dir>/timeline.jsonl. Point it at one source's car directory, or\n" +
