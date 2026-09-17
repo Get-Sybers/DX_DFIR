@@ -10,7 +10,11 @@ set_marker: [.vmx]
 ext: [.vmdk, .vhd, .vhdx, .vmx, .ova]
 signatures:
   - {hex: "4B 44 4D 56", offset: 0, ext: vmdk, desc: "VMDK monolithic sparse (KDMV)"}
-  - {hex: "23 20 44 69 73 6B 20 44 65 73 63 72 69 70 74 6F 72 46 69 6C 65", offset: 0, kind: "special:vmdk-descriptor", ext: vmdk, desc: "VMDK text descriptor (# Disk DescriptorFile)"}
+  - hex: "23 20 44 69 73 6B 20 44 65 73 63 72 69 70 74 6F 72 46 69 6C 65"
+    offset: 0
+    kind: "special:vmdk-descriptor"
+    ext: vmdk
+    desc: "VMDK text descriptor (# Disk DescriptorFile)"
   - {hex: "76 68 64 78 66 69 6C 65", offset: 0, ext: vhdx, desc: "VHDX (vhdxfile)"}
   - {hex: "63 6F 6E 65 63 74 69 78", offset: 0, ext: vhd, desc: "VHD dynamic header (conectix)"}
   - {hex: "63 6F 6E 65 63 74 69 78", offset: -512, kind: "special:vhd-footer", ext: vhd, desc: "VHD fixed-format footer (conectix, last 512 bytes)"}
