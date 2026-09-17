@@ -127,7 +127,7 @@ func newListCmd(env *Env) *cobra.Command {
 		// "accepts 0 arg(s)".
 		RunE: func(c *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				return Fail(2, "unknown list view %q — use one of: lanes, raw, processed, collections", args[0])
+				return Fail(2, "unknown list view %q — the views are: %s", args[0], viewNames(c))
 			}
 			return lanes.RunE(c, args)
 		},
@@ -145,6 +145,24 @@ func newListCmd(env *Env) *cobra.Command {
 		collections,
 	)
 	return cmd
+}
+
+// viewNames lists the accepted `list` view spellings — each view subcommand's
+// name and its aliases — so the unknown-view error stays exhaustive and never
+// drifts as views (or their singular/plural aliases) change.
+func viewNames(list *cobra.Command) string {
+	var parts []string
+	for _, sub := range list.Commands() {
+		if sub.Name() == "help" { // the auto-generated help command is not a view
+			continue
+		}
+		name := sub.Name()
+		if len(sub.Aliases) > 0 {
+			name += " (or " + strings.Join(sub.Aliases, ", ") + ")"
+		}
+		parts = append(parts, name)
+	}
+	return strings.Join(parts, ", ")
 }
 
 // printLanesView prints the per-lane evidence counts over data_store/raw/.
