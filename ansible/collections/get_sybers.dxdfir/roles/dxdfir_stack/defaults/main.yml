@@ -20,3 +20,10 @@ dxdfir_stack_env_file: "{{ dxdfir_stack_compose_dir }}/.env"
 dxdfir_stack_build: true
 # destroy: also remove named volumes (WIPES ingested data).
 dxdfir_stack_remove_volumes: false
+
+# The reusable ensure_running gate (tasks/ensure_running.yml) brings these compose
+# services up and requires them running — the stack is not "up" until they are.
+# deploy and start both run through it; a live-stack consumer can reuse it too.
+dxdfir_stack_required_services:
+  - elasticsearch
+  - kibana

@@ -1,0 +1,48 @@
+---
+# Reusable, idempotent gate: ENSURE every pinned tool image in
+# dxdfir_images_required is built on this host BEFORE a play runs a container from
+# it. Reads the local image facts and BUILDS any that are missing — so a fresh
+# host, or one whose images predate a new tool, self-heals in place instead of
+# failing a run hours in. Idempotent: an image already built is a no-op (the
+# build role only builds what is absent), so it is safe to call at the head of
+# every container play, including once per lane in a serial `process all`.
+#
+# Presence + self-heal only; the run-time supply-chain guard
+# (get_sybers_dxdfir.images.require) still enforces the hardened contract on each
+# image before it runs. Reuse:
+#   - ansible.builtin.include_role:
+#       name: dxdfir_images
+#       tasks_from: ensure_built
+#     vars:
+#       dxdfir_images_required: ["get-sybers/goevtx:latest"]
+
+- name: "ensure-built | read the local image facts"
+  community.docker.docker_image_info:
+    name: "{{ dxdfir_images_required }}"
+  register: dxdfir_images_built_info
+  when: dxdfir_images_required | length > 0
+
+- name: "ensure-built | resolve which required images are missing"
+  vars:
+    # RepoTags of every queried image docker knows locally, e.g.
+    # ["get-sybers/goevtx:latest"]. An image present only under another tag won't
+    # carry the requested :latest here, so it is correctly treated as missing.
+    _present: >-
+      {{ (dxdfir_images_built_info.images | default([]))
+         | map(attribute='RepoTags') | flatten | select('string') | list }}
+  ansible.builtin.set_fact:
+    # Missing refs mapped to their bare manifest names (get-sybers/goevtx:latest
+    # -> goevtx), the identity the dxdfir_images build role builds by.
+    dxdfir_images_to_build: >-
+      {{ dxdfir_images_required | reject('in', _present)
+         | map('regex_replace', '^[^/]+/([^:]+):.*$', '\1') | list }}
+  when: dxdfir_images_required | length > 0
+
+- name: "ensure-built | build the missing tool image(s)"
+  ansible.builtin.include_role:
+    name: dxdfir_images
+  vars:
+    # Build ONLY what is missing; the build itself is idempotent (force off), and
+    # each built image is hardening-verified by the build role.
+    dxdfir_images_set: "{{ dxdfir_images_to_build }}"
+  when: dxdfir_images_to_build | default([]) | length > 0

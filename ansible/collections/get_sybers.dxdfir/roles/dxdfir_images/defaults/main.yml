@@ -42,6 +42,12 @@ dxdfir_images_set: "{{ (dxdfir_images_manifest.images | default([])) | map(attri
 # Rebuild even when an image already exists (docker build cache still applies).
 dxdfir_images_force: false
 
+# The reusable ensure_built gate (tasks/ensure_built.yml) reads this list of full
+# image refs and builds any not yet built on the host (idempotent — already-built
+# images are a no-op). Empty by default; a calling play (a lane preflight, a CAR
+# preflight) passes the images it is about to run.
+dxdfir_images_required: []
+
 # Per-image build context / dockerfile / args now live in images.yml (one entry
 # per image); tasks/build.yml resolves them from the manifest entry, including a
 # `ref` -> <NAME>_REF build-arg whose sha comes from sources.yml (e.g. byakugan

@@ -54,6 +54,19 @@
   changed_when: false
   when: dxdfir_lane_module | default('') | length > 0
 
+# Built gate: the precondition for running this lane's containers — every
+# get-sybers/* tool image it runs must be built on the host. Idempotent and
+# self-healing: a missing image is BUILT here (a no-op when already built), so a
+# fresh host or one whose images predate a new tool provisions itself at the head
+# of the lane rather than failing a run hours in. Reused from the dxdfir_images
+# role; the hardened-contract guard below then enforces label + uid on what runs.
+- name: "preflight | ensure this lane's tool images are built | {{ dxdfir_lane_name }}"
+  ansible.builtin.include_role:
+    name: dxdfir_images
+    tasks_from: ensure_built
+  vars:
+    dxdfir_images_required: "{{ dxdfir_lane_images | select('match', '^get-sybers/') | list }}"
+
 # Supply-chain guard: refuse to start unless every tool image about to run is a
 # KNOWN hardened get-sybers/* image (label + uid + expected name). A substituted
 # or un-hardened image stops the lane before any evidence is touched. A

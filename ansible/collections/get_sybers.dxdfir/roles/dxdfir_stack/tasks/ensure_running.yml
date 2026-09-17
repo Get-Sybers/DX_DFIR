@@ -1,0 +1,45 @@
+---
+# Reusable, idempotent gate: ENSURE the required compose services are running
+# BEFORE a play depends on the live stack (a bring-up verifying itself, a start,
+# or anything that ingests into / queries elasticsearch). Brings the stack up and
+# then verifies — `state: present` is idempotent (it starts only what is not
+# already running and is a no-op when everything is up), so a stopped or
+# never-started stack self-heals in place instead of failing the consumer. The
+# project is the elastic analysis stack under docker/elastic.
+#
+# Reuse from within the role:
+#   - ansible.builtin.include_tasks: ensure_running.yml
+# with dxdfir_stack_required_services set (defaults to elasticsearch + kibana).
+
+- name: "ensure-running | bring the stack up (idempotent — no-op if already running)"
+  community.docker.docker_compose_v2:
+    project_src: "{{ dxdfir_stack_compose_dir }}"
+    env_files:
+      - "{{ dxdfir_stack_env_file }}"
+    state: present
+  register: dxdfir_stack_ensure_up
+
+- name: "ensure-running | read back the service state"
+  community.docker.docker_compose_v2:
+    project_src: "{{ dxdfir_stack_compose_dir }}"
+    env_files:
+      - "{{ dxdfir_stack_env_file }}"
+  register: dxdfir_stack_running_state
+
+- name: "ensure-running | every required service is running"
+  vars:
+    _running: >-
+      {{ dxdfir_stack_running_state.containers
+         | selectattr('State', 'equalto', 'running')
+         | map(attribute='Service') | list }}
+    _down: "{{ dxdfir_stack_required_services | reject('in', _running) | list }}"
+  ansible.builtin.assert:
+    that:
+      - _down | length == 0
+    fail_msg: >-
+      the elastic stack could not be brought fully up — not running:
+      {{ _down | join(', ') }}. Check docker/elastic/.env and `dxdfir status stack`.
+    success_msg: >-
+      the required stack services are running:
+      {{ dxdfir_stack_required_services | join(', ') }}.
+    quiet: true

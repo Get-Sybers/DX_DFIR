@@ -59,6 +59,18 @@ rather than failing the whole run — so a missing evidence type is a note, not 
 diagnostic. `ansible-lint --profile production` runs over the collection as a
 [CI gate](build-and-test.md).
 
+Two reusable, **idempotent self-healing** container preconditions back this up, so every
+play that runs a container ensures its precondition at the point — in a serial `process
+all`, once per lane, right before that lane creates its container. **`dxdfir_images`
+`ensure_built`** (`tasks_from: ensure_built`, fed `dxdfir_images_required`) builds any tool
+image not yet built on the host (a no-op when already built); the shared `dxdfir_lane`
+preflight and the `dxdfir_byakugan` preflight both call it, ahead of the run-time
+supply-chain guard that enforces the hardened contract on what is built. **`dxdfir_stack`
+`ensure_running`** (`dxdfir_stack_required_services`, default `elasticsearch` + `kibana`)
+brings the compose services up (`state: present`, a no-op when already running) and verifies
+they came up; stack `deploy` and `start` both run through it. Both are idempotent, so a
+fresh or half-provisioned host self-heals in place instead of failing the run.
+
 ## The one external seam
 
 The `dxdfir_byakugan` role drives the external [Byakugan engine](https://github.com/Get-Sybers/byakugan),

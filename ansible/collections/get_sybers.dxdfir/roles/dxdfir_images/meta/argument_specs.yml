@@ -35,3 +35,19 @@ argument_specs:
         required: false
         default: false
         description: "Rebuild images that already exist (docker layer cache still applies)."
+  ensure_built:
+    short_description: "Ensure a set of pinned tool images is built (build the missing ones)."
+    description:
+      - >-
+        Reusable, idempotent gate (tasks/ensure_built.yml): reads the local image
+        facts and BUILDS any requested image that is not built, before a play runs
+        a container from it — a missing image self-heals in place, an already-built
+        one is a no-op. Presence + self-heal only; the run-time supply-chain guard
+        still enforces the hardened contract at run time.
+    options:
+      dxdfir_images_required:
+        type: list
+        elements: str
+        required: false
+        default: []
+        description: "Full image refs the calling play needs built, e.g. get-sybers/goevtx:latest."

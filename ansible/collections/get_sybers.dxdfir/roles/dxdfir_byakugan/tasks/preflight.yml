@@ -23,6 +23,16 @@
   register: dxdfir_byakugan_carcheck_import
   changed_when: false
 
+# Built gate: the precondition for the CAR stage's engine container — idempotent
+# and self-healing, so a missing engine image is BUILT here (a no-op when already
+# built) rather than failing the stage.
+- name: "car-preflight | ensure the Byakugan engine image is built"
+  ansible.builtin.include_role:
+    name: dxdfir_images
+    tasks_from: ensure_built
+  vars:
+    dxdfir_images_required: ["{{ dxdfir_byakugan_image }}"]
+
 - name: "car-preflight | the Byakugan engine image is present + hardened"
   ansible.builtin.command:
     argv: ["python3", "-m", "get_sybers_dxdfir.images", "--require", "{{ dxdfir_byakugan_image }}"]

@@ -10,23 +10,7 @@
     state: present
   register: dxdfir_stack_up
 
-- name: "stack-deploy | read back the running services"
-  community.docker.docker_compose_v2:
-    project_src: "{{ dxdfir_stack_compose_dir }}"
-    env_files:
-      - "{{ dxdfir_stack_env_file }}"
-  register: dxdfir_stack_state
-
-- name: "stack-deploy | assert elasticsearch + kibana are running"
-  ansible.builtin.assert:
-    that:
-      - >-
-          dxdfir_stack_state.containers
-          | selectattr('Service', 'equalto', 'elasticsearch')
-          | selectattr('State', 'equalto', 'running') | list | length > 0
-      - >-
-          dxdfir_stack_state.containers
-          | selectattr('Service', 'equalto', 'kibana')
-          | selectattr('State', 'equalto', 'running') | list | length > 0
-    fail_msg: "the elastic stack is not fully running: {{ dxdfir_stack_state.containers | map(attribute='Name') | list }}"
-    quiet: true
+# Verify (and self-heal) the bring-up through the shared container-up gate — the
+# same idempotent gate start and any live-stack consumer use.
+- name: "stack-deploy | ensure the stack is up"
+  ansible.builtin.include_tasks: ensure_running.yml

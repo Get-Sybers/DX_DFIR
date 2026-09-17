@@ -28,21 +28,25 @@
       {{ {(dxdfir_images_name | upper | replace('-', '_')) ~ '_REF':
            ((dxdfir_images_sources[_img.ref] | default({})).ref | default('main'))}
          if (_img.ref is defined) else {} }}
-  community.docker.docker_image:
+  # BuildKit (docker buildx), NOT the legacy builder: every tool Dockerfile uses
+  # heredoc COPY and the `# syntax=` frontend directive, both BuildKit-only —
+  # the legacy builder fails them with "COPY failed: no source files were
+  # specified". rebuild=never keeps it idempotent (build only when the image is
+  # absent, so a re-run or a self-heal is a no-op); dxdfir_images_force flips it
+  # to always.
+  community.docker.docker_image_build:
     name: "{{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"
     tag: latest
-    source: build
-    force_source: "{{ dxdfir_images_force | bool }}"
-    build:
-      # context is repo-root-relative in the manifest; absent, the role default
-      # dxdfir_images_context (the GoDFIR-toolz submodule root) applies.
-      # dockerfile is relative to the context (default: <name>/Dockerfile).
-      path: "{{ (dxdfir_images_repo_root ~ '/' ~ _img.context) if _img.context is defined else dxdfir_images_context }}"
-      dockerfile: "{{ _img.dockerfile | default(dxdfir_images_name ~ '/Dockerfile') }}"
-      # The single-source run-as uid/gid are combined ON TOP of the manifest args
-      # (and any ref arg), so they always WIN over a per-image build arg.
-      args: "{{ (_img.args | default({})) | combine(_ref_args)
-                | combine({'DFIR_UID': dxdfir_images_uid | string, 'DFIR_GID': dxdfir_images_gid | string}) }}"
+    rebuild: "{{ 'always' if dxdfir_images_force | bool else 'never' }}"
+    # context is repo-root-relative in the manifest; absent, the role default
+    # dxdfir_images_context (the GoDFIR-toolz submodule root) applies.
+    # dockerfile is relative to the context (default: <name>/Dockerfile).
+    path: "{{ (dxdfir_images_repo_root ~ '/' ~ _img.context) if _img.context is defined else dxdfir_images_context }}"
+    dockerfile: "{{ _img.dockerfile | default(dxdfir_images_name ~ '/Dockerfile') }}"
+    # The single-source run-as uid/gid are combined ON TOP of the manifest args
+    # (and any ref arg), so they always WIN over a per-image build arg.
+    args: "{{ (_img.args | default({})) | combine(_ref_args)
+              | combine({'DFIR_UID': dxdfir_images_uid | string, 'DFIR_GID': dxdfir_images_gid | string}) }}"
 
 - name: "images-build | inspect {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"
   community.docker.docker_image_info:
