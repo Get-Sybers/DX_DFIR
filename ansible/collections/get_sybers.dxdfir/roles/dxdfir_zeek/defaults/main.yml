@@ -4,7 +4,13 @@
 # (roles/dxdfir_zeek -> get_sybers.dxdfir -> collections -> ansible -> repo).
 dxdfir_zeek_repo_root: "{{ role_path }}/../../../../.."
 
-dxdfir_zeek_pcap_dir: "{{ dxdfir_zeek_repo_root }}/data_store/raw/pcaps"
+# The pcaps subdir comes from the shared evidence taxonomy (evidence-taxonomy/),
+# the one source of truth for where sort files evidence AND where this role reads
+# it — the two can't drift.
+dxdfir_zeek_pcap_lane: >-
+  {{ (lookup('file', dxdfir_zeek_repo_root ~ '/evidence-taxonomy/pcaps.yml',
+  errors='ignore') | default('', true) | from_yaml).subdir }}
+dxdfir_zeek_pcap_dir: "{{ dxdfir_zeek_repo_root }}/data_store/raw/{{ dxdfir_zeek_pcap_lane }}"
 dxdfir_zeek_out_dir: "{{ dxdfir_zeek_repo_root }}/data_store/processed/zeek"
 # Output base — consumed by
 # tasks/process.yml. Override directly to send output to a custom location.

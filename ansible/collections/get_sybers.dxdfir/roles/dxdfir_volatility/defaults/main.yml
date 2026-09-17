@@ -4,7 +4,13 @@
 # (roles/dxdfir_volatility -> get_sybers.dxdfir -> collections -> ansible -> repo).
 dxdfir_volatility_repo_root: "{{ role_path }}/../../../../.."
 
-dxdfir_volatility_memory_dir: "{{ dxdfir_volatility_repo_root }}/data_store/raw/memory"
+# The memory subdir comes from the shared evidence taxonomy (evidence-taxonomy/),
+# the one source of truth for where sort files evidence AND where this role reads
+# it — the two can't drift.
+dxdfir_volatility_memory_lane: >-
+  {{ (lookup('file', dxdfir_volatility_repo_root ~ '/evidence-taxonomy/memory.yml',
+  errors='ignore') | default('', true) | from_yaml).subdir }}
+dxdfir_volatility_memory_dir: "{{ dxdfir_volatility_repo_root }}/data_store/raw/{{ dxdfir_volatility_memory_lane }}"
 dxdfir_volatility_out_dir: "{{ dxdfir_volatility_repo_root }}/data_store/processed/volatility"
 # Resolved output base for the selected pipeline. Override directly to send output
 # to a custom location.
