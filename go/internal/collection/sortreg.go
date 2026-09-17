@@ -347,12 +347,18 @@ func Register(repoRoot, name, fromPath, source string, onItem ItemFn) (RegisterR
 	return create(db, repoRoot, name)
 }
 
-// create mirrors _create: make the lane subdirs and register (idempotent).
+// create mirrors _create: make the lane subdirs and register (idempotent). The
+// taxonomy is loaded first and its failure returned, so a collection is never
+// registered without its lane subdirs.
 func create(db *sql.DB, repoRoot, name string) (RegisterResult, error) {
+	tax, err := identify.Load(repoRoot)
+	if err != nil {
+		return RegisterResult{}, err
+	}
 	root, _ := collectionDir(repoRoot, name)
 	dirExisted := fsx.IsDir(root)
 	hadMarker := fsx.IsRegularFile(filepath.Join(root, markerName))
-	for _, sub := range evidenceSubdirs(repoRoot) {
+	for _, sub := range tax.Subdirs() {
 		if err := os.MkdirAll(filepath.Join(root, sub), 0o755); err != nil {
 			return RegisterResult{}, err
 		}
@@ -447,7 +453,13 @@ func promote(db *sql.DB, repoRoot, name string, onItem ItemFn) (RegisterResult, 
 
 // linkExternal mirrors _link_external: register a collection whose evidence
 // lives outside the repo via a directory symlink collections/<name> → target.
+// The taxonomy is loaded before any side effect, so a load failure leaves no
+// half-registered symlink behind.
 func linkExternal(db *sql.DB, repoRoot, name, target string) (RegisterResult, error) {
+	tax, err := identify.Load(repoRoot)
+	if err != nil {
+		return RegisterResult{}, err
+	}
 	if !fsx.IsDir(target) {
 		return RegisterResult{}, fmt.Errorf("target path %s is not an existing directory", target)
 	}
@@ -461,7 +473,7 @@ func linkExternal(db *sql.DB, repoRoot, name, target string) (RegisterResult, er
 	if err := os.Symlink(target, dest); err != nil {
 		return RegisterResult{}, err
 	}
-	subdirs := evidenceSubdirs(repoRoot)
+	subdirs := tax.Subdirs()
 	for _, sub := range subdirs {
 		_ = os.MkdirAll(filepath.Join(target, sub), 0o755)
 	}

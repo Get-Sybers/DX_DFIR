@@ -49,7 +49,6 @@ type Lane struct {
 	Name       string      `yaml:"name"`
 	Subdir     string      `yaml:"subdir"`
 	Ext        []string    `yaml:"ext"`
-	SetFolder  bool        `yaml:"set_folder"`
 	SetMarker  []string    `yaml:"set_marker"`
 	Signatures []Signature `yaml:"signatures"`
 }
@@ -234,8 +233,10 @@ func (t *Taxonomy) SetLaneForDir(dir string) *Lane {
 	return nil
 }
 
-// Subdirs returns every lane subdir plus the catch-all, deepest-first so a
-// longest-prefix match assigns a file to its most specific lane.
+// Subdirs returns every lane subdir in taxonomy (precedence) order, then the
+// catch-all. The order carries no specificity — a nested subdir such as
+// other_raw_data/sql can follow its parent — so a caller assigning a path to its
+// most specific lane matches by longest prefix (by length), never by position.
 func (t *Taxonomy) Subdirs() []string {
 	seen := map[string]bool{}
 	var out []string

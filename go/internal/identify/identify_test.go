@@ -17,7 +17,7 @@ func writeFixture(t *testing.T) string {
 	}
 	files := map[string]string{
 		"_index.yml": "catch_all_subdir: other_raw_data\n" +
-			"order: [pcaps, logs_winevt, disk_images, vm_files, memory, filesystem_documents, other_raw_data_sql]\n",
+			"order: [pcaps, logs_winevt, disk_images, vm_files, memory, filesystem_documents, other_raw_data_sql, mobile]\n",
 		"pcaps.yml": "name: pcaps\nsubdir: pcaps\next: [.pcap, .pcapng]\n" +
 			"signatures:\n  - {hex: \"A1 B2 C3 D4\", offset: 0}\n",
 		"logs_winevt.yml": "name: logs_winevt\nsubdir: logs/winevt\next: [.evtx]\n" +
@@ -37,6 +37,8 @@ func writeFixture(t *testing.T) string {
 			"  - {hex: \"50 4B 03 04\", offset: 0, kind: \"special:ooxml\"}\n",
 		"other_raw_data_sql.yml": "name: other_raw_data_sql\nsubdir: other_raw_data/sql\next: [.sqlite, .db]\n" +
 			"signatures:\n  - {hex: \"53 51 4C 69 74 65 20 66 6F 72 6D 61 74 20 33 00\", offset: 0}\n",
+		"mobile.yml": "name: mobile\nsubdir: mobile\nset_marker: [.ufd, .ufdr]\next: [.ufd, .ufdr, .tar]\n" +
+			"signatures:\n  - {hex: \"50 4B 03 04\", offset: 0, kind: \"special:apk\"}\n",
 	}
 	for name, body := range files {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
@@ -187,6 +189,17 @@ func TestSetLaneForDir(t *testing.T) {
 	}
 	if lane := tax.SetLaneForDir(dir); lane == nil || lane.Subdir != "VM_files" {
 		t.Errorf("SetLaneForDir = %v, want VM_files lane", lane)
+	}
+	// A directory holding a UFED/Cellebrite report (.ufdr) is one mobile
+	// extraction set — moved whole, never split across lanes by its parts.
+	mob := t.TempDir()
+	for _, f := range []string{"extraction.ufdr", "files.tar", "report.pdf"} {
+		if err := os.WriteFile(filepath.Join(mob, f), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if lane := tax.SetLaneForDir(mob); lane == nil || lane.Subdir != "mobile" {
+		t.Errorf("SetLaneForDir(mobile) = %v, want mobile lane", lane)
 	}
 	// A plain directory is not a set.
 	plain := t.TempDir()

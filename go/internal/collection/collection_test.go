@@ -524,6 +524,27 @@ func TestHashUnregistered(t *testing.T) {
 
 // TestClassify moved to internal/identify with the classifier (package identify).
 
+// TestRegisterNeedsTaxonomy: create and link fail loudly when the evidence
+// taxonomy can't load, rather than registering a collection with no lane subdirs.
+func TestRegisterNeedsTaxonomy(t *testing.T) {
+	repo := t.TempDir() // no evidence-taxonomy/ staged
+	colls := filepath.Join(repo, "data_store", "raw", "collections")
+	if _, err := Register(repo, "bare", "", "manual", nil); err == nil {
+		t.Error("Register(create) without a taxonomy should error")
+	}
+	if fsx.Exists(filepath.Join(colls, "bare")) {
+		t.Error("Register(create) without a taxonomy must not materialise the collection")
+	}
+	ext := filepath.Join(repo, "external_evidence")
+	touch(t, filepath.Join(ext, "pcaps", "e.pcap"))
+	if _, err := Register(repo, "linked", ext, "manual", nil); err == nil {
+		t.Error("Register(link) without a taxonomy should error")
+	}
+	if fsx.IsSymlink(filepath.Join(colls, "linked")) {
+		t.Error("Register(link) without a taxonomy must not leave a symlink behind")
+	}
+}
+
 func TestSortRegisterPromoteLink(t *testing.T) {
 	repo := t.TempDir()
 	stageTaxonomy(t, repo)

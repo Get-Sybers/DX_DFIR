@@ -1,11 +1,12 @@
 # Mobile-device extractions. Lane subdir: mobile/
 #
-# Extractions are heterogeneous multi-file sets (UFED/GrayKey/tar dumps), so a
-# directory here is treated as one set and moved WHOLE (set_folder). Single-file
-# archives (tar) are typed by content.
+# Extractions are heterogeneous multi-file sets (UFED/GrayKey/tar dumps). A
+# directory holding a UFED/Cellebrite report (.ufd/.ufdr) is one extraction set
+# and moves WHOLE (set_marker), so its parts stay together. Single-file archives
+# (tar) and Android packages are typed by content.
 name: mobile
 subdir: mobile
-set_folder: true
+set_marker: [.ufd, .ufdr]
 ext: [.ufd, .ufdr, .tar]
 signatures:
   - {hex: "75 73 74 61 72", offset: 257, ext: tar, desc: "POSIX tar (ustar at offset 257)"}
