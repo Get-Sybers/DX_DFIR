@@ -6,10 +6,11 @@ dxdfir_zeek_repo_root: "{{ role_path }}/../../../../.."
 
 # The pcaps subdir comes from the shared evidence taxonomy (evidence-taxonomy/),
 # the one source of truth for where sort files evidence AND where this role reads
-# it — the two can't drift.
+# it — the two can't drift. A missing taxonomy file falls back to the conventional subdir.
 dxdfir_zeek_pcap_lane: >-
-  {{ (lookup('file', dxdfir_zeek_repo_root ~ '/evidence-taxonomy/pcaps.yml',
-  errors='ignore') | default('', true) | from_yaml).subdir }}
+  {{ ((lookup('file', dxdfir_zeek_repo_root ~ '/evidence-taxonomy/pcaps.yml',
+  errors='ignore') | default('', true) | from_yaml) or {}).subdir
+  | default('pcaps', true) }}
 dxdfir_zeek_pcap_dir: "{{ dxdfir_zeek_repo_root }}/data_store/raw/{{ dxdfir_zeek_pcap_lane }}"
 dxdfir_zeek_out_dir: "{{ dxdfir_zeek_repo_root }}/data_store/processed/zeek"
 # Output base — consumed by

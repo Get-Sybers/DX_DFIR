@@ -6,14 +6,17 @@ dxdfir_plaso_repo_root: "{{ role_path }}/../../../../.."
 
 # The disk_images and VM_files subdirs come from the shared evidence taxonomy
 # (evidence-taxonomy/), the one source of truth for where sort files evidence AND
-# where this role reads it — the two can't drift.
+# where this role reads it — the two can't drift. A missing taxonomy file falls
+# back to the conventional subdir.
 dxdfir_plaso_input_lane: >-
-  {{ (lookup('file', dxdfir_plaso_repo_root ~ '/evidence-taxonomy/disk_images.yml',
-  errors='ignore') | default('', true) | from_yaml).subdir }}
+  {{ ((lookup('file', dxdfir_plaso_repo_root ~ '/evidence-taxonomy/disk_images.yml',
+  errors='ignore') | default('', true) | from_yaml) or {}).subdir
+  | default('disk_images', true) }}
 dxdfir_plaso_input_dir: "{{ dxdfir_plaso_repo_root }}/data_store/raw/{{ dxdfir_plaso_input_lane }}"
 dxdfir_plaso_vm_lane: >-
-  {{ (lookup('file', dxdfir_plaso_repo_root ~ '/evidence-taxonomy/vm_files.yml',
-  errors='ignore') | default('', true) | from_yaml).subdir }}
+  {{ ((lookup('file', dxdfir_plaso_repo_root ~ '/evidence-taxonomy/vm_files.yml',
+  errors='ignore') | default('', true) | from_yaml) or {}).subdir
+  | default('VM_files', true) }}
 dxdfir_plaso_vm_dir: "{{ dxdfir_plaso_repo_root }}/data_store/raw/{{ dxdfir_plaso_vm_lane }}"
 # Loose-artefact trees (one folder per host: /var/log copies, mobile filesystem
 # dumps, triage output) — parsed by log2timeline as directory sources. Empty =
