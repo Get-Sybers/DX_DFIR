@@ -4,7 +4,13 @@
 # (roles/dxdfir_evtx -> get_sybers.dxdfir -> collections -> ansible -> repo).
 dxdfir_evtx_repo_root: "{{ role_path }}/../../../../.."
 
-dxdfir_evtx_evtx_dir: "{{ dxdfir_evtx_repo_root }}/data_store/raw/logs/winevt"
+# The logs/winevt subdir comes from the shared evidence taxonomy (evidence-taxonomy/),
+# the one source of truth for where sort files evidence AND where this role reads
+# it — the two can't drift.
+dxdfir_evtx_evtx_lane: >-
+  {{ (lookup('file', dxdfir_evtx_repo_root ~ '/evidence-taxonomy/logs_winevt.yml',
+  errors='ignore') | default('', true) | from_yaml).subdir }}
+dxdfir_evtx_evtx_dir: "{{ dxdfir_evtx_repo_root }}/data_store/raw/{{ dxdfir_evtx_evtx_lane }}"
 dxdfir_evtx_out_dir: "{{ dxdfir_evtx_repo_root }}/data_store/processed/windows_logs"
 # Output base — consumed by
 # tasks/process.yml. Override directly to send output to a custom location.
