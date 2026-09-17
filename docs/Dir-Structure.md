@@ -29,14 +29,21 @@ per-item processing).
     │
     └── docs/                                         # Documentation for project usage and setup
     │
+    └── evidence-taxonomy/                            # Single source of truth for the raw/ evidence lanes — one YAML per lane (subdir + magic signatures + extension claims); read by the dxdfir sort classifier and the Ansible roles' input-dir defaults
+    │
     └── data_store/                                   # Data storage for raw and processed forensic data
         │
-        └── raw/                                      # Unprocessed forensic data
-        │   └── disk_images/                          # Forensic disk images (E01, AFF, etc.)
-        │   └── pcaps/                                # Packet captures (PCAP files)
-        │   └── VM_files/                             # VMware VM exports (one folder per VM)
-        │   └── memory/                               # Raw memory captures
-        │   └── other_raw_data/                       # Additional raw data sources (WinEvt/<host>/ for .evtx)
+        └── raw/                                      # Unprocessed forensic data — the canonical evidence lanes (defined in evidence-taxonomy/)
+        │   └── pcaps/                                # Packet captures (pcap/pcapng)
+        │   └── logs/winevt/                          # Windows event logs (.evtx)
+        │   └── disk_images/                          # Forensic disk images (E01, QCOW, AFF, raw)
+        │   └── VM_files/                             # VM disk exports (one folder per VM)
+        │   └── memory/                               # Memory captures (raw dumps, crash/minidumps)
+        │   └── filesystem/documents/                 # Documents and loose filesystem artefacts
+        │   └── mobile/                               # Mobile-device extractions (one folder per set)
+        │   └── other_raw_data/                       # Catch-all; other_raw_data/sql holds SQLite/SQL databases
+        │   └── sort/                                 # Dropzone for staged evidence awaiting `dxdfir collection sort`
+        │   └── collections/                          # Registered collections, each sorted into the lanes above
         │
         └── dependencies/                             # Operator-supplied rulesets/tools (Hayabusa, rulesets, Volatility symbols)
         │

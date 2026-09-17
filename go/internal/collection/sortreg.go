@@ -3,6 +3,7 @@ package collection
 import (
 	"database/sql"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,22 +48,52 @@ type RegisterResult struct {
 	Promoted   bool
 }
 
-// SortInto classifies each loose file in the dropzone and moves it into the
-// named collection's matching lane subdir (mirrors sort_into). onItem may be nil.
+// SortInto organises a collection's evidence into canonical lanes WITHIN the
+// collection folder, by CONTENT (identify.Classify), descending the whole tree.
+// A file's identity is its magic bytes, not its path, so a mislabelled or
+// oddly-foldered file is filed by what it really is; whatever nothing claims
+// lands in the catch-all lane. A directory that is one multi-file evidence set
+// (a VM export with a .vmx, a mobile extraction) moves WHOLE into its lane so its
+// parts stay together. If the collection isn't materialised yet but a dropzone
+// folder data_store/raw/sort/<name>/ is, it is promoted first, so the command
+// works whether evidence was staged in the dropzone or already in the collection.
+// onItem may be nil. Mirrors sort_into's contract; the recursion + content-first
+// classification are the change.
 func SortInto(repoRoot, name string, dryRun bool, onItem ItemFn) (SortResult, error) {
 	res := SortResult{Moved: map[string][]string{}}
+	tax, err := identify.Load(repoRoot)
+	if err != nil {
+		return res, err
+	}
 	root, ok := collectionDir(repoRoot, name)
 	if !ok {
 		return res, fmt.Errorf("invalid collection name %q — use letters/digits then . _ -", name)
 	}
-	if !fsx.IsDir(root) {
-		return res, fmt.Errorf("no such collection %q — create it first: dxdfir collection create --name %s", name, name)
-	}
-	dz := dropzoneRoot(repoRoot)
-	_ = os.MkdirAll(dz, 0o755)
+	subdirs := tax.Subdirs()
 
-	// Only touch the registry when the collection is registered (recordFile /
-	// the "sorted" event are no-ops otherwise) — and never on a dry run.
+	// Source to walk: the materialised collection if present, else a dropzone
+	// folder sort/<name>/ (promoted into the collection first, unless dry-run).
+	src := root
+	if !fsx.IsDir(root) && !fsx.IsSymlink(root) {
+		dz := filepath.Join(dropzoneRoot(repoRoot), name)
+		if !fsx.IsDir(dz) {
+			return res, fmt.Errorf("no such collection %q — register it first: dxdfir register %s", name, name)
+		}
+		if dryRun {
+			src = dz // preview the classification from the dropzone
+		} else {
+			if err := os.MkdirAll(filepath.Dir(root), 0o755); err != nil {
+				return res, err
+			}
+			if err := os.Rename(dz, root); err != nil { // dropzone + collections share a filesystem
+				return res, err
+			}
+			writeMarker(root, name)
+		}
+	}
+
+	// Only touch the registry when the collection is registered — and never on a
+	// dry run.
 	var db *sql.DB
 	if !dryRun {
 		if reg, err := readRegistry(repoRoot); err == nil && reg.nameSet[name] {
@@ -78,57 +109,155 @@ func SortInto(repoRoot, name string, dryRun bool, onItem ItemFn) (SortResult, er
 			onItem(item, subdir, how, action)
 		}
 	}
-	entries, err := os.ReadDir(dz) // sorted by name
-	if err != nil {
-		return res, err
+	// destRoot receives the moves; the walk reads src (which, off the dry-run
+	// path, is root after any promote). Resolve a symlinked (external) source so
+	// the walk descends the real tree.
+	destRoot := root
+	if dryRun {
+		destRoot = src
 	}
-	for _, e := range entries {
-		nm := e.Name()
-		if strings.HasPrefix(nm, ".") {
-			continue
+	walkRoot := src
+	if resolved, e := filepath.EvalSymlinks(src); e == nil {
+		walkRoot = resolved
+	}
+
+	// Phase 1 — plan every move from one walk, so moving files into lane subdirs
+	// under the same root can't perturb the walk.
+	type fileMove struct{ abs, rel, subdir, how string }
+	type setMove struct{ abs, dirName, subdir string }
+	var files []fileMove
+	var sets []setMove
+	control := map[string]bool{markerName: true, logName: true, manifestName: true}
+	_ = filepath.WalkDir(walkRoot, func(p string, d fs.DirEntry, werr error) error {
+		if werr != nil || p == walkRoot {
+			return nil
 		}
-		p := filepath.Join(dz, nm)
-		if e.IsDir() {
-			reason := "directory — register as its own collection or move its files up"
-			res.Skipped = append(res.Skipped, [2]string{nm + "/", reason})
-			note(nm+"/", "", "directory", "skip")
-			continue
+		rel, e := filepath.Rel(walkRoot, p)
+		if e != nil {
+			return nil
 		}
-		subdir, how := identify.Classify(p)
-		if subdir == "" {
-			res.Skipped = append(res.Skipped, [2]string{nm, how})
-			note(nm, "", how, "skip")
-			continue
+		if d.IsDir() {
+			if lane := tax.SetLaneForDir(p); lane != nil {
+				if !underSubdir(rel, lane.Subdir) {
+					sets = append(sets, setMove{p, filepath.Base(p), lane.Subdir})
+				}
+				return filepath.SkipDir // a set moves whole; don't descend it
+			}
+			return nil
 		}
-		dest, derr := safeLaneDest(root, subdir, nm)
+		if !d.Type().IsRegular() || strings.HasPrefix(d.Name(), ".") || control[rel] {
+			return nil
+		}
+		subdir, how := tax.Classify(p)
+		if filepath.Dir(rel) == subdir {
+			return nil // already filed directly under its lane
+		}
+		files = append(files, fileMove{p, rel, subdir, how})
+		return nil
+	})
+
+	// Phase 2 — execute: whole evidence sets first, then loose files.
+	for _, s := range sets {
+		dest, derr := safeLaneDest(destRoot, s.subdir, s.dirName)
 		if derr != nil {
-			res.Skipped = append(res.Skipped, [2]string{nm, derr.Error()})
-			note(nm, subdir, derr.Error(), "skip")
+			res.Skipped = append(res.Skipped, [2]string{s.dirName + "/", derr.Error()})
+			note(s.dirName+"/", s.subdir, derr.Error(), "skip")
 			continue
 		}
 		if fsx.Exists(dest) {
-			res.Skipped = append(res.Skipped, [2]string{nm, "already in " + subdir + "/"})
-			note(nm, subdir, how, "skip")
+			res.Skipped = append(res.Skipped, [2]string{s.dirName + "/", "already in " + s.subdir + "/"})
+			note(s.dirName+"/", s.subdir, "set", "skip")
 			continue
 		}
 		if !dryRun {
 			if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 				return res, err
 			}
-			if err := fsx.Move(p, dest); err != nil {
+			if err := fsx.Move(s.abs, dest); err != nil {
+				return res, err
+			}
+			recordSetFiles(db, name, root, dest, subdirs)
+		}
+		res.Moved[s.subdir] = append(res.Moved[s.subdir], s.dirName+"/")
+		note(s.dirName+"/", s.subdir, "set", "moved")
+	}
+	for _, fm := range files {
+		base := filepath.Base(fm.rel)
+		dest, derr := safeLaneDest(destRoot, fm.subdir, base)
+		if derr != nil {
+			res.Skipped = append(res.Skipped, [2]string{fm.rel, derr.Error()})
+			note(base, fm.subdir, derr.Error(), "skip")
+			continue
+		}
+		if fsx.Exists(dest) {
+			res.Skipped = append(res.Skipped, [2]string{fm.rel, "already in " + fm.subdir + "/"})
+			note(base, fm.subdir, fm.how, "skip")
+			continue
+		}
+		if !dryRun {
+			if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+				return res, err
+			}
+			if err := fsx.Move(fm.abs, dest); err != nil {
 				return res, err
 			}
 			if db != nil {
-				recordFile(db, name, root, dest, how)
+				recordFile(db, name, root, dest, fm.how, subdirs)
 			}
 		}
-		res.Moved[subdir] = append(res.Moved[subdir], nm)
-		note(nm, subdir, how, "moved")
+		res.Moved[fm.subdir] = append(res.Moved[fm.subdir], base)
+		note(base, fm.subdir, fm.how, "moved")
 	}
-	if !dryRun && res.MovedCount() > 0 && db != nil {
-		logEvent(db, root, name, now(), "sorted", [][2]any{{"moved", res.MovedCount()}, {"skipped", len(res.Skipped)}})
+	if !dryRun {
+		pruneEmptyDirs(root, subdirs)
+		if res.MovedCount() > 0 && db != nil {
+			logEvent(db, root, name, now(), "sorted", [][2]any{{"moved", res.MovedCount()}, {"skipped", len(res.Skipped)}})
+		}
 	}
 	return res, nil
+}
+
+// underSubdir reports whether rel already sits at or under lane subdir sub.
+func underSubdir(rel, sub string) bool {
+	return rel == sub || strings.HasPrefix(rel, sub+string(filepath.Separator))
+}
+
+// recordSetFiles records every evidence file inside a just-moved set folder (now
+// at dest under the collection root), so the registry sees them even though the
+// set moved as a unit. Best-effort; no-op for an unregistered collection.
+func recordSetFiles(db *sql.DB, name, root, dest string, subdirs []string) {
+	if db == nil {
+		return
+	}
+	_ = filepath.WalkDir(dest, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || !d.Type().IsRegular() || strings.HasPrefix(d.Name(), ".") {
+			return nil
+		}
+		recordFile(db, name, root, p, "set", subdirs)
+		return nil
+	})
+}
+
+// pruneEmptyDirs removes directories left empty after a sort (the old,
+// non-canonical folders whose files moved into lanes), skipping the canonical
+// lane subdirs and the collection root itself. Best-effort, deepest-first.
+func pruneEmptyDirs(root string, subdirs []string) {
+	keep := map[string]bool{}
+	for _, s := range subdirs {
+		keep[filepath.Join(root, s)] = true
+	}
+	var dirs []string
+	_ = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err == nil && d.IsDir() && p != root && !keep[p] {
+			dirs = append(dirs, p)
+		}
+		return nil
+	})
+	for i := len(dirs) - 1; i >= 0; i-- { // deepest first
+		if entries, err := os.ReadDir(dirs[i]); err == nil && len(entries) == 0 {
+			_ = os.Remove(dirs[i])
+		}
+	}
 }
 
 // safeLaneDest returns <root>/<subdir>/<name> for a classified move, but refuses
@@ -218,12 +347,18 @@ func Register(repoRoot, name, fromPath, source string, onItem ItemFn) (RegisterR
 	return create(db, repoRoot, name)
 }
 
-// create mirrors _create: make the lane subdirs and register (idempotent).
+// create mirrors _create: make the lane subdirs and register (idempotent). The
+// taxonomy is loaded first and its failure returned, so a collection is never
+// registered without its lane subdirs.
 func create(db *sql.DB, repoRoot, name string) (RegisterResult, error) {
+	tax, err := identify.Load(repoRoot)
+	if err != nil {
+		return RegisterResult{}, err
+	}
 	root, _ := collectionDir(repoRoot, name)
 	dirExisted := fsx.IsDir(root)
 	hadMarker := fsx.IsRegularFile(filepath.Join(root, markerName))
-	for _, sub := range laneSubdirs {
+	for _, sub := range tax.Subdirs() {
 		if err := os.MkdirAll(filepath.Join(root, sub), 0o755); err != nil {
 			return RegisterResult{}, err
 		}
@@ -249,6 +384,11 @@ func create(db *sql.DB, repoRoot, name string) (RegisterResult, error) {
 // register it, classify loose files at the root into lanes, and record every
 // evidence file (including those hand-staged into lane subdirs).
 func promote(db *sql.DB, repoRoot, name string, onItem ItemFn) (RegisterResult, error) {
+	tax, err := identify.Load(repoRoot)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+	subdirs := tax.Subdirs()
 	dest, _ := collectionDir(repoRoot, name)
 	src := filepath.Join(dropzoneRoot(repoRoot), name)
 	if !fsx.IsDir(src) {
@@ -263,7 +403,7 @@ func promote(db *sql.DB, repoRoot, name string, onItem ItemFn) (RegisterResult, 
 	if err := os.Rename(src, dest); err != nil { // dropzone + collections share a filesystem
 		return RegisterResult{}, err
 	}
-	for _, sub := range laneSubdirs {
+	for _, sub := range subdirs {
 		_ = os.MkdirAll(filepath.Join(dest, sub), 0o755)
 	}
 	writeMarker(dest, name)
@@ -278,7 +418,7 @@ func promote(db *sql.DB, repoRoot, name string, onItem ItemFn) (RegisterResult, 
 			continue
 		}
 		p := filepath.Join(dest, nm)
-		subdir, how := identify.Classify(p)
+		subdir, how := tax.Classify(p)
 		if subdir != "" {
 			target, derr := safeLaneDest(dest, subdir, nm)
 			if derr != nil {
@@ -291,7 +431,7 @@ func promote(db *sql.DB, repoRoot, name string, onItem ItemFn) (RegisterResult, 
 				if err := fsx.Move(p, target); err != nil {
 					return RegisterResult{}, err
 				}
-				recordFile(db, name, dest, target, how)
+				recordFile(db, name, dest, target, how, subdirs)
 			}
 			if onItem != nil {
 				onItem(nm, subdir, how, "moved")
@@ -304,7 +444,7 @@ func promote(db *sql.DB, repoRoot, name string, onItem ItemFn) (RegisterResult, 
 	if rels, _, _, err := evidenceRelpaths(dest); err == nil {
 		for _, rel := range rels {
 			if !fileRowExists(db, name, rel) {
-				recordFile(db, name, dest, filepath.Join(dest, rel), "manual")
+				recordFile(db, name, dest, filepath.Join(dest, rel), "manual", subdirs)
 			}
 		}
 	}
@@ -313,7 +453,13 @@ func promote(db *sql.DB, repoRoot, name string, onItem ItemFn) (RegisterResult, 
 
 // linkExternal mirrors _link_external: register a collection whose evidence
 // lives outside the repo via a directory symlink collections/<name> → target.
+// The taxonomy is loaded before any side effect, so a load failure leaves no
+// half-registered symlink behind.
 func linkExternal(db *sql.DB, repoRoot, name, target string) (RegisterResult, error) {
+	tax, err := identify.Load(repoRoot)
+	if err != nil {
+		return RegisterResult{}, err
+	}
 	if !fsx.IsDir(target) {
 		return RegisterResult{}, fmt.Errorf("target path %s is not an existing directory", target)
 	}
@@ -327,7 +473,8 @@ func linkExternal(db *sql.DB, repoRoot, name, target string) (RegisterResult, er
 	if err := os.Symlink(target, dest); err != nil {
 		return RegisterResult{}, err
 	}
-	for _, sub := range laneSubdirs {
+	subdirs := tax.Subdirs()
+	for _, sub := range subdirs {
 		_ = os.MkdirAll(filepath.Join(target, sub), 0o755)
 	}
 	writeMarker(target, name)
@@ -335,7 +482,7 @@ func linkExternal(db *sql.DB, repoRoot, name, target string) (RegisterResult, er
 	logEvent(db, target, name, now(), "registered", [][2]any{{"source", "link"}, {"target", target}})
 	if rels, _, _, err := evidenceRelpaths(target); err == nil {
 		for _, rel := range rels {
-			recordFile(db, name, target, filepath.Join(target, rel), "manual")
+			recordFile(db, name, target, filepath.Join(target, rel), "manual", subdirs)
 		}
 	}
 	_ = os.MkdirAll(dropzoneRoot(repoRoot), 0o755)
@@ -347,7 +494,7 @@ func linkExternal(db *sql.DB, repoRoot, name, target string) (RegisterResult, er
 // recordFile upserts one files-table row at classify time (sha1 left NULL for
 // the hash pass), preserving nothing on conflict but lane/detected_by/size
 // (mirrors _record_file). No-op for an unregistered collection.
-func recordFile(db *sql.DB, name, root, path, detectedBy string) {
+func recordFile(db *sql.DB, name, root, path, detectedBy string, subdirs []string) {
 	if !registeredIn(db, name) {
 		return
 	}
@@ -360,7 +507,7 @@ func recordFile(db *sql.DB, name, root, path, detectedBy string) {
 		size = fi.Size()
 	}
 	var lane any
-	if l := laneFromRelpath(rel); l != "" {
+	if l := laneFromRelpath(rel, subdirs); l != "" {
 		lane = l
 	}
 	_, _ = db.Exec(

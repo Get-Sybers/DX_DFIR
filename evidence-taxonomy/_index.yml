@@ -1,0 +1,27 @@
+# Evidence taxonomy — the single source of truth for the raw/ evidence lanes.
+#
+# Consumed by BOTH:
+#   - the dxdfir Go front-end (go/internal/identify) — the sort classifier that
+#     types each file by content and files it into a canonical lane; and the
+#     collection/lanes views that count and scope evidence; and
+#   - the get_sybers.dxdfir Ansible roles — their raw input-dir defaults, so the
+#     directory a processor reads and the directory sort writes never drift.
+#
+# One <name>.yml per lane below. `order` is the precedence the classifier walks:
+# the first lane whose content signature matches wins; failing any magic, the
+# first lane whose extension claims the file wins; failing both, the file goes
+# to `catch_all_subdir` (never dropped).
+#
+# A file's IDENTITY is its content, not its path. Extensions are only a fallback.
+
+catch_all_subdir: other_raw_data
+
+order:
+  - pcaps
+  - logs_winevt
+  - disk_images
+  - vm_files
+  - memory
+  - filesystem_documents
+  - other_raw_data_sql
+  - mobile

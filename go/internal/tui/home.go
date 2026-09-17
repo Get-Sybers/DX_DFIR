@@ -246,8 +246,8 @@ func (v *homeView) buildColls(w int) {
 			col = colYellow
 		}
 		detail := ""
-		if c.Lanes != "" {
-			detail = "[" + c.Lanes + "]"
+		if c.Types != "" {
+			detail = "[" + c.Types + "]"
 		}
 		if c.Sha1 != "" {
 			detail += "  sha1:" + c.Sha1

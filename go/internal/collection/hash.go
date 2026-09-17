@@ -96,8 +96,9 @@ func WriteManifest(repoRoot, name string, p HashProgress) (rollup string, files 
 	// collection (matching _record_file_hash / write_manifest's guard; also
 	// avoids a files→collections foreign-key violation for an unregistered one).
 	if registeredIn(db, name) {
+		subdirs := evidenceSubdirs(repoRoot)
 		for _, f := range perFile {
-			recordFileHash(db, name, f.rel, f.sum, sizes[f.rel], ts)
+			recordFileHash(db, name, f.rel, f.sum, sizes[f.rel], ts, subdirs)
 		}
 		logEvent(db, root, name, ts, "hashed", [][2]any{
 			{"collection_sha1", rollup},
@@ -175,23 +176,21 @@ func hashFile(path string, onChunk func(int64)) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// laneFromRelpath infers the lane a path lives under (mirrors _lane_from_relpath);
-// "" means it maps to no lane (stored as NULL).
-func laneFromRelpath(rel string) string {
-	for _, sub := range laneSubdirs {
-		if rel == sub || strings.HasPrefix(rel, sub+"/") {
-			return sub
-		}
-	}
-	return ""
+// laneFromRelpath infers, from where a file ALREADY sits, the canonical lane
+// subdir it lives under — the most specific match among subdirs (so a file in
+// other_raw_data/sql maps to that, not the catch-all other_raw_data). "" means it
+// maps to no lane (stored as NULL). This records a landed file's lane after a
+// content-decided sort; it is not the classification decision.
+func laneFromRelpath(rel string, subdirs []string) string {
+	return longestLaneSubdir(rel, subdirs)
 }
 
 // recordFileHash upserts one files-table row with its fresh SHA-1 + size,
 // preserving an existing detected_by and defaulting new rows to 'manual'
 // (mirrors _record_file_hash). Best-effort.
-func recordFileHash(db *sql.DB, name, rel, sha1hex string, size int64, ts string) {
+func recordFileHash(db *sql.DB, name, rel, sha1hex string, size int64, ts string, subdirs []string) {
 	var lane any
-	if l := laneFromRelpath(rel); l != "" {
+	if l := laneFromRelpath(rel, subdirs); l != "" {
 		lane = l
 	}
 	_, _ = db.Exec(

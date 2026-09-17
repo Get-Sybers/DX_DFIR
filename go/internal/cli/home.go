@@ -82,7 +82,7 @@ func gatherCollections(r *repo.Repo) (colls []model.CollInfo, note, hardErr stri
 		colls = append(colls, collInfo(c, st.Active, "unregistered"))
 	}
 	for _, name := range st.Candidates {
-		colls = append(colls, model.CollInfo{Name: name, Lanes: "dropzone", Tag: "candidate"})
+		colls = append(colls, model.CollInfo{Name: name, Types: "dropzone", Tag: "candidate"})
 	}
 	return colls, "", ""
 }
@@ -115,7 +115,7 @@ func collInfo(c collSummary, active, tag string) model.CollInfo {
 	return model.CollInfo{
 		Name:   c.Name,
 		Total:  c.Total,
-		Lanes:  laneDetail(c.Lanes),
+		Types:  typeDetail(c.Types),
 		Sha1:   sha,
 		Active: c.Name == active,
 		Tag:    tag,

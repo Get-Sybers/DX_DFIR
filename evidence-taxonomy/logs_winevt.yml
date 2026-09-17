@@ -1,0 +1,6 @@
+# Windows event logs. Lane subdir: logs/winevt/
+name: logs_winevt
+subdir: logs/winevt
+ext: [.evtx]
+signatures:
+  - {hex: "45 6C 66 46 69 6C 65 00", offset: 0, ext: evtx, desc: "Windows XML Event Log (ElfFile\\0)"}

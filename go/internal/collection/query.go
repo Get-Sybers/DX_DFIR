@@ -51,7 +51,7 @@ func ListLanes(repoRoot, name string) (Lanes, bool) {
 	if !ok {
 		return Lanes{}, false
 	}
-	counts := subdirCounts(root)
+	counts := laneCounts(root, evidenceSubdirs(repoRoot))
 	out := Lanes{Name: name}
 	for _, lane := range LANES {
 		for i, sub := range lane.Subdirs {
@@ -91,9 +91,15 @@ func CheckState(repoRoot, name string) (State, error) {
 	return s, nil
 }
 
-// summarise builds a Summary per name concurrently: per-lane counts (from the
-// collection's subdir walk) plus the stored manifest rollup.
+// summarise builds a Summary per name concurrently: per-lane counts (from a
+// single walk of the collection, bucketed by the taxonomy's lane subdirs) plus
+// the stored manifest rollup.
 func summarise(repoRoot string, names []string) map[string]Summary {
+	types := evidenceTypesFor(repoRoot)
+	subdirs := make([]string, len(types))
+	for i, t := range types {
+		subdirs[i] = t.subdir
+	}
 	out := make(map[string]Summary, len(names))
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -109,18 +115,20 @@ func summarise(repoRoot string, names []string) map[string]Summary {
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			counts := subdirCounts(root)
-			lanes := map[string]int{}
+			counts := laneCounts(root, subdirs)
+			// Break the evidence down by identified type, one file → one lane
+			// (its most specific subdir), so each is counted once. Grouping by
+			// processing lane instead would fold the same file into every lane
+			// that reads its subdir (signatures re-reads pcaps/memory/disk).
+			var tc []TypeCount
 			total := 0
-			for _, lane := range LANES {
-				n := 0
-				for _, sub := range lane.Subdirs {
-					n += counts[sub]
+			for _, t := range types {
+				if n := counts[t.subdir]; n > 0 {
+					tc = append(tc, TypeCount{Label: t.label, Count: n})
+					total += n
 				}
-				lanes[lane.Name] = n
-				total += n
 			}
-			sum := Summary{Name: name, Lanes: lanes, Total: total, Sha1: manifestRollup(root)}
+			sum := Summary{Name: name, Types: tc, Total: total, Sha1: manifestRollup(root)}
 
 			mu.Lock()
 			out[name] = sum
@@ -131,26 +139,47 @@ func summarise(repoRoot string, names []string) map[string]Summary {
 	return out
 }
 
-// subdirCounts walks each of the collection's lane subdirs once, concurrently,
-// and returns the regular-file count per subdir. Walking each unique subdir once
-// (rather than per lane) matches the Python counts while avoiding re-walking a
-// subdir shared by several lanes.
-func subdirCounts(root string) map[string]int {
-	counts := make(map[string]int, len(laneSubdirs))
-	var mu sync.Mutex
-	var wg sync.WaitGroup
-	for _, sub := range laneSubdirs {
-		wg.Add(1)
-		go func(sub string) {
-			defer wg.Done()
-			n := countFiles(filepath.Join(root, sub))
-			mu.Lock()
-			counts[sub] = n
-			mu.Unlock()
-		}(sub)
+// laneCounts walks a collection once and buckets each evidence file into its most
+// specific lane subdir (longest-prefix match), so nested lanes — other_raw_data
+// and its child other_raw_data/sql — never double-count. Files that fall under no
+// lane subdir (e.g. loose at the collection root) are not counted.
+func laneCounts(root string, subdirs []string) map[string]int {
+	walkRoot := root
+	if resolved, err := filepath.EvalSymlinks(root); err == nil {
+		walkRoot = resolved
 	}
-	wg.Wait()
+	counts := make(map[string]int, len(subdirs))
+	_ = filepath.WalkDir(walkRoot, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !isEvidenceFile(d) {
+			return nil
+		}
+		rel, e := filepath.Rel(walkRoot, p)
+		if e != nil {
+			return nil
+		}
+		if sub := longestLaneSubdir(rel, subdirs); sub != "" {
+			counts[sub]++
+		}
+		return nil
+	})
 	return counts
+}
+
+// longestLaneSubdir returns the most specific lane subdir that rel sits under, or
+// "" when rel is under none.
+func longestLaneSubdir(rel string, subdirs []string) string {
+	best := ""
+	for _, s := range subdirs {
+		if rel == s || strings.HasPrefix(rel, s+string(filepath.Separator)) {
+			if len(s) > len(best) {
+				best = s
+			}
+		}
+	}
+	return best
 }
 
 // isEvidenceFile reports whether a walked entry counts as staged evidence: a
