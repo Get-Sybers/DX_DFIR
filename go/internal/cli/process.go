@@ -44,9 +44,10 @@ func newProcessCmd(env *Env) *cobra.Command {
 			"With a collection each lane is scoped to data_store/raw/collections/<name>/ and only\n" +
 			"lanes with staged evidence run. With no collection, the active one is used if set.\n\n" +
 			"A collection named exactly like a lane (e.g. 'zeek') is read as the lane when given\n" +
-			"positionally — select it first (dxdfir collection select zeek) and it is used as the\n" +
-			"active collection instead.",
-		Args: cobra.RangeArgs(1, 2),
+			"positionally — select it first (dxdfir select zeek) and it is used as the active\n" +
+			"collection instead.",
+		GroupID: groupProcessing,
+		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			// The positionals are order-independent: a known lane name is the lane,
 			// anything else is the collection (its existence is validated later).
@@ -56,7 +57,7 @@ func newProcessCmd(env *Env) *cobra.Command {
 				case validSources[a]:
 					if source != "" {
 						return Fail(2, "two lanes given (%q and %q) — pass at most one lane. "+
-							"If one names a collection, select it first (dxdfir collection select <name>) and pass only the lane",
+							"If one names a collection, select it first (dxdfir select <name>) and pass only the lane",
 							source, a)
 					}
 					source = a
@@ -98,7 +99,7 @@ func runProcess(env *Env, source, collection string, force, noRegister bool, ext
 	if collection == "" {
 		fmt.Fprintln(os.Stderr, style.Yellow(
 			"no collection selected — processing all staged raw evidence under data_store/raw/. "+
-				"Scope to a case with: dxdfir process <collection> "+source+"  (or select one: dxdfir collection select <name>)"))
+				"Scope to a case with: dxdfir process <collection> "+source+"  (or select one: dxdfir select <name>)"))
 	}
 
 	scopeVars := map[string][]string{}
@@ -133,7 +134,7 @@ func runProcess(env *Env, source, collection string, force, noRegister bool, ext
 			laneNames = filtered
 			if len(laneNames) == 0 {
 				fmt.Fprintln(os.Stderr, style.Yellow(fmt.Sprintf(
-					"collection '%s' has no evidence — stage files then: dxdfir collection sort %s", collection, collection)))
+					"collection '%s' has no evidence — stage files then: dxdfir sort %s", collection, collection)))
 				return nil
 			}
 		}

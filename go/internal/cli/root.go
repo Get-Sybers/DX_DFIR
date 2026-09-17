@@ -1,7 +1,14 @@
 // Package cli assembles the dxdfir command tree (cobra), one file per verb
-// group. Commands stay thin: they build a run.Plan or drive an orchestrator and
+// family. Commands stay thin: they build a run.Plan or drive an orchestrator and
 // hand the resulting model.Update stream to a presenter chosen by the terminal
 // context. All heavy work lives in internal/{run,lanes,collect,tui,plain}.
+//
+// The grammar is verb first: `<verb> <noun> [NAME]` (`register collection LS24`,
+// `deploy stack`, `list collections`). The collection verbs also take a bare
+// NAME in place of the noun (`register LS24`). The former noun-first spellings
+// (`collection register`, `stack deploy`) still run as hidden, deprecated
+// aliases — each verb body is a plain run function wrapped by both spellings,
+// never one *cobra.Command under two parents.
 package cli
 
 import (
@@ -22,8 +29,8 @@ type Env struct {
 }
 
 // ExitError carries a specific process exit code up to main, preserving the
-// Python CLI's exit-status contract (propagate subprocess rc; 2 usage/lookup;
-// 127 missing tool; 0 success).
+// exit-status contract (propagate subprocess rc; 2 usage/lookup; 127 missing
+// tool; 0 success).
 type ExitError struct{ Code int }
 
 func (e ExitError) Error() string { return fmt.Sprintf("exit status %d", e.Code) }
@@ -43,6 +50,40 @@ func (e *Env) resolveRepo() (*repo.Repo, error) {
 	return r, nil
 }
 
+// Root-help groups, mirroring the sections of docs/getting-started/commands.md
+// so `dxdfir --help` reads like the reference. Every visible root command
+// carries one (root_test.go enforces it).
+const (
+	groupSetup      = "setup"
+	groupEvidence   = "evidence"
+	groupProcessing = "processing"
+	groupCAR        = "car"
+	groupStack      = "stack"
+	groupHousekeep  = "housekeeping"
+	groupSelf       = "self"
+)
+
+// nounGroup builds a parent whose children are the targets it acts on — a
+// verb-first group (`deploy` → `stack`) or a hidden noun-first alias group
+// (`collection` → `register`…). A bare group prints its help; an unrecognised
+// child (a typo like `sellect`) errors clearly instead of silently falling
+// through to help.
+func nounGroup(use, short, long string) *cobra.Command {
+	return &cobra.Command{
+		Use:   use,
+		Short: short,
+		Long:  long,
+		Args:  cobra.ArbitraryArgs,
+		RunE: func(c *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return Fail(2, "unknown command %q for %q — see: %s --help",
+					args[0], c.CommandPath(), c.CommandPath())
+			}
+			return c.Help()
+		},
+	}
+}
+
 // NewRootCmd builds the full dxdfir command tree.
 func NewRootCmd(version string) *cobra.Command {
 	env := &Env{}
@@ -54,6 +95,9 @@ func NewRootCmd(version string) *cobra.Command {
 			"A Go/termui front-end over the get_sybers.dxdfir Ansible collection and the\n" +
 			"get_sybers_dxdfir Python processors. Long-running processing and collection\n" +
 			"creation render a live dashboard on a terminal; output stays plain when piped.\n\n" +
+			"Commands read verb first — `register collection NAME`, `deploy stack`,\n" +
+			"`list collections`. The collection verbs also take a bare NAME in place of\n" +
+			"the noun: `register NAME`, `sort NAME`, `select NAME`.\n\n" +
 			"Run `dxdfir` with no command for a landing dashboard: environment readiness\n" +
 			"(the checks that must be green before processing), tracked collections, and\n" +
 			"staged evidence.",
@@ -84,8 +128,8 @@ func NewRootCmd(version string) *cobra.Command {
 			}
 		},
 	}
-	// Match the Python CLI's ergonomics: -h and --help everywhere (cobra default),
-	// a bare group prints help, and no shell-completion subcommand clutters help.
+	// -h and --help everywhere (cobra default), a bare group prints help, and no
+	// shell-completion subcommand clutters help.
 	root.CompletionOptions.DisableDefaultCmd = true
 	root.SetVersionTemplate("dxdfir (get_sybers_dxdfir) {{.Version}}\n")
 
@@ -94,20 +138,47 @@ func NewRootCmd(version string) *cobra.Command {
 	pf.BoolVar(&env.ForcePlain, "no-tui", false, "Force plain line output (never the dashboard).")
 	pf.BoolVar(&env.ForceTUI, "tui", false, "Force the dashboard even when auto-detection is unsure.")
 
+	root.AddGroup(
+		&cobra.Group{ID: groupSetup, Title: "Setup:"},
+		&cobra.Group{ID: groupEvidence, Title: "Evidence and collections:"},
+		&cobra.Group{ID: groupProcessing, Title: "Processing:"},
+		&cobra.Group{ID: groupCAR, Title: "CAR (normalisation):"},
+		&cobra.Group{ID: groupStack, Title: "Analysis stack:"},
+		&cobra.Group{ID: groupHousekeep, Title: "Housekeeping:"},
+		&cobra.Group{ID: groupSelf, Title: "The command itself:"},
+	)
+	root.SetHelpCommandGroupID(groupSelf)
+
 	root.AddCommand(
-		newProcessCmd(env),
+		// Setup
+		newBuildDockerCmd(env),
+		newVerifyImagesCmd(env),
+		// Evidence and collections
 		newListCmd(env),
 		newRegisterCmd(env),
-		newCollectionCmd(env),
+		newUnregisterCmd(env),
+		newSelectCmd(env),
+		newUnselectCmd(env),
+		newSortCmd(env),
+		// Processing
+		newProcessCmd(env),
+		// CAR
 		newBuildCarCmd(env),
 		newVerifyCarCmd(env),
 		newCarTimelineCmd(env),
-		newBuildDockerCmd(env),
-		newVerifyImagesCmd(env),
-		newValidateCmd(env),
-		newStackCmd(env),
-		newCleanupCmd(env),
 		newStixCmd(env),
+		// Analysis stack
+		newDeployCmd(env),
+		newDestroyCmd(env),
+		newStartCmd(env),
+		newStopCmd(env),
+		newStatusCmd(env),
+		// Housekeeping
+		newCleanupCmd(env),
+		newValidateCmd(env),
+		// Hidden, deprecated noun-first aliases (retired next minor).
+		newCollectionCmd(env),
+		newStackCmd(env),
 	)
 	return root
 }

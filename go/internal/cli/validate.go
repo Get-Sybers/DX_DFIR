@@ -19,7 +19,8 @@ func newValidateCmd(env *Env) *cobra.Command {
 		Long: "Run the repository check harness.\n\n" +
 			"Fronts .github/tests/run-checks.sh from the repo root, streaming its output live and\n" +
 			"propagating its exit status. Requires bash on PATH.",
-		Args: cobra.NoArgs,
+		GroupID: groupHousekeep,
+		Args:    cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			if err := repo.Require("bash"); err != nil {
 				return Fail(127, "%v", err)

@@ -99,7 +99,7 @@ cd docker/elastic && cp .env.example .env     # then fill in the placeholders (s
 docker compose up -d                           # Elasticsearch + Kibana + Fleet + Filebeat
 ```
 
-Or drive the same stack with `dxdfir stack deploy`. Everything binds `127.0.0.1`;
+Or drive the same stack with `dxdfir deploy stack`. Everything binds `127.0.0.1`;
 Filebeat ships the processed evidence into `logs-dxdfir.<type>-*` data streams. See
 [the stack](../architecture/the-stack.md) and
 [docker/elastic/README.md](../../docker/elastic/README.md).
@@ -124,8 +124,8 @@ To group evidence into a named, tracked case and auto-sort a mixed pile:
 ```bash
 # drop a mixed pile into data_store/raw/sort/case-a/, then:
 dxdfir register case-a                  # promote it to a tracked collection + SHA-1 hash it
-dxdfir collection sort case-a           # magic-byte sort loose files into lane subdirs (add --dry-run to preview)
-dxdfir collection select case-a         # make it the active target for later commands
+dxdfir sort case-a                      # magic-byte sort loose files into lane subdirs (add --dry-run to preview)
+dxdfir select case-a                    # make it the active target for later commands
 dxdfir process case-a all               # process the whole collection
 ```
 

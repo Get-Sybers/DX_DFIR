@@ -12,6 +12,13 @@ import (
 
 // The analysis-stack lifecycle is Ansible-orchestrated (dxdfir_stack role): each
 // verb fronts a thin dxdfir-stack-<action>.yml play around docker/elastic.
+//
+// The verbs read verb first — `deploy stack`, `destroy stack`, `start stack`,
+// `stop stack`, `status stack` — with `stack` the noun child of each verb. The
+// noun is required (a bare verb prints its targets), so a later target such as
+// another service cannot collide. Each action's leaf builder returns a fresh
+// *cobra.Command so the hidden `stack <verb>` alias group can wrap the same
+// body under its own instance.
 
 // runStackAction drives one dxdfir-stack-<action>.yml with any action-specific vars.
 func (env *Env) runStackAction(action string, vars []string) error {
@@ -27,21 +34,81 @@ func (env *Env) runStackAction(action string, vars []string) error {
 	return exitCode(code)
 }
 
-// newStackCmd builds the `dxdfir stack` group (deploy/destroy/start/stop/status),
-// each driving the dxdfir_stack role.
-func newStackCmd(env *Env) *cobra.Command {
-	parent := &cobra.Command{
-		Use:   "stack",
-		Short: "Bring the Elastic analysis stack up/down (dxdfir_stack role around docker/elastic).",
-		Long: "Bring the Elastic analysis stack up/down via the dxdfir_stack Ansible role.\n\n" +
-			"Lifecycle for the compose stack under docker/elastic. Requires docker/elastic/.env\n" +
-			"(copy docker/elastic/.env.example and set the passwords).",
-	}
+// stackLong is the shared description of the stack the verbs act on.
+const stackLong = "The Elastic analysis stack under docker/elastic, driven by the dxdfir_stack\n" +
+	"Ansible role. Requires docker/elastic/.env (copy docker/elastic/.env.example and\n" +
+	"set the passwords)."
 
+// stackVerb builds a verb-first stack command: `<verb>` is the parent (bare, it
+// prints its targets), `<verb> stack` the leaf that runs the action.
+func stackVerb(env *Env, leaf leafFn, verb, short string) *cobra.Command {
+	cmd := nounGroup(verb, short, short+"\n\n"+stackLong+"\n\n"+
+		"The noun is required: `dxdfir "+verb+" stack`.")
+	cmd.GroupID = groupStack
+	cmd.AddCommand(leaf(env, "stack"))
+	return cmd
+}
+
+func newDeployCmd(env *Env) *cobra.Command {
+	return stackVerb(env, stackDeployLeaf, "deploy", "Build (if needed) and bring the analysis stack up, then verify it (deploy stack).")
+}
+
+func newDestroyCmd(env *Env) *cobra.Command {
+	return stackVerb(env, stackDestroyLeaf, "destroy", "Stop and remove the analysis stack's containers/networks (destroy stack).")
+}
+
+func newStartCmd(env *Env) *cobra.Command {
+	return stackVerb(env, stackStartLeaf, "start", "Start the analysis stack's existing stopped containers (start stack).")
+}
+
+func newStopCmd(env *Env) *cobra.Command {
+	return stackVerb(env, stackStopLeaf, "stop", "Stop the analysis stack's containers but keep them (stop stack).")
+}
+
+func newStatusCmd(env *Env) *cobra.Command {
+	return stackVerb(env, stackStatusLeaf, "status", "Show the analysis stack's container status (status stack).")
+}
+
+// newStackCmd builds the hidden `dxdfir stack <verb>` alias group: the noun-first
+// spelling the stack verbs had before the grammar went verb first. Each child
+// still runs its action, printing cobra's deprecation note (to stderr) with the
+// verb-first spelling to use instead.
+func newStackCmd(env *Env) *cobra.Command {
+	parent := nounGroup("stack",
+		"Deprecated noun-first spelling of the stack verbs.",
+		"Deprecated noun-first spelling of the stack verbs. Each still runs and prints\n"+
+			"the verb-first form to use instead:\n\n"+
+			"  stack deploy   ->  deploy stack\n"+
+			"  stack destroy  ->  destroy stack\n"+
+			"  stack start    ->  start stack\n"+
+			"  stack stop     ->  stop stack\n"+
+			"  stack status   ->  status stack")
+	parent.Hidden = true
+	for _, alias := range []struct {
+		leaf leafFn
+		verb string
+	}{
+		{stackDeployLeaf, "deploy"},
+		{stackDestroyLeaf, "destroy"},
+		{stackStartLeaf, "start"},
+		{stackStopLeaf, "stop"},
+		{stackStatusLeaf, "status"},
+	} {
+		cmd := alias.leaf(env, alias.verb)
+		cmd.Deprecated = "use: dxdfir " + alias.verb + " stack"
+		parent.AddCommand(cmd)
+	}
+	return parent
+}
+
+// ---- the actions, one leaf builder each ----
+
+func stackDeployLeaf(env *Env, use string) *cobra.Command {
 	var build, noBuild bool
-	deploy := &cobra.Command{
-		Use:   "deploy",
+	cmd := &cobra.Command{
+		Use:   use,
 		Short: "Build (if needed) and bring the stack up, then verify it is running.",
+		Long:  "Build (if needed) and bring the stack up, then verify it is running.\n\n" + stackLong,
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			vars := []string{"dxdfir_stack_build=" + boolVar(build && !noBuild)}
@@ -52,16 +119,20 @@ func newStackCmd(env *Env) *cobra.Command {
 			return nil
 		},
 	}
-	deploy.Flags().BoolVar(&build, "build", true, "Build images before starting.")
-	deploy.Flags().BoolVar(&noBuild, "no-build", false, "Do not build images before starting.")
+	cmd.Flags().BoolVar(&build, "build", true, "Build images before starting.")
+	cmd.Flags().BoolVar(&noBuild, "no-build", false, "Do not build images before starting.")
+	return cmd
+}
 
-	var volumes, destroyYes bool
-	destroy := &cobra.Command{
-		Use:   "destroy",
+func stackDestroyLeaf(env *Env, use string) *cobra.Command {
+	var volumes, yes bool
+	cmd := &cobra.Command{
+		Use:   use,
 		Short: "Stop and remove the stack's containers/networks (optionally its volumes).",
+		Long:  "Stop and remove the stack's containers/networks (optionally its volumes).\n\n" + stackLong,
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if volumes && !destroyYes {
+			if volumes && !yes {
 				if !confirmYes(
 					"Remove the elastic stack's containers AND named volumes? This DELETES ingested data. [y/N]: ") {
 					return Fail(1, "Aborted.")
@@ -75,11 +146,17 @@ func newStackCmd(env *Env) *cobra.Command {
 			return nil
 		},
 	}
-	destroy.Flags().BoolVar(&volumes, "volumes", false, "Also remove named volumes (WIPES stack data).")
-	destroy.Flags().BoolVarP(&destroyYes, "yes", "y", false, "Do not prompt.")
+	cmd.Flags().BoolVar(&volumes, "volumes", false, "Also remove named volumes (WIPES stack data).")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Do not prompt.")
+	return cmd
+}
 
-	start := &cobra.Command{
-		Use: "start", Short: "Start EXISTING stopped containers.", Args: cobra.NoArgs,
+func stackStartLeaf(env *Env, use string) *cobra.Command {
+	return &cobra.Command{
+		Use:   use,
+		Short: "Start EXISTING stopped containers.",
+		Long:  "Start EXISTING stopped containers.\n\n" + stackLong,
+		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			if err := env.runStackAction("start", nil); err != nil {
 				return err
@@ -88,8 +165,14 @@ func newStackCmd(env *Env) *cobra.Command {
 			return nil
 		},
 	}
-	stop := &cobra.Command{
-		Use: "stop", Short: "Stop containers but keep them.", Args: cobra.NoArgs,
+}
+
+func stackStopLeaf(env *Env, use string) *cobra.Command {
+	return &cobra.Command{
+		Use:   use,
+		Short: "Stop containers but keep them.",
+		Long:  "Stop containers but keep them.\n\n" + stackLong,
+		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			if err := env.runStackAction("stop", nil); err != nil {
 				return err
@@ -98,15 +181,18 @@ func newStackCmd(env *Env) *cobra.Command {
 			return nil
 		},
 	}
-	status := &cobra.Command{
-		Use: "status", Short: "Show container status.", Args: cobra.NoArgs,
+}
+
+func stackStatusLeaf(env *Env, use string) *cobra.Command {
+	return &cobra.Command{
+		Use:   use,
+		Short: "Show container status.",
+		Long:  "Show container status.\n\n" + stackLong,
+		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return env.runStackAction("status", nil)
 		},
 	}
-
-	parent.AddCommand(deploy, destroy, start, stop, status)
-	return parent
 }
 
 func boolVar(b bool) string {

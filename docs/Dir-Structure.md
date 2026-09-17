@@ -42,7 +42,7 @@ per-item processing).
         │   └── filesystem/documents/                 # Documents and loose filesystem artefacts
         │   └── mobile/                               # Mobile-device extractions (one folder per set)
         │   └── other_raw_data/                       # Catch-all; other_raw_data/sql holds SQLite/SQL databases
-        │   └── sort/                                 # Dropzone for staged evidence awaiting `dxdfir collection sort`
+        │   └── sort/                                 # Dropzone for staged evidence awaiting `dxdfir sort`
         │   └── collections/                          # Registered collections, each sorted into the lanes above
         │
         └── dependencies/                             # Operator-supplied rulesets/tools (Hayabusa, rulesets, Volatility symbols)

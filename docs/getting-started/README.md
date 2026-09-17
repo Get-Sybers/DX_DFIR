@@ -33,7 +33,7 @@ processing package driving Docker containers (see the
 
 - the **`dxdfir`** command and its verbs,
 - **one setup script**, and
-- **docker compose** (or `dxdfir stack`) for the analysis backend.
+- **docker compose** (or `dxdfir deploy stack`) for the analysis backend.
 
 ## The five-minute path
 

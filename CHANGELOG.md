@@ -23,6 +23,20 @@ is `0`, anything may change without notice.
   plugins).
 
 ### Changed
+- **The `dxdfir` grammar reads verb first.** `register collection NAME`,
+  `unregister collection NAME`, `select collection NAME`, `unselect collection`,
+  `sort collection [NAME]`, `list collections` and `deploy | destroy | start |
+  stop | status stack` replace the noun-first `collection <verb>` / `stack <verb>`
+  groups. The collection verbs also take a bare NAME in place of the noun
+  (`register NAME`, `sort NAME`, `select NAME`; `register NAME` gains `--from`).
+  `list` keeps its `lanes` (default) / `raw` / `processed` views as subcommands
+  and adds `collections`; `cleanup processed|car|docker` and `stix …` were
+  already verb first and are unchanged. The old spellings still run as hidden
+  aliases that print the verb-first form to stderr; they are removed in the next
+  minor. `dxdfir --help` is sectioned (Setup / Evidence and collections /
+  Processing / CAR / Analysis stack / Housekeeping) to mirror the command
+  reference, and the man page now documents the collection, stack and cleanup
+  verbs.
 - **All tool-image builds live in the GoDFIR-toolz submodule; the Elastic stack
   is back home at `docker/elastic/`.** The byakugan/plaso/signatures/zeek build
   items moved from `docker/<name>/` into the submodule (one dir per image,

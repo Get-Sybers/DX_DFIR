@@ -9,7 +9,7 @@ import (
 
 // TestSafeLaneDest_RefusesSymlinkedLaneDir guards the arbitrary-write primitive:
 // a lane subdir that is a symlink out of the collection must never be written
-// through (it would turn `collection sort` into a host write, e.g. into /etc/cron.d).
+// through (it would turn `dxdfir sort` into a host write, e.g. into /etc/cron.d).
 func TestSafeLaneDest_RefusesSymlinkedLaneDir(t *testing.T) {
 	root := t.TempDir()
 	outside := t.TempDir() // stands in for /etc/cron.d

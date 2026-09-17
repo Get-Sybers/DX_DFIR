@@ -1,4 +1,4 @@
-.TH DXDFIR 1 "2026-09-11" "dxdfir 0.6.0" "DX_DFIR Manual"
+.TH DXDFIR 1 "2026-09-17" "dxdfir 0.6.0" "DX_DFIR Manual"
 .SH NAME
 dxdfir \- DX_DFIR forensic processing pipeline front-end
 .SH SYNOPSIS
@@ -8,7 +8,8 @@ dxdfir \- DX_DFIR forensic processing pipeline front-end
 .RI [ ARGS ...]
 .br
 .B dxdfir process
-.I SOURCE
+.RI [ COLLECTION ]
+.RI [ LANE ]
 .RB [ --force ]
 .RB [ --repo-root
 .IR PATH ]
@@ -46,6 +47,39 @@ dxdfir \- DX_DFIR forensic processing pipeline front-end
 .IR KEY=VALUE ]...
 .br
 .B dxdfir list
+.RB [ lanes | raw | processed | collections ]
+.br
+.B dxdfir register
+.RB [ collection ]
+.RI [ NAME ]
+.RB [ --from
+.IR PATH ]
+.RB [ --no-hash ]
+.br
+.B dxdfir unregister
+.RB [ collection ]
+.I NAME
+.br
+.B dxdfir select
+.RB [ collection ]
+.I NAME
+.br
+.B dxdfir unselect
+.RB [ collection ]
+.br
+.B dxdfir sort
+.RB [ collection ]
+.RI [ NAME ]
+.RB [ --dry-run ]
+.RB [ --no-register ]
+.RB [ --no-hash ]
+.br
+.BR "dxdfir deploy" | destroy | start | stop | status " " stack
+.br
+.B dxdfir cleanup
+.BR processed | car | docker
+.RB [ --dry-run ]
+.RB [ -y ]
 .br
 .B dxdfir stix
 .I SUBCOMMAND
@@ -87,12 +121,25 @@ fronts the repository's check harness
 .RB ( .github/tests/run-checks.sh ).
 The analysis backend itself (the Elastic stack under
 .IR docker/elastic )
-is brought up with docker compose; see its README.
+is brought up with
+.B deploy stack
+(the
+.B dxdfir_stack
+role) or docker compose; see its README.
 .SH COMMANDS
+Commands read verb first \(em \fBregister collection\fR \fINAME\fR,
+\fBdeploy stack\fR, \fBlist collections\fR. The collection verbs also take a
+bare \fINAME\fR in place of the noun: \fBregister\fR \fINAME\fR is
+\fBregister collection\fR \fINAME\fR. The former noun-first spellings
+(\fBcollection register\fR, \fBstack deploy\fR) still run, hidden, and print
+the verb-first form to use.
 .TP
-.BI "process " SOURCE
-Process one evidence source. \fISOURCE\fR is one of
-.BR zeek ", " evtx ", " volatility ", " plaso ", " godfir-toolz ", " signatures .
+.BI "process " [COLLECTION] " " [LANE]
+Process evidence with a lane. \fILANE\fR is one of
+.BR zeek ", " evtx ", " volatility ", " plaso ", " godfir-toolz ", " signatures ", " all
+(the default when a collection is given); \fICOLLECTION\fR scopes the run to one
+registered collection (else the active one, if set). The two positionals may be
+given in either order \(em a lane name is the lane, anything else the collection.
 Idempotent: inputs that already have output are skipped (use
 .B --force
 to reprocess).
@@ -154,12 +201,72 @@ Run once per host before first processing, and again after changing anything
 under
 .IR docker/ .
 .TP
-.B list
-Inventory the evidence staged under
-.IR data_store/raw :
-for each source that
+.BI "list " [VIEW]
+Inventory the staged evidence, or the collections. \fIVIEW\fR is
+.B lanes
+(the default: for each lane that
 .B process
-reads, the input directory and how many evidence files are present.
+reads, the input directory and how many evidence files are present),
+.B raw
+or
+.B processed
+(a directory view of that tree's top-level subdirs), or
+.B collections
+(registered, detected and dropzone-candidate collections; the active one is
+starred).
+.TP
+.BI "register [collection] " [NAME]
+Register a collection: promote \fIdata_store/raw/sort/NAME/\fR if it exists
+(loose files auto-classified into lane subdirs), else create an empty
+collection \(em or, with
+.BI --from " PATH" ,
+symlink an external directory in (\fINAME\fR defaults to its basename). Adds
+the SQLite registry row and SHA-1s the evidence into
+.I .collection.hashes
+unless
+.BR --no-hash .
+.TP
+.BI "unregister [collection] " NAME
+Drop the registry row and marker; evidence and log are preserved.
+.TP
+.BI "select [collection] " NAME
+Mark a collection as the active target for later commands
+.RB ( process ", " sort ).
+.TP
+.B unselect [collection]
+Clear the active collection.
+.TP
+.BI "sort [collection] " [NAME]
+Sort the dropzone into the collection's lanes by magic-byte type (content beats
+extension). With no \fINAME\fR the active collection is used, or the only one.
+.B --dry-run
+shows what would move.
+.TP
+.BR "deploy stack" ", " "destroy stack" ", " "start stack" ", " "stop stack" ", " "status stack"
+The analysis-stack lifecycle (the
+.B dxdfir_stack
+role over
+.IR docker/elastic ):
+build if needed and bring the stack up, then verify it; stop and remove its
+containers and networks
+.RB ( --volumes
+also wipes the named volumes, i.e. the ingested data); start the existing
+stopped containers; stop them but keep them; show their status. The noun is
+required \(em a bare verb lists its targets.
+.TP
+\fBcleanup processed\fR|\fBcar\fR|\fBdocker\fR
+Wipe
+.I data_store/processed/
+(every lane and the CAR), the materialised CAR tree only, or the built
+.I get-sybers/*
+tool images (the
+.B dxdfir_cleanup
+role). Each prompts unless
+.B -y
+is given;
+.B --dry-run
+maps to
+.BR "ansible-playbook --check" .
 .TP
 .BI "stix " SUBCOMMAND
 The STIX 2.1 / OpenCTI exchange verbs (detections to sightings, indicators in,
@@ -190,6 +297,24 @@ a role default, e.g.
 .RB \(lq -e\  dxdfir_zeek_pcap_dir=/evidence/pcaps \(rq
 or
 .RB \(lq -e\  \(aq{\(dqdxdfir_signatures_lanes\(dq:[\(dqyara\(dq]}\(aq \(rq.
+.SS register
+.TP
+.BR --from ", " -f " " \fIPATH\fR
+Source: a dropzone subfolder or an external directory to symlink in.
+.TP
+.B --no-hash
+Skip SHA-1 hashing the evidence into
+.IR .collection.hashes .
+.SS sort
+.TP
+.B --dry-run
+Show what would move; move nothing.
+.TP
+.B --no-register
+Sort an unregistered collection without registering it.
+.TP
+.B --no-hash
+Skip the hash-manifest refresh after sorting.
 .SS build-car
 .TP
 .BI --in " PATH"
@@ -229,6 +354,17 @@ Pass an extra Ansible variable through to the
 .B dxdfir_images
 role; repeatable (e.g.\&
 .RB \(lq -e\  dxdfir_runtime_uid=3000 \(rq).
+.SS deploy stack
+.TP
+.B --no-build
+Do not build images before starting.
+.SS destroy stack
+.TP
+.B --volumes
+Also remove the named volumes (wipes the ingested data).
+.TP
+.BR --yes ", " -y
+Do not prompt.
 .SH ENVIRONMENT
 .TP
 .B DFIR_REPO_ROOT
@@ -273,6 +409,12 @@ Reprocess memory images, overriding the input directory:
 .TP
 Run only the YARA signature lane:
 .B dxdfir process signatures -e \(aq{\(dqdxdfir_signatures_lanes\(dq:[\(dqyara\(dq]}\(aq
+.TP
+Register the dropzone folder data_store/raw/sort/case-a as a tracked collection, sort it, make it active, process it:
+.B dxdfir register case-a && dxdfir sort case-a && dxdfir select case-a && dxdfir process case-a
+.TP
+Bring the analysis stack up, then show what is running:
+.B dxdfir deploy stack && dxdfir status stack
 .TP
 Normalise everything processed into CAR, then gate it:
 .B dxdfir build-car && dxdfir verify-car

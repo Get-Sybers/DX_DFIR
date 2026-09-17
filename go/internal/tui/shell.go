@@ -507,7 +507,7 @@ func (s *Shell) Run() (retErr error) {
 		"",
 		"Run any dxdfir command here, e.g.:",
 		"    list                          # staged evidence per lane",
-		"    collection status             # tracked collections",
+		"    list collections              # tracked collections",
 		"    process <collection> <lane>   # process a collection with a lane",
 		"",
 		"Tab / →  next view · Shift-Tab / ←  previous · `clear` clears · `quit` exits · Ctrl-C cancels a run.",

@@ -26,7 +26,8 @@ func newBuildDockerCmd(env *Env) *cobra.Command {
 			"ansible-hardened Dockerfile under docker/, then asserts the hardening contract\n" +
 			"on the result (fixed non-root USER, com.get-sybers.hardened label, no package\n" +
 			"managers or interpreters in the tool-only images).",
-		Args: cobra.NoArgs,
+		GroupID: groupSetup,
+		Args:    cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			r, ap, err := env.ansibleRepo()
 			if err != nil {
@@ -74,7 +75,8 @@ func newVerifyImagesCmd(env *Env) *cobra.Command {
 		Long: "Audit the hardened get-sybers/* tool-image inventory (dxdfir-verify-images.yml).\n\n" +
 			"Fails if any expected tool image is missing or un-hardened, or if an\n" +
 			"UNEXPECTED get-sybers/* image is present.",
-		Args: cobra.NoArgs,
+		GroupID: groupSetup,
+		Args:    cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			r, ap, err := env.ansibleRepo()
 			if err != nil {

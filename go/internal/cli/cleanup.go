@@ -14,10 +14,11 @@ import (
 
 // newCleanupCmd builds the `dxdfir cleanup` group.
 func newCleanupCmd(env *Env) *cobra.Command {
-	parent := &cobra.Command{
-		Use:   "cleanup",
-		Short: "Wipe processed evidence, CAR stores, or get-sybers/* docker images.",
-	}
+	parent := nounGroup("cleanup",
+		"Wipe processed evidence, CAR stores, or get-sybers/* docker images.",
+		"Wipe processed evidence, CAR stores, or get-sybers/* docker images (verb first:\n"+
+			"cleanup processed | cleanup car | cleanup docker).")
+	parent.GroupID = groupHousekeep
 	parent.AddCommand(
 		newCleanupActionCmd(env, "processed",
 			"Wipe everything under data_store/processed/ (all lanes + CAR).",
