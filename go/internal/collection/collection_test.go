@@ -428,8 +428,14 @@ func TestHash(t *testing.T) {
 	if files != 2 || total != 10 {
 		t.Errorf("files=%d total=%d want 2/10", files, total)
 	}
-	if startedFiles != 2 || startedTotal != 10 || onFileCalls != 2 || chunkSum != 10 {
-		t.Errorf("progress: start(%d,%d) onFile=%d chunkSum=%d want 2/10/2/10", startedFiles, startedTotal, onFileCalls, chunkSum)
+	// Hashing is parallel now; progress is driven by a ticker off atomic counters,
+	// so the byte total is still exact but OnFile fires by completion (>=1), not
+	// once per file.
+	if startedFiles != 2 || startedTotal != 10 || chunkSum != 10 {
+		t.Errorf("progress: start(%d,%d) chunkSum=%d want 2/10/…/10", startedFiles, startedTotal, chunkSum)
+	}
+	if onFileCalls < 1 {
+		t.Errorf("progress: OnFile never fired")
 	}
 
 	man, _ := os.ReadFile(filepath.Join(colls, "h", manifestName))

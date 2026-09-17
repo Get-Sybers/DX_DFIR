@@ -9,8 +9,12 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 )
 
 // This file is the native-Go SHA-1 manifest hasher (epic #174, phase 3), a
@@ -50,17 +54,71 @@ func WriteManifest(repoRoot, name string, p HashProgress) (rollup string, files 
 		p.OnStart(len(rels), total)
 	}
 
+	// Hash the files in parallel — the serial pass was the bottleneck over a large
+	// collection (LS24's multi-GB disk images hashed one core at a time). Each
+	// worker writes its own perFile slot, so the manifest stays path-ordered; the
+	// rollup sorts digests, so it is order-independent — concurrency changes
+	// neither output. A single ticker goroutine drives the progress callbacks off
+	// atomic counters, so the caller's single-goroutine progress state is never
+	// touched concurrently and the hashing workers never block on the UI.
 	type fileHash struct{ rel, sum string }
-	perFile := make([]fileHash, 0, len(rels))
+	perFile := make([]fileHash, len(rels))
+	var (
+		bytesDone, filesDone int64
+		firstErr             error
+		errOnce              sync.Once
+		wg                   sync.WaitGroup
+	)
+	stopProg := make(chan struct{})
+	progDone := make(chan struct{})
+	go func() {
+		defer close(progDone)
+		t := time.NewTicker(120 * time.Millisecond)
+		defer t.Stop()
+		var emitted int64
+		flush := func() {
+			if cur := atomic.LoadInt64(&bytesDone); p.OnChunk != nil && cur > emitted {
+				p.OnChunk(cur - emitted)
+				emitted = cur
+			}
+			if p.OnFile != nil {
+				p.OnFile("", 0, int(atomic.LoadInt64(&filesDone))-1, len(rels))
+			}
+		}
+		for {
+			select {
+			case <-stopProg:
+				flush() // final, exact snapshot
+				return
+			case <-t.C:
+				flush()
+			}
+		}
+	}()
+
+	sem := make(chan struct{}, hashWorkers(len(rels)))
 	for idx, rel := range rels {
-		if p.OnFile != nil {
-			p.OnFile(rel, sizes[rel], idx, len(rels))
-		}
-		sum, herr := hashFile(filepath.Join(root, rel), p.OnChunk)
-		if herr != nil {
-			return "", 0, 0, herr
-		}
-		perFile = append(perFile, fileHash{rel, sum})
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(idx int, rel string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			sum, herr := hashFile(filepath.Join(root, rel), func(n int64) {
+				atomic.AddInt64(&bytesDone, n)
+			})
+			if herr != nil {
+				errOnce.Do(func() { firstErr = herr })
+				return
+			}
+			perFile[idx] = fileHash{rel, sum}
+			atomic.AddInt64(&filesDone, 1)
+		}(idx, rel)
+	}
+	wg.Wait()
+	close(stopProg)
+	<-progDone
+	if firstErr != nil {
+		return "", 0, 0, firstErr
 	}
 	// rels are already path-sorted (manifest order). The rollup sorts the hex
 	// digests (NOT the paths) and concatenates them, so it is order-independent.
@@ -146,6 +204,22 @@ func evidenceRelpaths(root string) (rels []string, sizes map[string]int64, total
 	})
 	sort.Strings(rels)
 	return rels, sizes, total, err
+}
+
+// hashWorkers bounds the parallel hash fan-out: one per core (at least 4, so I/O
+// and hashing overlap even on a small box), never more than the file count.
+func hashWorkers(n int) int {
+	w := runtime.NumCPU()
+	if w < 4 {
+		w = 4
+	}
+	if n > 0 && w > n {
+		w = n
+	}
+	if w < 1 {
+		w = 1
+	}
+	return w
 }
 
 // hashFile returns the SHA-1 hex digest of a file, read in 1 MiB chunks (the
