@@ -15,12 +15,14 @@ The image's ENTRYPOINT dispatches on its first argument
     timeline  the unified, time-ordered CAR timeline from a source's stores.
 
 The CAR **correctness gate** is the engine's own ``byakugan.verify`` run-through.
-This lane runs it in the image (``--entrypoint python -m byakugan.verify`` over
-the materialised tree, mounted read-only) — the object model and its car_action
-vocabulary stay entirely in the engine, so the analyst host never imports the
-engine or reimplements the gate. ``byakugan.verify`` ships in the engine package
-baked into the image (importable off the image's ``PYTHONPATH=/opt/byakugan``), so
-no container subcommand is needed.
+This lane runs it in the image (``--entrypoint /usr/bin/python3 -m byakugan.verify``
+over the materialised tree, mounted read-only) — the object model and its
+car_action vocabulary stay entirely in the engine, so the analyst host never
+imports the engine or reimplements the gate. ``byakugan.verify`` ships in the
+engine package baked into the image (importable off the image's
+``PYTHONPATH=/opt/byakugan``), and ``/usr/bin/python3`` is the image's own
+interpreter (the ``byakugan`` entrypoint's shebang), so no container subcommand
+and no engine-image change are needed.
 
 This module maps the HOST paths in the engine's own flags to container mounts —
 processed evidence read-only, the byakugan/ output read-write — exactly like the
@@ -168,15 +170,17 @@ def run_verify(car_dir: str) -> subprocess.CompletedProcess:
     own ``byakugan.verify`` reads it — the object model and its car_action
     vocabulary stay in the engine (this lane never imports or reimplements the
     gate). ``byakugan.verify`` is invoked by overriding the entrypoint to the
-    baked ``python`` (the engine package is on the image's ``PYTHONPATH``), so no
-    container subcommand is required. stdout is the gate's report; the return code
-    is the verdict (1 = a check failed, 2 = no CAR present). Raises RuntimeError
-    (via images.require) if the engine image is absent or not hardened."""
+    image's own ``/usr/bin/python3`` (the engine package is on the image's
+    ``PYTHONPATH``; that path is the ``byakugan`` entrypoint's own interpreter), so
+    no container subcommand is required. stdout is the gate's report; the return
+    code is the verdict (1 = a check failed, 2 = no CAR present). Raises
+    RuntimeError (via images.require) if the engine image is absent or not
+    hardened."""
     src = os.path.realpath(car_dir)
     images.require(_IMAGE)
     argv = container.run(_IMAGE, ["-m", "byakugan.verify", "/work"],
                          mounts=[f"{src}:/work:ro"], workdir="/tmp",
-                         entrypoint="python")
+                         entrypoint="/usr/bin/python3")
     return subprocess.run(argv, capture_output=True, text=True, check=False)
 
 

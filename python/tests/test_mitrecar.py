@@ -106,9 +106,10 @@ def test_verify_mounts_car_tree_readonly_and_runs_the_engine_gate(tmp_path):
             mock.patch("subprocess.run", side_effect=fake_run):
         proc = mitrecar.run_verify(str(car))
     argv = seen["argv"]
-    # the engine's own gate runs via the baked python (entrypoint override) over
-    # the CAR tree mounted read-only at /work — the object model stays in the engine.
-    assert "--entrypoint" in argv and argv[argv.index("--entrypoint") + 1] == "python"
+    # the engine's own gate runs via the image's own /usr/bin/python3 (entrypoint
+    # override) over the CAR tree mounted read-only at /work — the object model
+    # stays in the engine; the stripped image has no bare `python`.
+    assert "--entrypoint" in argv and argv[argv.index("--entrypoint") + 1] == "/usr/bin/python3"
     img = argv.index(_IMAGE)
     assert argv[img + 1:] == ["-m", "byakugan.verify", "/work"]
     mounts = [argv[i + 1] for i, tok in enumerate(argv) if tok == "-v"]
