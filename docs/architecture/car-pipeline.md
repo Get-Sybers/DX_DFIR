@@ -41,9 +41,9 @@ The **13 CAR objects**: `authentication`, `driver`, `email`, `file`, `flow`, `ht
 `module`, `process`, `registry`, `service`, `socket`, `thread`, `user_session`.
 
 > Which source field populates each CAR column — and which are honestly-unmapped gaps —
-> is documented per object in the [CAR provenance ledger](../car-provenance/README.md).
-> The overview is [CAR-Pipeline.md](../CAR-Pipeline.md); extraction rules in
-> [CAR-Extraction-Rules.md](../CAR-Extraction-Rules.md).
+> is documented per object in the Byakugan engine's [CAR provenance ledger](https://github.com/Get-Sybers/byakugan/blob/main/docs/car-provenance/README.md).
+> The overview is [CAR-Pipeline.md](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Pipeline.md); extraction rules in
+> [CAR-Extraction-Rules.md](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Extraction-Rules.md).
 
 ## Verify
 
@@ -82,9 +82,9 @@ every source beneath it. You can also read it live in the
 
 Because every source lands in the same object model, entities converge: the same host,
 process GUID, IP or identity seen across a PCAP, a memory image and an event log link up.
-How the join keys work is documented in
-[CAR-CrossSource.md](../CAR-CrossSource.md) and
-[CAR-Relations.md](../CAR-Relations.md).
+How the join keys work is documented in the Byakugan engine's
+[CAR-CrossSource.md](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-CrossSource.md) and
+[CAR-Relations.md](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Relations.md).
 
 ## From CAR to detections
 

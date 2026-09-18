@@ -49,7 +49,7 @@ as part of the normal disk-image timeline.
 
 ## Output isolation
 
-Follows the CAR pipeline's rule (`docs/CAR-Pipeline.md` §2 — "one source, one
+Follows the CAR pipeline's rule (Byakugan's [CAR-Pipeline.md](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Pipeline.md) §2 — "one source, one
 database"): each image gets its own `<out_dir>/<host>/` (host = the image's
 filename stem), holding the raw extraction (`_extracted/`), one sub-dir per
 tool, and a combined `godfir-toolz.log`.

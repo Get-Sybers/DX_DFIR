@@ -1,8 +1,10 @@
 # DX_DFIR research notes
 
-Design notes and research write-ups that sit behind the pipeline. The raw findings
-and per-object provenance catalogues live in
-[`../car-provenance/`](../car-provenance/).
+Design notes and research write-ups that sit behind the pipeline. The CAR
+property-provenance catalogues and the cross-source-linkage arc are owned by the
+[Byakugan](https://github.com/Get-Sybers/byakugan) engine (which owns the CAR
+model and extraction) — see its
+[car-provenance ledger](https://github.com/Get-Sybers/byakugan/blob/main/docs/car-provenance/README.md).
 
 ## Proposals
 
@@ -18,4 +20,4 @@ Completed arcs — one doc per step — recording how a capability was built.
 
 | Journey | What it delivered |
 |---------|-------------------|
-| [CAR cross-source linkage & detection](cross-source-linkage/README.md) | the nine-step arc that turned the engine from *"emits CAR objects"* into *"resolves entities across sources and lines detections up against them"* |
+| [CAR cross-source linkage & detection](https://github.com/Get-Sybers/byakugan/blob/main/docs/research/cross-source-linkage/README.md) — in the [Byakugan](https://github.com/Get-Sybers/byakugan) engine repo | the nine-step arc that turned the engine from *"emits CAR objects"* into *"resolves entities across sources and lines detections up against them"* |

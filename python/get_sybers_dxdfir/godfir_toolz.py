@@ -33,7 +33,7 @@ substitutes above. They are their own CAR data sources (byakugan
 main log2timeline lane's own SRUM/prefetch coverage; the Go tools keep higher
 fidelity (goese's second-precision timestamps, decoded device paths/SIDs).
 
-Output isolation follows the CAR pipeline's rule (docs/CAR-Pipeline.md §2 — "one
+Output isolation follows the CAR pipeline's rule (https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Pipeline.md §2 — "one
 source, one database"): each image gets its OWN
 ``data_store/processed/godfir-toolz/<host>/``, holding the raw extraction
 (``_extracted/``), the tool-container outputs (one sub-dir per tool), and a
@@ -480,7 +480,7 @@ def process_image(image, host_out_dir, *, plaso_image=PLASO_IMAGE, force=False,
                   vss=False) -> dict:
     """Extract + run every godfir-toolz step for one disk image into ``host_out_dir``
     (== ``processed/godfir-toolz/<host>/`` — one host, one directory, per the CAR
-    isolation rule in docs/CAR-Pipeline.md §2). Idempotent at the HOST level: a
+    isolation rule in https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Pipeline.md §2). Idempotent at the HOST level: a
     host dir that already holds any non-empty file is skipped whole unless
     ``force`` (a partial prior run is reprocessed entirely, not resumed
     file-by-file — simpler and safer than guessing which step half-completed).

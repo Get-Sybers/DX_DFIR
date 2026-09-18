@@ -93,8 +93,8 @@ dxdfir build-timeline data_store/processed/byakugan # one time-ordered timeline 
   sane (IPs, ports, SIDs, `car_action` in the engine model's vocabulary), every
   row traceable to one artefact, the relationship edges naming real endpoints.
   It reads `data_store/processed/byakugan` by default, or `--car-dir DIR`.
-- The CAR JSON is the contract every sink reads — see
-  [docs/CAR-Pipeline.md](/docs/CAR-Pipeline.md).
+- The CAR JSON is the contract every sink reads — see the Byakugan engine's
+  [CAR-Pipeline.md](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Pipeline.md).
 
 ### Step 7: Bring up the Elastic-native backend
 ```bash
