@@ -57,3 +57,25 @@ def test_dxdfir_does_not_import_or_reembed_the_engine():
         "DX_DFIR re-embedded Byakugan-owned CAR logic (it should shell the "
         "get-sybers/byakugan image instead): " + "; ".join(offenders)
     )
+
+
+def test_sources_yml_pins_the_byakugan_engine():
+    # The reference to Byakugan must not be silently dropped or loosened:
+    # sources.yml always pins the engine at a reproducible full-sha commit.
+    import yaml  # PyYAML is a package dependency; import locally so the other
+                 # boundary checks stay dependency-free.
+
+    sources = yaml.safe_load((REPO / "sources.yml").read_text(encoding="utf-8"))
+    entry = sources.get("byakugan") if isinstance(sources, dict) else None
+    assert isinstance(entry, dict), (
+        "sources.yml must pin the Byakugan engine under a top-level `byakugan:` entry"
+    )
+    url = str(entry.get("url", ""))
+    assert re.search(r"github\.com/Get-Sybers/Byakugan(?:\.git)?/?$", url, re.IGNORECASE), (
+        f"sources.yml byakugan.url must point at the Byakugan repo, got {url!r}"
+    )
+    ref = str(entry.get("ref", ""))
+    assert re.fullmatch(r"[0-9a-f]{40}", ref), (
+        "sources.yml byakugan.ref must be a full 40-hex commit sha (never a branch "
+        f"or tag, so the engine pin is reproducible), got {ref!r}"
+    )
