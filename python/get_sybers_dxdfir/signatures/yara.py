@@ -40,6 +40,11 @@ from .. import container, imageexport
 
 _SIGNATURES_IMAGE = "get-sybers/signatures:latest"  # yara + suricata + hayabusa, one image
 _VOL_IMAGE = "get-sybers/piiat-mem:latest"
+# The DetectRaptor ruleset baked into the signatures image (the Dockerfile
+# guarantees it with a build-time `test -s`). Used for the file + disk scans when
+# no operator rules are staged on the host — an in-image absolute path, never
+# mounted. The memory scan runs on the piiat-mem image, which does not carry it.
+_BAKED_YARA_RULES = "/opt/dxdfir/yara-rules/detectraptor/detectraptor.yar"
 _STRING_RE = re.compile(r"^0x([0-9a-fA-F]+):(\$[^:]*):\s?(.*)$")
 
 
@@ -181,7 +186,7 @@ def build_index(rules: list[str], rules_dir: str) -> str:
     )
 
 
-def _scan_dir(scan_dir, rules_dir, index_path, source, base, image) -> list[dict]:
+def _scan_dir(scan_dir, rules_dir, index_path, source, base, image, *, mount_rules=True) -> list[dict]:
     """Scan every file under scan_dir in ONE container (per-file loop over a list
     file — a fixed sh -c script reads names from the mounted list, no interpolation).
     The index is bind-mounted at /index.yar; its includes resolve against /rules."""
@@ -199,13 +204,15 @@ def _scan_dir(scan_dir, rules_dir, index_path, source, base, image) -> list[dict
         # per-file scan loop (/opt/dxdfir/scan-list.sh) explicitly. It reads the
         # mounted list + index and prints matches to stdout (captured here) — no
         # shell command is injected from here.
+        # Mount the host rules at /rules only when the index references them; the
+        # baked-rules index uses an in-image absolute path, so nothing is mounted.
+        mounts = [f"{os.path.realpath(scan_dir)}:/scan:ro",
+                  f"{os.path.realpath(index_path)}:/index.yar:ro",
+                  f"{listf.name}:/list.txt:ro"]
+        if mount_rules:
+            mounts.append(f"{os.path.realpath(rules_dir)}:/rules:ro")
         proc = subprocess.run(
-            container.run(
-                image, ["/opt/dxdfir/scan-list.sh"],
-                mounts=[f"{os.path.realpath(rules_dir)}:/rules:ro",
-                        f"{os.path.realpath(scan_dir)}:/scan:ro",
-                        f"{os.path.realpath(index_path)}:/index.yar:ro",
-                        f"{listf.name}:/list.txt:ro"]),
+            container.run(image, ["/opt/dxdfir/scan-list.sh"], mounts=mounts),
             capture_output=True, text=True, check=False,
         )
         # A non-zero exit with no output is a SCAN failure, never "no matches" —
@@ -256,14 +263,18 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
             res["note"] = f"detectraptor fetch failed: {exc}"
 
     rules = _rule_files(rules_dir)
-    if not rules:
-        res["note"] = f"no rules in {rules_dir}"
-        return res
+    # Operator rules staged under rules_dir win; otherwise fall back to the
+    # DetectRaptor ruleset BAKED into the signatures image (the file + disk scans
+    # run there). `baked` drives the index contents and whether /rules is mounted.
+    baked = not rules
+    if baked:
+        _note(res, "using the DetectRaptor ruleset baked into the signatures image "
+                   f"(no operator rules staged under {rules_dir})")
 
     # Build the include index in a TEMP file (never write into the operator's rules
     # tree — it may be read-only/externally managed); it's bind-mounted at /index.yar.
     idxf = tempfile.NamedTemporaryFile("w", suffix=".yar", delete=False)
-    idxf.write(build_index(rules, rules_dir))
+    idxf.write(f'include "{_BAKED_YARA_RULES}"\n' if baked else build_index(rules, rules_dir))
     idxf.close()
     # NamedTemporaryFile is 0600; the hardened container reads it as uid 2000
     os.chmod(idxf.name, 0o644)
@@ -277,7 +288,8 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
         elif os.path.isdir(files_target):
             try:
                 matches = _scan_dir(files_target, rules_dir, index_path, "file",
-                                    os.path.basename(files_target), image)
+                                    os.path.basename(files_target), image,
+                                    mount_rules=not baked)
             except RuntimeError as exc:
                 res["failed"] += 1
                 _note(res, f"files: {exc}")
@@ -311,7 +323,7 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
                         continue
                     try:
                         matches += _scan_dir(stage, rules_dir, index_path, "disk",
-                                             base, image)
+                                             base, image, mount_rules=not baked)
                     except RuntimeError as exc:
                         res["failed"] += 1
                         _note(res, f"disk {base}: {exc}")
@@ -322,6 +334,13 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
         out = os.path.join(output_dir, "memory.jsonl")
         if not force and os.path.exists(out):
             res["skipped"] += 1
+        elif baked:
+            # The baked rules live in the signatures image; the memory scan runs on
+            # the piiat-mem image, which cannot reach them. It needs operator YARA
+            # rules staged on the host (and Vol3 symbols) — skip, don't run ruleless.
+            res["skipped"] += 1
+            _note(res, f"memory: skipped — stage operator YARA rules under {rules_dir} "
+                       "(the baked rules are in the signatures image, not piiat-mem)")
         else:
             # Reuse the volatility processor's image discovery (its extension set
             # covers the shell lane's list plus the corpus-specific *dramimage).

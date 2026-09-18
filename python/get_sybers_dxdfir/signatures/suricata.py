@@ -37,6 +37,10 @@ from .. import container
 from . import clean_name
 
 _SURICATA_IMAGE = "get-sybers/signatures:latest"  # yara + suricata + hayabusa, one image
+# The ET Open ruleset baked into the signatures image (the Dockerfile guarantees it
+# with a build-time `test -s`). Used when no operator ruleset is staged on the host
+# — an in-image absolute path, never mounted.
+_BAKED_SURICATA_RULES = "/opt/dxdfir/suricata-rules/suricata.rules"
 _WANTED = {"alert", "anomaly", "http", "dns", "tls", "fileinfo", "flow"}
 
 # Ranges that count as "home" when auto-deriving HOME_NET: RFC1918 + CGNAT +
@@ -451,39 +455,44 @@ def discover(pcap_dir: str) -> list[str]:
     return sorted(found)
 
 
-def suricata_argv(pcap, out_dir, rules_dir, rules_file, image, sets=None):
+def suricata_argv(pcap, out_dir, rules_dir, rules_file, image, sets=None, baked_rules=None):
     """The ``docker run`` argv for one offline Suricata pass on the hardened
-    get-sybers/suricata image (ansible-only execution, allow-listed argv, no caps, no
+    get-sybers/signatures image (ansible-only execution, allow-listed argv, no caps, no
     network — offline replay needs none). ``sets`` are Suricata ``--set
-    key=value`` tuning entries (HOME_NET etc. from ``var_sets``). Pure."""
+    key=value`` tuning entries (HOME_NET etc. from ``var_sets``). ``baked_rules`` is
+    an in-image ruleset path used when no host ruleset is mounted. Pure."""
     args = ["-r", f"/pcaps/{os.path.basename(pcap)}", "-l", "/out", "-k", "none"]
-    if rules_file:
+    if baked_rules:
+        args += ["-S", baked_rules]          # in-image ruleset — nothing mounted
+    elif rules_file:
         args += ["-S", f"/rules/{os.path.basename(rules_file)}"]
     for entry in (sets or []):
         args += ["--set", entry]
     # The signatures image has no ENTRYPOINT; name the tool (suricata) explicitly.
     # It writes eve.json to the mounted -l /out; under the read-only rootfs it also
-    # touches /var/{run,log}/suricata -> tmpfs.
+    # touches /var/{run,log}/suricata -> tmpfs. Mount host rules at /rules only when
+    # they are what -S points at (the baked ruleset lives in the image).
+    mounts = [f"{os.path.dirname(pcap)}:/pcaps:ro", f"{out_dir}:/out"]
+    if rules_file and not baked_rules:
+        mounts.append(f"{os.path.realpath(rules_dir)}:/rules:ro")
     return container.run(
         image, ["suricata", *args],
-        mounts=[f"{os.path.dirname(pcap)}:/pcaps:ro",
-                f"{os.path.realpath(rules_dir)}:/rules:ro",
-                f"{out_dir}:/out"],
+        mounts=mounts,
         tmpfs=["/var/run/suricata:rw,nosuid,nodev",
                "/var/log/suricata:rw,nosuid,nodev"],
     )
 
 
-def _run_suricata(pcap, out_dir, rules_dir, rules_file, image, sets=None):
-    subprocess.run(suricata_argv(pcap, out_dir, rules_dir, rules_file, image, sets),
+def _run_suricata(pcap, out_dir, rules_dir, rules_file, image, sets=None, baked_rules=None):
+    subprocess.run(suricata_argv(pcap, out_dir, rules_dir, rules_file, image, sets, baked_rules),
                    capture_output=True, check=False)
 
 
-def _suricata_pass(pcap, rules_dir, rules_file, image, sets):
+def _suricata_pass(pcap, rules_dir, rules_file, image, sets, baked_rules=None):
     """One Suricata pass into a fresh temp dir; return its raw EVE text ('' on no output)."""
     with tempfile.TemporaryDirectory() as tmp:
         os.chmod(tmp, 0o777)
-        _run_suricata(pcap, tmp, rules_dir, rules_file, image, sets)
+        _run_suricata(pcap, tmp, rules_dir, rules_file, image, sets, baked_rules)
         eve = os.path.join(tmp, "eve.json")
         if os.path.isfile(eve) and os.path.getsize(eve) > 0:
             with open(eve, encoding="utf-8", errors="replace") as fh:
@@ -521,9 +530,13 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
         if "suricata.rules" in files:
             rules_file = os.path.join(cur, "suricata.rules")
             break
-    if not rules_file:
-        res["note"] = "no suricata.rules — using the image's bundled rules " \
-                      "(run with --fetch online to provision ET Open)"
+    # No operator ruleset staged -> use the ET Open rules BAKED into the signatures
+    # image (an in-image path, nothing mounted) so Suricata ALERTS instead of
+    # emitting protocol events only.
+    baked_rules = None if rules_file else _BAKED_SURICATA_RULES
+    if baked_rules:
+        res["note"] = "no host suricata.rules — using the ET Open ruleset baked " \
+                      "into the signatures image"
 
     pcaps = discover(pcap_dir)
     if not pcaps:
@@ -571,7 +584,7 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
                                   "source": "auto", "vars": derived}
             recorded[key] = {name.lower(): val for name, val in derived.items()}
 
-        eve_text = _suricata_pass(pcap, rules_dir, rules_file, image, sets)
+        eve_text = _suricata_pass(pcap, rules_dir, rules_file, image, sets, baked_rules)
         if eve_text:
             events = filter_eve(eve_text, os.path.relpath(pcap, repo_root), keep_all)
             with open(out, "w") as w:

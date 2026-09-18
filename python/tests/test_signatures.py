@@ -104,7 +104,7 @@ def test_yara_disk_extracts_in_userspace_then_scans(tmp_path, monkeypatch):
         extracted.append((image, artifact_filters))
         return []
 
-    def fake_scan_dir(scan_dir, rules_dir, index_path, source, base, image):
+    def fake_scan_dir(scan_dir, rules_dir, index_path, source, base, image, **_kw):
         scanned.append((source, base))
         return [{"tool": "yara", "source": source, "rule": "R", "target": base}]
 
@@ -393,7 +393,7 @@ def _pcap_repo(tmp_path):
 
 def _fake_pass(calls):
     """_suricata_pass stand-in: per-pcap EVE whose src_ip depends on the capture."""
-    def fake(pcap, rules_dir, rules_file, image, sets):
+    def fake(pcap, rules_dir, rules_file, image, sets, baked_rules=None):
         calls.append((os.path.basename(pcap), tuple(sets or [])))
         ip = "10.1.1.1" if os.path.basename(pcap) == "a.pcap" else "192.168.5.5"
         return f'{{"event_type": "alert", "src_ip": "{ip}", "dest_ip": "8.8.8.8"}}\n'
@@ -535,7 +535,7 @@ def test_run_records_derived_ports_and_uses_them(tmp_path, monkeypatch):
     repo, _ = _pcap_repo(tmp_path)
     calls = []
 
-    def fake(pcap, rules_dir, rules_file, image, sets):
+    def fake(pcap, rules_dir, rules_file, image, sets, baked_rules=None):
         calls.append((os.path.basename(pcap), tuple(sets or [])))
         return ('{"event_type":"http","src_ip":"10.0.0.9","dest_ip":"10.0.0.5",'
                 '"dest_port":8080}\n')
