@@ -31,7 +31,11 @@
     dxdfir_lane_name: signatures
     dxdfir_lane_module: get_sybers_dxdfir.signatures
     dxdfir_lane_python_path: "{{ dxdfir_signatures_python_path }}"
-    dxdfir_lane_images: ["get-sybers/signatures:latest"]  # yara + suricata + hayabusa, one image
+    # The detection tools run in the one signatures image; the yara-disk scan and
+    # the hayabusa image-EVTX extraction ALSO run the plaso image for their
+    # userspace disk-image extraction (imageexport.PLASO_IMAGE), so the lane must
+    # ensure both are built and supply-chain-guarded.
+    dxdfir_lane_images: ["get-sybers/signatures:latest", "get-sybers/plaso:latest"]
     dxdfir_lane_input_checks:
       - name: data_store anchor
         path: "{{ dxdfir_signatures_repo_root }}/data_store"
