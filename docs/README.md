@@ -38,13 +38,17 @@ New here? Start with **[What DX_DFIR is](getting-started/README.md)**.
 These pre-date this hub and go deeper than the pages above; they're linked from the
 relevant sections:
 
-- [CAR pipeline](CAR-Pipeline.md) · [extraction rules](CAR-Extraction-Rules.md) ·
-  [cross-source linkage](CAR-CrossSource.md) · [relationships](CAR-Relations.md)
-- [CAR provenance ledger](car-provenance/README.md) — one field-map per CAR object
+- **CAR reference** — owned by the [Byakugan](https://github.com/Get-Sybers/byakugan) engine (the CAR model + extraction live there, not here):
+  [CAR pipeline](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Pipeline.md) ·
+  [extraction rules](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Extraction-Rules.md) ·
+  [cross-source linkage](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-CrossSource.md) ·
+  [relationships](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Relations.md) ·
+  [provenance ledger](https://github.com/Get-Sybers/byakugan/blob/main/docs/car-provenance/README.md) (one field-map per CAR object)
 - [Signature rules](Signature-Rules.md) · [risk gate](riskgate.md)
 - [Directory structure](Dir-Structure.md) · [tool containers](Containers.md) ·
   [scripts overview](scripts/Scripts-Overview.md)
-- [Research notes](research/README.md) — the linkage / behaviour-timeline programme
+- [Research notes](research/README.md) — the evidence-spine proposal (the CAR
+  cross-source-linkage arc lives in the [Byakugan engine repo](https://github.com/Get-Sybers/byakugan/blob/main/docs/research/cross-source-linkage/README.md))
 
 ---
 

@@ -116,7 +116,8 @@ the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
 - **New here?** [What DX_DFIR is](/docs/getting-started/README.md) · [Install](/docs/getting-started/install.md) · [First run](/docs/getting-started/first-run.md) · [The interface](/docs/getting-started/the-interface.md) · [Command reference](/docs/getting-started/commands.md)
 - **How it works:** [Architecture overview](/docs/architecture/README.md) · [Processing lanes](/docs/architecture/processing-lanes.md) · [CAR pipeline](/docs/architecture/car-pipeline.md) · [The stack](/docs/architecture/the-stack.md)
 - **Contributing:** [Standards](/docs/reference/README.md) · [Repository map](/docs/reference/repository-map.md) · [Contributing](/.github/CONTRIBUTING.md) · [Security](/.github/SECURITY.md)
-- **Deep reference:** [CAR pipeline](/docs/CAR-Pipeline.md) · [extraction rules](/docs/CAR-Extraction-Rules.md) · [relations](/docs/CAR-Relations.md) · [risk gate](/docs/riskgate.md) · [detection rules-as-code](/python/get_sybers_dxdfir/detect/rules/README.md)
+- **CAR engine reference** (owned by [Byakugan](https://github.com/Get-Sybers/byakugan)): [CAR pipeline](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Pipeline.md) · [extraction rules](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Extraction-Rules.md) · [relations](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Relations.md)
+- **Deep reference:** [risk gate](/docs/riskgate.md) · [detection rules-as-code](/python/get_sybers_dxdfir/detect/rules/README.md)
 
 > The pre-beta code lives on the frozen
 > [`deprecated`](https://github.com/Get-Sybers/DX_DFIR/tree/deprecated) branch —

@@ -237,7 +237,7 @@ is `0`, anything may change without notice.
   the `process` by ProcessGuid; yara → the `process` by pid or `file` by hash.
   Reuses the exchange's object builders and validation, so a behaviour bundle
   merges object-for-object with `stix export` and PIIAT's projection. Documented
-  in `docs/research/cross-source-linkage/09-behaviour-sightings.md`.
+  in Byakugan's [cross-source-linkage/09-behaviour-sightings.md](https://github.com/Get-Sybers/byakugan/blob/main/docs/research/cross-source-linkage/09-behaviour-sightings.md).
 
 ### Fixed
 - The YARA **memory** lane's Volatility renderer defaulted to a nonexistent

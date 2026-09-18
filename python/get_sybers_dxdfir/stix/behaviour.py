@@ -46,9 +46,11 @@ from . import objects as o
 from .attack_index import AttackIndex, load_attack_index
 from .export import make_bundle, summarise, validate_bundle
 
-# CAR object tables the join reads (the engine's per-object store, one table
-# per CAR object — see the Byakugan engine's store.py). Only these
-# carry a joinable subject.
+# The car.db schema is OWNED by the Byakugan engine (store.py defines the tables
+# and columns). These tuples are only this consumer's READ view of that contract —
+# the columns this join needs from the per-object store, read from car.db offline.
+# They are not a second definition of the schema; when the engine's schema changes
+# it is the source of truth. Only these three objects carry a joinable subject.
 _FLOW_COLS = ("guid", "timestamp", "hostname", "fqdn", "src_ip", "dest_ip", "src_port",
               "dest_port", "transport_protocol", "application_protocol", "dest_fqdn", "src_fqdn")
 _PROCESS_COLS = ("guid", "timestamp", "hostname", "fqdn", "pid", "command_line", "exe",

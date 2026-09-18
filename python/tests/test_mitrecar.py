@@ -2,7 +2,7 @@
 inside the hardened get-sybers/byakugan container. This suite tests the DX_DFIR
 seam: that host paths in the engine's own flags are mapped to the right
 container mounts (processed evidence read-only, the car/ output read-write), that
-the car_action vocabulary is read from the container, and the CLI dispatch. The
+the CAR correctness gate runs inside the container, and the CLI dispatch. The
 engine's own correctness has its own 100-test suite in the engine repo."""
 import json
 import os
@@ -92,26 +92,35 @@ def test_timeline_explicit_out_keeps_car_readonly(tmp_path):
     assert f"{os.path.realpath(str(tmp_path))}:/out" in mounts
 
 
-# ---- car_vocab (the verify-car vocabulary, from the container) -------------
-def test_car_vocab_parses_container_json():
-    payload = json.dumps({"process": ["create", "terminate"], "flow": ["start"]})
+# ---- verify (the CAR correctness gate, run inside the container) -----------
+def test_verify_mounts_car_tree_readonly_and_runs_the_engine_gate(tmp_path):
+    car = tmp_path / "byakugan"
+    car.mkdir()
+    seen = {}
+
+    def fake_run(argv, **_kw):
+        seen["argv"] = argv
+        return subprocess.CompletedProcess(argv, 0, stdout="ok", stderr="")
+
     with mock.patch("get_sybers_dxdfir.images.require"), \
-            mock.patch("subprocess.run",
-                       return_value=subprocess.CompletedProcess([], 0, stdout=payload, stderr="")):
-        vocab = mitrecar.car_vocab()
-    assert vocab == {"process": {"create", "terminate"}, "flow": {"start"}}
+            mock.patch("subprocess.run", side_effect=fake_run):
+        proc = mitrecar.run_verify(str(car))
+    argv = seen["argv"]
+    # the engine's own gate runs via the image's own /usr/bin/python3 (entrypoint
+    # override) over the CAR tree mounted read-only at /work — the object model
+    # stays in the engine; the stripped image has no bare `python`.
+    assert "--entrypoint" in argv and argv[argv.index("--entrypoint") + 1] == "/usr/bin/python3"
+    img = argv.index(_IMAGE)
+    assert argv[img + 1:] == ["-m", "byakugan.verify", "/work"]
+    mounts = [argv[i + 1] for i, tok in enumerate(argv) if tok == "-v"]
+    assert f"{os.path.realpath(str(car))}:/work:ro" in mounts
+    assert proc.returncode == 0
 
 
-def test_car_vocab_none_when_image_absent():
+def test_verify_raises_when_image_absent():
     with mock.patch("get_sybers_dxdfir.images.require", side_effect=RuntimeError("absent")):
-        assert mitrecar.car_vocab() is None
-
-
-def test_car_vocab_none_on_unparseable_output():
-    with mock.patch("get_sybers_dxdfir.images.require"), \
-            mock.patch("subprocess.run",
-                       return_value=subprocess.CompletedProcess([], 1, stdout="boom", stderr="err")):
-        assert mitrecar.car_vocab() is None
+        with pytest.raises(RuntimeError):
+            mitrecar.run_verify("/x")
 
 
 # ---- CLI dispatch ----------------------------------------------------------

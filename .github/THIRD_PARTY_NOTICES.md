@@ -24,7 +24,7 @@ image that redistributes MITRE's `car` repo.)
 ### MITRE CAR
 
 The MITRE CAR object/field/action model (Apache-2.0, attribution required — hence
-`NOTICE`) is the model the pipeline's CAR output follows (`docs/CAR-Pipeline.md`
+`NOTICE`) is the model the pipeline's CAR output follows (Byakugan's [CAR-Pipeline.md](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Pipeline.md)
 verifies it against `car.mitre.org`). It is **not vendored** in this repository's
 tree. The CAR engine (Byakugan, MIT, Get-Sybers) is an external public project
 that reconstructs its model from the `car` repo its own pinned submodules carry.
