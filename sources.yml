@@ -21,7 +21,7 @@
 # attack-datasources submodules at build time (recursive clone required).
 byakugan:
   url: https://github.com/Get-Sybers/Byakugan
-  ref: 2c7eeeab1081b7583067f6bb8ee5eead2b176c8a
+  ref: 72b6b629029587fd8b09711c05a44d28cc77e478
   consumed: "docker/GoDFIR-toolz/byakugan/Dockerfile (BYAKUGAN_REF build-arg)"
 
 # PIIAT-Mem (Volatility 3 memory forensics) — fused into get-sybers/piiat-mem in
