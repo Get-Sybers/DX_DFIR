@@ -71,13 +71,33 @@ trap cleanup EXIT
 # car_count <object> <action|-> <populated-fields,csv|-> <field=needle|->
 # Rows of car_<object>.jsonl (across every source under $CAR_DIR) with that
 # car_action (or any), every listed field populated, and — when given — the
-# needle somewhere in the field's value. Reads the tree through the framework's
-# own loader (get_sybers_dxdfir.carcheck), so this test and the gate agree on what
-# a row is.
+# needle somewhere in the field's value. Reads the materialised car_<object>.jsonl
+# directly — one JSON object per line, the contract the engine writes and its
+# verify gate (byakugan.verify, in the engine image) checks.
 car_count() {
     python3 - "$CAR_DIR" "$1" "$2" "$3" "$4" <<'PY'
-import sys
-from get_sybers_dxdfir.carcheck import empty, load_rows
+import json, os, sys
+
+def empty(v):
+    return v is None or (isinstance(v, str) and not v.strip())
+
+def load_rows(car_dir, obj):
+    name = f"car_{obj}.jsonl"
+    for cur, _dirs, files in os.walk(car_dir):
+        if name not in files:
+            continue
+        with open(os.path.join(cur, name), encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(rec, dict):
+                    yield rec
+
 car_dir, obj, action, fields, contains = sys.argv[1:6]
 want = [] if fields == "-" else [f for f in fields.split(",") if f]
 field, _, needle = ("", "", "") if contains == "-" else contains.partition("=")

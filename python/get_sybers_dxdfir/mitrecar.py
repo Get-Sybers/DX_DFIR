@@ -5,17 +5,22 @@ engine is cloned + built INTO the image at the commit pinned by ``sources.yml``
 holds an engine checkout at all — the ONLY thing this repo has is how it INVOKES
 the image, which is this module.
 
-The image's ENTRYPOINT is one binary dispatched on its first argument to the
-engine's three operations (docker/GoDFIR-toolz/byakugan/byakugan-entry.py):
+The image's ENTRYPOINT dispatches on its first argument
+(docker/GoDFIR-toolz/byakugan/byakugan-entry.py):
 
     build     the pipeline (``--in``/``--out`` single-source, or ``--batch``) —
               one processed evidence SOURCE -> its own MITRE CAR database (one
               SQLite table per CAR object) + per-object ``car_<object>.jsonl``,
               the materialised CAR every sink reads (epic #86).
     timeline  the unified, time-ordered CAR timeline from a source's stores.
-    car-vocab the canonical car_action vocabulary per object, as JSON — the
-              verify-car gate (carcheck) reads it here instead of importing the
-              engine on the analyst host, so the object model stays in the engine.
+
+The CAR **correctness gate** is the engine's own ``byakugan.verify`` run-through.
+This lane runs it in the image (``--entrypoint python -m byakugan.verify`` over
+the materialised tree, mounted read-only) — the object model and its car_action
+vocabulary stay entirely in the engine, so the analyst host never imports the
+engine or reimplements the gate. ``byakugan.verify`` ships in the engine package
+baked into the image (importable off the image's ``PYTHONPATH=/opt/byakugan``), so
+no container subcommand is needed.
 
 This module maps the HOST paths in the engine's own flags to container mounts —
 processed evidence read-only, the byakugan/ output read-write — exactly like the
@@ -28,7 +33,6 @@ other processing lanes (see plaso.py). Every flag is otherwise the engine's own
 """
 from __future__ import annotations
 
-import json
 import os
 import subprocess
 import sys
@@ -158,29 +162,22 @@ def run_timeline(tool_argv: list[str]) -> subprocess.CompletedProcess:
     return _run(argv, mounts)
 
 
-def car_vocab() -> dict[str, set[str]] | None:
-    """The canonical car_action vocabulary per CAR object, ``{object: {actions}}``,
-    read from the engine container (``byakugan car-vocab``) — RECONSTRUCTED inside
-    the engine from the forked car repo it owns, exactly as the engine builds it.
-    The verify-car gate reads it here rather than importing the engine, so the
-    object model stays entirely in the container. Returns None when the image is
-    unavailable or the dump fails (verify-car degrades gracefully)."""
-    try:
-        images.require(_IMAGE)
-    except RuntimeError:
-        return None
-    proc = subprocess.run(
-        container.run(_IMAGE, ["car-vocab"], workdir="/tmp"),
-        capture_output=True, text=True, check=False)
-    if proc.returncode != 0 or not proc.stdout.strip():
-        return None
-    try:
-        data = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(data, dict):
-        return None
-    return {obj: set(actions or []) for obj, actions in data.items()}
+def run_verify(car_dir: str) -> subprocess.CompletedProcess:
+    """Run the engine's CAR correctness gate over a materialised CAR tree, inside
+    the hardened image. The tree is mounted read-only at ``/work`` and the engine's
+    own ``byakugan.verify`` reads it — the object model and its car_action
+    vocabulary stay in the engine (this lane never imports or reimplements the
+    gate). ``byakugan.verify`` is invoked by overriding the entrypoint to the
+    baked ``python`` (the engine package is on the image's ``PYTHONPATH``), so no
+    container subcommand is required. stdout is the gate's report; the return code
+    is the verdict (1 = a check failed, 2 = no CAR present). Raises RuntimeError
+    (via images.require) if the engine image is absent or not hardened."""
+    src = os.path.realpath(car_dir)
+    images.require(_IMAGE)
+    argv = container.run(_IMAGE, ["-m", "byakugan.verify", "/work"],
+                         mounts=[f"{src}:/work:ro"], workdir="/tmp",
+                         entrypoint="python")
+    return subprocess.run(argv, capture_output=True, text=True, check=False)
 
 
 def main(argv: list[str] | None = None) -> int:
