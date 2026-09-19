@@ -6,9 +6,10 @@ Sources (default all three):
           (ewfmount for E01 -> raw, then ntfs-3g on the first NTFS partition —
           both FUSE, so ``/dev/fuse`` must exist on the host; nothing is ever
           extracted out of an image — a host that can't mount records a note)
-  memory  process memory, THROUGH Volatility 3                     -> memory.jsonl
-          (``windows.vadyarascan`` with the ``jsonl_dfir`` renderer — matches
-          carry PID/process context)
+  memory  memory image files, scanned directly with YARA           -> memory.jsonl
+          (no Volatility — coarser than per-VAD scanning: matches carry the image
+          file + offset, not PID/process. A flashback/MemProcFS-native per-process
+          scan is a planned follow-up.)
 
 YARA has no JSON output and the container's recursive scan hangs, so file/disk scans
 loop per-file inside ONE container (per-file scans print strings) and the stable text
@@ -17,12 +18,10 @@ form is parsed here. Each match is a self-describing JSON object:
     {"tool":"yara","source":"<file|disk|memory>","rule":"<name>","target":"...",
      "strings":[{"id":"$s1","offset":21,"data":"MZ"}...], "pid":123,"process":"..."}
 
-The mount/scan invocations are built by pure helpers (``ewfmount_argv``,
-``mmls_argv``/``parse_mmls_offset``, ``ntfs3g_argv``, ``vadyarascan_argv``) so the
-logic is unit-testable without FUSE, docker or evidence; ``mount_image`` /
-``unmount_image`` orchestrate them. For the memory source all rule files are
-concatenated into one file for Volatility's ``--yara-file`` (naive concat — rule
-names must be unique across files).
+The scan invocations are built by pure, unit-testable helpers (``_scan_dir`` for
+loose files, staged disk trees and raw memory images; ``imageexport.extract`` for
+userspace disk extraction), so the logic is exercised without FUSE, docker or
+evidence.
 
 Rules are operator-supplied under data_store/dependencies/yara-rules. ``--fetch``
 provisions the DetectRaptor ruleset (pinned + sha256-verified, merged into
@@ -39,11 +38,10 @@ import tempfile
 from .. import container, imageexport
 
 _SIGNATURES_IMAGE = "get-sybers/signatures:latest"  # yara + suricata + hayabusa, one image
-_VOL_IMAGE = "get-sybers/piiat-mem:latest"
 # The DetectRaptor ruleset baked into the signatures image (the Dockerfile
-# guarantees it with a build-time `test -s`). Used for the file + disk scans when
-# no operator rules are staged on the host — an in-image absolute path, never
-# mounted. The memory scan runs on the piiat-mem image, which does not carry it.
+# guarantees it with a build-time `test -s`). Used for the file + disk + memory
+# scans when no operator rules are staged on the host — an in-image absolute path,
+# never mounted.
 _BAKED_YARA_RULES = "/opt/dxdfir/yara-rules/detectraptor/detectraptor.yar"
 _STRING_RE = re.compile(r"^0x([0-9a-fA-F]+):(\$[^:]*):\s?(.*)$")
 
@@ -83,29 +81,6 @@ def parse_yara_text(text: str, source: str, strip: str, base: str) -> list[dict]
     return matches
 
 
-def parse_vadyarascan(lines: str, mem: str) -> list[dict]:
-    """vadyarascan JSONL -> yara-match dicts (Rule, PID, Process/Value/Offset)."""
-    out: list[dict] = []
-    for line in lines.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            r = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        rule = r.get("Rule") or r.get("rule")
-        if not rule:
-            continue
-        out.append({
-            "tool": "yara", "source": "memory", "rule": rule,
-            "pid": r.get("PID"), "process": r.get("Process"),
-            "offset": r.get("Offset"), "value": r.get("Value"),
-            "target": mem, "match": mem,
-        })
-    return out
-
-
 # --- disk source: userspace artefact extraction (no host mount) ---
 #
 # The disk YARA scan used to mount each image on the HOST via ewfmount + ntfs-3g
@@ -121,48 +96,6 @@ def extract_disk_files(image: str, stage_dir: str) -> list[str]:
     """Extract every allocated file from one disk image into ``stage_dir`` (via the
     plaso container) and return the files written. Raises on extraction failure."""
     return imageexport.extract(image, stage_dir, artifact_filters=None)
-
-
-# --- memory source: Volatility 3 windows.vadyarascan -------------------------
-
-# vadyarascan runs on the hardened get-sybers/piiat-mem image (Volatility 3 fused
-# in). That image's ENTRYPOINT is the batch orchestrator, so we OVERRIDE it to run
-# the BAKED vol_wrapper (/opt/piiat-mem/docker/vol_wrapper.py) with the BAKED
-# jsonl_dfir renderer (/opt/piiat-mem/jsonl_dfir_renderer.py) — both ship inside
-# the image, so nothing is mounted but the evidence, the symbols and the rules.
-
-
-def vadyarascan_argv(mem: str, symbols_dir: str, rules_file: str,
-                     vol_image: str = _VOL_IMAGE,
-                     symbols_online: bool = False) -> list[str]:
-    """The ``docker run`` argv for one vadyarascan pass over one memory image on
-    the hardened get-sybers/piiat-mem image: the batch ENTRYPOINT is overridden to
-    python3 running the baked vol_wrapper + renderer (no caps, read-only rootfs, no
-    network unless ``symbols_online``). The scan's JSONL goes to stdout. Pure."""
-    return container.run(
-        vol_image,
-        ["/opt/piiat-mem/docker/vol_wrapper.py",
-         "/opt/piiat-mem/jsonl_dfir_renderer.py",
-         "-q", "-s", "/symbols", "-r", "jsonl_dfir",
-         "-f", f"/mem/{os.path.basename(mem)}",
-         "windows.vadyarascan.VadYaraScan", "--yara-file", "/rules/combined.yar"],
-        mounts=[f"{os.path.dirname(mem)}:/mem:ro",
-                f"{os.path.realpath(symbols_dir)}:/symbols",
-                f"{os.path.realpath(rules_file)}:/rules/combined.yar:ro"],
-        network=symbols_online,
-        entrypoint="python3",
-    )
-
-
-def combine_rules(rule_paths: list[str]) -> str:
-    """All rule files concatenated for Volatility's single ``--yara-file`` (naive
-    concat, so rule names must be unique across files — same contract as the
-    retired shell lane)."""
-    parts = []
-    for path in rule_paths:
-        with open(path, encoding="utf-8", errors="replace") as fh:
-            parts.append(fh.read())
-    return "\n".join(parts)
 
 
 def _rule_files(rules_dir: str) -> list[str]:
@@ -233,18 +166,16 @@ def _note(res: dict, note: str) -> None:
 def run(*, output_dir, repo_root, fetch=False, force=False,
         sources=("files", "disk", "memory"),
         rules_dir=None, files_target=None, disk_dir=None, memory_dir=None,
-        symbols_dir=None,
-        image=_SIGNATURES_IMAGE, vol_image=_VOL_IMAGE, **_ignored) -> dict:
-    """Run the selected YARA sources. Returns {lane, produced, skipped, failed}."""
+        image=_SIGNATURES_IMAGE, **_ignored) -> dict:
+    """Run the selected YARA sources. Returns {lane, produced, skipped, failed}.
+
+    (Legacy symbols_dir/vol_image kwargs are accepted and ignored — the memory
+    source no longer runs Volatility.)"""
     ds = os.path.join(repo_root, "data_store")
     rules_dir = rules_dir or os.path.join(ds, "dependencies", "yara-rules")
     files_target = files_target or os.path.join(ds, "raw", "other_raw_data")
     disk_dir = disk_dir or os.path.join(ds, "raw", "disk_images")
     memory_dir = memory_dir or os.path.join(ds, "raw", "memory")
-    symbols_dir = symbols_dir or os.path.join(ds, "dependencies", "volatility3-symbols")
-    # The jsonl_dfir renderer + vol_wrapper are BAKED into the get-sybers/piiat-mem
-    # image (at /opt/piiat-mem/); the memory scan overrides the batch entrypoint to
-    # run them there, so nothing renderer-related is mounted (see vadyarascan_argv).
     os.makedirs(output_dir, exist_ok=True)
 
     res = {"lane": "yara", "sources": list(sources), "produced": 0, "skipped": 0,
@@ -334,50 +265,23 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
         out = os.path.join(output_dir, "memory.jsonl")
         if not force and os.path.exists(out):
             res["skipped"] += 1
-        elif baked:
-            # The baked rules live in the signatures image; the memory scan runs on
-            # the piiat-mem image, which cannot reach them. It needs operator YARA
-            # rules staged on the host (and Vol3 symbols) — skip, don't run ruleless.
-            res["skipped"] += 1
-            _note(res, f"memory: skipped — stage operator YARA rules under {rules_dir} "
-                       "(the baked rules are in the signatures image, not piiat-mem)")
-        else:
-            # Reuse the volatility processor's image discovery (its extension set
-            # covers the shell lane's list plus the corpus-specific *dramimage).
-            from ..volatility import discover as _discover_memory
-            mems = _discover_memory(memory_dir) if os.path.isdir(memory_dir) else []
-            os.makedirs(symbols_dir, exist_ok=True)
+        elif os.path.isdir(memory_dir):
+            # flashback replaced Volatility, so there is no windows.vadyarascan.
+            # Scan the raw memory image files directly with YARA — the same container
+            # path as the loose-files source (works with the baked ruleset too).
+            # Coarser than per-VAD scanning: matches carry the image file + offset,
+            # not PID/process. A flashback/MemProcFS-native per-process YARA scan is
+            # a planned follow-up.
             try:
-                os.chmod(symbols_dir, 0o777)  # the container writes its ISF cache here
-            except OSError:
-                pass
-            combined = tempfile.NamedTemporaryFile("w", suffix=".yar", delete=False)
-            combined.write(combine_rules(rules))
-            combined.close()
-            # NamedTemporaryFile is 0600; the Volatility container runs as a
-            # non-root user and must be able to read the mounted rules file.
-            os.chmod(combined.name, 0o644)
-            matches = []
-            failed_mems = []
-            try:
-                for mem in mems:
-                    proc = subprocess.run(
-                        vadyarascan_argv(mem, symbols_dir,
-                                         combined.name, vol_image),
-                        capture_output=True, text=True, check=False,
-                    )
-                    if proc.returncode != 0:
-                        res["failed"] += 1
-                        failed_mems.append(os.path.basename(mem))
-                        continue
-                    matches += parse_vadyarascan(
-                        proc.stdout, os.path.relpath(mem, memory_dir))
-            finally:
-                os.unlink(combined.name)
-            _write(out, matches)
-            res["produced"] += len(matches)
-            if failed_mems:
-                _note(res, "memory: vadyarascan failed on: " + ", ".join(failed_mems))
+                matches = _scan_dir(memory_dir, rules_dir, index_path, "memory",
+                                    os.path.basename(memory_dir), image,
+                                    mount_rules=not baked)
+            except RuntimeError as exc:
+                res["failed"] += 1
+                _note(res, f"memory: {exc}")
+            else:
+                _write(out, matches)
+                res["produced"] += len(matches)
 
     try:
         os.unlink(index_path)

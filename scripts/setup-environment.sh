@@ -358,12 +358,12 @@ confirm "Do you wish to proceed?" || { info "Setup cancelled."; exit 1; }
 # Pull the git submodules — RECURSIVELY.
 #
 # The remaining submodule is docker/GoDFIR-toolz: the Go tool family, goevtx
-# and the PIIAT-Mem volatility image build. --recursive is kept on principle: it
+# and the flashback volatility image build. --recursive is kept on principle: it
 # means any submodule that DOES nest content checks out complete instead of
 # silently empty — the failure mode that bit the CAR engine while it was vendored
 # here. (The Byakugan engine is no longer a submodule; it is provisioned as an
-# external checkout in the next step, and PIIAT-Mem is fused into the
-# get-sybers/piiat-mem image.) Runs before the chown/chmod below so the freshly
+# external checkout in the next step, and flashback is fused into the
+# get-sybers/flashback image.) Runs before the chown/chmod below so the freshly
 # checked-out files inherit them too.
 section "Git submodules"
 if [[ -f "$REPO_ROOT_DIR/.gitmodules" ]]; then

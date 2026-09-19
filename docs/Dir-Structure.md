@@ -78,7 +78,7 @@ per-item processing).
             │   └── <capture>/                        # Zeek JSON (conn.json + every other log)
             │
             └── volatility/
-            │   └── <image>/                          # Volatility 3 JSONL per plugin
+            │   └── <image>/                          # flashback (MemProcFS) JSONL per plugin
             │
             └── godfir-toolz/                            # GoDFIR-toolz artefacts (registry, SRUM, MFT, …)
             │

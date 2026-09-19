@@ -6,7 +6,7 @@ real analytics stack — offline, from one command.**
 You hand it packet captures, disk images, memory dumps, or Windows event logs. It:
 
 1. **Processes** each kind of evidence with the right specialist tool, in a hardened
-   container — Zeek for PCAPs, goevtx for Windows logs, Volatility 3 for memory,
+   container — Zeek for PCAPs, goevtx for Windows logs, flashback (MemProcFS) for memory,
    Plaso and the GoDFIR-toolz parsers for disk images.
 2. **Normalises** all of it into one common shape — the
    [MITRE CAR](https://car.mitre.org/data_model/) data model — written out as plain

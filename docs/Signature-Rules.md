@@ -28,9 +28,9 @@ at `/rules` inside the hardened `get-sybers/yara` container, so nested layouts s
 intact; the index itself goes to a temp file outside the tree, so the rules
 directory may be read-only.
 
-For the **memory** source (Volatility `vadyarascan`) all rule files are
-concatenated into one file — so **rule names must be unique across every
-file** or compilation fails.
+The **memory** source scans the raw memory image files directly with YARA (the
+same include-index path as the files source — no Volatility), so rules load the
+same way as for files.
 
 ```bash
 # drop rules (any nesting)

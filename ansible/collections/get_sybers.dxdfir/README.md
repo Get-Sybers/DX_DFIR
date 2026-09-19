@@ -15,7 +15,7 @@ as a single action.
 | Role | Source | Processor |
 |---|---|---|
 | `dxdfir_zeek` | PCAPs → Zeek JSON | `get_sybers_dxdfir.zeek` |
-| `dxdfir_volatility` | Memory images → Volatility 3 per-plugin JSONL | `get-sybers/piiat-mem` image (env-driven) |
+| `dxdfir_volatility` | Memory images → per-plugin JSONL (flashback / MemProcFS) | `get-sybers/flashback` image (env-driven) |
 | `dxdfir_evtx` | Windows Event Logs (`.evtx`) → goevtx JSON | `get_sybers_dxdfir.evtx` |
 | `dxdfir_plaso` | Disk images / VM exports → Plaso JSONL | `get_sybers_dxdfir.plaso` |
 | `dxdfir_signatures` | YARA / Suricata / Hayabusa detections | `get_sybers_dxdfir.signatures` |

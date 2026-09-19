@@ -15,14 +15,15 @@ dxdfir_volatility_memory_dir: "{{ dxdfir_volatility_repo_root }}/data_store/raw/
 dxdfir_volatility_out_dir: "{{ dxdfir_volatility_repo_root }}/data_store/processed/volatility"
 # Resolved output base for the selected pipeline. Override directly to send output
 # to a custom location.
-# Kernel symbol cache (mounted at /symbols). Windows plugins fetch ISF tables from
-# the symbol servers on first use — pre-seed this on an isolated host.
-dxdfir_volatility_symbols_dir: "{{ dxdfir_volatility_repo_root }}/data_store/dependencies/volatility3-symbols"
-# The self-orchestrating, env-driven PIIAT-Mem image (Volatility 3 in-process via
-# --native). ansible runs it directly — no processor module. Built from
-# docker/GoDFIR-toolz/piiat-mem at the sources.yml pin (dxdfir build-docker).
-dxdfir_volatility_image: "get-sybers/piiat-mem:latest"
-# Allow the container network for ISF symbol fetch — the ONE legitimate network
+# PDB/symbol cache (mounted at /symbols). MemProcFS fetches PDB symbols from the
+# Microsoft symbol server on first use — pre-seed this on an isolated host.
+dxdfir_volatility_symbols_dir: "{{ dxdfir_volatility_repo_root }}/data_store/dependencies/memprocfs-symbols"
+# The self-orchestrating, env-driven flashback image (pure-Go memory forensics on
+# MemProcFS — no Volatility, no Python). ansible runs it directly — no processor
+# module. Built from docker/GoDFIR-toolz/flashback at the sources.yml pin
+# (dxdfir build-docker).
+dxdfir_volatility_image: "get-sybers/flashback:latest"
+# Allow the container network for PDB symbol fetch — the ONE legitimate network
 # need; default fully offline (pre-seed the symbols dir instead).
 dxdfir_volatility_symbols_online: false
 dxdfir_volatility_force: false

@@ -247,7 +247,7 @@ func (j *Job) ansibleArgs(lr LaneRun) ([]string, error) {
 func activeLog(s Spec, outDir string) string {
 	switch s.Name {
 	case "volatility":
-		return newestMatch(outDir, "*", "piiat_mem.log")
+		return newestMatch(outDir, "*", "flashback.log")
 	case "plaso":
 		return newestMatch(outDir, "logs", "*.log")
 	default:

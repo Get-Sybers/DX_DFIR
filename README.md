@@ -7,7 +7,7 @@
 Point DX_DFIR at a disk image or a PCAP; it processes the evidence with
 **[Plaso](https://github.com/log2timeline/plaso)**, **[Zeek](https://zeek.org/)**,
 **goevtx**,
-**[Volatility 3](https://github.com/volatilityfoundation/volatility3)** and the
+**[flashback](https://github.com/Get-Sybers/flashback)** (memory) and the
 **[GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz)**, normalises it into the
 **[MITRE CAR](https://car.mitre.org/data_model/)** data model — materialised, one
 `car_<object>.jsonl` per object — and feeds an **Elastic-native analysis backend**
@@ -78,7 +78,7 @@ matching `dxdfir_<source>` role); processors are also runnable as
 | Disk images / VM exports (Plaso) | `process plaso` | `log2timeline/jsonl/` (Plaso `json_line`, one file per host) |
 | PCAP (Zeek) | `process zeek` | `zeek/<capture>/` (`conn.json` + every other Zeek log) |
 | Windows event logs + Sysmon (goevtx) | `process evtx` | `windows_logs/<host>/` (goevtx JSON) |
-| Memory (Volatility 3 / [PIIAT-Mem](https://github.com/Get-Sybers/PIIAT-Mem)) | `process volatility` | `volatility/<image>/` (per-plugin JSONL) |
+| Memory ([flashback](https://github.com/Get-Sybers/flashback)) | `process volatility` | `volatility/<image>/` (per-plugin JSONL) |
 | GoDFIR-toolz artefacts — SRUM, registry, … | `process godfir-toolz` | `godfir-toolz/` |
 | YARA / Suricata / Hayabusa | `process signatures` | `signatures/<lane>/` (JSONL) |
 

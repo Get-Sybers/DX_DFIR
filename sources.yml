@@ -24,13 +24,18 @@ byakugan:
   ref: 72b6b629029587fd8b09711c05a44d28cc77e478
   consumed: "docker/GoDFIR-toolz/byakugan/Dockerfile (BYAKUGAN_REF build-arg)"
 
-# PIIAT-Mem (Volatility 3 memory forensics) — fused into get-sybers/piiat-mem in
-# the GoDFIR-toolz submodule, cloned + built at this pin (no longer vendored here).
-# Volatility runs in-process (--native), confined by the hardened image.
-piiat-mem:
-  url: https://github.com/Get-Sybers/PIIAT-Mem
-  ref: b5c4f7c8ed2229c46884b2f9d1edfc30164fd157
-  consumed: "docker/GoDFIR-toolz/piiat-mem/Dockerfile (PIIAT_MEM_REF build-arg)"
+# flashback (pure-Go memory forensics on MemProcFS — no Volatility, no Python) —
+# built into get-sybers/flashback in the GoDFIR-toolz submodule, cloned + built at
+# this pin (-tags memprocfs), confined by the hardened image.
+#
+# NOTE: url points at the renamed repo (Get-Sybers/flashback). The rename is done in
+# GitHub settings by the owner; GitHub redirects the old Get-Sybers/PIIAT-Mem URL to
+# it, so builds keep working across the rename. Bump `ref` to the merged flashback
+# commit once this branch lands on the default branch.
+flashback:
+  url: https://github.com/Get-Sybers/flashback
+  ref: 1932c957090001687f37c22e5c9aa6513c99c022  # flashback branch HEAD; bump to the merged sha once landed
+  consumed: "docker/GoDFIR-toolz/flashback/Dockerfile (FLASHBACK_REF build-arg)"
 
 # Git submodules: pinned by their gitlink (.gitmodules). Inventory only.
 submodules:

@@ -25,7 +25,7 @@ type Spec struct {
 	InputSubdirs []string
 	Exts         []string
 	// PluginsPerImage multiplies the input count into a finer denominator
-	// (volatility: 18 plugin outputs per memory image).
+	// (volatility: 17 collector outputs per memory image).
 	PluginsPerImage int
 }
 
@@ -37,7 +37,7 @@ var Specs = []Spec{
 	{Name: "evtx", Title: "evtx", Kind: model.KindGauge, OutLeaf: "windows_logs",
 		InputSubdirs: []string{"logs/winevt"}, Exts: dotset(".evtx")},
 	{Name: "volatility", Title: "volatility", Kind: model.KindGauge, OutLeaf: "volatility",
-		InputSubdirs: []string{"memory"}, PluginsPerImage: 18,
+		InputSubdirs: []string{"memory"}, PluginsPerImage: 17,
 		Exts: dotset(".dmp", ".mem", ".lime", ".vmem", ".raw", ".dump", ".bin")},
 	{Name: "plaso", Title: "plaso", Kind: model.KindHeartbeat, OutLeaf: "log2timeline",
 		InputSubdirs: []string{"disk_images", "VM_files"}, Exts: imageExts()},

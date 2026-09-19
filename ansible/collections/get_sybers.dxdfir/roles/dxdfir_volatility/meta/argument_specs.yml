@@ -1,14 +1,15 @@
 ---
 argument_specs:
   main:
-    short_description: "memory images -> Volatility 3 per-plugin JSON Lines."
+    short_description: "memory images -> per-plugin JSON Lines (flashback / MemProcFS)."
     description:
       - >-
         Discovers memory images under dxdfir_volatility_memory_dir and runs the CAR
-        plugin set (via the container + custom jsonl_dfir renderer), writing one
-        <plugin>.jsonl per image. Idempotent per plugin: a plugin whose valid .jsonl
-        output already exists is skipped. Windows plugins need kernel symbols
-        (outbound network on first use, or a pre-seeded dxdfir_volatility_symbols_dir).
+        collector set (via the flashback container, a native MemProcFS engine — no
+        Volatility, no Python), writing one <plugin>.jsonl per image plus car.db.
+        Idempotent per collector: one whose valid .jsonl output already exists is
+        skipped. Windows plugins need PDB symbols (outbound network on first use, or
+        a pre-seeded dxdfir_volatility_symbols_dir).
     options:
       dxdfir_volatility_memory_dir:
         type: str
@@ -21,12 +22,12 @@ argument_specs:
       dxdfir_volatility_symbols_dir:
         type: str
         required: false
-        description: "Volatility 3 symbol cache (passed as --symbols-dir); pre-seed when offline."
+        description: "PDB/symbol cache (mounted at /symbols); pre-seed when offline."
       dxdfir_volatility_image:
         type: str
         required: false
-        default: "get-sybers/piiat-mem:latest"
-        description: "The self-orchestrating, env-driven PIIAT-Mem (Volatility 3) image the lane docker-runs directly."
+        default: "get-sybers/flashback:latest"
+        description: "The self-orchestrating, env-driven flashback (MemProcFS) image the lane docker-runs directly."
       dxdfir_volatility_python_path:
         type: str
         required: false
@@ -36,11 +37,11 @@ argument_specs:
         required: false
         default: false
         description: >-
-          Allow the container network access for ISF symbol fetch (the one
+          Allow the container network access for PDB symbol fetch (the one
           legitimate network need). Default fully offline — pre-seed the
           symbols dir instead.
       dxdfir_volatility_force:
         type: bool
         required: false
         default: false
-        description: "Rerun plugins that already have valid output."
+        description: "Rerun collectors that already have valid output."

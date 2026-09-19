@@ -199,13 +199,13 @@ func checkDocker(r *repo.Repo) model.Check {
 // `dxdfir build-docker`), so the CAR lane just shells that image. It is needed
 // only for the CAR build/timeline/verify verbs, so its absence is a warning,
 // never a process gate.
-// checkVolatility reports whether the hardened get-sybers/piiat-mem image (the
-// volatility lane — Volatility 3 fused in, run in-process) is present and
-// hardened. The lane docker-runs it, so its absence narrows the pipeline to the
-// other lanes rather than blocking it: a warning, never a gate.
+// checkVolatility reports whether the hardened get-sybers/flashback image (the
+// volatility lane — a native MemProcFS engine, no Volatility, no Python) is
+// present and hardened. The lane docker-runs it, so its absence narrows the
+// pipeline to the other lanes rather than blocking it: a warning, never a gate.
 func checkVolatility(_ *repo.Repo) model.Check {
-	c := model.Check{Name: "piiat-mem", Gate: false}
-	const image = "get-sybers/piiat-mem:latest"
+	c := model.Check{Name: "flashback", Gate: false}
+	const image = "get-sybers/flashback:latest"
 	if _, err := exec.LookPath("docker"); err != nil {
 		c.State = model.CheckWarn
 		c.Detail = "docker not on PATH - cannot check the " + image + " volatility image"

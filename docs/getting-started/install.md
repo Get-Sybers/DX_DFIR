@@ -24,7 +24,7 @@ git clone --recursive https://github.com/Get-Sybers/DX_DFIR.git
 cd DX_DFIR
 ```
 
-`--recursive` matters: the memory lane ([PIIAT-Mem](https://github.com/Get-Sybers/PIIAT-Mem))
+`--recursive` matters: the memory lane ([flashback](https://github.com/Get-Sybers/flashback))
 and the Go tool family ([GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz)) are
 git submodules. Already cloned flat? `git submodule update --init --recursive`.
 

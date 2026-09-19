@@ -1,7 +1,7 @@
 ---
 # The playbook holds the decisions. It selects the role and passes the pipeline;
 # the role groups, the tasks act (one-action-per-task).
-- name: "DFIR | process memory images with Volatility 3"
+- name: "DFIR | process memory images with flashback (MemProcFS)"
   hosts: "{{ dxdfir_hosts | default('localhost') }}"
   connection: "{{ dxdfir_connection | default('local') }}"
   gather_facts: true

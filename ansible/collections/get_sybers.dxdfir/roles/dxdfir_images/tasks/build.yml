@@ -22,7 +22,7 @@
     # This image's entry in the images.yml manifest (guaranteed present by the
     # assert above). A `ref` (if present) is a sources.yml key whose sha is passed
     # as the <NAME>_REF build-arg — named from the IMAGE (byakugan -> BYAKUGAN_REF,
-    # piiat-mem -> PIIAT_MEM_REF), the arg name the Dockerfile expects.
+    # flashback -> FLASHBACK_REF), the arg name the Dockerfile expects.
     _img: "{{ (dxdfir_images_manifest.images | default([])) | selectattr('name', 'equalto', dxdfir_images_name) | first }}"
     _ref_args: >-
       {{ {(dxdfir_images_name | upper | replace('-', '_')) ~ '_REF':

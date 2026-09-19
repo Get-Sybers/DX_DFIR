@@ -1,9 +1,11 @@
 ---
 # dxdfir_volatility: memory images -> per-plugin JSONL. The role GROUPS; the
 # playbook DECIDES. The lane now runs the self-orchestrating, env-driven
-# get-sybers/piiat-mem image DIRECTLY (no processor module, no vendored submodule):
-# it discovers images, runs the CAR plugin set over each with Volatility in-process
-# (--native), is idempotent per plugin, and emits the summary the gate reads.
+# get-sybers/flashback image DIRECTLY (no processor module, no vendored submodule):
+# it discovers images, runs the CAR collector set over each with a native
+# MemProcFS engine (no Volatility, no Python), is idempotent per plugin, and emits
+# the summary the gate reads. (The lane keeps the name "volatility" for pipeline
+# continuity; the engine underneath is flashback.)
 # Per-plugin failures are NORMAL (Windows plugins error without symbols), so
 # dxdfir_lane_require_no_failures=false and the gate is purely "some plugin produced
 # output, or there were no images".
@@ -26,7 +28,7 @@
   tags: [always]
 
 # The container runs as the image's non-root uid (2000) and writes the per-plugin
-# JSONL to /out and caches fetched ISF symbols in /symbols, so both host dirs must
+# JSONL to /out and caches fetched PDB symbols in /symbols, so both host dirs must
 # be writable by it. We do NOT chmod the read-only evidence mount (see --group-add).
 - name: "volatility | ensure the output + symbols dirs are container-writable"
   ansible.builtin.file:
@@ -49,9 +51,9 @@
 
 # The confined `docker run` — the same posture container.run applied for the python
 # lanes (cap-drop ALL, no-new-privileges, pids-limit, read-only rootfs + /tmp tmpfs,
-# no network unless symbols-online). Config is passed as PIIAT_* env vars; mounts
+# no network unless symbols-online). Config is passed as FLASHBACK_* env vars; mounts
 # land at the container's defaults (/mem ro, /out, /symbols).
-- name: "volatility | build the confined docker run for get-sybers/piiat-mem"
+- name: "volatility | build the confined docker run for get-sybers/flashback"
   ansible.builtin.set_fact:
     dxdfir_volatility_argv: >-
       {{ ['docker', 'run', '--rm',
@@ -64,8 +66,8 @@
        + ['-v', dxdfir_volatility_memory_dir ~ ':/mem:ro',
           '-v', dxdfir_volatility_out_dir ~ ':/out',
           '-v', dxdfir_volatility_symbols_dir ~ ':/symbols',
-          '-e', 'PIIAT_FORCE=' ~ (1 if dxdfir_volatility_force | bool else 0),
-          '-e', 'PIIAT_SYMBOLS_ONLINE=' ~ (1 if dxdfir_volatility_symbols_online | bool else 0),
+          '-e', 'FLASHBACK_FORCE=' ~ (1 if dxdfir_volatility_force | bool else 0),
+          '-e', 'FLASHBACK_SYMBOLS_ONLINE=' ~ (1 if dxdfir_volatility_symbols_online | bool else 0),
           dxdfir_volatility_image] }}
   tags: [always]
 

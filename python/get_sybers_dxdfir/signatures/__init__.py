@@ -6,7 +6,7 @@ over the evidence and lands their native events as ingest-ready JSON Lines under
 ``<output_dir>/<lane>/``:
 
     yara       loose files + disk images (mounted read-only, needs /dev/fuse) +
-               memory (Volatility windows.vadyarascan)
+               memory (raw-image YARA scan)
     suricata   captures (magic-first discovery, same as the zeek processor)
                -> Suricata EVE alerts (+context event types)
     hayabusa   Windows Event Logs -> Sigma detection timeline: loose .evtx AND

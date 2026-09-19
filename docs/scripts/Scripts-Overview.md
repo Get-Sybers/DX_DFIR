@@ -45,7 +45,7 @@ than needing a `/dev/fuse` mount.
 | Lane | Input | Output |
 |---|---|---|
 | `suricata` | PCAPs | Suricata EVE JSON, `source_pcap`-tagged, alert+context event types. |
-| `yara` | **files**, **disk images** (mounted read-only in place — `ewfmount`+`ntfs-3g`, never extracts; `--yara-sources` selects), **memory** (via Volatility `windows.vadyarascan`, matches carry PID context) | one JSON object per match (rule, target, offsets/strings). |
+| `yara` | **files**, **disk images** (mounted read-only in place — `ewfmount`+`ntfs-3g`, never extracts; `--yara-sources` selects), **memory** (raw-image YARA scan, matches carry file + offset) | one JSON object per match (rule, target, offsets/strings). |
 | `hayabusa` | loose `.evtx` (+ disk-image EVTX via the evtx lane's targeted `image_export --artifact_filters WindowsEventLogs` pull — event logs only, transient) | Hayabusa Sigma detection timeline (native binary). |
 
 > **Mounting note.** Disk-image mounting needs `/dev/fuse`, which an LXC blocks by
