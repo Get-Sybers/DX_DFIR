@@ -5,7 +5,7 @@ supply-chain-compromised tool): the images are stripped to the tool itself —
 no runtime ansible, no package managers, no pip, no sudo/su, no setuid, uid 0
 renamed and locked, tool runs as uid 2000, and NO shell/python beyond what the
 tool irreducibly needs (yara's per-file scan loop needs sh; Plaso and byakugan
-are python; flashback is a static Go binary + the MemProcFS libraries). The tool
+are python; anamnesis is a static Go binary + the MemProcFS libraries). The tool
 is the image's ENTRYPOINT.
 
 Every invocation is confined at the runtime — which is what actually contains

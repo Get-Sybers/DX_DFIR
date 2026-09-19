@@ -13,7 +13,7 @@ evidence. See the [command reference](../getting-started/commands.md#processing)
 |---|---|---|---|---|
 | **zeek** | Packet captures (`data_store/raw/pcaps`) | Zeek → JSON logs | `get-sybers/zeek` | `zeek/<capture>/*.json` |
 | **evtx** | Windows event logs (`raw/logs/winevt`, or pulled from disk images) | [goevtx](https://github.com/Get-Sybers/GoDFIR-toolz) (static-Go `.evtx` parser) + Hayabusa Sigma | `get-sybers/goevtx` | `windows_logs/<host>/*_EvtxECmd_Output.json` |
-| **volatility** | Memory images (`raw/memory`) | [flashback](https://github.com/Get-Sybers/flashback) (MemProcFS) | `get-sybers/flashback` | `volatility/<image>/plugins/*.jsonl` |
+| **volatility** | Memory images (`raw/memory`) | [anamnesis](https://github.com/Get-Sybers/Anamnesis) (MemProcFS) | `get-sybers/anamnesis` | `volatility/<image>/plugins/*.jsonl` |
 | **plaso** | Disk images + VM exports (`raw/disk_images`, `raw/VM_files`) | Plaso (`log2timeline` → `psort`) | `get-sybers/plaso` | `log2timeline/<host>.jsonl` |
 | **godfir-toolz** | Same disk-image family | [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) parsers (gore, gomft, goese, goprefetch…) | `get-sybers/<tool>` + `get-sybers/plaso` for extraction | `godfir-toolz/<host>/` |
 | **signatures** | PCAPs · disk · memory · `.evtx` | YARA · Suricata replay · Hayabusa Sigma (three sub-lanes) | `get-sybers/yara`, `get-sybers/suricata` | `signatures/<sub-lane>/` |

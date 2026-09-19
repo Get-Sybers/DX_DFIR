@@ -17,7 +17,7 @@ flowchart LR
 | 1 | **Docker engine** | `docker-ce`/cli/containerd/buildx/compose-plugin from the distro-derived Docker apt repo (skipped if present). |
 | 2 | **Userland tools** | `ca-certificates curl git gnupg unzip python3 python3-venv tar`. |
 | 3 | **Docker group** | `groupadd docker` + `usermod -aG` the invoking user. |
-| 4 | **Git submodules** | `submodule update --init --recursive` — [flashback](https://github.com/Get-Sybers/flashback) (memory lane) and [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) (the tool images). |
+| 4 | **Git submodules** | `submodule update --init --recursive` — [anamnesis](https://github.com/Get-Sybers/Anamnesis) (memory lane) and [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) (the tool images). |
 | 5 | **Permissions** | `chown -R <user>:docker` + `chmod -R u=rwX,g=rX,o=` (capital `X` keeps dirs traversable for the group). |
 | 6 | **Python + Ansible** | Create `/opt/dxdfir/venv`, `pip install --editable python/` against `python/constraints.txt`; symlink `ansible*` onto PATH. |
 | 7 | **Go + dxdfir** | Install the pinned, SHA-256-verified Go toolchain (if absent/too old), then build the `dxdfir` binary from a clean ephemeral cache to `/opt/dxdfir/bin`, symlink onto PATH, install the man page. |

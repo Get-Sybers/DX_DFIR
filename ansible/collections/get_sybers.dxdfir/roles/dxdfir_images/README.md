@@ -6,8 +6,8 @@ No third-party tool image is pulled at runtime. Every image builds from the
 (`docker/GoDFIR-toolz/`), one directory per image:
 
 - **The pipeline images** (`<name>/Dockerfile` against the submodule-root
-  context): byakugan, plaso, signatures, zeek — plus **flashback** (memory,
-  cloned from [flashback](https://github.com/Get-Sybers/flashback) at the
+  context): byakugan, plaso, signatures, zeek — plus **anamnesis** (memory,
+  cloned from [anamnesis](https://github.com/Get-Sybers/Anamnesis) at the
   `sources.yml` pin).
 - **The Windows-artefact tool family**, almost entirely
   **static-Go `FROM scratch` substitutes** (no
@@ -46,7 +46,7 @@ from the shared context — nothing is synced or generated.
   account-manipulation suite removed; every setuid/setgid bit stripped
 - **no package manager, no pip** (nothing installable at runtime)
 - **no shell and no python** except where the tool needs them: `get-sybers/yara`
-  keeps `sh` (its scan loop is a shell script), `get-sybers/flashback` and
+  keeps `sh` (its scan loop is a shell script), `get-sybers/anamnesis` and
   `get-sybers/plaso` keep python (the tools are python); `get-sybers/zeek`,
   `get-sybers/suricata`, and the GoDFIR Go tools carry neither
 - the tool runs as **uid 2000**
@@ -72,7 +72,7 @@ and **ansible itself** (build-time only). The uid-0 account is renamed `ansible`
 and locked; the tool runs as uid 2000.
 
 **Kept only where the tool needs it**: `get-sybers/yara` keeps `sh` (its per-file
-scan loop is a shell script — the image ENTRYPOINT); `get-sybers/flashback` and
+scan loop is a shell script — the image ENTRYPOINT); `get-sybers/anamnesis` and
 `get-sybers/plaso` keep `python3` (the tools *are* python). `get-sybers/zeek`,
 `get-sybers/suricata` and the GoDFIR Go tools (goevtx/gomft/…) carry **no shell and no python** at all.
 

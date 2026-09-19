@@ -2,19 +2,19 @@
 
 Process **memory images** into per-plugin JSON Lines. The role is structure only — it asserts inputs,
 runs a preflight (docker reachable, memory dir present, the hardened
-[`get-sybers/flashback`](https://github.com/Get-Sybers/flashback) image guarded),
+[`get-sybers/anamnesis`](https://github.com/Get-Sybers/Anamnesis) image guarded),
 then **`docker run`s that image directly** — no processor module, no vendored
 submodule. One `<plugin>.jsonl` per plugin per image.
 
 ## How it works
-[flashback](https://github.com/Get-Sybers/flashback) (MemProcFS) is fused into
-the **self-orchestrating `get-sybers/flashback` image** (cloned + built at the
+[anamnesis](https://github.com/Get-Sybers/Anamnesis) (MemProcFS) is fused into
+the **self-orchestrating `get-sybers/anamnesis` image** (cloned + built at the
 `sources.yml` pin). It discovers the images, runs the CAR plugin set over each with
 Volatility **in-process** (`--native`, confined by the image — no nested docker),
 is idempotent per plugin, and emits the JSON summary Ansible gates on. The role
 just builds the confined `docker run` (cap-drop ALL, no-new-privileges, read-only
 rootfs + `/tmp` tmpfs, no network unless `--symbols-online`, `--group-add` for the
-read-only evidence mount) and passes config as `FLASHBACK_*` env vars; the image writes
+read-only evidence mount) and passes config as `ANAMNESIS_*` env vars; the image writes
 the raw `<dest>/plugins/<plugin>.jsonl` to the mounted `/out`.
 
 ## Role variables
@@ -23,7 +23,7 @@ the raw `<dest>/plugins/<plugin>.jsonl` to the mounted `/out`.
 | `dxdfir_volatility_memory_dir` | `<repo>/data_store/raw/memory` | Memory-image tree to process (recursed). |
 | `dxdfir_volatility_out_dir` | `<repo>/data_store/processed/volatility` | Output base (override to redirect). |
 | `dxdfir_volatility_symbols_dir` | `<repo>/data_store/dependencies/memprocfs-symbols` | PDB/symbol cache (mounted at `/symbols`). |
-| `dxdfir_volatility_image` | `get-sybers/flashback:latest` | The hardened, env-driven flashback (MemProcFS) image the lane docker-runs (built by `playbooks/dxdfir-build-images.yml`). |
+| `dxdfir_volatility_image` | `get-sybers/anamnesis:latest` | The hardened, env-driven anamnesis (MemProcFS) image the lane docker-runs (built by `playbooks/dxdfir-build-images.yml`). |
 | `dxdfir_volatility_symbols_online` | `false` | Allow container network access for PDB symbol fetch — the one legitimate network need; pre-seed the symbols dir instead. |
 | `dxdfir_volatility_python_path` | `<repo>/python` | PYTHONPATH for the image supply-chain guard (`get_sybers_dxdfir.images`); in-repo runs. |
 | `dxdfir_volatility_force` | `false` | Rerun plugins that already have valid output. |
@@ -49,14 +49,14 @@ ansible-playbook playbooks/dxdfir-process-volatility.yml
 ## Testing
 Python unit tests cover the pure logic (image discovery, name folding, JSONL
 validity, no-images path, the CAR plugin set, and a conformance check that shells
-`flashback --list-plugins`). The **Molecule** scenario needs a memory image
+`anamnesis --list-plugins`). The **Molecule** scenario needs a memory image
 (large/binary — not shipped) and, for the Windows plugins, symbols:
 ```bash
 molecule test -- -e molecule_sample_memory=/path/dump.raw
 ```
 
 ## Validated (real run, built image)
-On 2026-08-29 the lane was run end-to-end through a built `get-sybers/flashback:latest`
+On 2026-08-29 the lane was run end-to-end through a built `get-sybers/anamnesis:latest`
 image against a real dump (Magnet 2020 CTF `memdump-001.mem`, 5 GB, 64-bit Windows).
 All 15 CAR plugins loaded and ran through the container; the run exited 0. The
 pool-scan plugins produced valid JSON Lines — **`windows.piiat.processes`** (65

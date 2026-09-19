@@ -12,15 +12,15 @@ dxdfir_images_namespace: get-sybers
 # single override knob — set it via extra-var or inventory (e.g.
 # -e dxdfir_runtime_uid=3000) to move all images + their runs off 2000; unset, it
 # defaults to 2000 here. Passed as build args to each Dockerfile and asserted in
-# the build contract, so the build and the runtime share one uid. (get-sybers/flashback
-# is built from docker/GoDFIR-toolz/flashback at the sources.yml pin.)
+# the build contract, so the build and the runtime share one uid. (get-sybers/anamnesis
+# is built from docker/GoDFIR-toolz/anamnesis at the sources.yml pin.)
 dxdfir_images_uid: "{{ dxdfir_runtime_uid | default(2000) }}"
 # gid follows the uid unless explicitly set, so setting only dxdfir_runtime_uid
 # still yields a matched USER <uid>:<uid>, never <uid>:2000.
 dxdfir_images_gid: "{{ dxdfir_runtime_gid | default(dxdfir_runtime_uid | default(2000)) }}"
 
 # The GoDFIR-toolz submodule root — the default build context for EVERY tool
-# image (the pipeline images byakugan/plaso/signatures/zeek, flashback, the EZ
+# image (the pipeline images byakugan/plaso/signatures/zeek, anamnesis, the EZ
 # tool family and the GoDFIR Go tools alike). The submodule carries the
 # canonical hardening/harden.yml at its root, COPYd by the Dockerfiles that
 # build from the shared context.

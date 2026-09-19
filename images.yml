@@ -28,8 +28,8 @@ images:
   - name: byakugan          # external MITRE CAR engine, cloned + built at the sources.yml pin
     ref: byakugan
   - name: zeek
-  - name: flashback         # pure-Go memory forensics on MemProcFS — self-orchestrating, env-driven
-    ref: flashback
+  - name: anamnesis         # pure-Go memory forensics on MemProcFS — self-orchestrating, env-driven
+    ref: anamnesis
     args:
       MEMPROCFS_VERSION: "5.18"
       MEMPROCFS_SHA256: ""   # TODO: pin the MemProcFS linux x64 tarball checksum

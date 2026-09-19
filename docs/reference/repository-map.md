@@ -10,17 +10,17 @@ flowchart TD
     DX["<b>DX_DFIR</b><br/>the pipeline"]
     BYA["byakugan<br/>CAR / STIX engine"]
     TOOLZ["GoDFIR-toolz<br/>the Go tool family + goevtx"]
-    MEM["flashback<br/>MemProcFS (get-sybers/flashback)"]
+    MEM["anamnesis<br/>MemProcFS (get-sybers/anamnesis)"]
     DX -->|"drives (get-sybers/byakugan image)"| BYA
     DX -->|"submodule docker/GoDFIR-toolz"| TOOLZ
-    DX -->|"clone-at-build (sources.yml -> get-sybers/flashback)"| MEM
+    DX -->|"clone-at-build (sources.yml -> get-sybers/anamnesis)"| MEM
 ```
 
 | Repository | Link | How DX_DFIR uses it |
 |---|---|---|
 | **byakugan** | [Get-Sybers/byakugan](https://github.com/Get-Sybers/byakugan) | The external CAR / STIX engine the [`dxdfir_byakugan` lane](../architecture/car-pipeline.md) drives. **Not vendored, not a host checkout** — it is cloned + built into the hardened `get-sybers/byakugan` image (`docker/GoDFIR-toolz/byakugan/Dockerfile`) at the exact sha pinned by `sources.yml`, by `dxdfir build-docker` (the [image build](../architecture/setup-flow.md)) alongside the other tool images. The lane only shells that image. |
 | **GoDFIR-toolz** | [Get-Sybers/GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) | Git submodule at `docker/GoDFIR-toolz`. The source for the static-Go tool family (gore, gomft, goese, goprefetch…) and **goevtx** (the `.evtx` parser the [evtx lane](../architecture/processing-lanes.md) runs), plus the canonical hardening playbook. |
-| **flashback** | [Get-Sybers/flashback](https://github.com/Get-Sybers/flashback) | Pure-Go memory-forensics tool (MemProcFS). No longer vendored — cloned + built into the hardened `get-sybers/flashback` image (`docker/GoDFIR-toolz/flashback/Dockerfile`) at the `sources.yml` pin; the [memory lane](../architecture/processing-lanes.md) docker-runs it. |
+| **anamnesis** | [Get-Sybers/Anamnesis](https://github.com/Get-Sybers/Anamnesis) | Pure-Go memory-forensics tool (MemProcFS). No longer vendored — cloned + built into the hardened `get-sybers/anamnesis` image (`docker/GoDFIR-toolz/anamnesis/Dockerfile`) at the `sources.yml` pin; the [memory lane](../architecture/processing-lanes.md) docker-runs it. |
 
 ## In-repo layout
 

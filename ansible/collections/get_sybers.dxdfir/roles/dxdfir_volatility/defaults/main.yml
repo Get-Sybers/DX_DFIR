@@ -18,11 +18,11 @@ dxdfir_volatility_out_dir: "{{ dxdfir_volatility_repo_root }}/data_store/process
 # PDB/symbol cache (mounted at /symbols). MemProcFS fetches PDB symbols from the
 # Microsoft symbol server on first use — pre-seed this on an isolated host.
 dxdfir_volatility_symbols_dir: "{{ dxdfir_volatility_repo_root }}/data_store/dependencies/memprocfs-symbols"
-# The self-orchestrating, env-driven flashback image (pure-Go memory forensics on
+# The self-orchestrating, env-driven anamnesis image (pure-Go memory forensics on
 # MemProcFS — no Volatility, no Python). ansible runs it directly — no processor
-# module. Built from docker/GoDFIR-toolz/flashback at the sources.yml pin
+# module. Built from docker/GoDFIR-toolz/anamnesis at the sources.yml pin
 # (dxdfir build-docker).
-dxdfir_volatility_image: "get-sybers/flashback:latest"
+dxdfir_volatility_image: "get-sybers/anamnesis:latest"
 # Allow the container network for PDB symbol fetch — the ONE legitimate network
 # need; default fully offline (pre-seed the symbols dir instead).
 dxdfir_volatility_symbols_online: false

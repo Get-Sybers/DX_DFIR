@@ -8,7 +8,7 @@ Sources (default all three):
           extracted out of an image — a host that can't mount records a note)
   memory  memory image files, scanned directly with YARA           -> memory.jsonl
           (no Volatility — coarser than per-VAD scanning: matches carry the image
-          file + offset, not PID/process. A flashback/MemProcFS-native per-process
+          file + offset, not PID/process. An anamnesis/MemProcFS-native per-process
           scan is a planned follow-up.)
 
 YARA has no JSON output and the container's recursive scan hangs, so file/disk scans
@@ -266,11 +266,11 @@ def run(*, output_dir, repo_root, fetch=False, force=False,
         if not force and os.path.exists(out):
             res["skipped"] += 1
         elif os.path.isdir(memory_dir):
-            # flashback replaced Volatility, so there is no windows.vadyarascan.
+            # anamnesis replaced Volatility, so there is no windows.vadyarascan.
             # Scan the raw memory image files directly with YARA — the same container
             # path as the loose-files source (works with the baked ruleset too).
             # Coarser than per-VAD scanning: matches carry the image file + offset,
-            # not PID/process. A flashback/MemProcFS-native per-process YARA scan is
+            # not PID/process. An anamnesis/MemProcFS-native per-process YARA scan is
             # a planned follow-up.
             try:
                 matches = _scan_dir(memory_dir, rules_dir, index_path, "memory",

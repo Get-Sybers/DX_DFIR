@@ -17,7 +17,7 @@ ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-im
 | `get-sybers/zeek` | PCAP → Zeek JSON | Zeek LTS from the project's OBS Debian repo (`docker/GoDFIR-toolz/zeek/`) |
 | `get-sybers/signatures` | detections — YARA + Suricata (offline replay) + Hayabusa | Debian packages + the pinned Hayabusa release (`docker/GoDFIR-toolz/signatures/`) |
 | `get-sybers/byakugan` | CAR/STIX behaviour engine | clone-at-build at the `sources.yml` pin (`docker/GoDFIR-toolz/byakugan/`) |
-| `get-sybers/flashback` | memory (flashback / MemProcFS) | `docker/GoDFIR-toolz/flashback/` (clone-at-build) |
+| `get-sybers/anamnesis` | memory (anamnesis / MemProcFS) | `docker/GoDFIR-toolz/anamnesis/` (clone-at-build) |
 | `get-sybers/plaso` | Plaso timelining + `image_export` (dfVFS) | GIFT stable PPA (`docker/GoDFIR-toolz/plaso/`) |
 | `get-sybers/goevtx` | Windows Event Logs (.evtx) | static Go on go-evtx, FROM scratch (`docker/GoDFIR-toolz/goevtx/`) |
 
@@ -48,7 +48,7 @@ it never ships at runtime.
 - **no package manager, no pip** — nothing installable at runtime
 - **no shell and no python** except where the tool irreducibly needs them:
   `get-sybers/signatures` keeps `sh` (its per-file scan loop *is* a shell script);
-  `get-sybers/flashback` and `get-sybers/plaso` keep python (the tools *are* python).
+  `get-sybers/anamnesis` and `get-sybers/plaso` keep python (the tools *are* python).
   `get-sybers/zeek` and the GoDFIR Go tools carry neither.
 - the tool runs as the fixed unprivileged user (`USER 2000:2000`)
 

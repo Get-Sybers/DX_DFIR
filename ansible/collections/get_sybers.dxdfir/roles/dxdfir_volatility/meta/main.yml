@@ -5,7 +5,7 @@ galaxy_info:
   author: Get-Sybers
   description: >-
     Process memory images into per-plugin JSON Lines.
-    docker-runs the hardened, env-driven get-sybers/flashback image;
+    docker-runs the hardened, env-driven get-sybers/anamnesis image;
     one <plugin>.jsonl per image via the custom jsonl_dfir renderer.
   company: Get-Sybers
   license: MIT
