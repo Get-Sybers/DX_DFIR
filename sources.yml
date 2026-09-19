@@ -21,7 +21,7 @@
 # attack-datasources submodules at build time (recursive clone required).
 byakugan:
   url: https://github.com/Get-Sybers/Byakugan
-  ref: 72b6b629029587fd8b09711c05a44d28cc77e478
+  ref: 11bf05598f732a525bb0675a024879218c2180ab
   consumed: "docker/GoDFIR-toolz/byakugan/Dockerfile (BYAKUGAN_REF build-arg)"
 
 # anamnesis (pure-Go memory forensics on MemProcFS — no Volatility, no Python) —
@@ -34,7 +34,7 @@ byakugan:
 # commit once this branch lands on the default branch.
 anamnesis:
   url: https://github.com/Get-Sybers/Anamnesis
-  ref: 2ce1bb8d83f5de9f48bf29955656c9d822139c7d  # anamnesis branch HEAD; bump to the merged sha once landed
+  ref: 139b0b7a43de1d09ae70657ef86f324fe1a44aeb  # anamnesis branch HEAD; bump to the merged sha once landed
   consumed: "docker/GoDFIR-toolz/anamnesis/Dockerfile (ANAMNESIS_REF build-arg)"
 
 # Git submodules: pinned by their gitlink (.gitmodules). Inventory only.
