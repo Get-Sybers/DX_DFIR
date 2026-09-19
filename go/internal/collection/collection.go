@@ -33,7 +33,7 @@ type Lane struct {
 var LANES = []Lane{
 	{"zeek", []string{"pcaps"}, []string{"dxdfir_zeek_pcap_dir"}},
 	{"evtx", []string{"logs/winevt"}, []string{"dxdfir_evtx_evtx_dir"}},
-	{"volatility", []string{"memory"}, []string{"dxdfir_volatility_memory_dir"}},
+	{"memory", []string{"memory"}, []string{"dxdfir_memory_memory_dir"}},
 	{"plaso", []string{"disk_images", "VM_files"},
 		[]string{"dxdfir_plaso_input_dir", "dxdfir_plaso_vm_dir"}},
 	{"godfir-toolz", []string{"disk_images", "VM_files"},

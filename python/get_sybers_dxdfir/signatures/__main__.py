@@ -34,7 +34,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--yara-sources",
                     help="comma list of yara sources to run: files,disk,memory "
                          "(default all three). disk needs /dev/fuse + ewfmount/ntfs-3g "
-                         "on the host; memory needs the Volatility 3 image + symbols.")
+                         "on the host; memory scans the raw images directly (no Volatility).")
     # Suricata tuning (HOME_NET is Suricata's primary tuning variable: rule direction
     # keys off $HOME_NET/$EXTERNAL_NET).
     ap.add_argument("--home-net", help="Suricata HOME_NET, e.g. '[10.0.0.0/8,192.168.0.0/16]'. "
@@ -99,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
     json.dump(summary, sys.stdout)
     sys.stdout.write("\n")
     # Fail only when the run produced nothing AND nothing was already done: inputs
-    # that can never produce output (e.g. a Volatility plugin unsupported by this
+    # that can never produce output (e.g. a plugin unsupported by this
     # image) are retried on every run, and must not flip an otherwise-complete,
     # idempotent re-run (processed=0, everything else skipped) into a failure.
     return 1 if summary["failed"] and not summary["processed"] and not summary["skipped"] else 0

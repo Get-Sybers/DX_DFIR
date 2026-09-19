@@ -13,7 +13,7 @@ flowchart TD
     CLI -->|ansible-playbook| ANS["Ansible collection <b>get_sybers.dxdfir</b><br/>roles group · playbooks decide"]
     CLI -.->|passthrough| STIX["python -m …stix"]
     ANS -->|python3 -m …| PY["Python processors <b>get_sybers_dxdfir</b><br/>discover inputs · run one tool · emit summary"]
-    PY -->|docker run| DK["Hardened <b>get-sybers/*</b> tool containers<br/>Zeek · goevtx · Volatility · Plaso · GoDFIR-toolz · YARA…"]
+    PY -->|docker run| DK["Hardened <b>get-sybers/*</b> tool containers<br/>Zeek · goevtx · anamnesis · Plaso · GoDFIR-toolz · YARA…"]
     PY -.->|CAR seam| BYA["External <b>Byakugan</b> engine<br/>normalises → MITRE CAR"]
     DK --> FS[("data_store/<br/>raw → processed → car")]
     BYA --> FS

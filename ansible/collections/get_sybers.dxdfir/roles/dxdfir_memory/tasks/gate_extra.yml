@@ -1,15 +1,15 @@
 ---
-# volatility output gate, included at the end of dxdfir_lane's process block: some
+# memory output gate, included at the end of dxdfir_lane's process block: some
 # plugin produced output, UNLESS there were no images (images == 0). Per-plugin
 # failures are NORMAL (Windows plugins error without symbols), so this gates on
 # output, not failed==0 (dxdfir_lane_require_no_failures is false for this lane). A
 # trusted literal assert — dxdfir_lane_run + dxdfir_lane_verify are in scope from the
 # shared process step.
-- name: "volatility-process | assert output was produced for the images present"
+- name: "memory-process | assert output was produced for the images present"
   ansible.builtin.assert:
     that:
       - dxdfir_lane_verify.matched | int > 0 or (dxdfir_lane_run.stdout | from_json).images | int == 0
     fail_msg: >-
-      volatility produced no JSONL at all though memory images were present (symbols
+      memory produced no JSONL at all though memory images were present (symbols
       unavailable for every plugin?).
     quiet: true

@@ -29,7 +29,7 @@ data_store/
        │   └── logs/               # Job logs
        ├── windows_logs/           # goevtx JSON, per host
        ├── zeek/<capture>/         # Zeek JSON (conn.json, dns.json, …)
-       ├── volatility/<image>/     # Volatility 3 JSONL per plugin
+       ├── memory/<image>/         # anamnesis (MemProcFS) JSONL per plugin
        ├── godfir-toolz/              # GoDFIR-toolz artefacts (registry, SRUM, MFT, …)
        ├── signatures/             # yara/ suricata/ hayabusa/ detection JSONL
        ├── linux_logs/             # syslog/auth/utmp/… (not yet wired into the backend)
@@ -61,7 +61,7 @@ dxdfir process all case-a                # run every lane over just this collect
 dxdfir process plaso        # disk images / VM exports
 dxdfir process zeek         # pcaps
 dxdfir process evtx         # Windows event logs
-dxdfir process volatility   # memory
+dxdfir process memory       # memory
 dxdfir process godfir-toolz    # GoDFIR-toolz artefacts from disk images
 dxdfir process signatures   # yara / suricata / hayabusa
 ```

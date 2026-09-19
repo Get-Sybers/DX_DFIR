@@ -11,7 +11,7 @@ per-item processing).
     │   └── man/                                      # dxdfir.1 man page
     │
     └── python/                                       # get_sybers_dxdfir package — the processors the front-end and roles invoke
-    │   └── get_sybers_dxdfir/                          # processors (zeek/plaso/volatility/evtx/godfir_toolz/signatures), the CAR lane (mitrecar, carcheck), stix/
+    │   └── get_sybers_dxdfir/                          # processors (zeek/plaso/memory/evtx/godfir_toolz/signatures), the CAR lane (mitrecar, carcheck), stix/
     │   │   └── detect/rules/                         # the Elastic detection rules-as-code (ES|QL / EQL, one YAML per rule)
     │   └── tests/                                    # pytest unit tests (pure logic, no Docker)
     │
@@ -45,7 +45,7 @@ per-item processing).
         │   └── sort/                                 # Dropzone for staged evidence awaiting `dxdfir sort`
         │   └── collections/                          # Registered collections, each sorted into the lanes above
         │
-        └── dependencies/                             # Operator-supplied rulesets/tools (Hayabusa, rulesets, Volatility symbols)
+        └── dependencies/                             # Operator-supplied rulesets/tools (Hayabusa, rulesets, MemProcFS symbols)
         │
         └── processed/                                # One subtree per source — what `dxdfir build-car` normalises to CAR
             └── linux_logs/                           # Linux Distro logs (not wired into the backend)
@@ -77,8 +77,8 @@ per-item processing).
             └── zeek/
             │   └── <capture>/                        # Zeek JSON (conn.json + every other log)
             │
-            └── volatility/
-            │   └── <image>/                          # Volatility 3 JSONL per plugin
+            └── memory/
+            │   └── <image>/                          # anamnesis (MemProcFS) JSONL per plugin
             │
             └── godfir-toolz/                            # GoDFIR-toolz artefacts (registry, SRUM, MFT, …)
             │

@@ -39,7 +39,7 @@ Presentation adapts to the work and the terminal:
 - **Processing progress** (`process`) and **collection creation** (`register`,
   `sort`) render a **live termui dashboard** — an overall gauge, a
   per-lane board, a bounded *filtered* log-tail for the long-pole lanes
-  (volatility, plaso), and an exceptions panel. Progress is truthful: a gauge
+  (memory, plaso), and an exceptions panel. Progress is truthful: a gauge
   appears only where a real *i/N* exists (files landed, bytes hashed); heartbeat
   lanes (plaso) show growth + elapsed; spinner lanes (hayabusa, yara) show a
   spinner, never a fake bar.

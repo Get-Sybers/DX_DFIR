@@ -12,7 +12,7 @@ walk a run end to end:
 
 ```bash
 scripts/setup-environment.sh  # builds the Go dxdfir front-end (go/) + installs the processors and ansible-core
-dxdfir process plaso     # sources: plaso | zeek | evtx | volatility | godfir-toolz | signatures
+dxdfir process plaso     # sources: plaso | zeek | evtx | memory | godfir-toolz | signatures
 dxdfir build-car         # normalise every processed source into CAR (car_<object>.jsonl)
 dxdfir verify-car        # the CAR correctness gate over what was written
 dxdfir validate          # run the repo check harness

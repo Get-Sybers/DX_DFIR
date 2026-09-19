@@ -17,7 +17,7 @@ ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-im
 | `get-sybers/zeek` | PCAP → Zeek JSON | Zeek LTS from the project's OBS Debian repo (`docker/GoDFIR-toolz/zeek/`) |
 | `get-sybers/signatures` | detections — YARA + Suricata (offline replay) + Hayabusa | Debian packages + the pinned Hayabusa release (`docker/GoDFIR-toolz/signatures/`) |
 | `get-sybers/byakugan` | CAR/STIX behaviour engine | clone-at-build at the `sources.yml` pin (`docker/GoDFIR-toolz/byakugan/`) |
-| `get-sybers/piiat-mem` | memory (Volatility 3) + `vadyarascan` | `docker/GoDFIR-toolz/piiat-mem/` (clone-at-build) |
+| `get-sybers/anamnesis` | memory (anamnesis / MemProcFS) | `docker/GoDFIR-toolz/anamnesis/` (clone-at-build) |
 | `get-sybers/plaso` | Plaso timelining + `image_export` (dfVFS) | GIFT stable PPA (`docker/GoDFIR-toolz/plaso/`) |
 | `get-sybers/goevtx` | Windows Event Logs (.evtx) | static Go on go-evtx, FROM scratch (`docker/GoDFIR-toolz/goevtx/`) |
 
@@ -48,7 +48,7 @@ it never ships at runtime.
 - **no package manager, no pip** — nothing installable at runtime
 - **no shell and no python** except where the tool irreducibly needs them:
   `get-sybers/signatures` keeps `sh` (its per-file scan loop *is* a shell script);
-  `get-sybers/piiat-mem` and `get-sybers/plaso` keep python (the tools *are* python).
+  `get-sybers/anamnesis` and `get-sybers/plaso` keep python (the tools *are* python).
   `get-sybers/zeek` and the GoDFIR Go tools carry neither.
 - the tool runs as the fixed unprivileged user (`USER 2000:2000`)
 
@@ -57,8 +57,8 @@ code execution does not need an on-image shell), applied on every `docker run`
 the processors issue: `--cap-drop ALL --security-opt no-new-privileges
 --read-only --tmpfs /tmp --pids-limit 512 --network none`. Evidence is mounted
 read-only, output read-write, the root filesystem is immutable. The single
-network exception is Volatility ISF symbol fetch
-(`dxdfir_volatility_symbols_online` / `--symbols-online`).
+network exception is the anamnesis PDB symbol fetch
+(`dxdfir_memory_symbols_online` / `--symbols-online`).
 
 Why not keep a shell out of a "belt and braces" instinct? Removing the shell
 does not stop an attacker who already has code execution (the premise of a
@@ -104,7 +104,7 @@ official image) — operator-supplied: download the pinned release into
 ## Upstream documentation
 
 - [Zeek](https://zeek.org/) · [Suricata](https://suricata.io/) · [YARA](https://virustotal.github.io/yara/)
-- [Volatility 3](https://github.com/volatilityfoundation/volatility3) · [Plaso / GIFT PPA](https://launchpad.net/~gift)
+- [MemProcFS](https://github.com/ufrisk/MemProcFS) · [Plaso / GIFT PPA](https://launchpad.net/~gift)
 - [go-evtx (Velociraptor)](https://github.com/Velocidex/evtx) · [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) · [Hayabusa (Yamato Security)](https://github.com/Yamato-Security/hayabusa)
 - [Elastic Stack](https://www.elastic.co/docs) — the analysis backend (`docker/elastic/`)
 

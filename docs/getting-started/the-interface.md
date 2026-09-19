@@ -36,7 +36,7 @@ a lane/step queue that ticks as evidence lands. State icons: `▸` running, `✓
 │   LANE / STEP        PROGRESS   DETAIL                                           │
 │ ✓ zeek               12/12      conn, dns, http, ssl, files…                     │
 │ ▸ evtx               3/8        Security.evtx                                    │
-│ · volatility         0/1        queued                                           │
+│ · memory             0/1        queued                                           │
 │ · plaso              0/1        queued                                           │
 │ – godfir-toolz       –          skipped — no disk image                          │
 ├ output ─────────────────────────────────────────────────────────────────────── ┤

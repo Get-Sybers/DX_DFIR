@@ -1,0 +1,25 @@
+---
+- name: Verify
+  hosts: localhost
+  gather_facts: false
+  vars:
+    molecule_out: /tmp/dxdfir_memory_molecule/out
+  tasks:
+    - name: "molecule-verify | find the dxdfir_memory_produced per-plugin JSONL"
+      ansible.builtin.find:
+        paths: "{{ molecule_out }}"
+        patterns: "*.jsonl"
+        recurse: true
+      register: dxdfir_memory_produced
+
+    # banners.Banners is NOT a safe canary: it scans for LINUX kernel banners, so
+    # a Windows memory image legitimately produces nothing from it. The honest
+    # gate is that the plugin set dxdfir_memory_produced SOME JSONL from the sample.
+    - name: "molecule-verify | assert the plugin set dxdfir_memory_produced output"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_memory_produced.matched | int > 0
+        fail_msg: >-
+          no plugin JSONL dxdfir_memory_produced from the sample memory image (symbols
+          unavailable for every plugin, or the image is unreadable)
+        quiet: true

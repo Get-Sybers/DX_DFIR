@@ -4,8 +4,9 @@ Posture (chosen for strongest resistance to container escape AND a
 supply-chain-compromised tool): the images are stripped to the tool itself —
 no runtime ansible, no package managers, no pip, no sudo/su, no setuid, uid 0
 renamed and locked, tool runs as uid 2000, and NO shell/python beyond what the
-tool irreducibly needs (yara's per-file scan loop needs sh; Volatility and
-Plaso are python). The tool is the image's ENTRYPOINT.
+tool irreducibly needs (yara's per-file scan loop needs sh; Plaso and byakugan
+are python; anamnesis is a static Go binary + the MemProcFS libraries). The tool
+is the image's ENTRYPOINT.
 
 Every invocation is confined at the runtime — which is what actually contains
 both threats, since an attacker with code execution (the premise of a
@@ -20,7 +21,7 @@ compromised tool) does not need an on-image shell:
   --pids-limit                   caps fork-bomb / parallel-exploit blast radius
   --network none                 no network by default — a compromised tool
                                  cannot exfiltrate or fetch a second stage.
-                                 The single exception is Volatility ISF symbol
+                                 The single exception is the memory lane's PDB symbol
                                  fetch (``network=True``), an explicit opt-in.
 
 The confinement flags stay pure list builders; run() additionally reads the
@@ -45,7 +46,7 @@ _BASE_TMPFS = ["--tmpfs", "/tmp:rw,nosuid,nodev,exec,size=1g"]
 
 def run_flags(network: bool = False, tmpfs: tuple = ()) -> list[str]:
     """The confinement flags for one ``docker run``. ``network=True`` keeps the
-    default bridge (Volatility symbol fetch); everything else runs with no
+    default bridge (the memory lane PDB symbol fetch); everything else runs with no
     network. ``tmpfs`` adds per-tool writable tmpfs mounts (paths a tool touches
     on the read-only rootfs, e.g. suricata's /var/run)."""
     flags = list(HARDENING_FLAGS) + list(_BASE_TMPFS)

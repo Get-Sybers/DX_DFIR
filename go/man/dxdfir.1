@@ -136,7 +136,7 @@ the verb-first form to use.
 .TP
 .BI "process " [COLLECTION] " " [LANE]
 Process evidence with a lane. \fILANE\fR is one of
-.BR zeek ", " evtx ", " volatility ", " plaso ", " godfir-toolz ", " signatures ", " all
+.BR zeek ", " evtx ", " memory ", " plaso ", " godfir-toolz ", " signatures ", " all
 (the default when a collection is given); \fICOLLECTION\fR scopes the run to one
 registered collection (else the active one, if set). The two positionals may be
 given in either order \(em a lane name is the lane, anything else the collection.
@@ -340,7 +340,7 @@ The materialised CAR tree to check. Default:
 Build only this image (e.g.\&
 .BR yara ,
 .BR zeek ,
-.BR volatility );
+.BR anamnesis );
 repeatable. Default: every get-sybers/* tool image.
 .TP
 .B --force
@@ -406,7 +406,7 @@ Process packet captures with the zeek lane:
 .B dxdfir process zeek
 .TP
 Reprocess memory images, overriding the input directory:
-.B dxdfir process volatility --force -e dxdfir_volatility_memory_dir=/evidence/mem
+.B dxdfir process memory --force -e dxdfir_memory_memory_dir=/evidence/mem
 .TP
 Run only the YARA signature lane:
 .B dxdfir process signatures -e \(aq{\(dqdxdfir_signatures_lanes\(dq:[\(dqyara\(dq]}\(aq

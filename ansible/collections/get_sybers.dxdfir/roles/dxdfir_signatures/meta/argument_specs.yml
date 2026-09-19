@@ -7,7 +7,7 @@ argument_specs:
         Runs the signature engines over the evidence and writes one <lane>/ folder of
         detection JSONL under the output dir. Standalone — no processor run is needed
         first. YARA covers loose files, disk images (mounted read-only; needs
-        /dev/fuse) and memory (Volatility vadyarascan); Suricata covers every capture
+        /dev/fuse) and memory (raw-image YARA scan); Suricata covers every capture
         the zeek processor discovers (magic-first); Hayabusa covers loose Windows
         Event Logs AND disk images via the staged image_export extraction it shares
         with the evtx processor (extracted once, reused by both). A source whose host

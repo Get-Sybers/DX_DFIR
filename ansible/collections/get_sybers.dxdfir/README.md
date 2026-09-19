@@ -15,7 +15,7 @@ as a single action.
 | Role | Source | Processor |
 |---|---|---|
 | `dxdfir_zeek` | PCAPs → Zeek JSON | `get_sybers_dxdfir.zeek` |
-| `dxdfir_volatility` | Memory images → Volatility 3 per-plugin JSONL | `get-sybers/piiat-mem` image (env-driven) |
+| `dxdfir_memory` | Memory images → per-plugin JSONL (anamnesis / MemProcFS) | `get-sybers/anamnesis` image (env-driven) |
 | `dxdfir_evtx` | Windows Event Logs (`.evtx`) → goevtx JSON | `get_sybers_dxdfir.evtx` |
 | `dxdfir_plaso` | Disk images / VM exports → Plaso JSONL | `get_sybers_dxdfir.plaso` |
 | `dxdfir_signatures` | YARA / Suricata / Hayabusa detections | `get_sybers_dxdfir.signatures` |
@@ -51,7 +51,7 @@ Or run a playbook directly; each source has one under `playbooks/`, which select
 the role and passes the pipeline:
 ```bash
 ansible-playbook playbooks/dxdfir-process-zeek.yml -e dxdfir_zeek_pipeline=elastic
-ansible-playbook playbooks/dxdfir-process-volatility.yml -e dxdfir_volatility_pipeline=elastic
+ansible-playbook playbooks/dxdfir-process-memory.yml -e dxdfir_memory_pipeline=elastic
 ansible-playbook playbooks/dxdfir-process-evtx.yml -e dxdfir_evtx_pipeline=elastic
 ansible-playbook playbooks/dxdfir-process-plaso.yml -e dxdfir_plaso_pipeline=elastic
 ansible-playbook playbooks/dxdfir-process-signatures.yml -e dxdfir_signatures_pipeline=elastic
@@ -89,5 +89,5 @@ recorded here rather than half-implemented.
 | Testing in CI/CD | `ansible-lint` (production profile, config in `.ansible-lint`) + the repo harness run on every push/PR; molecule scenarios run the roles for real (`.github/tests/run-molecule.sh`), idempotence included. |
 | Cross-platform conditionals | **Principle implemented, mechanics inapplicable:** the practice's point — one adaptable unit instead of near-identical copies — is exactly the shared `process.yml` + resolved `dxdfir_<role>_out_dir`. OS-family `when` ladders have no surface: targets are tool containers on a Linux analysis host, single-platform by design. |
 | Vault / secrets | **No secrets exist in the collection by design** — verified: no credentials anywhere, every published port binds `127.0.0.1`, and the Elastic stack's credentials live in its gitignored `docker/elastic/.env`, never in the collection. The practice's pre-commit secret hook is replaced by a CI-time pattern scan (private keys, AWS/GitHub/GitLab/Slack tokens) in the repo harness — a deliberate adaptation, because commits land via the GitHub API here, so pre-commit hooks would never execute; CI is the only enforceable choke point. When an Ansible deploy role for the Elastic stack lands, its secrets go through Ansible Vault, never defaults. |
-| Hardened execution containers | Every tool container is built in-repo by `dxdfir_images` with ansible as its only execution path (allow-listed run role), uid0 renamed+locked, no escalation/installers, non-root runtime; every `docker run` adds `--cap-drop ALL --security-opt no-new-privileges --network none` (volatility symbol fetch is the one explicit opt-in). |
+| Hardened execution containers | Every tool container is built in-repo by `dxdfir_images` with ansible as its only execution path (allow-listed run role), uid0 renamed+locked, no escalation/installers, non-root runtime; every `docker run` adds `--cap-drop ALL --security-opt no-new-privileges --network none` (memory symbol fetch is the one explicit opt-in). |
 | Monitor, log, audit | Repo-root `ansible.cfg` appends every run to `logs/ansible.log` and enables `ansible.posix.profile_tasks` for per-task timing; every processor emits a machine-readable JSON summary that the roles gate on. The log captures task output, which includes evidence-derived metadata (paths, resolved hostnames, artefact names) — it is therefore treated like evidence: gitignored (only `logs/.gitkeep` is tracked) and never leaves the analysis host. |

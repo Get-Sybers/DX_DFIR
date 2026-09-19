@@ -38,7 +38,7 @@ var diskImageExts = extSet(".e01", ".ex01", ".dd", ".raw", ".img", ".vmdk",
 var evidenceLanes = []evidenceLane{
 	{"zeek", []string{"pcaps"}, extSet(".pcap", ".pcapng", ".cap")},
 	{"evtx", []string{"logs/winevt"}, extSet(".evtx")},
-	{"volatility", []string{"memory"}, extSet(".dmp", ".mem", ".lime", ".vmem", ".raw", ".dump", ".bin")},
+	{"memory", []string{"memory"}, extSet(".dmp", ".mem", ".lime", ".vmem", ".raw", ".dump", ".bin")},
 	{"plaso", []string{"disk_images", "VM_files"}, diskImageExts},
 	{"godfir-toolz", []string{"disk_images", "VM_files"}, diskImageExts},
 }
@@ -52,7 +52,7 @@ var rawSubdirs = []string{
 // processedSubdirs are the top-level data_store/processed/ subdirs shown by
 // `list processed`.
 var processedSubdirs = []string{
-	"zeek", "windows_logs", "volatility", "plaso", "godfir-toolz",
+	"zeek", "windows_logs", "memory", "plaso", "godfir-toolz",
 	"linux_logs", "software_logs", "log2timeline", "csv", "json",
 }
 

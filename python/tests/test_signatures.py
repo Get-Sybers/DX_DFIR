@@ -64,21 +64,6 @@ def test_parse_yara_text_ignores_malformed():
     assert yara.parse_yara_text("justoneword\n", "file", "/scan/", "b") == []
 
 
-def test_parse_vadyarascan():
-    lines = (
-        '{"Rule": "Cobalt", "PID": 123, "Process": "evil.exe", "Offset": 4096, "Value": "MZ"}\n'
-        '{"nope": 1}\n'
-        'garbage\n'
-    )
-    got = yara.parse_vadyarascan(lines, "mem/dump.raw")
-    assert len(got) == 1
-    assert got[0] == {
-        "tool": "yara", "source": "memory", "rule": "Cobalt", "pid": 123,
-        "process": "evil.exe", "offset": 4096, "value": "MZ",
-        "target": "mem/dump.raw", "match": "mem/dump.raw",
-    }
-
-
 # ---- yara disk source: mount argv construction (pure, no FUSE needed) ------
 _MMLS = """DOS Partition Table
 Offset Sector: 0
@@ -120,41 +105,32 @@ def test_yara_disk_extracts_in_userspace_then_scans(tmp_path, monkeypatch):
     assert res["produced"] == 1
 
 
-# ---- yara memory source: vadyarascan argv + rules concat --------------------
-def test_vadyarascan_argv_mounts_and_wrapper_args(tmp_path):
-    mem = tmp_path / "case" / "memdump.mem"
-    mem.parent.mkdir()
-    mem.write_bytes(b"x")
-    sym = tmp_path / "symbols"; sym.mkdir()
-    rules = tmp_path / "combined.yar"; rules.write_text("rule X { condition: true }")
-    argv = yara.vadyarascan_argv(str(mem), str(sym), str(rules), "vol:img")
-    for flag in ("--cap-drop", "--security-opt", "--read-only"):
-        assert flag in argv
-    assert "--network" in argv                                   # offline by default
-    assert f"{mem.parent}:/mem:ro" in argv                       # image dir read-only
-    assert f"{sym}:/symbols" in argv                             # symbols writable (ISF cache)
-    assert f"{rules}:/rules/combined.yar:ro" in argv
-    # the batch entrypoint is overridden to python3 running the baked wrapper +
-    # renderer (no renderer mount); vol_wrapper.py is the first arg after the image
-    assert argv[argv.index("--entrypoint") + 1] == "python3"
-    assert "vol:img" in argv
-    tail = argv[argv.index("vol:img") + 1:]
-    assert tail[0] == "/opt/piiat-mem/docker/vol_wrapper.py"
-    assert tail[1] == "/opt/piiat-mem/jsonl_dfir_renderer.py"
-    assert "windows.vadyarascan.VadYaraScan" in tail
-    assert tail[tail.index("--yara-file") + 1] == "/rules/combined.yar"
-    # symbols_online lifts the network isolation for ISF fetch
-    online = yara.vadyarascan_argv(str(mem), str(sym), str(rules),
-                                   "vol:img", symbols_online=True)
-    assert "--network" not in online
+# ---- yara memory source: raw-image scan (no Volatility) ---------------------
+def test_memory_source_scans_raw_images_no_volatility(tmp_path, monkeypatch):
+    """The memory source scans the raw memory image files with YARA via _scan_dir
+    (the same container path as loose files) — no Volatility, no vadyarascan."""
+    mem = tmp_path / "data_store" / "raw" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "case1.raw").write_bytes(b"MZ....")
+    rules = tmp_path / "rules"; rules.mkdir()
+    (rules / "r.yar").write_text('rule R { strings: $m = "MZ" condition: $m }\n')
+    scanned = []
 
+    def fake_scan_dir(scan_dir, rules_dir, index_path, source, base, image, **_kw):
+        scanned.append((source, base))
+        return [{"tool": "yara", "source": source, "rule": "R", "target": base}]
 
-def test_combine_rules_concatenates(tmp_path):
-    a = tmp_path / "a.yar"; a.write_text("rule A { condition: true }")
-    b = tmp_path / "b.yar"; b.write_text("rule B { condition: false }")
-    got = yara.combine_rules([str(a), str(b)])
-    assert "rule A" in got and "rule B" in got
-    assert got.index("rule A") < got.index("rule B")
+    monkeypatch.setattr(yara, "_scan_dir", fake_scan_dir)
+    out = tmp_path / "out"; out.mkdir()
+    res = yara.run(output_dir=str(out), repo_root=str(tmp_path),
+                   sources=("memory",), memory_dir=str(mem), rules_dir=str(rules))
+    assert scanned == [("memory", "memory")]
+    assert res["produced"] == 1
+    # legacy Volatility kwargs are accepted and ignored
+    res2 = yara.run(output_dir=str(out), repo_root=str(tmp_path), force=True,
+                    sources=("memory",), memory_dir=str(mem), rules_dir=str(rules),
+                    symbols_dir="/ignored", vol_image="ignored:img")
+    assert res2["produced"] == 1
 
 
 # ---- suricata EVE filtering ------------------------------------------------

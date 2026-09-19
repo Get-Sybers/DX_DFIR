@@ -19,7 +19,7 @@
 # a scenario whose fixture is absent is SKIPPED with a note, not failed:
 #   MOLECULE_SAMPLE_EVTX      .evtx log            (dxdfir_evtx)
 #   MOLECULE_SAMPLE_IMAGE     raw/E01 disk image   (dxdfir_plaso)
-#   MOLECULE_SAMPLE_MEMORY    memory image         (dxdfir_volatility)
+#   MOLECULE_SAMPLE_MEMORY    memory image         (dxdfir_memory)
 #
 # Exit code is non-zero if any executed scenario fails, so this can gate CI
 # (on a runner with the docker socket and the tool images available).
@@ -32,7 +32,7 @@ ROLES_DIR="$REPO_ROOT/ansible/collections/get_sybers.dxdfir/roles"
 IMAGE="${MOLECULE_IMAGE:-get-sybers/molecule:latest}"
 
 # Roles whose scenarios validate real behaviour.
-DEFAULT_ROLES=(dxdfir_signatures dxdfir_zeek dxdfir_evtx dxdfir_plaso dxdfir_volatility)
+DEFAULT_ROLES=(dxdfir_signatures dxdfir_zeek dxdfir_evtx dxdfir_plaso dxdfir_memory)
 ROLES=("${@:-${DEFAULT_ROLES[@]}}")
 
 command -v docker >/dev/null 2>&1 || { echo "docker is required" >&2; exit 127; }
@@ -61,7 +61,7 @@ extra_args() { # role -> ansible -e args for its operator-supplied fixtures, or 
         dxdfir_plaso)
             [[ -f "${MOLECULE_SAMPLE_IMAGE:-}" ]] || return 1
             echo "-e molecule_sample_image=$MOLECULE_SAMPLE_IMAGE" ;;
-        dxdfir_volatility)
+        dxdfir_memory)
             [[ -f "${MOLECULE_SAMPLE_MEMORY:-}" ]] || return 1
             echo "-e molecule_sample_memory=$MOLECULE_SAMPLE_MEMORY" ;;
         *)  echo "" ;;

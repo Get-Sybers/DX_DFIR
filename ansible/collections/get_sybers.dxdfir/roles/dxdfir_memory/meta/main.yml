@@ -1,11 +1,11 @@
 ---
 galaxy_info:
-  role_name: dxdfir_volatility
+  role_name: dxdfir_memory
   namespace: get_sybers
   author: Get-Sybers
   description: >-
-    Process memory images with Volatility 3 into per-plugin JSON Lines.
-    docker-runs the hardened, env-driven get-sybers/piiat-mem image;
+    Process memory images into per-plugin JSON Lines.
+    docker-runs the hardened, env-driven get-sybers/anamnesis image;
     one <plugin>.jsonl per image via the custom jsonl_dfir renderer.
   company: Get-Sybers
   license: MIT
@@ -13,6 +13,6 @@ galaxy_info:
   platforms:
     - name: Debian
       versions: [bookworm, trixie]
-  galaxy_tags: [dfir, volatility, memory, forensics]
+  galaxy_tags: [dfir, memory, forensics]
 
 dependencies: []

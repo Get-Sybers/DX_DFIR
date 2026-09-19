@@ -1,0 +1,36 @@
+---
+
+# Repo root is five levels up from this role
+# (roles/dxdfir_memory -> get_sybers.dxdfir -> collections -> ansible -> repo).
+dxdfir_memory_repo_root: "{{ role_path }}/../../../../.."
+
+# The memory subdir comes from the shared evidence taxonomy (evidence-taxonomy/),
+# the one source of truth for where sort files evidence AND where this role reads
+# it — the two can't drift. A missing taxonomy file falls back to the conventional subdir.
+dxdfir_memory_memory_lane: >-
+  {{ ((lookup('file', dxdfir_memory_repo_root ~ '/evidence-taxonomy/memory.yml',
+  errors='ignore') | default('', true) | from_yaml) or {}).subdir
+  | default('memory', true) }}
+dxdfir_memory_memory_dir: "{{ dxdfir_memory_repo_root }}/data_store/raw/{{ dxdfir_memory_memory_lane }}"
+dxdfir_memory_out_dir: "{{ dxdfir_memory_repo_root }}/data_store/processed/memory"
+# Resolved output base for the selected pipeline. Override directly to send output
+# to a custom location.
+# PDB/symbol cache (mounted at /symbols). MemProcFS fetches PDB symbols from the
+# Microsoft symbol server on first use — pre-seed this on an isolated host.
+dxdfir_memory_symbols_dir: "{{ dxdfir_memory_repo_root }}/data_store/dependencies/memprocfs-symbols"
+# The self-orchestrating, env-driven anamnesis image (pure-Go memory forensics on
+# MemProcFS — no Volatility, no Python). ansible runs it directly — no processor
+# module. Built from docker/GoDFIR-toolz/anamnesis at the sources.yml pin
+# (dxdfir build-docker).
+dxdfir_memory_image: "get-sybers/anamnesis:latest"
+# Allow the container network for PDB symbol fetch — the ONE legitimate network
+# need; default fully offline (pre-seed the symbols dir instead).
+dxdfir_memory_symbols_online: false
+dxdfir_memory_force: false
+# There is no processor module, but the shared image supply-chain guard still runs
+# python3 -m get_sybers_dxdfir.images --require <image>, so the package must be on
+# PYTHONPATH. In-repo runs use this; a deployed run installs the package instead.
+dxdfir_memory_python_path: "{{ dxdfir_memory_repo_root }}/python"
+
+# tasks/main.yml builds dxdfir_memory_argv (the confined `docker run`) after
+# stat'ing the evidence mount for its --group-add gid; it can't be a static default.

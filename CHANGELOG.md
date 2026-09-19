@@ -82,7 +82,7 @@ is `0`, anything may change without notice.
   amcacheparser, appcompatcacheparser, lecmd, jlecmd, sbecmd, sqlecmd, rbcmd,
   wxtcmd) and the two Linux-native Go substitutes now build from the submodule;
   DX_DFIR's duplicated `docker/eztool` + `docker/evtxecmd` were removed. yara,
-  suricata, zeek, plaso stay in `docker/`; volatility from PIIAT-Mem.
+  suricata, zeek, plaso stay in `docker/`; volatility from Anamnesis.
 - **Two new Go substitute images** for the Windows-bound EZ tools, built into the
   image set: `get-sybers/goprefetch` (`goprefetch`, replaces PECmd) and
   `get-sybers/goese` (`goese`, replaces SrumECmd/SumECmd) — both `FROM
@@ -177,7 +177,7 @@ is `0`, anything may change without notice.
   `byakugan.ref` file (the same commit the old gitlink pinned) and provisioned
   by `scripts/setup-environment.sh`, the CI smoke workflow, and the offline
   bundle. The bundle now actually ships the engine (`byakugan.tar`, nested
-  model submodules included) and the PIIAT-Mem tree (`piiat-mem.tar`):
+  model submodules included) and the Anamnesis tree (`piiat-mem.tar`):
   `git archive` never carried submodule content, so no submodule had ever
   reached a bundle and `build-car` had never worked air-gapped.
 
@@ -243,7 +243,7 @@ is `0`, anything may change without notice.
 - The YARA **memory** lane's Volatility renderer defaulted to a nonexistent
   `dev-scripts/volatility/` path (the lane had never run), so
   `dxdfir process signatures --yara-sources memory` could not scan; it now
-  resolves the renderer the vendored PIIAT-Mem tool owns
+  resolves the renderer the vendored Anamnesis tool owns
   (`third_party/piiat-mem/jsonl_dfir_renderer.py`).
 
 ## [0.6.0] - 2026-08-30
@@ -255,7 +255,7 @@ is `0`, anything may change without notice.
 - Zimmerman (EZ-Tools) lane: hardened `dxdfir/*` containers (RECmd, SRUM via Plaso, MFT, …) → CAR.
 
 ### Changed
-- CAR extraction moved into the PIIAT-MitreCar engine (pinned submodule); memory/Volatility driven via the [PIIAT-Mem](https://github.com/Get-Sybers/PIIAT-Mem) CLI. `40-mitre.kql` is now the materialized tables, schema generated from the engine model.
+- CAR extraction moved into the PIIAT-MitreCar engine (pinned submodule); memory/Volatility driven via the [Anamnesis](https://github.com/Get-Sybers/Anamnesis) CLI. `40-mitre.kql` is now the materialized tables, schema generated from the engine model.
 - `dxdfir verify-car` rewritten against the `mitre.car_*` tables; `car_action` validated against the engine model's vocabulary.
 
 ### Removed

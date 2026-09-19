@@ -21,7 +21,7 @@ from get_sybers_dxdfir.detect import rules_loader as rl
 # silently, and a new one is a deliberate addition here.
 EXPECTED_IDS = (
     "sig-hayabusa-high", "sig-suricata-alert", "sig-yara-match",
-    "vol-malfind-injection",
+    "mem-malfind-injection",
     "win-defender-tamper", "win-eventlog-cleared", "win-prefetch-dualuse-tool",
     "win-service-suspicious-path",
     "zeek-dns-oversized-query", "zeek-notice-promoted",

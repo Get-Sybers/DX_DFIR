@@ -6,8 +6,8 @@
   hosts: localhost
   gather_facts: false
   vars:
-    molecule_mem_in: /tmp/dxdfir_volatility_molecule/mem
-    molecule_out: /tmp/dxdfir_volatility_molecule/out
+    molecule_mem_in: /tmp/dxdfir_memory_molecule/mem
+    molecule_out: /tmp/dxdfir_memory_molecule/out
     molecule_sample_memory: ""
   tasks:
     - name: "molecule-prepare | require a sample memory image"

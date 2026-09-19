@@ -40,7 +40,7 @@ These are already known. You do not need to report them.
   deny-by-default, but a determined `git add -f` defeats it.
 - **Egress restriction is best-effort; the localhost binding is not.** The
   stacks publish only on `127.0.0.1`, which is a real control. The tool
-  containers run with `--network none` (the Volatility symbol fetch is the one
+  containers run with `--network none` (the anamnesis symbol fetch is the one
   explicit opt-in). Note that Docker's published-port rules are inserted ahead
   of the host firewall, so `ufw` will not save you from a wrong bind address —
   check `docker compose ps` / `docker port` after a change to the compose files.

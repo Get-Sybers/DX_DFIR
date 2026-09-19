@@ -9,7 +9,7 @@ as a **single action**. One `<lane>/` folder of detections under the output base
 ## Lanes
 | Lane | Input | Output |
 |---|---|---|
-| `yara` | loose files under `raw/other_raw_data/`; disk images under `raw/disk_images/` (mounted read-only in place — needs `/dev/fuse` + `ewfmount`/`ntfs-3g` on the host, nothing extracted); memory images under `raw/memory/` (Volatility 3 `windows.vadyarascan`) | `yara/matches.jsonl`, `yara/disk.jsonl`, `yara/memory.jsonl` |
+| `yara` | loose files under `raw/other_raw_data/`; disk images under `raw/disk_images/` (mounted read-only in place — needs `/dev/fuse` + `ewfmount`/`ntfs-3g` on the host, nothing extracted); memory images under `raw/memory/` (scanned directly — YARA over the raw dump) | `yara/matches.jsonl`, `yara/disk.jsonl`, `yara/memory.jsonl` |
 | `suricata` | every capture the zeek processor discovers (magic-first, odd extensions included) | `suricata/<name>.eve.jsonl` (alert + context event types) |
 | `hayabusa` | loose Windows Event Logs (`.evtx`) under `raw/` **and** disk images (staged `image_export` extraction shared with the evtx processor) | `hayabusa/timeline.jsonl` |
 
@@ -21,8 +21,9 @@ as a **single action**. One `<lane>/` folder of detections under the output base
 
 > **Mounting.** The YARA `disk` source needs `/dev/fuse` on the host (an LXC
 > blocks it by default); without it the source records a note and produces
-> nothing — it never extracts files out of an image. The `memory` source needs
-> the Volatility 3 container image and pre-seeded symbols.
+> nothing — it never extracts files out of an image. The `memory` source scans
+> the raw memory image files directly with YARA (via the signatures image) — no
+> Volatility, no symbols.
 
 ## Role variables
 | Variable | Default | Description |
@@ -97,8 +98,7 @@ ansible-playbook playbooks/dxdfir-process-signatures.yml -e '{"dxdfir_signatures
 
 ## Testing
 Python unit tests cover the pure parsing logic (YARA text → match JSONL incl.
-strings/offsets, `vadyarascan` → match JSONL, disk-mount/vadyarascan argv
-construction and `mmls` offset parsing, Suricata EVE filtering/annotation,
+strings/offsets, the raw-image memory scan, Suricata EVE filtering/annotation,
 Hayabusa tagging, binary discovery). The **Molecule** scenario runs the **yara lane
 live** against a fixture rule + matching sample (needs the hardened `get-sybers/yara`
 image — `playbooks/dxdfir-build-images.yml`):
