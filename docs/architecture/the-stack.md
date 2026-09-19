@@ -51,7 +51,7 @@ under [`python/get_sybers_dxdfir/detect/rules/`](../../python/get_sybers_dxdfir/
 each carrying an ES|QL or EQL query plus the contract for the evidence line it tags
 (shape, fields, `car_join`, ATT&CK technique/tactic ids). Queries request
 `METADATA _id,_index,_version` so the engine emits one alert per matched document.
-Examples: `win-defender-tamper`, `vol-malfind-injection`, `zeek-dns-oversized-query`,
+Examples: `win-defender-tamper`, `mem-malfind-injection`, `zeek-dns-oversized-query`,
 `sig-yara-match`.
 
 The **STIX** side turns detection hits into a STIX 2.1 bundle:

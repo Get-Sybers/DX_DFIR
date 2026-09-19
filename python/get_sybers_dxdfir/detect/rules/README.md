@@ -172,7 +172,7 @@ one goes missing):
 | `win-prefetch-dualuse-tool` | `host.L2tPrefetch` | ES\|QL line | `logs-dxdfir.plaso-*` | **ported** | anchored regex -> `TO_UPPER(process.name) IN (...)`; two techniques as multi-value |
 | `zeek-notice-promoted` | `network.Zeek (notice)` | ES\|QL line | `logs-dxdfir.zeek-*` | **ported** | `event.dataset == "zeek.notice"`; no ATT&CK, identity stamp only |
 | `zeek-dns-oversized-query` | `network.Zeek (dns)` | ES\|QL aggregate | `logs-dxdfir.zeek-*` | **ported** | `summarize by` -> `STATS ... BY source.ip`; `take_any()` -> `MAX()` |
-| `vol-malfind-injection` | `memory.VolatilityJson` | ES\|QL aggregate | `logs-dxdfir.volatility-*` | stub | `make_set()` -> `VALUES()` (technical preview); `volatility.*` projection not yet defined |
+| `mem-malfind-injection` | `memory.MemoryJson` | ES\|QL aggregate | `logs-dxdfir.memory-*` | stub | `make_set()` -> `VALUES()` (technical preview); `memory.*` projection not yet defined |
 | `sig-hayabusa-high` | `signatures/hayabusa` (jsonl) | ES\|QL line | `logs-dxdfir.hayabusa-*` | stub | promotion of `hayabusa.level`; per-hit `MitreTags` -> `threat.technique.id` belongs in the ingest pipeline |
 | `sig-suricata-alert` | `signatures/suricata` (jsonl) | ES\|QL line | `logs-dxdfir.suricata-*` | stub | `suricata.eve.event_type == "alert"`; `mitre_technique_id` lift belongs in the ingest pipeline |
 | `sig-yara-match` | `signatures/yara` (jsonl) | ES\|QL line | `logs-dxdfir.yara-*` | stub | `yara.*` projection and `strings[].data` trimming not yet defined |

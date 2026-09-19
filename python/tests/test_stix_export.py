@@ -78,7 +78,7 @@ def rules(tmp_path_factory):
     _write_rule(d, "win-service-suspicious-path", query='FROM logs-dxdfir.evtx-* | WHERE event.code == "7045"',
                 attack=["T1543.003"], created="2026-09-01", updated="2026-09-02",
                 name="Service installed from a suspicious path")
-    _write_rule(d, "vol-malfind-injection", query=None, status="stub")
+    _write_rule(d, "mem-malfind-injection", query=None, status="stub")
     _write_rule(d, "undated-rule", query="FROM logs-dxdfir.x-* | LIMIT 1", created=None)
     return export.rules_source(str(d))
 
@@ -336,13 +336,13 @@ def test_identical_rows_collapse_into_one_sighting_with_count(rules):
 
 
 def test_hits_without_an_exportable_rule_are_skipped_and_counted(rules):
-    stub = {**ENVELOPE, "DetectionId": "vol-malfind-injection"}
+    stub = {**ENVELOPE, "DetectionId": "mem-malfind-injection"}
     unknown = {**ENVELOPE, "DetectionId": "nope-rule"}
     undated = {**ENVELOPE, "DetectionId": "undated-rule"}
     objs, report = export.hit_objects([_hit(stub), _hit(unknown), _hit(undated), _hit(ENVELOPE)], rules=rules)
     assert report["sightings"] == 1 and report["hits"] == 4
     assert report["skipped"] == {"stub_rule": 1, "no_rule": 1, "undated_rule": 1}
-    assert rules.reason("vol-malfind-injection") == "stub_rule" and rules.reason("win-eventlog-cleared") == "ok"
+    assert rules.reason("mem-malfind-injection") == "stub_rule" and rules.reason("win-eventlog-cleared") == "ok"
     assert [x["type"] for x in objs.values()].count("indicator") == 1
     # a reference pattern is never invented for them
     assert not any("x-dxdfir" in json.dumps(x) for x in objs.values())
@@ -709,7 +709,7 @@ def test_run_export_writes_and_pushes(rules, tmp_path):
     with pytest.raises(ValueError):
         export.run_export(config.StixConfig(), [], transport=Explode())
     stubs = tmp_path / "stubs.jsonl"
-    stubs.write_text(json.dumps({**ENVELOPE, "DetectionId": "vol-malfind-injection"}) + "\n")
+    stubs.write_text(json.dumps({**ENVELOPE, "DetectionId": "mem-malfind-injection"}) + "\n")
     with pytest.raises(ValueError, match="every hit was skipped"):
         export.run_export(config.StixConfig(rules_dir=rules.rules_dir), [str(stubs)], transport=Explode())
     with pytest.raises(ValueError, match="rules directory"):
