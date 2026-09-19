@@ -34,7 +34,7 @@ byakugan:
 # commit once this branch lands on the default branch.
 anamnesis:
   url: https://github.com/Get-Sybers/Anamnesis
-  ref: 139b0b7a43de1d09ae70657ef86f324fe1a44aeb  # anamnesis branch HEAD; bump to the merged sha once landed
+  ref: 94fadc1893b0d4951867935a2a3dcac51b2aa654  # Get-Sybers/Anamnesis main (PR #7 merged)
   consumed: "docker/GoDFIR-toolz/anamnesis/Dockerfile (ANAMNESIS_REF build-arg)"
 
 # Git submodules: pinned by their gitlink (.gitmodules). Inventory only.
