@@ -15,7 +15,7 @@ import (
 )
 
 var validSources = map[string]bool{
-	"zeek": true, "evtx": true, "volatility": true, "plaso": true,
+	"zeek": true, "evtx": true, "memory": true, "plaso": true,
 	"godfir-toolz": true, "signatures": true, "all": true,
 }
 
@@ -31,7 +31,7 @@ func newProcessCmd(env *Env) *cobra.Command {
 			"Lanes:\n" +
 			"  zeek         PCAPs -> Zeek JSON logs\n" +
 			"  evtx         Windows event logs -> goevtx JSON\n" +
-			"  volatility   memory images -> plugin JSONL\n" +
+			"  memory       memory images -> plugin JSONL\n" +
 			"  plaso        disk images/VMs -> super timeline\n" +
 			"  godfir-toolz disk images/VMs -> registry/MFT/… artefacts\n" +
 			"  signatures   yara/suricata/hayabusa over the staged evidence\n" +
@@ -63,7 +63,7 @@ func newProcessCmd(env *Env) *cobra.Command {
 					source = a
 				default:
 					if collection != "" {
-						return Fail(2, "unrecognised argument %q — %q is not a lane (zeek|evtx|volatility|plaso|godfir-toolz|signatures|all) and a collection is already given (%q)", a, a, collection)
+						return Fail(2, "unrecognised argument %q — %q is not a lane (zeek|evtx|memory|plaso|godfir-toolz|signatures|all) and a collection is already given (%q)", a, a, collection)
 					}
 					collection = a
 				}

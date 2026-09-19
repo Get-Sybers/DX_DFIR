@@ -4,35 +4,35 @@ argument_specs:
     short_description: "memory images -> per-plugin JSON Lines (anamnesis / MemProcFS)."
     description:
       - >-
-        Discovers memory images under dxdfir_volatility_memory_dir and runs the CAR
+        Discovers memory images under dxdfir_memory_memory_dir and runs the CAR
         collector set (via the anamnesis container, a native MemProcFS engine — no
         Volatility, no Python), writing one <plugin>.jsonl per image plus car.db.
         Idempotent per collector: one whose valid .jsonl output already exists is
         skipped. Windows plugins need PDB symbols (outbound network on first use, or
-        a pre-seeded dxdfir_volatility_symbols_dir).
+        a pre-seeded dxdfir_memory_symbols_dir).
     options:
-      dxdfir_volatility_memory_dir:
+      dxdfir_memory_memory_dir:
         type: str
         required: false
         description: "Directory tree of memory images to process (recursed)."
-      dxdfir_volatility_out_dir:
+      dxdfir_memory_out_dir:
         type: str
         required: false
-        description: "Output dir (default data_store/processed/volatility); override to send output to a custom location."
-      dxdfir_volatility_symbols_dir:
+        description: "Output dir (default data_store/processed/memory); override to send output to a custom location."
+      dxdfir_memory_symbols_dir:
         type: str
         required: false
         description: "PDB/symbol cache (mounted at /symbols); pre-seed when offline."
-      dxdfir_volatility_image:
+      dxdfir_memory_image:
         type: str
         required: false
         default: "get-sybers/anamnesis:latest"
         description: "The self-orchestrating, env-driven anamnesis (MemProcFS) image the lane docker-runs directly."
-      dxdfir_volatility_python_path:
+      dxdfir_memory_python_path:
         type: str
         required: false
         description: "PYTHONPATH to the get_sybers_dxdfir package (in-repo/dev runs)."
-      dxdfir_volatility_symbols_online:
+      dxdfir_memory_symbols_online:
         type: bool
         required: false
         default: false
@@ -40,7 +40,7 @@ argument_specs:
           Allow the container network access for PDB symbol fetch (the one
           legitimate network need). Default fully offline — pre-seed the
           symbols dir instead.
-      dxdfir_volatility_force:
+      dxdfir_memory_force:
         type: bool
         required: false
         default: false

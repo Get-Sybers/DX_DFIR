@@ -20,7 +20,7 @@
 # WHERE THINGS LAND: routed by FILE TYPE, then isolated in a per-group folder:
 #
 #     data_store/raw/disk_images/<group>/   the plaso lane
-#     data_store/raw/memory/<group>/        the volatility lane
+#     data_store/raw/memory/<group>/        the memory lane
 #     data_store/raw/pcaps/<group>/         the zeek lane
 #     data_store/raw/logs/winevt/<group>/  the evtx lane
 #     data_store/raw/other_raw_data/<group>/         no processor yet (mobile, apk, …)
@@ -46,7 +46,7 @@
 #   the .E01 and libewf pulls in the rest.
 #
 #   Compressed samples (.pcap.gz, .dmp.gz, *.mddramimage.zip) can't be consumed
-#   as-is — zeek wants .pcap, volatility wants the raw dump — so they are staged
+#   as-is — zeek wants .pcap, memory wants the raw dump — so they are staged
 #   under data_store/raw/.sources/<group>/, verified, extracted into the type
 #   directory, and then the staged source is DELETED so the data is not stored
 #   twice (use --keep-archives to retain it). A .<name>.done marker records a
@@ -144,7 +144,7 @@ rows_for() { # group, where "all" matches everything; honours $EXCLUDE (group re
 # must land so the matching processor's depth-1 glob finds it.
 #
 # Order matters. Memory markers are checked before the disk rule because a bare
-# ".raw" is globbed by BOTH volatility and log2timeline; a memory-image name
+# ".raw" is globbed by BOTH memory and log2timeline; a memory-image name
 # (*.dmp.gz, *dramimage, *.mem, *.lime) must win. Everything with no processor
 # falls through to other_raw_data.
 classify_dir() { # group name  ->  path under $RAW
@@ -184,7 +184,7 @@ classify_dir() { # group name  ->  path under $RAW
 # ".dmp" is ambiguous: tcpdump writes packet captures as .dmp (the nps-2009
 # net-*.dmp.gz files), Windows writes crash dumps. The name-based rule above
 # routes .dmp to memory/; once the BYTES exist, a capture magic wins and the
-# file is re-routed to pcaps/ so zeek/suricata find it (volatility can't parse
+# file is re-routed to pcaps/ so zeek/suricata find it (memory can't parse
 # a capture anyway). Same magics as get_sybers_dxdfir.zeek.is_pcap.
 is_pcap_magic() { # path
     local h; h="$(head -c4 "$1" 2>/dev/null | od -An -tx1 | tr -d ' \n')"

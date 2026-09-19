@@ -38,7 +38,7 @@ func Probe(r *repo.Repo) []model.Check {
 		checkCollection,
 		checkDocker,
 		checkByakugan,
-		checkVolatility,
+		checkMemory,
 	}
 	out := make([]model.Check, len(probes))
 	var wg sync.WaitGroup
@@ -199,23 +199,23 @@ func checkDocker(r *repo.Repo) model.Check {
 // `dxdfir build-docker`), so the CAR lane just shells that image. It is needed
 // only for the CAR build/timeline/verify verbs, so its absence is a warning,
 // never a process gate.
-// checkVolatility reports whether the hardened get-sybers/anamnesis image (the
-// volatility lane — a native MemProcFS engine, no Volatility, no Python) is
+// checkMemory reports whether the hardened get-sybers/anamnesis image (the
+// memory lane — a native MemProcFS engine, no Volatility, no Python) is
 // present and hardened. The lane docker-runs it, so its absence narrows the
 // pipeline to the other lanes rather than blocking it: a warning, never a gate.
-func checkVolatility(_ *repo.Repo) model.Check {
+func checkMemory(_ *repo.Repo) model.Check {
 	c := model.Check{Name: "anamnesis", Gate: false}
 	const image = "get-sybers/anamnesis:latest"
 	if _, err := exec.LookPath("docker"); err != nil {
 		c.State = model.CheckWarn
-		c.Detail = "docker not on PATH - cannot check the " + image + " volatility image"
+		c.Detail = "docker not on PATH - cannot check the " + image + " memory image"
 		return c
 	}
 	out, _, ok := capture("docker", "image", "inspect", "--format",
 		`{{.Config.User}} {{index .Config.Labels "com.get-sybers.hardened"}}`, image)
 	if !ok {
 		c.State = model.CheckWarn
-		c.Detail = "image " + image + " not built - volatility lane unavailable (dxdfir build-docker)"
+		c.Detail = "image " + image + " not built - memory lane unavailable (dxdfir build-docker)"
 		return c
 	}
 	f := strings.Fields(out)
@@ -225,7 +225,7 @@ func checkVolatility(_ *repo.Repo) model.Check {
 		return c
 	}
 	c.State = model.CheckOK
-	c.Detail = "image " + image + " present + hardened (volatility lane)"
+	c.Detail = "image " + image + " present + hardened (memory lane)"
 	return c
 }
 

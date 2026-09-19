@@ -6,6 +6,6 @@
   connection: "{{ dxdfir_connection | default('local') }}"
   gather_facts: true
   tasks:
-    - name: "dxdfir-process-volatility | run the volatility role"
+    - name: "dxdfir-process-memory | run the memory role"
       ansible.builtin.include_role:
-        name: dxdfir_volatility
+        name: dxdfir_memory

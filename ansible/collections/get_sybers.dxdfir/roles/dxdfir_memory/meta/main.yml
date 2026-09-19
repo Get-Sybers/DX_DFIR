@@ -1,6 +1,6 @@
 ---
 galaxy_info:
-  role_name: dxdfir_volatility
+  role_name: dxdfir_memory
   namespace: get_sybers
   author: Get-Sybers
   description: >-
@@ -13,6 +13,6 @@ galaxy_info:
   platforms:
     - name: Debian
       versions: [bookworm, trixie]
-  galaxy_tags: [dfir, volatility, memory, forensics]
+  galaxy_tags: [dfir, memory, forensics]
 
 dependencies: []

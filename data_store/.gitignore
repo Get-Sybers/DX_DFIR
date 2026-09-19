@@ -42,8 +42,8 @@
 !/dependencies/hayabusa/.gitkeep
 !/dependencies/suricata-rules/
 !/dependencies/suricata-rules/.gitkeep
-!/dependencies/volatility3-symbols/
-!/dependencies/volatility3-symbols/.gitkeep
+!/dependencies/memprocfs-symbols/
+!/dependencies/memprocfs-symbols/.gitkeep
 !/dependencies/yara-rules/
 !/dependencies/yara-rules/.gitkeep
 # NOTE: /dependencies/hayabusa/ (fetched tool cache, embeds a git repo under
@@ -67,8 +67,8 @@
 !/processed/detections/suricata/.gitkeep
 !/processed/detections/hayabusa/
 !/processed/detections/hayabusa/.gitkeep
-!/processed/volatility/
-!/processed/volatility/.gitkeep
+!/processed/memory/
+!/processed/memory/.gitkeep
 !/processed/csv/
 !/processed/csv/.gitkeep
 !/processed/json/

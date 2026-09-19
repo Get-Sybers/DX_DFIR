@@ -37,7 +37,7 @@ Run the pipeline:
 ```bash
 dxdfir build-docker                 # build the hardened tool images (once per host, before first process)
 # drop evidence under data_store/raw/<type>/ (see data_store/README.md), then per source:
-dxdfir process evtx                 # zeek | evtx | volatility | plaso | godfir-toolz | signatures
+dxdfir process evtx                 # zeek | evtx | memory | plaso | godfir-toolz | signatures
 dxdfir build-car                    # normalise every source into per-source CAR stores (car_<object>.jsonl)
 dxdfir verify-car                   # the CAR correctness gate over what was written
 dxdfir build-timeline data_store/processed/byakugan # one property-rich, time-ordered timeline JSONL
@@ -78,7 +78,7 @@ matching `dxdfir_<source>` role); processors are also runnable as
 | Disk images / VM exports (Plaso) | `process plaso` | `log2timeline/jsonl/` (Plaso `json_line`, one file per host) |
 | PCAP (Zeek) | `process zeek` | `zeek/<capture>/` (`conn.json` + every other Zeek log) |
 | Windows event logs + Sysmon (goevtx) | `process evtx` | `windows_logs/<host>/` (goevtx JSON) |
-| Memory ([anamnesis](https://github.com/Get-Sybers/Anamnesis)) | `process volatility` | `volatility/<image>/` (per-plugin JSONL) |
+| Memory ([anamnesis](https://github.com/Get-Sybers/Anamnesis)) | `process memory` | `memory/<image>/` (per-plugin JSONL) |
 | GoDFIR-toolz artefacts — SRUM, registry, … | `process godfir-toolz` | `godfir-toolz/` |
 | YARA / Suricata / Hayabusa | `process signatures` | `signatures/<lane>/` (JSONL) |
 
@@ -95,7 +95,7 @@ reads and cannot drift from what the engine emits.
 pinned Sysmon fixtures, asserting the extracted field values) and by
 **`dxdfir verify-car`** (each CAR object populated, values sane — IPs, ports, SIDs —
 `car_action` checked against the engine's model vocabulary, every row traceable to
-a source). The other lanes (Plaso, Zeek, Volatility, GoDFIR-toolz) are run by hand on
+a source). The other lanes (Plaso, Zeek, Memory, GoDFIR-toolz) are run by hand on
 the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
 `LOOKUP JOIN`) have their own [risk gate](/docs/riskgate.md).
 

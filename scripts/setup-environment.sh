@@ -358,7 +358,7 @@ confirm "Do you wish to proceed?" || { info "Setup cancelled."; exit 1; }
 # Pull the git submodules — RECURSIVELY.
 #
 # The remaining submodule is docker/GoDFIR-toolz: the Go tool family, goevtx
-# and the anamnesis volatility image build. --recursive is kept on principle: it
+# and the anamnesis memory image build. --recursive is kept on principle: it
 # means any submodule that DOES nest content checks out complete instead of
 # silently empty — the failure mode that bit the CAR engine while it was vendored
 # here. (The Byakugan engine is no longer a submodule; it is provisioned as an

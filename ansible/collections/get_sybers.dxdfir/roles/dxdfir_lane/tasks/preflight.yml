@@ -42,7 +42,7 @@
   when: dxdfir_lane_preflight_extra | length > 0
 
 # Most lanes drive a get_sybers_dxdfir.<lane> processor module; verify it imports.
-# A lane that ansible drives directly (e.g. volatility runs the self-orchestrating
+# A lane that ansible drives directly (e.g. memory runs the self-orchestrating
 # get-sybers/anamnesis container with no processor module) sets dxdfir_lane_module
 # empty and skips this — the image supply-chain guard below still runs.
 - name: "preflight | processor module imports | {{ dxdfir_lane_name }}"

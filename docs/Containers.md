@@ -58,7 +58,7 @@ the processors issue: `--cap-drop ALL --security-opt no-new-privileges
 --read-only --tmpfs /tmp --pids-limit 512 --network none`. Evidence is mounted
 read-only, output read-write, the root filesystem is immutable. The single
 network exception is the anamnesis PDB symbol fetch
-(`dxdfir_volatility_symbols_online` / `--symbols-online`).
+(`dxdfir_memory_symbols_online` / `--symbols-online`).
 
 Why not keep a shell out of a "belt and braces" instinct? Removing the shell
 does not stop an attacker who already has code execution (the premise of a

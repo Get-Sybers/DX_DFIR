@@ -121,7 +121,7 @@ func (j *Job) runLane(ctx context.Context, updates chan<- model.Update, lane *mo
 	lane.State = model.Running
 	lane.Started = time.Now()
 	outDir := lr.Spec.outDir(j.Repo.Root)
-	longPole := lr.Spec.Kind == model.KindHeartbeat || lr.Spec.Name == "volatility"
+	longPole := lr.Spec.Kind == model.KindHeartbeat || lr.Spec.Name == "memory"
 
 	args, err := j.ansibleArgs(lr)
 	if err != nil {
@@ -246,7 +246,7 @@ func (j *Job) ansibleArgs(lr LaneRun) ([]string, error) {
 // activeLog returns the newest on-disk tool log for the lane's active item.
 func activeLog(s Spec, outDir string) string {
 	switch s.Name {
-	case "volatility":
+	case "memory":
 		return newestMatch(outDir, "*", "anamnesis.log")
 	case "plaso":
 		return newestMatch(outDir, "logs", "*.log")

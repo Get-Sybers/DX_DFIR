@@ -32,7 +32,7 @@ type Kind int
 
 const (
 	// KindGauge: a clear i/N is reconstructable from per-item output files
-	// landing on disk (zeek, evtx, suricata, godfir-toolz, volatility).
+	// landing on disk (zeek, evtx, suricata, godfir-toolz, memory).
 	KindGauge Kind = iota
 	// KindHeartbeat: coarse, no per-item sub-signal; show elapsed + the growing
 	// on-disk artefact size as the "still alive" proof (plaso — status_view none).
@@ -113,7 +113,7 @@ type Snapshot struct {
 	Overall Overall
 	Lanes   []Lane
 	// Active is the ID of the long-pole lane whose filtered log-tail should be
-	// shown (volatility / plaso while running); "" hides the tail pane.
+	// shown (memory / plaso while running); "" hides the tail pane.
 	Active string
 	// Tail is the active lane's filtered, bounded log-tail (already sanitized and
 	// deduplicated). It is the single source of truth for the log pane; the plain

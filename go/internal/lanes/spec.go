@@ -16,7 +16,7 @@ import (
 // Spec is the static description of one process lane, derived from the role
 // defaults and the processors' output-path contracts.
 type Spec struct {
-	Name    string     // zeek, evtx, volatility, plaso, godfir-toolz, signatures
+	Name    string     // zeek, evtx, memory, plaso, godfir-toolz, signatures
 	Title   string     // display title
 	Kind    model.Kind // gauge / heartbeat / spinner
 	OutLeaf string     // processed subdir leaf under data_store/processed/
@@ -25,7 +25,7 @@ type Spec struct {
 	InputSubdirs []string
 	Exts         []string
 	// PluginsPerImage multiplies the input count into a finer denominator
-	// (volatility: 17 collector outputs per memory image).
+	// (memory: 17 collector outputs per memory image).
 	PluginsPerImage int
 }
 
@@ -36,7 +36,7 @@ var Specs = []Spec{
 		InputSubdirs: []string{"pcaps"}, Exts: dotset(".pcap", ".pcapng", ".cap")},
 	{Name: "evtx", Title: "evtx", Kind: model.KindGauge, OutLeaf: "windows_logs",
 		InputSubdirs: []string{"logs/winevt"}, Exts: dotset(".evtx")},
-	{Name: "volatility", Title: "volatility", Kind: model.KindGauge, OutLeaf: "volatility",
+	{Name: "memory", Title: "memory", Kind: model.KindGauge, OutLeaf: "memory",
 		InputSubdirs: []string{"memory"}, PluginsPerImage: 17,
 		Exts: dotset(".dmp", ".mem", ".lime", ".vmem", ".raw", ".dump", ".bin")},
 	{Name: "plaso", Title: "plaso", Kind: model.KindHeartbeat, OutLeaf: "log2timeline",
@@ -115,7 +115,7 @@ func (s Spec) countDone(outDir string) int {
 		return len(uniqueParents(glob(outDir, "*", "*.json")))
 	case "evtx":
 		return len(glob(outDir, "*", "*_EvtxECmd_Output.json"))
-	case "volatility":
+	case "memory":
 		// per (image,plugin) .jsonl; the finest gauge
 		return len(glob(outDir, "*", "plugins", "*.jsonl"))
 	case "plaso":

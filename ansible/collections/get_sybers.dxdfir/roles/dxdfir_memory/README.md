@@ -1,4 +1,4 @@
-# dxdfir_volatility
+# dxdfir_memory
 
 Process **memory images** into per-plugin JSON Lines. The role is structure only — it asserts inputs,
 runs a preflight (docker reachable, memory dir present, the hardened
@@ -9,8 +9,8 @@ submodule. One `<plugin>.jsonl` per plugin per image.
 ## How it works
 [anamnesis](https://github.com/Get-Sybers/Anamnesis) (MemProcFS) is fused into
 the **self-orchestrating `get-sybers/anamnesis` image** (cloned + built at the
-`sources.yml` pin). It discovers the images, runs the CAR plugin set over each with
-Volatility **in-process** (`--native`, confined by the image — no nested docker),
+`sources.yml` pin). It discovers the images, runs the CAR plugin set over each
+**in-process** (native MemProcFS, confined by the image — no nested docker),
 is idempotent per plugin, and emits the JSON summary Ansible gates on. The role
 just builds the confined `docker run` (cap-drop ALL, no-new-privileges, read-only
 rootfs + `/tmp` tmpfs, no network unless `--symbols-online`, `--group-add` for the
@@ -20,18 +20,18 @@ the raw `<dest>/plugins/<plugin>.jsonl` to the mounted `/out`.
 ## Role variables
 | Variable | Default | Description |
 |---|---|---|
-| `dxdfir_volatility_memory_dir` | `<repo>/data_store/raw/memory` | Memory-image tree to process (recursed). |
-| `dxdfir_volatility_out_dir` | `<repo>/data_store/processed/volatility` | Output base (override to redirect). |
-| `dxdfir_volatility_symbols_dir` | `<repo>/data_store/dependencies/memprocfs-symbols` | PDB/symbol cache (mounted at `/symbols`). |
-| `dxdfir_volatility_image` | `get-sybers/anamnesis:latest` | The hardened, env-driven anamnesis (MemProcFS) image the lane docker-runs (built by `playbooks/dxdfir-build-images.yml`). |
-| `dxdfir_volatility_symbols_online` | `false` | Allow container network access for PDB symbol fetch — the one legitimate network need; pre-seed the symbols dir instead. |
-| `dxdfir_volatility_python_path` | `<repo>/python` | PYTHONPATH for the image supply-chain guard (`get_sybers_dxdfir.images`); in-repo runs. |
-| `dxdfir_volatility_force` | `false` | Rerun plugins that already have valid output. |
+| `dxdfir_memory_memory_dir` | `<repo>/data_store/raw/memory` | Memory-image tree to process (recursed). |
+| `dxdfir_memory_out_dir` | `<repo>/data_store/processed/memory` | Output base (override to redirect). |
+| `dxdfir_memory_symbols_dir` | `<repo>/data_store/dependencies/memprocfs-symbols` | PDB/symbol cache (mounted at `/symbols`). |
+| `dxdfir_memory_image` | `get-sybers/anamnesis:latest` | The hardened, env-driven anamnesis (MemProcFS) image the lane docker-runs (built by `playbooks/dxdfir-build-images.yml`). |
+| `dxdfir_memory_symbols_online` | `false` | Allow container network access for PDB symbol fetch — the one legitimate network need; pre-seed the symbols dir instead. |
+| `dxdfir_memory_python_path` | `<repo>/python` | PYTHONPATH for the image supply-chain guard (`get_sybers_dxdfir.images`); in-repo runs. |
+| `dxdfir_memory_force` | `false` | Rerun plugins that already have valid output. |
 
 ## Symbols (network)
-Windows plugins resolve the kernel against PDB symbols Volatility fetches from
+Windows plugins resolve the kernel against PDB symbols anamnesis fetches from
 the symbol servers on first use — that needs **outbound network**. On an isolated
-host, pre-seed `dxdfir_volatility_symbols_dir`, or the Windows plugins error with
+host, pre-seed `dxdfir_memory_symbols_dir`, or the Windows plugins error with
 "symbol table requirement was not fulfilled". `banners.Banners` needs no symbols.
 
 ## Idempotence
@@ -43,7 +43,7 @@ verify gate is "some plugin produced output, or there were no images", not
 
 ## Example
 ```bash
-ansible-playbook playbooks/dxdfir-process-volatility.yml
+ansible-playbook playbooks/dxdfir-process-memory.yml
 ```
 
 ## Testing
