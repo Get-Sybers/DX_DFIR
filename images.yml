@@ -29,10 +29,7 @@ images:
     ref: byakugan
   - name: zeek
   - name: anamnesis         # pure-Go memory forensics on MemProcFS — self-orchestrating, env-driven
-    ref: anamnesis
-    args:
-      MEMPROCFS_VERSION: "5.18"
-      MEMPROCFS_SHA256: ""   # TODO: pin the MemProcFS linux x64 tarball checksum
+    ref: anamnesis          # MemProcFS release tag/asset/sha256 are pinned in the Dockerfile
   - name: plaso
   # GoDFIR Go substitutes — each FROM scratch, from its own subdir in the submodule.
   - name: goprefetch        # prefetch         (XP->Win11 .pf, MAM-compressed)
