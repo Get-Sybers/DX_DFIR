@@ -34,7 +34,7 @@ byakugan:
 # commit once this branch lands on the default branch.
 flashback:
   url: https://github.com/Get-Sybers/flashback
-  ref: 1932c957090001687f37c22e5c9aa6513c99c022  # flashback branch HEAD; bump to the merged sha once landed
+  ref: 2ce1bb8d83f5de9f48bf29955656c9d822139c7d  # flashback branch HEAD; bump to the merged sha once landed
   consumed: "docker/GoDFIR-toolz/flashback/Dockerfile (FLASHBACK_REF build-arg)"
 
 # Git submodules: pinned by their gitlink (.gitmodules). Inventory only.
