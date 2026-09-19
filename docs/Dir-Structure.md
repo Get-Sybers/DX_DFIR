@@ -45,7 +45,7 @@ per-item processing).
         │   └── sort/                                 # Dropzone for staged evidence awaiting `dxdfir sort`
         │   └── collections/                          # Registered collections, each sorted into the lanes above
         │
-        └── dependencies/                             # Operator-supplied rulesets/tools (Hayabusa, rulesets, Volatility symbols)
+        └── dependencies/                             # Operator-supplied rulesets/tools (Hayabusa, rulesets, MemProcFS symbols)
         │
         └── processed/                                # One subtree per source — what `dxdfir build-car` normalises to CAR
             └── linux_logs/                           # Linux Distro logs (not wired into the backend)

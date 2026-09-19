@@ -58,7 +58,7 @@ binaries — and, for the tool-only images, the shell and python — are absent.
 Runtime confinement is what actually contains both threats (an attacker with
 code execution does not need an on-image shell): every processor `docker run`
 carries `--cap-drop ALL --security-opt no-new-privileges --read-only --tmpfs
-/tmp --pids-limit 512 --network none` (Volatility symbol fetch is the one
+/tmp --pids-limit 512 --network none` (the anamnesis symbol fetch is the one
 `--symbols-online` opt-in).
 
 ## What is removed vs. what remains (and why)
