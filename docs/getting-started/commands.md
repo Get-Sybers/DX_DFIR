@@ -54,6 +54,7 @@ See the [collection concept](../architecture/processing-lanes.md#collections).
 | `dxdfir load-car [--namespace NS] [--setup\|--no-setup] [--force] [--kibana]` | Bulk-load the materialised CAR into the [analysis stack](../architecture/the-stack.md)'s `logs-car.*` data streams (`byakugan load`). `--setup` (default) applies the index/component templates first; `--no-setup` for routine repeat loads once they exist; `--kibana` also imports the rendered Kibana saved objects. |
 | `dxdfir build-timeline CAR_DIR [--out-dir DIR] [--force] [--after ISO] [--before ISO]` | Build one time-ordered `timeline.jsonl` across a source or a whole tree, beside the stores unless `--out-dir` (alias: `car-timeline`). |
 | `dxdfir stix export --hits FILE --out FILE [--push]` | Turn detection hits into a STIX 2.1 bundle (OpenCTI on the wire). See [stix/README](../../python/get_sybers_dxdfir/stix/README.md). |
+| `dxdfir stamp-detections [TREE] [--out FILE] [--post] [--url URL] [--ca FILE]` | Stamp the behaviour hits Byakugan's `--stix` export already materialises (STIX Sightings in each source's `stix_bundle.json`) into the `car-detections` lookup index — `_id <detection.id>:<event.id>`, per [join-keys.yml](../../python/get_sybers_dxdfir/detect/rules/car-detections/join-keys.yml). Writes `car-detections.bulk.ndjson` by default; `--post` also applies the index template (skipped when already equal) and bulk-loads the stack. |
 
 ## Analysis stack
 

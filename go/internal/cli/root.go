@@ -169,6 +169,7 @@ func NewRootCmd(version string) *cobra.Command {
 		newLoadCarCmd(env),
 		newCarTimelineCmd(env),
 		newStixCmd(env),
+		newStampDetectionsCmd(env),
 		// Analysis stack
 		newDeployCmd(env),
 		newDestroyCmd(env),

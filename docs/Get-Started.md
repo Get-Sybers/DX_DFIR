@@ -124,8 +124,12 @@ docker compose ps               # setup exits 0; the rest go (healthy)
   `logs-car.inferred-<namespace>` data streams (the `dxdfir_car_load` role,
   `byakugan load`, behind the stack's own bring-up gate). `--setup` (the
   default, first run) applies the index/component templates; `--no-setup` for
-  routine repeat loads once they exist. The `car-detections` lookup index is
-  still the next phase; the Phase-0 [risk gate](/docs/riskgate.md) proves the
+  routine repeat loads once they exist. `dxdfir stamp-detections` stamps the
+  behaviour hits Byakugan's `--stix` export already materialises (STIX
+  Sightings in each source's `stix_bundle.json`) into the `car-detections`
+  lookup index — `join-keys.yml`'s own contract, `_id <detection.id>:<event.id>`;
+  a sweep from the Detection Engine's own alerts is still future work. The
+  Phase-0 [risk gate](/docs/riskgate.md) proves the
   two assumptions it rests on (evidence-time detection runs, ES|QL
   `LOOKUP JOIN`) and documents the projection.
 

@@ -22,6 +22,7 @@ The binary never re-implements processing. It shells out to what already exists:
 | `verify-images` | `ansible-playbook … dxdfir-verify-images.yml` |
 | `register` / `collection …` | native Go (`internal/collection`: the SQLite registry, magic-byte classify, sort/promote/link, and the SHA-1 manifest — no subprocess) |
 | `stix …` | `python -m get_sybers_dxdfir.stix …` (data → stdout, summary → stderr) |
+| `stamp-detections` | `python -m get_sybers_dxdfir.detect.car_detections …` (the car-detections lookup-index writer — Byakugan's behaviour hits in, one summary line on stdout) |
 | `stack …` | `ansible-playbook … dxdfir-stack-<action>.yml` (the `dxdfir_stack` role) |
 | `cleanup …` | `ansible-playbook … dxdfir-cleanup.yml` (`--dry-run` maps to `--check`) |
 | `list` | native Go (filesystem only) |
