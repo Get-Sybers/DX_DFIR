@@ -487,3 +487,34 @@ def test_main_post_reports_bulk_errors_as_not_ok(tree, stub_es, capsys):
     assert code == 1
     summary = json.loads(out.splitlines()[-1])
     assert summary["bulk"]["errors"] and summary["ok"] is False
+
+
+def test_extract_rows_skips_non_string_refs_instead_of_raising(tmp_path):
+    """A malformed bundle putting a dict/list where a ref string belongs
+    (``sighting_of_ref``, ``observed_data_refs[0]``) is skipped and counted,
+    never a TypeError (unhashable dict key) aborting the whole stamp run."""
+    ind = _indicator("indicator--ok", "CAR-2013-01-002", "An analytic")
+    od = _observed_data("observed-data--ok", "guid-ok", "2024-01-01T00:00:00Z")
+    good = _sighting("sighting--good", "indicator--ok", "guid-ok",
+                     "2024-01-01T00:00:00Z", analytic_id="CAR-2013-01-002",
+                     observed_data_ref="observed-data--ok")
+    bad_ind_ref = _sighting("sighting--bad-ind", "indicator--ok", "guid-b",
+                            "2024-01-01T00:00:01Z", analytic_id="CAR-2013-01-002")
+    bad_ind_ref["sighting_of_ref"] = {"not": "a ref"}
+    bad_od_ref = _sighting("sighting--bad-od", "indicator--ok", "guid-c",
+                           "2024-01-01T00:00:02Z", analytic_id="CAR-2013-01-002")
+    bad_od_ref["observed_data_refs"] = [["not-a-string"]]
+    bundle = {"type": "bundle", "id": "bundle--x",
+              "objects": [ind, od, good, bad_ind_ref, bad_od_ref]}
+    src = tmp_path / "host-x"
+    src.mkdir()
+    (src / "stix_bundle.json").write_text(json.dumps(bundle))
+    rows, report = cd.extract_rows(str(tmp_path))
+    ids = {r["hit"].event_id for r in rows}
+    assert "guid-ok" in ids                      # the good sighting still lands
+    assert "guid-b" not in ids                   # bad sighting_of_ref: skipped
+    assert report["skipped"].get("no_indicator", 0) >= 1
+    # a non-string observed_data ref only costs the process pivot, never the row
+    assert "guid-c" in ids
+    bad_od = next(r["hit"] for r in rows if r["hit"].event_id == "guid-c")
+    assert bad_od.process_entity_id is None

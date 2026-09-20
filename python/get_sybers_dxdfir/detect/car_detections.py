@@ -220,7 +220,11 @@ def _extract_hit(sighting: dict, objs: dict[str, dict]) -> tuple[Hit | None, str
     event_id = sighting.get("x_car_event_id")
     if not isinstance(event_id, str) or not event_id:
         return None, "no_event_id"
-    ind = objs.get(sighting.get("sighting_of_ref"))
+    # a ref must be a string before it can key the object index — a malformed
+    # bundle putting a dict/list there would otherwise raise (unhashable) and
+    # abort the whole stamp run instead of skipping the one sighting
+    ind_ref = sighting.get("sighting_of_ref")
+    ind = objs.get(ind_ref) if isinstance(ind_ref, str) else None
     if not isinstance(ind, dict) or ind.get("type") != "indicator":
         return None, "no_indicator"
     detection_id = ind.get("x_car_analytic")
@@ -231,7 +235,7 @@ def _extract_hit(sighting: dict, objs: dict[str, dict]) -> tuple[Hit | None, str
         return None, "no_rule_name"
     process_entity_id = None
     refs = sighting.get("observed_data_refs")
-    if isinstance(refs, list) and refs:
+    if isinstance(refs, list) and refs and isinstance(refs[0], str):
         od = objs.get(refs[0])
         if isinstance(od, dict):
             pid = od.get("x_car_process_entity_id")
@@ -555,7 +559,15 @@ def _contains(local, remote) -> bool:
     GET echoes back fields Elasticsearch defaults in (``composed_of``,
     ``allow_auto_create``, ``data_stream`` ...) that were never in what this
     repo commits; a strict ``==`` would re-PUT an unchanged template on every
-    run, which is not what "diff-first: GET and skip when equal" asks for."""
+    run, which is not what "diff-first: GET and skip when equal" asks for.
+
+    Lists deliberately compare by position AND length, never as subsets: the
+    list-valued template fields are order-sensitive (``composed_of`` — later
+    components win the mapping merge — and ``index_patterns``), so a remote
+    reordering or superset is a real difference. If a cluster ever normalises
+    a list on echo, the cost is a spurious re-PUT of an idempotent template —
+    the fail-safe direction — never a skipped PUT that leaves the live
+    template drifted."""
     if isinstance(local, dict):
         return isinstance(remote, dict) and all(k in remote and _contains(v, remote[k]) for k, v in local.items())
     if isinstance(local, list):

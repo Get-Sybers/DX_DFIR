@@ -39,7 +39,10 @@
       to docker/elastic/.env and set the passwords before loading the CAR.
     quiet: true
 
-# One password per line matching ^KEY=, prefix stripped. regex_replace (not
+# One password per line matching ^KEY=, prefix stripped, then ONE wrapping
+# quote pair — dotenv files commonly quote values, and the repo's own Python
+# readers strip exactly this (.strip("'\"") in tui/riskgate), so a quoted
+# value must resolve to the same secret here too. regex_replace (not
 # regex_search's group extraction) because it always returns a plain string,
 # matched or not — no ambiguity over whether the result comes back wrapped in
 # a list.
@@ -50,10 +53,14 @@
   ansible.builtin.set_fact:
     dxdfir_car_load_elastic_password: >-
       {{ (_env_lines | select('match', '^ELASTIC_PASSWORD=') | list | first | default('', true))
-         | regex_replace('^ELASTIC_PASSWORD=', '') }}
+         | regex_replace('^ELASTIC_PASSWORD=', '')
+         | regex_replace('^"(.*)"$', '\g<1>')
+         | regex_replace("^'(.*)'$", '\g<1>') }}
     dxdfir_car_load_byakugan_loader_password: >-
       {{ (_env_lines | select('match', '^BYAKUGAN_LOADER_PASSWORD=') | list | first | default('', true))
-         | regex_replace('^BYAKUGAN_LOADER_PASSWORD=', '') }}
+         | regex_replace('^BYAKUGAN_LOADER_PASSWORD=', '')
+         | regex_replace('^"(.*)"$', '\g<1>')
+         | regex_replace("^'(.*)'$", '\g<1>') }}
 
 # Setup-mode template PUTs (and, with the Kibana import on, the saved-objects
 # import) need cluster/Kibana privileges logs_car_writer deliberately does not

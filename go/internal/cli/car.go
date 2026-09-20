@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 
 	"github.com/spf13/cobra"
 
@@ -172,6 +173,12 @@ func newLoadCarCmd(env *Env) *cobra.Command {
 		GroupID: groupCAR,
 		Args:    cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
+			// The saved-objects import only runs in the setup pass (the role
+			// ignores it otherwise) — refuse the silently-ignored combination
+			// instead of leaving "why did no dashboards import" to forensics.
+			if kibana && (!setup || noSetup) {
+				return errors.New("--kibana requires --setup: the Kibana saved-objects import runs in the setup pass")
+			}
 			r, ap, err := env.ansibleRepo()
 			if err != nil {
 				return err
