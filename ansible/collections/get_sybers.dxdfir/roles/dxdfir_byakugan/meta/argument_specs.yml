@@ -11,10 +11,11 @@ argument_specs:
         dxdfir_lane skeleton. Three actions selected by dxdfir_byakugan_action:
         build (`byakugan build`: per-source car.db + car_<object>.jsonl +
         car_relationships.jsonl, superset.db with the derive pass), verify
-        (`byakugan verify`: the engine's own correctness gate over the tree
-        mounted read-only, judged on the summary's status ok, its report in
-        verify.txt) and timeline (`byakugan timeline`: one property-rich,
-        time-ordered CAR timeline).
+        (`byakugan verify`: the engine's own correctness gate — the tree is
+        its read-only input mount, the report verify.txt is written through
+        the output mount, beside the stores by default — judged on the
+        summary's status ok) and timeline (`byakugan timeline`: one
+        property-rich, time-ordered CAR timeline).
     options:
       dxdfir_byakugan_action:
         type: str

@@ -52,9 +52,10 @@ dxdfir verify-car
 ```
 
 The **correctness gate** over the materialised tree — the engine's own `verify` sub-tool
-(`byakugan.verify`), driven inside the image by its env contract like every lane, over the
-tree mounted read-only. Its report lands as `verify.txt` beside the stores and the run
-passes only on the summary's `status: ok`. It reads what `build-car` wrote and asserts:
+(`byakugan.verify`), driven inside the image by its env contract like every lane. The tree
+is its read-only input mount; its report, `verify.txt`, is written through the output
+mount — beside the stores by default — and the run passes only on the summary's
+`status: ok`. It reads what `build-car` wrote and asserts:
 
 - every exercised object has rows, and key fields are **populated**;
 - values are **sane** — IPs are IPs, ports are ports, SIDs are SIDs;
