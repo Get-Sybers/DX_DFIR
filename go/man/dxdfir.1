@@ -18,11 +18,11 @@ dxdfir \- DX_DFIR forensic processing pipeline front-end
 .br
 .B dxdfir build-car
 .RI [ PROCESSED_DIR ]
-.RB [ --in
-.IR PATH ]
 .RB [ --out
 .IR DIR ]
 .RB [ --rebuild ]
+.RB [ --derive ]
+.RB [ --stix ]
 .br
 .B dxdfir verify-car
 .RB [ --car-dir
@@ -30,8 +30,9 @@ dxdfir \- DX_DFIR forensic processing pipeline front-end
 .br
 .B dxdfir build-timeline
 .I CAR_DIR
-.RB [ --out
-.IR PATH ]
+.RB [ --out-dir
+.IR DIR ]
+.RB [ --force ]
 .br
 .B dxdfir validate
 .br
@@ -94,16 +95,18 @@ backend.
 It is the top of a three-layer design: this command holds the verbs, the
 .B get_sybers.dxdfir
 Ansible collection holds the orchestration (one role per source, one action per
-task), and the
-.B get_sybers_dxdfir
-Python package holds the heavy per-item processing the roles invoke.
+task), and the GoDFIR-toolz tool containers do the processing \(em each driven
+purely by its
+.IR contract.yml ,
+the role building the confined
+.B docker run
+from the tool's environment variables and mounts.
 .PP
 .B dxdfir process
 drives a source's role with
 .BR ansible-playbook (1)
-\(em preflight, then process, then verify \(em and the role's single action calls
-.RB \(lq python \-m get_sybers_dxdfir. SOURCE \(rq
-for the tight loop.
+\(em build the run from the contract, preflight, process, verify \(em and the
+container discovers, batches and skips its own inputs.
 .BR build-car ", " verify-car " and " build-timeline
 drive the CAR lane the same way (the
 .B dxdfir_byakugan
@@ -113,9 +116,8 @@ image \(em cloned + built at the
 .I sources.yml
 pin by
 .BR "dxdfir build-docker" ,
-so the lane only shells the image \(em and the
-.B get_sybers_dxdfir.carcheck
-gate), while
+so the lane only runs the image \(em including the engine's own verify gate),
+while
 .B validate
 fronts the repository's check harness
 .RB ( .github/tests/run-checks.sh ).
@@ -145,12 +147,12 @@ Idempotent: inputs that already have output are skipped (use
 to reprocess).
 .TP
 .BI "build-car " [PROCESSED_DIR]
-Build the per-source CAR stores (car.db + superset.db + one
+Build the per-source CAR stores (car.db + one
 .IR car_<object>.jsonl
-per object) from the processed tree \(em every source under it by default, or
-one file/dir with
-.BR --in .
-A source whose store already exists is left alone unless
+per object; superset.db with
+.BR --derive )
+from every source under the processed tree. A source whose store already
+exists is left alone unless
 .B --rebuild
 is given.
 .TP
@@ -167,7 +169,9 @@ relationship edges naming real endpoints. Run the pipeline first
 .TP
 .BI "build-timeline " CAR_DIR
 Build one property-rich, time-ordered CAR timeline JSONL from a source's
-car.db + superset.db (or aggregate a whole tree). Alias:
+car.db + superset.db (or aggregate a whole tree), beside the stores unless
+.BR --out-dir .
+Alias:
 .BR car-timeline .
 .TP
 .B validate
@@ -318,17 +322,28 @@ Sort an unregistered collection without registering it.
 Skip the hash-manifest refresh after sorting.
 .SS build-car
 .TP
-.BI --in " PATH"
-Single-source mode: one processed file or directory, one car.db.
-.TP
 .BI --out " DIR"
-Output directory (single-source: this source's car dir; batch: the car/ root).
-.TP
-.BI --host " HOST"
-Single-source mode: fallback source_host where the map derives none.
+The CAR tree to write. Default:
+.IR <repo>/data_store/processed/byakugan .
 .TP
 .B --rebuild
 Rebuild CAR stores that already exist (after a map/coverage change).
+.TP
+.B --derive
+Also run the derived relationship pass into superset.db.
+.TP
+.B --stix
+Also derive the STIX 2.1 bundle from the finished stores.
+.SS build-timeline
+.TP
+.BI --out-dir " DIR"
+Directory timeline.jsonl is written to. Default: CAR_DIR itself.
+.TP
+.B --force
+Rewrite an existing timeline.jsonl.
+.TP
+.BI --host " HOST" ", " --after " ISO" ", " --before " ISO"
+Only events whose source_host matches / at or after / at or before the timestamp.
 .SS verify-car
 .TP
 .BI --car-dir " DIR"
@@ -421,7 +436,7 @@ Normalise everything processed into CAR, then gate it:
 .B dxdfir build-car && dxdfir verify-car
 .TP
 One timeline across every source:
-.B dxdfir build-timeline data_store/processed/byakugan --out /tmp/timeline.jsonl
+.B dxdfir build-timeline data_store/processed/byakugan --out-dir /tmp
 .SH FILES
 .TP
 .I ansible/collections/get_sybers.dxdfir/
@@ -429,8 +444,13 @@ The Ansible collection driven by
 .BR "dxdfir process" .
 .TP
 .I python/get_sybers_dxdfir/
-The processing package (also runnable as
-.RB \(lq python\ -m\ get_sybers_dxdfir. SOURCE \(rq).
+The host-side package: the tool-image supply-chain guard, the ruleset fetchers,
+the detection rules-as-code and the STIX exchange (nothing in it runs a container).
+.TP
+.I docker/GoDFIR-toolz/<tool>/contract.yml
+The contract each lane's
+.B docker run
+is built from (the tool's environment variables, mounts and summary line).
 .TP
 .I data_store/
 Raw evidence and processed output (gitignored); the materialised CAR lands under
@@ -441,8 +461,8 @@ The Elastic-native analysis backend (docker compose).
 .SH SEE ALSO
 .BR ansible-playbook (1),
 .BR docker (1).
-The processors run standalone as
-.RB \(lq python\ -m\ get_sybers_dxdfir. SOURCE \ --help\(rq.
+Each lane's playbook runs standalone as
+.RB \(lq ansible-playbook\ ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-process- SOURCE .yml\(rq.
 .SH AUTHOR
 Get-Sybers.
 .SH LICENSE

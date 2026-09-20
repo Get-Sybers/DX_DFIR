@@ -9,8 +9,9 @@ collected with **the hardened GoDFIR-toolz containers**
 > front-end** — see [How It Runs](/README.md#how-it-runs). Every data-pipeline
 > shell script has been retired: the per-source `process-*.sh` scripts, the
 > signature-lane scripts, and the deploy/apply/ingest scripts of the retired
-> Kusto backend (`scripts/lib/`). Their behaviour lives in the `get_sybers_dxdfir`
-> package and the collection's roles: `dxdfir process <source>` and the CAR lane
+> Kusto backend (`scripts/lib/`). Their behaviour lives in the collection's roles
+> and the [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) tool
+> containers they run: `dxdfir process <source>` and the CAR lane
 > (`dxdfir build-car` / `dxdfir verify-car`); the analysis backend is the Elastic
 > stack under `docker/elastic/`, brought up with docker compose.
 
@@ -19,40 +20,33 @@ collected with **the hardened GoDFIR-toolz containers**
 ## Processing
 
 Per-source processing runs through the **`dxdfir` CLI** (`dxdfir process <source>`),
-which drives the `get_sybers.dxdfir` roles and the `get_sybers_dxdfir` Python processors
-(see [How It Runs](/README.md#how-it-runs)); each is also runnable as
-`python -m get_sybers_dxdfir.<source>`. The retired per-source `process-*.sh` scripts
-have been removed — their behaviour lives in those processors. No processing shell
-scripts remain.
+which drives the `get_sybers.dxdfir` roles (see [How It Runs](/README.md#how-it-runs)).
+Each role builds its `docker run` purely from the tool image's `contract.yml` —
+the tool's environment variables and mounts — and the container discovers,
+batches and skips its own inputs; there is no host-side processor and no
+processing shell script.
 
-### Signature detection (`get_sybers_dxdfir.signatures`)
+### Signature detection
 
-The three signature lanes (formerly `scripts/process-signatures.sh` +
-`scripts/signatures/`) are Python: `python -m get_sybers_dxdfir.signatures`, or the
-`dxdfir_signatures` role. Each lane emits self-describing JSONL to
-`data_store/processed/detections/<tool>/`. Run all, or `--only <lane>`; `--fetch`
-provisions rules when online (the YARA lane fetches the pinned
-[DetectRaptor](https://github.com/mgreen27/DetectRaptor) ruleset). To supply
-your own YARA or Suricata rules (and tune Suricata's `HOME_NET`), see
+The detection lane is the `get-sybers/signatures` image, run by the
+`dxdfir_signatures` role: four sub-tools of one hardened container, each a
+separate contract-driven run over the evidence tree it reads. Each writes
+self-describing JSONL to `data_store/processed/detections/<sub-tool>/<item>/`.
+Run all, or select with `dxdfir_signatures_lanes`; rulesets are baked into the
+image, with operator rulesets mounted in their place — see
 [Signature-Rules](/docs/Signature-Rules.md).
 
-**Hayabusa** also runs inside the **evtx pipeline** (`dxdfir process evtx`,
-or `python -m get_sybers_dxdfir.evtx --hayabusa`): it scans the same `.evtx` that
-lane collects — loose logs or those extracted from a disk image via `--image-src`
-— so disk-image EVTX reaches Hayabusa through the evtx lane's extraction rather
-than needing a `/dev/fuse` mount.
-
-| Lane | Input | Output |
+| Sub-tool | Input | Output |
 |---|---|---|
-| `suricata` | PCAPs | Suricata EVE JSON, `source_pcap`-tagged, alert+context event types. |
-| `yara` | **files**, **disk images** (mounted read-only in place — `ewfmount`+`ntfs-3g`, never extracts; `--yara-sources` selects), **memory** (raw-image YARA scan, matches carry file + offset) | one JSON object per match (rule, target, offsets/strings). |
-| `hayabusa` | loose `.evtx` (+ disk-image EVTX via the evtx lane's targeted `image_export --artifact_filters WindowsEventLogs` pull — event logs only, transient) | Hayabusa Sigma detection timeline (native binary). |
+| `yara` | **loose files** under `raw/other_raw_data/` and **memory images** under `raw/memory/` (scanned directly) | one hit record per rule match (rule, target, offsets/strings). |
+| `suricata` | every capture under `raw/pcaps/` | Suricata EVE JSON per capture. |
+| `hayabusa` | every `.evtx` tree: `raw/logs/winevt/` and the evtx lane's disk-image export (`processed/windows_logs/_extracted_evtx/`) | Hayabusa Sigma detection timeline (native binary, `verbose` profile). |
+| `scan` | every disk image under `raw/disk_images/`, streamed by gomount through goyara in **userspace** — no `/dev/fuse`, nothing mounted on the host | goyara hit records per image. |
 
-> **Mounting note.** Disk-image mounting needs `/dev/fuse`, which an LXC blocks by
-> default; the YARA disk source skips images with a host-fix note until it's
-> enabled (nothing is ever extracted out of an image for YARA).
-> **Hayabusa's `-J` JSON input does not detect** (0 hits vs 792 natively) — real
-> `.evtx` is required, from a mount or the targeted extraction.
+> Disk-image event logs reach Hayabusa through the evtx lane's one canonical
+> export (`image_export --artifact_filters WindowsEventLogs`, event logs only),
+> so an image is exported once for both lanes. Hayabusa needs real `.evtx`
+> input — its `-J` JSON input does not detect.
 
 ---
 
@@ -60,14 +54,14 @@ than needing a `/dev/fuse` mount.
 
 No shell scripts here either:
 
-- **`dxdfir build-car`** drives the external Byakugan engine inside the hardened
+- **`dxdfir build-car`** runs the external Byakugan engine inside the hardened
   `get-sybers/byakugan` image (cloned + built at the `sources.yml` pin by
-  `dxdfir build-docker`) over the processed
-  tree: one `car.db` + `superset.db` and
-  one `car_<object>.jsonl` per populated object per source, under
-  `data_store/processed/byakugan/<source>/`.
-  **`dxdfir verify-car`** (`get_sybers_dxdfir.carcheck`) is the gate over what was
-  written; **`dxdfir build-timeline`** unions a tree into one timeline JSONL.
+  `dxdfir build-docker`), driven from the image's contract (`byakugan build`),
+  over the processed tree: one `car.db` and one `car_<object>.jsonl` per
+  populated object per source, under `data_store/processed/byakugan/<source>/`
+  (`--derive` adds `superset.db`).
+  **`dxdfir verify-car`** is the engine's own gate over what was written;
+  **`dxdfir build-timeline`** unions a tree into one timeline JSONL.
 - The **Elastic-native backend** (`docker/elastic/`) is brought up with
   `docker compose` (see its README). Filebeat tails the processed tree directly
   (`ELASTIC_INGEST_DIR` is the knob) into `logs-dxdfir.<type>-*` data
@@ -107,5 +101,6 @@ dxdfir build-car
 dxdfir verify-car
 ```
 
-> ⚠️ The processing lanes `chmod 777` their working directories under
-> `data_store/` to work around Docker UID mismatches. Don't run them on a shared host.
+> ⚠️ The processing lanes `chmod 777` their output directories under
+> `data_store/processed/` so the containers' non-root user can write them. Don't
+> run them on a shared host.

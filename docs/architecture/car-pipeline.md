@@ -9,11 +9,11 @@ The normalisation itself is done by the **external [Byakugan engine](https://git
 which runs entirely inside the hardened `get-sybers/byakugan` container — cloned + built
 into the image at the `sources.yml` pin (`docker/GoDFIR-toolz/byakugan/Dockerfile`) by `dxdfir
 build-docker`, never vendored. DX_DFIR is a thin front over it: one Ansible role,
-`dxdfir_byakugan`, with three actions. Each action runs the Python seam
-`get_sybers_dxdfir.mitrecar`, which holds **no CAR logic itself** — it only maps the host
-paths to container mounts (processed evidence read-only, the `byakugan/` output read-write) and
-shells the engine image. (Grepping the code, `mitrecar` is the name you'll meet for the
-CAR lane.)
+`dxdfir_byakugan`, with three actions. Each action is one confined `docker run` of the
+engine image, built by the shared `dxdfir_lane` skeleton from the image's contract
+(`docker/GoDFIR-toolz/byakugan/contract.yml`) — `byakugan build` / `byakugan timeline`
+driven by their `BYAKUGAN_<SUBTOOL>_*` variables, the processed evidence mounted
+read-only and the `byakugan/` output read-write. DX_DFIR holds **no CAR logic itself**.
 
 ```
 processed/ ──build──▶ byakugan/<source>/car.db + car_<object>.jsonl ──timeline──▶ timeline.jsonl
@@ -51,7 +51,8 @@ The **13 CAR objects**: `authentication`, `driver`, `email`, `file`, `flow`, `ht
 dxdfir verify-car
 ```
 
-The **correctness gate** over the materialised tree. It reads what `build-car` wrote and
+The **correctness gate** over the materialised tree — the engine's own `byakugan.verify`,
+run inside the image over the tree mounted read-only. It reads what `build-car` wrote and
 asserts:
 
 - every exercised object has rows, and key fields are **populated**;
@@ -68,14 +69,15 @@ gate checks the materialised output. **Run it before you trust the CAR.**
 ## Timeline
 
 ```bash
-dxdfir build-timeline data_store/processed/byakugan --out timeline.jsonl [--after ISO] [--before ISO]
+dxdfir build-timeline data_store/processed/byakugan [--out-dir DIR] [--after ISO] [--before ISO]
 ```
 
 Unions the **object events** (`car.db` — every populated field plus the `native`
 evidence) and the **relationship instances** (`superset.db` — source→verb→target with
 confidence/method) into a single timestamp-ordered stream, `timeline.jsonl` — the
-behaviour timeline. Point it at one source's car dir, or a parent tree to aggregate
-every source beneath it. You can also read it live in the
+behaviour timeline, written beside the stores (or under `--out-dir`). Point it at one
+source's car dir, or a parent tree to aggregate every source beneath it. An existing
+`timeline.jsonl` is kept unless `--force`. You can also read it live in the
 [Timeline tab](../getting-started/the-interface.md#timeline).
 
 ## Cross-source linkage

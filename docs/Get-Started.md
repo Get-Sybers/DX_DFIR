@@ -56,8 +56,9 @@ _Refer to [📁 Dir-Structure](/docs/Dir-Structure.md) for detailed directory st
 dxdfir process plaso
 ```
 - Automates forensic analysis of all `.E01` disk images and VMware VM exports using Plaso.
-- Output lands in `data_store/processed/log2timeline/jsonl/` (Plaso `json_line`,
-  one file per host), the `.plaso` databases in `plaso/`, and job logs in `logs/`.
+- Output lands in `data_store/processed/log2timeline/jsonl/<source>/timeline.jsonl`
+  (Plaso `json_line`) and the `.plaso` storage files in `storage/<source>/`, each with
+  its tool log beside it.
 
 ### Step 4: Process PCAPs with Zeek
 ```bash

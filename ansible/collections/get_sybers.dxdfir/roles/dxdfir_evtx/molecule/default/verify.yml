@@ -5,17 +5,19 @@
   vars:
     molecule_out: /tmp/dxdfir_evtx_molecule/out
   tasks:
-    - name: "molecule-verify | find the dxdfir_evtx_produced evtx JSON"
+    - name: "molecule-verify | find the dxdfir_evtx_produced goevtx JSON Lines"
       ansible.builtin.find:
         paths: "{{ molecule_out }}"
-        patterns: "*_EvtxECmd_Output.json"
+        patterns: "goevtx.jsonl"
         recurse: true
       register: dxdfir_evtx_produced
 
-    - name: "molecule-verify | assert JSON was dxdfir_evtx_produced under the host group"
+    # The item folder is the log's path relative to the input dir with the
+    # separators folded to _ (HOST01/Security.evtx -> HOST01_Security.evtx).
+    - name: "molecule-verify | assert JSON Lines were dxdfir_evtx_produced under the host item"
       ansible.builtin.assert:
         that:
           - dxdfir_evtx_produced.matched | int > 0
-          - dxdfir_evtx_produced.files | map(attribute='path') | select('search', '/HOST01/') | list | length > 0
-        fail_msg: "no evtx JSON dxdfir_evtx_produced from the sample log under the host group"
+          - dxdfir_evtx_produced.files | map(attribute='path') | select('search', '/HOST01_') | list | length > 0
+        fail_msg: "no goevtx.jsonl dxdfir_evtx_produced from the sample log under the host item"
         quiet: true

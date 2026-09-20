@@ -1,0 +1,146 @@
+---
+# ONE confined `docker run` from one run spec (dxdfir_lane_spec) and the tool's
+# contract.yml — data-driven, the consumer side of docs/framework/03: the
+# contract declares the env vars and mounts, the spec supplies values and host
+# paths, and this file turns them into `-e NAME=VALUE` / `-v host:path:mode`
+# behind the shared confinement. Nothing about the tool's argv is built here;
+# a self-orchestrating image runs with no arguments, a multi-tool image gets its
+# sub-tool name and nothing else.
+#
+# Read-only checks only (the daemon is not touched, no directory is created);
+# the built run is appended to dxdfir_lane_runs_built for preflight + process.
+
+- name: "argv | read the tool contract | {{ dxdfir_lane_spec.name }}"
+  ansible.builtin.set_fact:
+    dxdfir_lane_contract: "{{ lookup('file', dxdfir_lane_spec.contract) | from_yaml }}"
+
+# Every env override must be a variable the contract declares; every mount the
+# contract requires must be bound; every mount's CONTAINER path must be one the
+# contract declares — or a path a declared env override names, which is how a
+# contract asks for a mounted file it does not list as a mount (the plaso
+# image_export filter file named by PLASO_IMAGE_EXPORT_FILTER_FILE, an operator
+# ruleset named by SIGNATURES_<SUBTOOL>_RULES) — so a lane cannot bind a path
+# the tool's interface knows nothing about; a multi-tool image must be given
+# one of its declared sub-tools (unless the debug pass-through is used
+# deliberately).
+- name: "argv | the run spec is within the contract | {{ dxdfir_lane_spec.name }}"
+  vars:
+    _env_undeclared: >-
+      {{ (dxdfir_lane_spec.env | default({})) | list
+         | difference(dxdfir_lane_contract.env | default({}) | list) }}
+    _bound: "{{ dxdfir_lane_spec.mounts | default([]) | map(attribute='path') | list }}"
+    _declared: "{{ dxdfir_lane_contract.mounts | default([]) | map(attribute='path') | list }}"
+    _env_named: >-
+      {{ (dxdfir_lane_spec.env | default({})).values() | reject('none') | map('string') | list }}
+    _mounts_undeclared: "{{ _bound | difference(_declared + _env_named) }}"
+    _required_unbound: >-
+      {{ dxdfir_lane_contract.mounts | default([])
+         | selectattr('required', 'equalto', true) | map(attribute='path') | difference(_bound) }}
+    _subtool: "{{ dxdfir_lane_spec.subtool | default('') }}"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_lane_contract.tool is defined
+      - dxdfir_lane_contract.image is defined
+      - _env_undeclared | length == 0
+      - _mounts_undeclared | length == 0
+      - (_required_unbound | length == 0) or (dxdfir_lane_spec.entrypoint is defined)
+      - (_subtool | length == 0) or (_subtool in (dxdfir_lane_contract.subtools | default([])))
+      - >-
+        (_subtool | length > 0)
+        or (dxdfir_lane_contract.entrypoint | default('') != 'multi-tool')
+        or (dxdfir_lane_spec.entrypoint is defined)
+    fail_msg: >-
+      {{ dxdfir_lane_name }}/{{ dxdfir_lane_spec.name }} does not fit
+      {{ dxdfir_lane_spec.contract }}: undeclared env {{ _env_undeclared }},
+      undeclared mount paths {{ _mounts_undeclared }} (declared:
+      {{ _declared }}, env-named: {{ _env_named }}), unbound required mounts
+      {{ _required_unbound }}, sub-tool '{{ _subtool }}' (declared:
+      {{ dxdfir_lane_contract.subtools | default([]) }}).
+    quiet: true
+
+# The read-only mounts are the evidence (and any operator ruleset). They must
+# exist — docker would otherwise create an empty root-owned directory in their
+# place — and their owning group is granted to the container (--group-add) so the
+# image's non-root uid can read a locked-down tree (data_store is root:docker 750
+# on a hardened host) without running as root.
+- name: "argv | stat each read-only mount | {{ dxdfir_lane_spec.name }}"
+  ansible.builtin.stat:
+    path: "{{ item.host }}"
+  loop: "{{ dxdfir_lane_spec.mounts | default([]) | selectattr('mode', 'equalto', 'ro') | list }}"
+  loop_control:
+    label: "{{ item.path }}"
+  register: dxdfir_lane_ro_stats
+
+- name: "argv | every read-only mount exists on the host | {{ dxdfir_lane_spec.name }}"
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+    fail_msg: >-
+      {{ dxdfir_lane_name }}/{{ dxdfir_lane_spec.name }}: read-only mount
+      {{ item.item.path }} <- {{ item.item.host }} is missing on the host.
+    quiet: true
+  loop: "{{ dxdfir_lane_ro_stats.results }}"
+  loop_control:
+    label: "{{ item.item.path }}"
+
+# Confinement + tmpfs (for /tmp and every optional read-write contract mount
+# left unbound: the tool's /work scratch, suricata's /var/run) + network (none
+# unless the contract allows it AND the spec asks) + --group-add + the contract
+# mounts and env + the image (+ sub-tool). Filter-only expressions: a jinja
+# block would come back as a string, not a list.
+- name: "argv | build the confined docker run | {{ dxdfir_lane_spec.name }}"
+  vars:
+    _env: "{{ dxdfir_lane_spec.env | default({}) }}"
+    _bool_keys: >-
+      {{ dxdfir_lane_contract.env | default({}) | dict2items
+         | selectattr('value.type', 'defined') | selectattr('value.type', 'equalto', 'bool')
+         | map(attribute='key') | list }}
+    _bools: "{{ _env | dict2items | selectattr('key', 'in', _bool_keys) | list }}"
+    _strings: >-
+      {{ _env | dict2items | rejectattr('key', 'in', _bool_keys)
+         | rejectattr('value', 'none') | rejectattr('value', 'equalto', '') | list }}
+    _env_kv: >-
+      {{ (_bools | map(attribute='key')
+          | zip(_bools | map(attribute='value') | map('bool') | map('ternary', '1', '0'))
+          | map('join', '=') | list)
+         + (_strings | map(attribute='key')
+            | zip(_strings | map(attribute='value') | map('string'))
+            | map('join', '=') | list) }}
+    _mounts: "{{ dxdfir_lane_spec.mounts | default([]) }}"
+    _binds: >-
+      {{ _mounts | map(attribute='host')
+         | zip(_mounts | map(attribute='path'), _mounts | map(attribute='mode'))
+         | map('join', ':') | list }}
+    _tmpfs_paths: >-
+      {{ (['/tmp'] + (dxdfir_lane_contract.mounts | default([])
+                      | selectattr('mode', 'equalto', 'rw')
+                      | rejectattr('required', 'equalto', true)
+                      | map(attribute='path') | reject('match', '^/dev/') | list))
+         | difference(_mounts | map(attribute='path') | list) | unique }}
+    _tmpfs: "{{ _tmpfs_paths | map('regex_replace', '$', ':' ~ dxdfir_lane_tmpfs_opts) | list }}"
+    _gids: >-
+      {{ dxdfir_lane_ro_stats.results | map(attribute='stat.gid') | map('string')
+         | reject('equalto', '0') | unique | list }}
+    _network: >-
+      {{ (dxdfir_lane_spec.network | default(false) | bool)
+         and (dxdfir_lane_contract.network | default('none') == 'optional') }}
+    _image: "{{ dxdfir_lane_spec.image | default(dxdfir_lane_contract.image, true) }}"
+    _subtool: "{{ dxdfir_lane_spec.subtool | default('') }}"
+  ansible.builtin.set_fact:
+    dxdfir_lane_runs_built: >-
+      {{ dxdfir_lane_runs_built + [{
+           'name': dxdfir_lane_spec.name,
+           'tool': dxdfir_lane_contract.tool,
+           'image': _image,
+           'mounts': _mounts,
+           'argv': ['docker', 'run', '--rm'] + dxdfir_lane_confinement
+                   + (['--tmpfs'] | product(_tmpfs) | flatten)
+                   + ([] if _network | bool else ['--network', 'none'])
+                   + (['--group-add'] | product(_gids) | flatten)
+                   + (['--entrypoint', dxdfir_lane_spec.entrypoint] if dxdfir_lane_spec.entrypoint is defined else [])
+                   + (['-v'] | product(_binds) | flatten)
+                   + (['-e'] | product(_env_kv) | flatten)
+                   + [_image]
+                   + ([_subtool] if _subtool | length > 0 else [])
+                   + (dxdfir_lane_spec.args | default([])),
+         }] }}

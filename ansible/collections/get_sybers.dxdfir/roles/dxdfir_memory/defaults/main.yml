@@ -18,19 +18,20 @@ dxdfir_memory_out_dir: "{{ dxdfir_memory_repo_root }}/data_store/processed/memor
 # PDB/symbol cache (mounted at /symbols). MemProcFS fetches PDB symbols from the
 # Microsoft symbol server on first use — pre-seed this on an isolated host.
 dxdfir_memory_symbols_dir: "{{ dxdfir_memory_repo_root }}/data_store/dependencies/memprocfs-symbols"
-# The self-orchestrating, env-driven anamnesis image (pure-Go memory forensics on
-# MemProcFS — no Volatility, no Python). ansible runs it directly — no processor
-# module. Built from docker/GoDFIR-toolz/anamnesis at the sources.yml pin
-# (dxdfir build-docker).
-dxdfir_memory_image: "get-sybers/anamnesis:latest"
+# The tool contract the lane is driven from — the single source of truth for the
+# anamnesis image's env vars and mounts (the self-orchestrating, env-driven
+# pure-Go memory forensics engine on MemProcFS). Built from
+# docker/GoDFIR-toolz/anamnesis at the sources.yml pin (dxdfir build-docker).
+dxdfir_memory_contract: "{{ dxdfir_memory_repo_root }}/docker/GoDFIR-toolz/anamnesis/contract.yml"
+# Empty = the contract's image (get-sybers/anamnesis:latest); set to pin a digest.
+dxdfir_memory_image: ""
 # Allow the container network for PDB symbol fetch — the ONE legitimate network
 # need; default fully offline (pre-seed the symbols dir instead).
 dxdfir_memory_symbols_online: false
 dxdfir_memory_force: false
+# Comma-separated collector names (ANAMNESIS_PLUGINS); empty = the default CAR set.
+dxdfir_memory_plugins: ""
 # There is no processor module, but the shared image supply-chain guard still runs
 # python3 -m get_sybers_dxdfir.images --require <image>, so the package must be on
 # PYTHONPATH. In-repo runs use this; a deployed run installs the package instead.
 dxdfir_memory_python_path: "{{ dxdfir_memory_repo_root }}/python"
-
-# tasks/main.yml builds dxdfir_memory_argv (the confined `docker run`) after
-# stat'ing the evidence mount for its --group-add gid; it can't be a static default.

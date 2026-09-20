@@ -1,46 +1,62 @@
 # Processing lanes
 
 A **lane** processes one family of evidence with one specialist tool. There are six.
-Each is an Ansible role that delegates the run to a shared skeleton and calls a Python
-processor, which runs a hardened container and writes deterministic output.
+Each is an Ansible role that declares one or more runs of a
+[GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) tool image and delegates
+them to a shared skeleton, which builds each confined `docker run` purely from the
+tool's `contract.yml` — `-e` for its environment variables, `-v` for its mounts —
+and gates on the single JSON summary line the container prints. The container
+discovers its inputs, batches over them, skips items that already have valid output
+and writes deterministic output; no host-side processor exists.
 
 `dxdfir process [COLLECTION] [LANE]` picks the lane; `all` runs every lane that has
 evidence. See the [command reference](../getting-started/commands.md#processing).
 
 ## The six lanes
 
-| Lane | Evidence in | Tool | Container | Output under `data_store/processed/` |
+| Lane | Evidence in | Tool | Container(s) | Output under `data_store/processed/` |
 |---|---|---|---|---|
-| **zeek** | Packet captures (`data_store/raw/pcaps`) | Zeek → JSON logs | `get-sybers/zeek` | `zeek/<capture>/*.json` |
-| **evtx** | Windows event logs (`raw/logs/winevt`, or pulled from disk images) | [goevtx](https://github.com/Get-Sybers/GoDFIR-toolz) (static-Go `.evtx` parser) + Hayabusa Sigma | `get-sybers/goevtx` | `windows_logs/<host>/*_EvtxECmd_Output.json` |
-| **memory** | Memory images (`raw/memory`) | [anamnesis](https://github.com/Get-Sybers/Anamnesis) (MemProcFS) | `get-sybers/anamnesis` | `memory/<image>/plugins/*.jsonl` |
-| **plaso** | Disk images + VM exports (`raw/disk_images`, `raw/VM_files`) | Plaso (`log2timeline` → `psort`) | `get-sybers/plaso` | `log2timeline/<host>.jsonl` |
-| **godfir-toolz** | Same disk-image family | [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) parsers (gore, gomft, goese, goprefetch…) | `get-sybers/<tool>` + `get-sybers/plaso` for extraction | `godfir-toolz/<host>/` |
-| **signatures** | PCAPs · disk · memory · `.evtx` | YARA · Suricata replay · Hayabusa Sigma (three sub-lanes) | `get-sybers/yara`, `get-sybers/suricata` | `signatures/<sub-lane>/` |
+| **zeek** | Packet captures (`data_store/raw/pcaps`) | Zeek → JSON logs | `get-sybers/zeek` | `zeek/<capture>/*.json` + `zeek.jsonl` |
+| **evtx** | Windows event logs (`raw/logs/winevt`, or exported from disk images by the plaso image) | [goevtx](https://github.com/Get-Sybers/GoDFIR-toolz) (static-Go `.evtx` parser) | `get-sybers/goevtx` (+ `get-sybers/plaso` for the export) | `windows_logs/<log>/goevtx.jsonl` |
+| **memory** | Memory images (`raw/memory`) | [anamnesis](https://github.com/Get-Sybers/Anamnesis) (MemProcFS) | `get-sybers/anamnesis` | `memory/<image>/plugins/*.jsonl` + `car.db` |
+| **plaso** | Disk images + VM exports (`raw/disk_images`, `raw/VM_files`) | Plaso (`log2timeline` → `psort` sub-tools) | `get-sybers/plaso` | `log2timeline/storage/<source>/<source>.plaso`, `log2timeline/jsonl/<source>/timeline.jsonl` |
+| **godfir-toolz** | Same disk-image family | [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) parsers (gore, gomft, goese, goprefetch…) over the plaso image's artefact export | `get-sybers/<tool>` + `get-sybers/plaso` for the export | `godfir-toolz/<tool>/<item>/<tool>.jsonl` |
+| **signatures** | loose files · memory · PCAPs · `.evtx` · disk images | YARA · Suricata replay · Hayabusa Sigma · gomount→goyara disk scan (four sub-tools of one image) | `get-sybers/signatures` | `detections/<sub-tool>/<item>/` |
 
-Evidence is discovered by **magic bytes first**, extension as a fallback — so a
-mislabelled `.pcap` is still recognised. Every tool runs in a
-[hardened container](../Containers.md): fixed non-root user, no network, read-only
-rootfs.
+Each tool discovers its items by **content first** (magic bytes / signatures),
+extension as a fallback — so a mislabelled `.pcap` is still recognised. Every tool
+runs in a [hardened container](../Containers.md): fixed non-root user, no network,
+read-only rootfs.
 
 ## The shared lane skeleton
 
 Each lane role (`dxdfir_zeek`, `dxdfir_evtx`, …) carries only its own per-lane piece —
-asserting its inputs and building the processor argv — then delegates the run to the
-shared **`dxdfir_lane`** role. That skeleton is the same for every lane:
+asserting its inputs and declaring its runs (`{contract, subtool, env, mounts}`) —
+then delegates to the shared **`dxdfir_lane`** role. That skeleton is the same for
+every lane:
 
 ```
-preflight ──▶ process ──▶ verify/gate
-    │            │              │
- docker up?   run the       assert failed == 0,
- inputs?      processor,     find output on disk,
- image ok?    changed_when   surface the JSON summary
-             from summary    on failure (rescue)
+build ──────────▶ preflight ──────▶ process ──────▶ verify/gate
+  │                  │                 │                │
+ read the         docker up?      run each          assert failed == 0,
+ contract,        image built +   container in      find output on disk,
+ assert the       hardened?       order; changed    surface every summary
+ spec fits it,                    when its summary  + stderr on failure
+ build the                        says processed>0  (rescue)
+ confined argv
 ```
+
+The confinement every run gets: `--cap-drop ALL --security-opt no-new-privileges
+--pids-limit 512 --read-only`, a tmpfs for `/tmp` and every optional read-write
+mount the contract declares (the tool's `/work` scratch), `--network none` unless
+the contract allows it and the lane asks, and `--group-add` for the group owning
+each read-only evidence mount. The contract's exit table is honoured: 0 success,
+1 nothing to do, 3 partial (judged by the summary line and the lane's gate), 2
+config error (fails).
 
 This is the house rule in action: **the role groups, the playbook decides, and
-idempotence lives in the Python processor** — a source whose output already exists is
-skipped in the processor, not in an Ansible `when:`. See
+idempotence lives in the tool container** — an item whose output already exists is
+skipped by the tool, not in an Ansible `when:`. See
 [Ansible standards](../reference/ansible-standards.md).
 
 ## Output

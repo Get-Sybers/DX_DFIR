@@ -1,10 +1,12 @@
 ---
-# dxdfir_zeek: PCAPs -> Zeek JSON. The role GROUPS; the playbook DECIDES.
-# NOTE: a first run that processes new captures is legitimately changed=true; a
-# second immediate run is changed=false (captures with output are skipped). That
-# skip lives in the Python processor, not in a task's `when:`. This role asserts
-# its own input rules, then delegates the shared preflight + process skeleton to
-# dxdfir_lane.
+# dxdfir_zeek: PCAPs -> Zeek JSON. The role GROUPS; the playbook DECIDES. The
+# lane runs the self-orchestrating get-sybers/zeek image directly from its
+# contract (docker/GoDFIR-toolz/zeek/contract.yml): zeek-run discovers every
+# capture under /input, parses each into its own /output folder and skips a
+# capture that already has valid output unless ZEEK_FORCE. A first run that
+# processes new captures is legitimately changed=true; a second immediate run is
+# changed=false. This role asserts its own input rules and declares the run, then
+# delegates the shared build + preflight + process skeleton to dxdfir_lane.
 
 - name: "zeek | assert inputs"
   ansible.builtin.assert:
@@ -16,28 +18,22 @@
     quiet: true
   tags: [always]
 
-# role_path resolves to THIS role here — capture the lane-specific gate file so
-# dxdfir_lane includes zeek's output gate, not its own.
-- name: "zeek | resolve lane-specific task paths"
-  ansible.builtin.set_fact:
-    dxdfir_zeek_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
-  tags: [always]
-
-# Output lands under the resolved dxdfir_zeek_out_dir default — the shared
-# tasks only consume it.
 - name: "zeek | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
     name: dxdfir_lane
   vars:
     dxdfir_lane_name: zeek
-    dxdfir_lane_module: get_sybers_dxdfir.zeek
     dxdfir_lane_python_path: "{{ dxdfir_zeek_python_path }}"
-    dxdfir_lane_images: ["{{ dxdfir_zeek_image }}"]
-    dxdfir_lane_input_checks:
-      - name: pcap dir
-        path: "{{ dxdfir_zeek_pcap_dir }}"
-    dxdfir_lane_argv: "{{ dxdfir_zeek_argv }}"
+    dxdfir_lane_runs:
+      - name: zeek
+        contract: "{{ dxdfir_zeek_contract }}"
+        image: "{{ dxdfir_zeek_image }}"
+        env:
+          ZEEK_FORCE: "{{ dxdfir_zeek_force }}"
+          ZEEK_SCRIPTS: "{{ dxdfir_zeek_scripts }}"
+        mounts:
+          - {host: "{{ dxdfir_zeek_pcap_dir }}", path: /input, mode: ro}
+          - {host: "{{ dxdfir_zeek_out_dir }}", path: /output, mode: rw}
     dxdfir_lane_verify_dir: "{{ dxdfir_zeek_out_dir }}"
     dxdfir_lane_verify_glob: "*.json"
-    dxdfir_lane_gate_extra: "{{ dxdfir_zeek_gate_extra }}"
   tags: [always]

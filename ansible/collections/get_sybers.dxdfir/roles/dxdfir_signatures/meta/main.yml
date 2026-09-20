@@ -4,9 +4,9 @@ galaxy_info:
   namespace: get_sybers
   author: Get-Sybers
   description: >-
-    Run the YARA, Suricata and Hayabusa detection lanes over the evidence and land
-    their native events as JSON Lines. Invokes the
-    get_sybers_dxdfir.signatures Python processor; one <lane>/ folder of detections.
+    Run the YARA, Suricata, Hayabusa and disk-scan detection sub-tools of the
+    get-sybers/signatures image over the evidence, from its contract; one
+    <subtool>/ folder of detection JSON Lines.
   company: Get-Sybers
   license: MIT
   min_ansible_version: "2.15"

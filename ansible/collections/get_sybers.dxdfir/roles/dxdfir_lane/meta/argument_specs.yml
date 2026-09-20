@@ -1,49 +1,57 @@
 ---
 argument_specs:
   main:
-    short_description: "Shared preflight + process skeleton for a hardened DFIR tool lane."
+    short_description: "Shared build + preflight + process skeleton for a hardened DFIR tool lane."
     description:
       - >-
         Runs the invariant lane skeleton so it lives once instead of copy-pasted per
-        tool: preflight (docker reachable, each declared input dir exists, the
-        processor module imports, every get-sybers/* tool image passes the hardened
-        supply-chain guard) and the process block/rescue (run the processor argv,
-        verify output on disk, assert failed==0 plus the lane's own gate, and on any
-        failure surface the processor's JSON summary + stderr as one diagnostic).
+        tool. build turns each declared run into a confined `docker run` from the
+        tool's contract.yml (-e for each env override, -v for each mount, behind
+        cap-drop ALL / no-new-privileges / pids-limit / read-only rootfs / tmpfs
+        scratch / no network / --group-add for the evidence group). preflight
+        checks the docker daemon, self-heals missing get-sybers/* images and runs
+        the hardened supply-chain guard on every image. process creates the
+        read-write mounts, runs each container in order, parses its single JSON
+        summary line, verifies output on disk, asserts failed==0 and the output
+        gate, and on any failure surfaces every run's summary + stderr as one
+        diagnostic.
       - >-
-        A per-tool lane role asserts its own input rules and builds the interface
-        vars below, then delegates here via include_role.
+        A per-tool lane role asserts its own input rules and declares its runs,
+        then delegates here via include_role.
     options:
       dxdfir_lane_name:
         type: str
         required: false
         default: lane
         description: "Short lane token used in task names and diagnostics (e.g. evtx)."
-      dxdfir_lane_module:
-        type: str
-        required: true
-        description: "Python module the preflight import-checks (e.g. get_sybers_dxdfir.evtx)."
       dxdfir_lane_python_path:
         type: str
         required: false
-        description: "PYTHONPATH for the in-repo processor run and module import check."
-      dxdfir_lane_images:
-        type: list
-        elements: str
-        required: false
-        default: []
-        description: "Tool images to require via the hardened supply-chain guard (only get-sybers/* are checked)."
-      dxdfir_lane_input_checks:
+        description: "PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images)."
+      dxdfir_lane_runs:
         type: list
         elements: dict
-        required: false
-        default: []
-        description: "Input dirs that must exist before processing, each {name, path}."
-      dxdfir_lane_argv:
+        required: true
+        description: >-
+          The runs of the lane, in order — one tool container each:
+          {name, contract, image?, subtool?, env{}, mounts[{host, path, mode}],
+          network?}. See defaults/main.yml for the full field reference.
+      dxdfir_lane_confinement:
         type: list
         elements: str
-        required: true
-        description: "The processor command argv — the one genuinely per-lane piece."
+        required: false
+        description: "The docker run confinement flags applied to every run."
+      dxdfir_lane_tmpfs_opts:
+        type: str
+        required: false
+        default: "rw,nosuid,nodev,exec,size=1g"
+        description: "tmpfs options for /tmp and every unbound optional read-write contract mount."
+      dxdfir_lane_exit_ok:
+        type: list
+        elements: int
+        required: false
+        default: [0, 1, 3]
+        description: "Exit codes a run may return without failing the lane (the contract's 0/1/3)."
       dxdfir_lane_verify_dir:
         type: str
         required: false
@@ -51,24 +59,18 @@ argument_specs:
       dxdfir_lane_verify_glob:
         type: str
         required: false
-        description: "Glob proving output (empty => skip the on-disk verify step)."
+        description: "Glob proving output (empty => skip the on-disk verify step and the default gate)."
       dxdfir_lane_gate_extra:
         type: str
         required: false
         description: >-
           Optional lane-specific output-gate task file (absolute path) with the
-          lane's own assert on the run summary + on-disk verification, included at
-          the end of the process block.
+          lane's own assert on the run summaries + on-disk verification, included
+          at the end of the process block instead of the default gate.
       dxdfir_lane_require_no_failures:
         type: bool
         required: false
         default: true
         description: >-
-          Assert the processor reported failed==0. Set false for lanes whose
-          processor tolerates per-item failures (exits 0 with failed>0).
-      dxdfir_lane_preflight_extra:
-        type: str
-        required: false
-        description: >-
-          Optional lane-specific preflight task file (absolute path), included after
-          the input-dir asserts and before the module/image guards.
+          Assert every run reported failed==0. Set false for lanes whose tools
+          tolerate per-item failures (exit 3, partial).

@@ -1,26 +1,69 @@
 ---
-# Shared processing skeleton for every hardened tool lane (was copy-pasted into
-# each lane's tasks/process.yml). The three steps run as ONE guarded unit: on any
-# failure the rescue surfaces the processor's own JSON summary + stderr as one
-# clear diagnostic instead of a raw traceback, then fails the play (no
-# half-configured silence). In check mode the command is skipped, so the gate on
-# its output is too.
+# Shared processing skeleton for every hardened tool lane. The steps run as ONE
+# guarded unit: on any failure the rescue surfaces each run's own JSON summary
+# line + stderr as one clear diagnostic instead of a raw traceback, then fails
+# the play (no half-configured silence). In check mode the containers are
+# skipped, so the gates on their output are too.
 #
-# The calling lane supplies: dxdfir_lane_argv (the processor command — the one
-# genuinely per-lane piece), dxdfir_lane_python_path, the output dir + glob to
-# verify (dxdfir_lane_verify_dir / dxdfir_lane_verify_glob), and an optional
-# lane-specific output gate (dxdfir_lane_gate_extra) — a task file that asserts on
-# the run's JSON summary (dxdfir_lane_run.stdout) and the verification
-# (dxdfir_lane_verify).
+# Each run is one contract-driven container (dxdfir_lane_runs_built, from
+# tasks/build.yml); the tool prints exactly one JSON summary line on stdout and
+# exits by the uniform table (0 ok, 1 nothing, 2 config error, 3 partial). The
+# calling lane supplies the output dir + glob to verify and, optionally, its own
+# output gate (dxdfir_lane_gate_extra).
 - name: "process | run, verify and gate | {{ dxdfir_lane_name }}"
   block:
-    - name: "process | run the processor | {{ dxdfir_lane_name }}"
+    # The tools run as the image's non-root uid (2000) and write into their
+    # bind-mounted output, so every read-write mount must exist and be writable
+    # by it. The read-only evidence mounts are never touched (see --group-add).
+    - name: "process | ensure each read-write mount is container-writable | {{ dxdfir_lane_name }}"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0777"
+      loop: >-
+        {{ dxdfir_lane_runs_built | map(attribute='mounts') | flatten
+           | selectattr('mode', 'equalto', 'rw') | map(attribute='host') | unique | list }}
+
+    # The containers are run without self-judgement: the registered result is a
+    # list (one entry per run under .results), and the verdict is taken over
+    # that list explicitly below — every run against the contract's exit table,
+    # the lane's changed state from every summary line — so no condition ever
+    # reads a single .rc/.stdout off the looped register.
+    - name: "process | run the tool container | {{ dxdfir_lane_name }}"
       ansible.builtin.command:
-        argv: "{{ dxdfir_lane_argv }}"
-      environment:
-        PYTHONPATH: "{{ dxdfir_lane_python_path }}"
-      register: dxdfir_lane_run
-      changed_when: (dxdfir_lane_run.stdout | from_json).processed | int > 0
+        argv: "{{ item.argv }}"
+      loop: "{{ dxdfir_lane_runs_built }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: dxdfir_lane_results
+      changed_when: false
+      failed_when: false
+
+    # The contract's uniform exit table, per run: 0 success and 1 nothing to do
+    # pass here, 3 partial passes here and is judged by the summary line below,
+    # 2 config error (or anything outside the table — docker itself failing)
+    # fails the lane naming the run.
+    - name: "process | judge each run by the contract exit table | {{ dxdfir_lane_name }}"
+      ansible.builtin.assert:
+        that:
+          - item.rc | int in dxdfir_lane_exit_ok
+        fail_msg: >-
+          {{ dxdfir_lane_name }}/{{ item.item.name }} exited {{ item.rc }} —
+          not in the contract's exit table {{ dxdfir_lane_exit_ok }}
+          (2 = config error). stderr: {{ item.stderr | default('') | trim | truncate(800) }}
+        quiet: true
+      loop: "{{ dxdfir_lane_results.results }}"
+      loop_control:
+        label: "{{ item.item.name }} rc={{ item.rc }}"
+      when: dxdfir_lane_results is not skipped
+
+    # One JSON summary line per run; the lane changed when any run processed
+    # something (an idempotent rerun skips every item and reports processed 0).
+    - name: "process | collect the summary lines | {{ dxdfir_lane_name }}"
+      ansible.builtin.set_fact:
+        dxdfir_lane_summaries: "{{ dxdfir_lane_results.results | map(attribute='stdout') | map('from_json') | list }}"
+      changed_when: dxdfir_lane_summaries | map(attribute='processed') | map('int') | sum > 0
+      when: dxdfir_lane_results is not skipped
 
     - name: "process | verify output on disk | {{ dxdfir_lane_name }}"
       ansible.builtin.find:
@@ -30,31 +73,48 @@
       register: dxdfir_lane_verify
       when: dxdfir_lane_verify_glob | length > 0
 
-    - name: "process | assert no processor failures | {{ dxdfir_lane_name }}"
+    - name: "process | assert no tool failures | {{ dxdfir_lane_name }}"
       when:
-        - dxdfir_lane_run is not skipped
+        - dxdfir_lane_results is not skipped
         - dxdfir_lane_require_no_failures | bool
       ansible.builtin.assert:
         that:
-          - (dxdfir_lane_run.stdout | from_json).failed | int == 0
+          - dxdfir_lane_summaries | map(attribute='failed') | map('int') | sum == 0
         fail_msg: >-
-          {{ dxdfir_lane_name }} reported processor failures — see the summary above.
+          {{ dxdfir_lane_name }} reported item failures — see the summaries above.
         quiet: true
 
-    # Lane-specific output gate: a trusted, literal assert in the lane's own file
-    # (e.g. evtx's "produced JSON unless there were no logs"), with dxdfir_lane_run +
-    # dxdfir_lane_verify in scope. Kept in the lane — NOT passed as an expression
-    # string — because ansible-core rejects evaluating variable-sourced templates
-    # in `that:` (template-injection guard).
+    # Default output gate: something landed on disk, UNLESS every run genuinely
+    # had nothing to do (inputs == 0 across the lane). A lane with its own gate
+    # (dxdfir_lane_gate_extra) replaces this with a trusted literal assert in its
+    # own file — kept as a task, not an expression string, because ansible-core
+    # rejects evaluating variable-sourced templates in `that:`.
+    - name: "process | output gate | {{ dxdfir_lane_name }}"
+      when:
+        - dxdfir_lane_results is not skipped
+        - dxdfir_lane_verify_glob | length > 0
+        - dxdfir_lane_gate_extra | length == 0
+      ansible.builtin.assert:
+        that:
+          - >-
+            dxdfir_lane_verify.matched | int > 0
+            or (dxdfir_lane_summaries | map(attribute='inputs') | map('int') | sum) == 0
+        fail_msg: >-
+          {{ dxdfir_lane_name }} produced no output though inputs were present.
+        quiet: true
+
     - name: "process | lane output gate | {{ dxdfir_lane_name }}"
       ansible.builtin.include_tasks: "{{ dxdfir_lane_gate_extra }}"
       when:
-        - dxdfir_lane_run is not skipped
+        - dxdfir_lane_results is not skipped
         - dxdfir_lane_gate_extra | length > 0
   rescue:
-    - name: "process | surface processor diagnostics | {{ dxdfir_lane_name }}"
+    - name: "process | surface tool diagnostics | {{ dxdfir_lane_name }}"
       ansible.builtin.fail:
         msg: >-
           dxdfir_{{ dxdfir_lane_name }} processing failed.
-          Summary: {{ dxdfir_lane_run.stdout | default('(no summary emitted)') | trim }}
-          Stderr: {{ dxdfir_lane_run.stderr | default('') | trim | truncate(1000) }}
+          {% for r in dxdfir_lane_results.results | default([]) %}
+          [{{ r.item.name }} rc={{ r.rc | default('?') }}]
+          summary: {{ r.stdout | default('(no summary emitted)') | trim | truncate(600) }}
+          stderr: {{ r.stderr | default('') | trim | truncate(800) }}
+          {% endfor %}

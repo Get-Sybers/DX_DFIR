@@ -23,11 +23,20 @@ argument_specs:
         type: str
         required: false
         description: "PDB/symbol cache (mounted at /symbols); pre-seed when offline."
+      dxdfir_memory_contract:
+        type: str
+        required: false
+        description: "The anamnesis contract.yml the lane is driven from (default docker/GoDFIR-toolz/anamnesis/contract.yml)."
       dxdfir_memory_image:
         type: str
         required: false
-        default: "get-sybers/anamnesis:latest"
-        description: "The self-orchestrating, env-driven anamnesis (MemProcFS) image the lane docker-runs directly."
+        default: ""
+        description: "Image ref overriding the contract's (get-sybers/anamnesis:latest); e.g. a digest pin."
+      dxdfir_memory_plugins:
+        type: str
+        required: false
+        default: ""
+        description: "Comma-separated collector names (ANAMNESIS_PLUGINS); empty = the default CAR set."
       dxdfir_memory_python_path:
         type: str
         required: false

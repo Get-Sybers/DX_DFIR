@@ -1,16 +1,17 @@
 ---
 # dxdfir_memory: memory images -> per-plugin JSONL. The role GROUPS; the
-# playbook DECIDES. The lane now runs the self-orchestrating, env-driven
-# get-sybers/anamnesis image DIRECTLY (no processor module, no vendored submodule):
-# it discovers images, runs the CAR collector set over each with a native
-# MemProcFS engine (no Volatility, no Python), is idempotent per plugin, and emits
-# the summary the gate reads. (The lane is named "memory" after the evidence it
-# processes; the engine underneath is anamnesis.)
+# playbook DECIDES. The lane runs the self-orchestrating, env-driven
+# get-sybers/anamnesis image directly from its contract
+# (docker/GoDFIR-toolz/anamnesis/contract.yml): it discovers images, runs the CAR
+# collector set over each with a native MemProcFS engine (no Volatility, no
+# Python), is idempotent per plugin, and emits the summary the gate reads. (The
+# lane is named "memory" after the evidence it processes; the engine underneath
+# is anamnesis.)
 # Per-plugin failures are NORMAL (Windows plugins error without symbols), so
 # dxdfir_lane_require_no_failures=false and the gate is purely "some plugin produced
 # output, or there were no images".
 
-- name: "memory |assert inputs"
+- name: "memory | assert inputs"
   ansible.builtin.assert:
     that:
       - dxdfir_memory_memory_dir | length > 0
@@ -21,71 +22,35 @@
   tags: [always]
 
 # role_path resolves to THIS role here — capture the lane-specific output gate so
-# dxdfir_lane includes memory's gate, not its own.
-- name: "memory |resolve lane-specific task paths"
+# dxdfir_lane includes memory's gate, not its default one.
+- name: "memory | resolve lane-specific task paths"
   ansible.builtin.set_fact:
     dxdfir_memory_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
   tags: [always]
 
-# The container runs as the image's non-root uid (2000) and writes the per-plugin
-# JSONL to /out and caches fetched PDB symbols in /symbols, so both host dirs must
-# be writable by it. We do NOT chmod the read-only evidence mount (see --group-add).
-- name: "memory |ensure the output + symbols dirs are container-writable"
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    mode: "0777"
-  loop:
-    - "{{ dxdfir_memory_out_dir }}"
-    - "{{ dxdfir_memory_symbols_dir }}"
-  tags: [always]
-
-# The read-only evidence mount is owned by whatever group staged it (data_store is
-# root:docker 750 on a hardened host); grant the container that group so uid 2000
-# can read it without running as root — exactly what the python container helper did.
-- name: "memory |stat the memory dir for the container read-group"
-  ansible.builtin.stat:
-    path: "{{ dxdfir_memory_memory_dir }}"
-  register: dxdfir_memory_mem_stat
-  tags: [always]
-
-# The confined `docker run` — the same posture container.run applied for the python
-# lanes (cap-drop ALL, no-new-privileges, pids-limit, read-only rootfs + /tmp tmpfs,
-# no network unless symbols-online). Config is passed as ANAMNESIS_* env vars; mounts
-# land at the container's defaults (/mem ro, /out, /symbols).
-- name: "memory |build the confined docker run for get-sybers/anamnesis"
-  ansible.builtin.set_fact:
-    dxdfir_memory_argv: >-
-      {{ ['docker', 'run', '--rm',
-          '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
-          '--pids-limit', '512', '--read-only',
-          '--tmpfs', '/tmp:rw,nosuid,nodev,exec,size=1g']
-       + ([] if dxdfir_memory_symbols_online | bool else ['--network', 'none'])
-       + (['--group-add', dxdfir_memory_mem_stat.stat.gid | string]
-          if (dxdfir_memory_mem_stat.stat.gid | default(0) | string) != '0' else [])
-       + ['-v', dxdfir_memory_memory_dir ~ ':/mem:ro',
-          '-v', dxdfir_memory_out_dir ~ ':/out',
-          '-v', dxdfir_memory_symbols_dir ~ ':/symbols',
-          '-e', 'ANAMNESIS_FORCE=' ~ (1 if dxdfir_memory_force | bool else 0),
-          '-e', 'ANAMNESIS_SYMBOLS_ONLINE=' ~ (1 if dxdfir_memory_symbols_online | bool else 0),
-          dxdfir_memory_image] }}
-  tags: [always]
-
-- name: "memory |run the shared tool-lane skeleton"
+# One run: the anamnesis contract's env (ANAMNESIS_*) and mounts (/mem ro,
+# /out, /symbols) — dxdfir_lane builds the confined `docker run` from them.
+# The container network stays off unless symbols-online (the contract's one
+# `network: optional` case).
+- name: "memory | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
     name: dxdfir_lane
   vars:
     dxdfir_lane_name: memory
-    # No processor module — ansible runs the container directly; the import check
-    # in the shared preflight is skipped when this is empty. The python path is
-    # still needed for the image supply-chain guard (get_sybers_dxdfir.images).
-    dxdfir_lane_module: ""
     dxdfir_lane_python_path: "{{ dxdfir_memory_python_path }}"
-    dxdfir_lane_images: ["{{ dxdfir_memory_image }}"]
-    dxdfir_lane_input_checks:
-      - name: memory dir
-        path: "{{ dxdfir_memory_memory_dir }}"
-    dxdfir_lane_argv: "{{ dxdfir_memory_argv }}"
+    dxdfir_lane_runs:
+      - name: anamnesis
+        contract: "{{ dxdfir_memory_contract }}"
+        image: "{{ dxdfir_memory_image }}"
+        env:
+          ANAMNESIS_FORCE: "{{ dxdfir_memory_force }}"
+          ANAMNESIS_SYMBOLS_ONLINE: "{{ dxdfir_memory_symbols_online }}"
+          ANAMNESIS_PLUGINS: "{{ dxdfir_memory_plugins }}"
+        mounts:
+          - {host: "{{ dxdfir_memory_memory_dir }}", path: /mem, mode: ro}
+          - {host: "{{ dxdfir_memory_out_dir }}", path: /out, mode: rw}
+          - {host: "{{ dxdfir_memory_symbols_dir }}", path: /symbols, mode: rw}
+        network: "{{ dxdfir_memory_symbols_online }}"
     dxdfir_lane_verify_dir: "{{ dxdfir_memory_out_dir }}"
     dxdfir_lane_verify_glob: "*.jsonl"
     dxdfir_lane_require_no_failures: false

@@ -7,11 +7,13 @@ argument_specs:
         Normalises every processed source into the MITRE CAR data model via the
         external Byakugan engine, which runs entirely inside the hardened
         get-sybers/byakugan container (cloned + built at the repo-root
-        sources.yml pin). Three actions selected by dxdfir_byakugan_action: build
-        (per-source car.db + superset.db + car_<object>.jsonl +
-        car_relationships.jsonl), verify (the CAR correctness promotion gate) and
-        timeline (one property-rich, time-ordered CAR timeline). A pure-Python
-        seam (mitrecar/carcheck) shells the engine image.
+        sources.yml pin) and is driven from its contract by the shared
+        dxdfir_lane skeleton. Three actions selected by dxdfir_byakugan_action:
+        build (`byakugan build`: per-source car.db + car_<object>.jsonl +
+        car_relationships.jsonl, superset.db with the derive pass), verify (the
+        engine's own byakugan.verify correctness gate over the tree, mounted
+        read-only) and timeline (`byakugan timeline`: one property-rich,
+        time-ordered CAR timeline).
     options:
       dxdfir_byakugan_action:
         type: str
@@ -26,45 +28,49 @@ argument_specs:
       dxdfir_byakugan_dir:
         type: str
         required: false
-        description: "The materialised CAR tree (default data_store/processed/byakugan)."
-      dxdfir_byakugan_module:
+        description: "The materialised CAR tree the build writes and verify/timeline read (default data_store/processed/byakugan)."
+      dxdfir_byakugan_contract:
         type: str
         required: false
-        default: get_sybers_dxdfir.mitrecar
-        description: "The CAR engine module the preflight import-checks."
+        description: "The byakugan contract.yml the runs are built from (default docker/GoDFIR-toolz/byakugan/contract.yml)."
+      dxdfir_byakugan_image:
+        type: str
+        required: false
+        default: ""
+        description: "Image ref overriding the contract's (get-sybers/byakugan:latest); e.g. a digest pin."
       dxdfir_byakugan_python_path:
         type: str
         required: false
-        description: "PYTHONPATH to the get_sybers_dxdfir package (in-repo/dev runs)."
+        description: "PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); in-repo runs."
       dxdfir_byakugan_rebuild:
         type: bool
         required: false
         default: false
-        description: "build: rebuild CAR stores that already exist (maps to the engine's --force)."
-      dxdfir_byakugan_in:
-        type: str
+        description: "build: rebuild sources whose car.db already exists (BYAKUGAN_BUILD_FORCE)."
+      dxdfir_byakugan_derive:
+        type: bool
         required: false
-        description: "build (single-source): one processed file/dir -> one car.db. Empty => batch."
-      dxdfir_byakugan_out:
-        type: str
+        default: false
+        description: "build: also run the derived relationship pass into superset.db (BYAKUGAN_BUILD_DERIVE)."
+      dxdfir_byakugan_stix:
+        type: bool
         required: false
-        description: "build: output dir (single-source: this source's car dir; batch: the car/ root)."
-      dxdfir_byakugan_host:
-        type: str
-        required: false
-        description: "build (single-source): fallback source_host where the map derives none."
-      dxdfir_byakugan_artefacts:
-        type: str
-        required: false
-        description: "build (single-source): comma-separated artefact map keys (default: route by filename)."
+        default: false
+        description: "build: also derive the STIX 2.1 bundle from the finished stores (BYAKUGAN_BUILD_STIX)."
       dxdfir_byakugan_timeline_dir:
         type: str
         required: false
         description: "timeline: a source's car dir, or a tree to aggregate (default the whole car tree)."
-      dxdfir_byakugan_timeline_out:
+      dxdfir_byakugan_timeline_out_dir:
         type: str
         required: false
-        description: "timeline: output path (default <car_dir>/timeline.jsonl)."
+        default: ""
+        description: "timeline: the directory timeline.jsonl is written to (empty = the timeline dir itself)."
+      dxdfir_byakugan_timeline_force:
+        type: bool
+        required: false
+        default: false
+        description: "timeline: rewrite an existing timeline.jsonl (BYAKUGAN_TIMELINE_FORCE)."
       dxdfir_byakugan_timeline_host:
         type: str
         required: false

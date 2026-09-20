@@ -5,9 +5,9 @@ galaxy_info:
   author: Get-Sybers
   description: >-
     Process disk images with the GoDFIR-toolz parsers (gore, gojle, gole,
-    goamcache, goappcompat, gosbe, gorb, gomft) plus goese for SRUM and
-    goprefetch for Prefetch, into per-host artefact output.
-    Invokes the get_sybers_dxdfir.godfir_toolz Python processor; one output dir per host.
+    goamcache, goappcompat, gosbe, gorb, gomft, goese, goprefetch): the plaso
+    image exports the artefact set, each Go tool image runs over it from its
+    contract; one folder per tool and item.
   company: Get-Sybers
   license: MIT
   min_ansible_version: "2.15"

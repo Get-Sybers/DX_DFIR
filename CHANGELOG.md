@@ -7,7 +7,31 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Changed
+- **Every tool lane runs its container from ansible, driven by the tool's
+  GoDFIR-toolz `contract.yml`.** The `dxdfir_lane` skeleton builds each confined
+  `docker run` from the contract (`-e` per declared variable, `-v` per mount) and
+  gates on the container's single JSON summary line; the tools discover, batch
+  and skip their own inputs. Output layouts follow the contracts
+  (`windows_logs/<log>/goevtx.jsonl`, `log2timeline/{storage,jsonl}/<source>/`,
+  `godfir-toolz/<tool>/<item>/`, `detections/<subtool>/<item>/`). The CAR
+  `verify` action runs the engine's `byakugan.verify` through the contracts'
+  argv pass-through until the byakugan contract declares a `verify` sub-tool.
+- `dxdfir build-car` drops the single-source `--in/--host/--artefacts` mode (the
+  contract has no env for it) and gains `--derive` / `--stix`; `--out` names the
+  CAR tree. `dxdfir build-timeline --out-dir DIR` replaces `--out PATH`
+  (`timeline.jsonl` lands beside the stores by default) and gains `--force`.
+
 ### Removed
+- **The Python and shell container wrappers.** `get_sybers_dxdfir.zeek`,
+  `.evtx`, `.plaso`, `.godfir_toolz`, `.imageexport`, `.mitrecar`, `.carcheck`,
+  `.container` and `.signatures.{yara,suricata,hayabusa,__main__}` (with their
+  tests) and the mounted psort output module `dev-scripts/plaso/l2t_json_dxdfir.py`
+  are gone — no host-side code builds a container argv any more. The package
+  keeps the image supply-chain guard (`images`), the ruleset fetchers
+  (`signatures.detectraptor`, `signatures.suricata_rules`), the detection
+  rules-as-code and the STIX exchange. The smoke test drives the lanes with
+  `ansible-playbook`.
 - **SOF-ELK, eradicated.** The Elastic-native stack is the one analysis backend;
   the legacy SOF-ELK path is gone end to end: `docker/sof-elk/` (the from-source
   image + compose stack), the `dxdfir_deploy_sofelk` / `dxdfir_ingest_sofelk`

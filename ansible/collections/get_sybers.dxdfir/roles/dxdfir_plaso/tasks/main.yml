@@ -1,10 +1,14 @@
 ---
-# dxdfir_plaso: disk images / VM exports -> enriched Plaso JSONL. The role GROUPS; the
-# playbook DECIDES. Idempotence (skip images with a .plaso db + recorded output)
-# lives in the Python processor, not in a task's `when:`. This role asserts its own
-# input rules, then delegates the shared preflight + process skeleton to dxdfir_lane.
-# Per-image failures are tolerated (dxdfir_lane_require_no_failures=false), so the
-# gate is purely "some timeline was produced, or there were no sources".
+# dxdfir_plaso: disk images / VM exports / loose trees -> Plaso JSON Lines. The
+# role GROUPS; the playbook DECIDES. The lane drives the multi-tool
+# get-sybers/plaso image from its contract (docker/GoDFIR-toolz/plaso/contract.yml)
+# — `plaso-entry log2timeline` over each source tree into storage/, then
+# `plaso-entry psort` over storage/ into jsonl/ — each sub-tool discovering,
+# batching and skipping its own items (PLASO_<SUBTOOL>_FORCE reruns). Per-image
+# failures are tolerated (dxdfir_lane_require_no_failures=false), so the gate is
+# purely "some timeline was produced, or there were no sources". This role
+# asserts its own input rules and declares the runs, then delegates the shared
+# build + preflight + process skeleton to dxdfir_lane.
 
 - name: "plaso | assert inputs"
   ansible.builtin.assert:
@@ -16,34 +20,80 @@
     quiet: true
   tags: [always]
 
-# role_path resolves to THIS role here — capture the lane-specific preflight +
-# gate files so dxdfir_lane includes plaso's checks (l2t_json output module) and
-# output gate, not its own.
-- name: "plaso | resolve lane-specific task paths"
-  ansible.builtin.set_fact:
-    dxdfir_plaso_preflight_extra: "{{ role_path }}/tasks/preflight_extra.yml"
-    dxdfir_plaso_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
+# The VM-export and loose-artefact trees are optional: a log2timeline run is
+# declared for each that exists.
+- name: "plaso | stat the optional source trees"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ dxdfir_plaso_vm_dir }}"
+    - "{{ dxdfir_plaso_loose_dir }}"
+  when: item | length > 0
+  register: dxdfir_plaso_optional
   tags: [always]
 
-# Output lands under the resolved dxdfir_plaso_out_dir default — the shared
-# tasks only consume it. Only the
-# disk-image input dir is required; dxdfir_plaso_vm_dir is optional (the processor
-# tolerates its absence) so it is not declared as an input check.
+# Facts persist for the whole play (a serial "process all"), so the run list is
+# reset before it is accumulated.
+- name: "plaso | start from an empty run list"
+  ansible.builtin.set_fact:
+    dxdfir_plaso_runs: []
+  tags: [always]
+
+- name: "plaso | one log2timeline run per source tree"
+  ansible.builtin.set_fact:
+    dxdfir_plaso_runs: >-
+      {{ dxdfir_plaso_runs + [{
+           'name': 'log2timeline:' ~ (item | basename),
+           'contract': dxdfir_plaso_contract,
+           'image': dxdfir_plaso_image,
+           'subtool': 'log2timeline',
+           'env': {'PLASO_LOG2TIMELINE_FORCE': dxdfir_plaso_force,
+                   'PLASO_LOG2TIMELINE_VSS': dxdfir_plaso_vss,
+                   'PLASO_LOG2TIMELINE_PARSERS': dxdfir_plaso_parsers},
+           'mounts': [{'host': item, 'path': '/input', 'mode': 'ro'},
+                      {'host': dxdfir_plaso_storage_dir, 'path': '/output', 'mode': 'rw'}],
+         }] }}
+  loop: >-
+    {{ [dxdfir_plaso_input_dir]
+       + (dxdfir_plaso_optional.results | default([])
+          | selectattr('stat', 'defined') | selectattr('stat.isdir', 'defined')
+          | selectattr('stat.isdir') | map(attribute='item') | list) }}
+  tags: [always]
+
+# psort renders every storage file log2timeline produced; it runs last.
+- name: "plaso | the psort run over the storage tree"
+  ansible.builtin.set_fact:
+    dxdfir_plaso_runs: >-
+      {{ dxdfir_plaso_runs + [{
+           'name': 'psort',
+           'contract': dxdfir_plaso_contract,
+           'image': dxdfir_plaso_image,
+           'subtool': 'psort',
+           'env': {'PLASO_PSORT_FORCE': dxdfir_plaso_force,
+                   'PLASO_PSORT_OUTPUT_FORMAT': dxdfir_plaso_output_format},
+           'mounts': [{'host': dxdfir_plaso_storage_dir, 'path': '/input', 'mode': 'ro'},
+                      {'host': dxdfir_plaso_jsonl_dir, 'path': '/output', 'mode': 'rw'}],
+         }] }}
+  tags: [always]
+
+# The storage tree is psort's read-only input, but it does not exist before the
+# first log2timeline run — create it (container-writable) ahead of the build so
+# the read-only-mount check passes on a fresh host.
+- name: "plaso | ensure the storage tree exists"
+  ansible.builtin.file:
+    path: "{{ dxdfir_plaso_storage_dir }}"
+    state: directory
+    mode: "0777"
+  tags: [always]
+
 - name: "plaso | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
     name: dxdfir_lane
   vars:
     dxdfir_lane_name: plaso
-    dxdfir_lane_module: get_sybers_dxdfir.plaso
     dxdfir_lane_python_path: "{{ dxdfir_plaso_python_path }}"
-    dxdfir_lane_images: ["{{ dxdfir_plaso_image }}"]
-    dxdfir_lane_input_checks:
-      - name: disk-image input dir
-        path: "{{ dxdfir_plaso_input_dir }}"
-    dxdfir_lane_argv: "{{ dxdfir_plaso_argv }}"
-    dxdfir_lane_verify_dir: "{{ dxdfir_plaso_out_dir }}/jsonl"
-    dxdfir_lane_verify_glob: "*.jsonl"
+    dxdfir_lane_runs: "{{ dxdfir_plaso_runs }}"
+    dxdfir_lane_verify_dir: "{{ dxdfir_plaso_jsonl_dir }}"
+    dxdfir_lane_verify_glob: "timeline.jsonl"
     dxdfir_lane_require_no_failures: false
-    dxdfir_lane_preflight_extra: "{{ dxdfir_plaso_preflight_extra }}"
-    dxdfir_lane_gate_extra: "{{ dxdfir_plaso_gate_extra }}"
   tags: [always]

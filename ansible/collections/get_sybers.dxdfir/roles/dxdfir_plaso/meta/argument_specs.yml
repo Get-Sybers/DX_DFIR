@@ -1,23 +1,27 @@
 ---
 argument_specs:
   main:
-    short_description: "disk images / VM exports -> enriched Plaso JSON Lines."
+    short_description: "disk images / VM exports / loose trees -> Plaso JSON Lines."
     description:
       - >-
-        Discovers forensic images under dxdfir_plaso_input_dir (content-first) and VM
-        exports under dxdfir_plaso_vm_dir, runs the Plaso two-step (log2timeline.py ->
-        .plaso, then psort with the custom l2t_json_dxdfir output module) per source,
-        and names each json_line output by the resolved image_hostname. Idempotent:
-        an image whose .plaso db and recorded output both exist is skipped.
+        Drives the multi-tool get-sybers/plaso image from its contract: the
+        log2timeline sub-tool (PLASO_LOG2TIMELINE_*) over dxdfir_plaso_input_dir
+        — and over dxdfir_plaso_vm_dir / dxdfir_plaso_loose_dir when they exist —
+        into storage/<source>/<source>.plaso, then the psort sub-tool
+        (PLASO_PSORT_*) over storage/ into jsonl/<source>/timeline.jsonl. Each
+        sub-tool discovers, batches and skips its own items; a source whose
+        output exists is skipped unless dxdfir_plaso_force. Per-source failures
+        are tolerated; the gate is "some timeline was produced, or there were no
+        sources".
     options:
       dxdfir_plaso_input_dir:
         type: str
         required: false
-        description: "Disk-image tree (E01/raw/img/dd/vmdk/vhd/vhdx/aff), recursed."
+        description: "Disk-image tree (E01/Ex01/raw/dd/img/vmdk/vhd/vhdx/qcow2/aff4/001/bin), recursed."
       dxdfir_plaso_vm_dir:
         type: str
         required: false
-        description: "VMware VM export folders (one sub-folder per VM); optional."
+        description: "VM export folders (one sub-folder per VM); optional — processed when the directory exists."
       dxdfir_plaso_loose_dir:
         type: str
         default: ""
@@ -28,22 +32,45 @@ argument_specs:
       dxdfir_plaso_out_dir:
         type: str
         required: false
-        description: "Output dir (default data_store/processed/log2timeline); override to send output to a custom location."
-      dxdfir_plaso_module:
+        description: "Output dir (default data_store/processed/log2timeline); storage/ and jsonl/ hang off it."
+      dxdfir_plaso_storage_dir:
         type: str
         required: false
-        description: "Path to the l2t_json_dxdfir.py psort output module (dev-scripts/plaso)."
+        description: "Where log2timeline writes <source>/<source>.plaso (default <out_dir>/storage)."
+      dxdfir_plaso_jsonl_dir:
+        type: str
+        required: false
+        description: "Where psort writes <source>/timeline.jsonl (default <out_dir>/jsonl)."
+      dxdfir_plaso_contract:
+        type: str
+        required: false
+        description: "The plaso contract.yml the runs are built from (default docker/GoDFIR-toolz/plaso/contract.yml)."
       dxdfir_plaso_image:
         type: str
         required: false
-        default: "get-sybers/plaso:latest"
-        description: "The hardened in-repo Plaso image (build with playbooks/dxdfir-build-images.yml)."
+        default: ""
+        description: "Image ref overriding the contract's (get-sybers/plaso:latest); e.g. a digest pin."
+      dxdfir_plaso_vss:
+        type: bool
+        required: false
+        default: true
+        description: "log2timeline: process every VSS store of an image (PLASO_LOG2TIMELINE_VSS)."
+      dxdfir_plaso_parsers:
+        type: str
+        required: false
+        default: ""
+        description: "log2timeline: parser preset/list (PLASO_LOG2TIMELINE_PARSERS); empty = plaso's default."
+      dxdfir_plaso_output_format:
+        type: str
+        required: false
+        default: json_line
+        description: "psort: the output module (PLASO_PSORT_OUTPUT_FORMAT)."
       dxdfir_plaso_python_path:
         type: str
         required: false
-        description: "PYTHONPATH to the get_sybers_dxdfir package (in-repo/dev runs)."
+        description: "PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); in-repo runs."
       dxdfir_plaso_force:
         type: bool
         required: false
         default: false
-        description: "Reprocess images that already have output."
+        description: "Rerun sources that already have a storage file / rendered timeline."

@@ -1,12 +1,22 @@
 ---
 # dxdfir_lane: the shared "run a hardened DFIR tool lane" skeleton. A lane role
 # (dxdfir_zeek, dxdfir_plaso, dxdfir_evtx, dxdfir_memory, dxdfir_signatures,
-# dxdfir_godfir_toolz) asserts its own input rules, builds its processor argv +
-# gate/verify vars, then delegates preflight + process here — so the ~72-line
-# skeleton that was copy-pasted six times lives once.
+# dxdfir_godfir_toolz, dxdfir_byakugan) asserts its own input rules and declares
+# its runs — one GoDFIR-toolz tool image each, driven purely by that tool's
+# contract.yml (env vars + mounts) — then delegates here: the confined
+# `docker run` argv is built from the contract, preflight checks the daemon and
+# the image supply chain, process runs each container and gates on its summary.
 #
-# The role GROUPS; the playbook DECIDES. Idempotence lives in each Python
-# processor, not in a task's `when:`.
+# The role GROUPS; the playbook DECIDES. Idempotence lives in each tool
+# container (an item with valid output is skipped unless <TOOL>_FORCE), not in a
+# task's `when:`.
+
+- name: "build | the confined docker run per declared run | {{ dxdfir_lane_name }}"
+  ansible.builtin.include_tasks:
+    file: build.yml
+    apply:
+      tags: [always]
+  tags: [always]
 
 - name: "run preflight | {{ dxdfir_lane_name }}"
   ansible.builtin.include_tasks:

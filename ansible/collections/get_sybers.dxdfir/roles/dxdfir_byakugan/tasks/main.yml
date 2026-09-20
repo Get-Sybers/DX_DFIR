@@ -1,7 +1,10 @@
 ---
 # dxdfir_byakugan: materialise/verify/timeline the CAR. The role GROUPS; the playbook
-# DECIDES the action. Idempotence (rebuild only with --rebuild) lives in the
-# engine, not a task's `when:`.
+# DECIDES the action. Every action is one confined run of the multi-tool
+# get-sybers/byakugan image, driven from its contract
+# (docker/GoDFIR-toolz/byakugan/contract.yml) by the shared dxdfir_lane skeleton;
+# the engine's own idempotence (a source whose car.db exists is skipped unless
+# BYAKUGAN_BUILD_FORCE) lives in the engine, not a task's `when:`.
 
 - name: "car | assert inputs"
   ansible.builtin.assert:
@@ -14,12 +17,6 @@
     quiet: true
   tags: [always]
 
-- name: "car | preflight"
-  ansible.builtin.include_tasks:
-    file: preflight.yml
-    apply:
-      tags: [always]
-  tags: [always]
-
 - name: "car | run the CAR action | {{ dxdfir_byakugan_action }}"
   ansible.builtin.include_tasks: "{{ dxdfir_byakugan_action }}.yml"
+  tags: [always]

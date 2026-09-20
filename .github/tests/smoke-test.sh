@@ -10,13 +10,14 @@
 #
 # What it does, entirely in throwaway temp dirs (never data_store/processed):
 #
-#   process pinned Sysmon .evtx through the real evtx lane (goevtx) ->
-#   normalise the output into materialised CAR (the external Byakugan engine,
-#   run inside the hardened get-sybers/byakugan image at the sources.yml pin,
-#   via get_sybers_dxdfir.mitrecar) -> assert each Sysmon-sourced CAR object
-#   has rows AND its EvtxPayload-derived fields are populated with the expected
-#   values -> run the verify-car gate (get_sybers_dxdfir.carcheck) over the
-#   same tree.
+#   process pinned Sysmon .evtx through the real evtx lane (the dxdfir_evtx
+#   role: ansible builds the confined `docker run` of get-sybers/goevtx from its
+#   contract) -> normalise the output into materialised CAR (the dxdfir_byakugan
+#   role, build action: `byakugan build` inside the hardened get-sybers/byakugan
+#   image at the sources.yml pin, over the processed tree) -> assert each
+#   Sysmon-sourced CAR object has rows AND its EvtxPayload-derived fields are
+#   populated with the expected values -> run the verify-car gate (the role's
+#   verify action, the engine's own byakugan.verify) over the same tree.
 #
 # Fixtures: the `sysmon-attack-samples` group in dev-scripts/samples-manifest.tsv
 # (real Sysmon telemetry from sbousseaden/EVTX-ATTACK-SAMPLES, sha256-pinned, a
@@ -37,14 +38,16 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$REPO_ROOT" || exit 1
 
 KEEP="${KEEP:-0}"
-FIXTURE_DIR="data_store/raw/logs/winevt/sysmon-attack-samples"
-OUT_DIR="$(mktemp -d)"     # the evtx lane's goevtx JSON
+PLAYBOOKS="ansible/collections/get_sybers.dxdfir/playbooks"
+FIXTURE_DIR="$REPO_ROOT/data_store/raw/logs/winevt/sysmon-attack-samples"
+OUT_DIR="$(mktemp -d)"     # the processed tree: windows_logs/ from the evtx lane
 CAR_DIR="$(mktemp -d)"     # the materialised CAR built from it
 LOG_DIR="$(mktemp -d)"
 # The tool images run as a non-root uid (2000), so they must be able to traverse
 # the working tree — exactly as the real data_store is provisioned (g=rX + the
 # docker group; setup-environment.sh). mktemp defaults to 0700, which would block
-# the CAR engine container from reading the processed tree it normalises.
+# the CAR engine container from reading the processed tree it normalises. The
+# roles make each read-write mount 0777 themselves.
 chmod 0755 "$OUT_DIR" "$CAR_DIR"
 
 PASS=0; FAIL=0
@@ -53,14 +56,17 @@ fail() { FAIL=$((FAIL+1)); echo "    ✗ $1"; }
 die()  { echo "❌ $*" >&2; exit 1; }
 section() { echo; echo "── $1"; }
 
-# In-repo run: the get_sybers_dxdfir package is under python/ (a deployed install
-# would already be importable). Mirrors dxdfir_evtx_python_path in the role.
+# In-repo run: the get_sybers_dxdfir package (the image supply-chain guard the
+# lane preflight runs) is under python/; the roles set this themselves via
+# dxdfir_<lane>_python_path, and the CAR assertions below import nothing.
 export PYTHONPATH="$REPO_ROOT/python${PYTHONPATH:+:$PYTHONPATH}"
+# ansible.cfg at the repo root resolves the roles; its log lands in logs/.
+export ANSIBLE_CONFIG="$REPO_ROOT/ansible.cfg"
 
 cleanup() {
     rm -rf "$LOG_DIR"
     if [[ "$KEEP" == "1" ]]; then
-        echo "   (KEEP=1: leaving $OUT_DIR (goevtx JSON) and $CAR_DIR (CAR) in place)"
+        echo "   (KEEP=1: leaving $OUT_DIR (goevtx JSON Lines) and $CAR_DIR (CAR) in place)"
         return
     fi
     rm -rf "$OUT_DIR" "$CAR_DIR"
@@ -130,6 +136,7 @@ section "Preflight (fail loudly — never skip)"
 command -v docker >/dev/null 2>&1 || die "docker not found. This test RUNS the pipeline; it cannot be skipped."
 docker info >/dev/null 2>&1 || die "docker daemon not reachable."
 command -v python3 >/dev/null 2>&1 || die "python3 not found."
+command -v ansible-playbook >/dev/null 2>&1 || die "ansible-playbook not found — it ships with 'pip install ./python'."
 docker image inspect get-sybers/goevtx:latest >/dev/null 2>&1 \
     || die "image get-sybers/goevtx:latest missing — build it: docker build -t get-sybers/goevtx:latest -f docker/GoDFIR-toolz/goevtx/Dockerfile docker/GoDFIR-toolz/goevtx"
 # The CAR lane drives the external Byakugan engine inside the hardened
@@ -137,7 +144,7 @@ docker image inspect get-sybers/goevtx:latest >/dev/null 2>&1 \
 # reconstructs its model from its OWN nested submodules, all baked into the image.
 docker image inspect get-sybers/byakugan:latest >/dev/null 2>&1 \
     || die "image get-sybers/byakugan:latest missing — build it: dxdfir build-docker (it clones Byakugan at the sources.yml pin and builds the hardened engine image)."
-pass "docker, python3, get-sybers/goevtx:latest and the Byakugan engine image present"
+pass "docker, python3, ansible-playbook, get-sybers/goevtx:latest and the Byakugan engine image present"
 
 # =============================================================================
 section "Fixtures (sha256-pinned Sysmon .evtx)"
@@ -153,27 +160,31 @@ n_fix=$(find "$FIXTURE_DIR" -iname '*.evtx' 2>/dev/null | wc -l)
 pass "$n_fix Sysmon .evtx fixtures present and verified"
 
 # =============================================================================
-section "Process fixtures through the real evtx lane (goevtx)"
-summary="$(python3 -m get_sybers_dxdfir.evtx --evtx-dir "$FIXTURE_DIR" --out-dir "$OUT_DIR" 2>"$LOG_DIR/evtx.err")"
-processed="$(printf '%s' "$summary" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("processed",0))' 2>/dev/null)"
-if ! [[ "$processed" =~ ^[0-9]+$ ]] || (( processed == 0 )); then
-    tail -20 "$LOG_DIR/evtx.err" >&2
-    die "evtx processor produced nothing (summary: $summary)"
+section "Process fixtures through the real evtx lane (dxdfir_evtx -> goevtx)"
+if ! ansible-playbook "$PLAYBOOKS/dxdfir-process-evtx.yml" \
+        -e "dxdfir_evtx_evtx_dir=$FIXTURE_DIR" -e "dxdfir_evtx_out_dir=$OUT_DIR/windows_logs" \
+        >"$LOG_DIR/evtx.out" 2>&1; then
+    tail -40 "$LOG_DIR/evtx.out" >&2
+    die "the evtx lane failed (see the play output above)"
 fi
-pass "goevtx processed $processed log(s)"
+n_logs=$(find "$OUT_DIR/windows_logs" -name goevtx.jsonl -size +0 2>/dev/null | wc -l)
+(( n_logs > 0 )) || die "the evtx lane produced no goevtx.jsonl under $OUT_DIR/windows_logs"
+pass "goevtx parsed $n_logs log(s) into goevtx.jsonl"
 
 # =============================================================================
 # Normalise the processed evtx into finished CAR (Byakugan engine): one
 # car_<object>.jsonl per populated object, plus car_relationships.jsonl — the
 # materialised CAR every sink reads. Extraction happens in the engine; this is
 # the real CAR path.
-section "Normalise to materialised CAR (car_<object>.jsonl)"
-if ! python3 -m get_sybers_dxdfir.mitrecar --in "$OUT_DIR" --out "$CAR_DIR/windows_logs_sysmon" >"$LOG_DIR/car.out" 2>"$LOG_DIR/car.err"; then
-    tail -20 "$LOG_DIR/car.err" >&2
+section "Normalise to materialised CAR (dxdfir_byakugan build -> car_<object>.jsonl)"
+if ! ansible-playbook "$PLAYBOOKS/dxdfir-build-car.yml" \
+        -e "dxdfir_byakugan_processed_dir=$OUT_DIR" -e "dxdfir_byakugan_dir=$CAR_DIR" \
+        >"$LOG_DIR/car.out" 2>&1; then
+    tail -40 "$LOG_DIR/car.out" >&2
     die "CAR normalise (build-car) failed."
 fi
 n_car=$(find "$CAR_DIR" -name 'car_*.jsonl' -size +0 2>/dev/null | wc -l)
-(( n_car > 0 )) || die "the engine wrote no populated car_<object>.jsonl under $CAR_DIR"
+(( n_car > 0 )) || die "the engine wrote no populated car_<object>.jsonl under $CAR_DIR (did it discover the windows_logs source?)"
 pass "$n_car populated car_<object>.jsonl file(s) written"
 
 # =============================================================================
@@ -205,11 +216,11 @@ assert_has relationships -        source_guid,target_guid -                     
 # =============================================================================
 # The same tree through the promotion gate: populated, value-sane, traceable,
 # car_action in the engine model's vocabulary.
-section "The verify-car gate over the same tree (get_sybers_dxdfir.carcheck)"
-if python3 -m get_sybers_dxdfir.carcheck --car-dir "$CAR_DIR" >"$LOG_DIR/gate.out" 2>&1; then
+section "The verify-car gate over the same tree (dxdfir_byakugan verify)"
+if ansible-playbook "$PLAYBOOKS/dxdfir-verify-car.yml" -e "dxdfir_byakugan_dir=$CAR_DIR" >"$LOG_DIR/gate.out" 2>&1; then
     pass "verify-car: $(grep -oE 'passed: +[0-9]+' "$LOG_DIR/gate.out" | head -1 | tr -s ' '), no failures"
 else
-    grep -E '✗|❌|not loadable|no materialised CAR' "$LOG_DIR/gate.out" >&2 || tail -20 "$LOG_DIR/gate.out" >&2
+    grep -E '✗|❌|not loadable|no materialised CAR|rc=' "$LOG_DIR/gate.out" >&2 || tail -20 "$LOG_DIR/gate.out" >&2
     fail "verify-car reported failures (details above)"
 fi
 

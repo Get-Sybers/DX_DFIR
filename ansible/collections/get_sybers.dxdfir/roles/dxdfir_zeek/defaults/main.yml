@@ -13,16 +13,17 @@ dxdfir_zeek_pcap_lane: >-
   | default('pcaps', true) }}
 dxdfir_zeek_pcap_dir: "{{ dxdfir_zeek_repo_root }}/data_store/raw/{{ dxdfir_zeek_pcap_lane }}"
 dxdfir_zeek_out_dir: "{{ dxdfir_zeek_repo_root }}/data_store/processed/zeek"
-# Output base — consumed by
-# tasks/process.yml. Override directly to send output to a custom location.
-# The hardened in-repo image (build with playbooks/dxdfir-build-images.yml).
-dxdfir_zeek_image: "get-sybers/zeek:latest"
-# In-repo runs use PYTHONPATH; a deployed run installs the package instead.
+# Output base — one folder per capture. Override directly to send output to a
+# custom location.
+# The tool contract the lane is driven from — the single source of truth for the
+# zeek image's env vars (ZEEK_*) and mounts (/input ro, /output).
+dxdfir_zeek_contract: "{{ dxdfir_zeek_repo_root }}/docker/GoDFIR-toolz/zeek/contract.yml"
+# Empty = the contract's image (get-sybers/zeek:latest); set to pin a digest.
+dxdfir_zeek_image: ""
+# Extra zeek argv appended after -C -r <capture> (ZEEK_SCRIPTS): scripts to load
+# and option assignments; empty = zeek's default script set.
+dxdfir_zeek_scripts: ""
+# PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); a
+# deployed run installs the package instead.
 dxdfir_zeek_python_path: "{{ dxdfir_zeek_repo_root }}/python"
 dxdfir_zeek_force: false
-
-# The processor command argv, handed to the shared dxdfir_lane process step. This
-# is the one genuinely per-lane piece; the run/verify/gate skeleton is shared.
-dxdfir_zeek_argv: >-
-  {{ ['python3', '-m', 'get_sybers_dxdfir.zeek', '--pcap-dir', dxdfir_zeek_pcap_dir, '--out-dir', dxdfir_zeek_out_dir, '--image', dxdfir_zeek_image]
-  + (['--force'] if dxdfir_zeek_force | bool else []) }}

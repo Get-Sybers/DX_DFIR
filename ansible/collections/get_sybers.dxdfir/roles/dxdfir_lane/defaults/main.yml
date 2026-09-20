@@ -1,37 +1,71 @@
 ---
-# Interface consumed by tasks/{preflight,process}.yml. A per-tool lane role sets
-# these (in its own defaults/main.yml) and delegates via
-# `include_role: name=dxdfir_lane`. Empty/neutral defaults here document the
-# contract and keep the shared role importable on its own.
+# Interface consumed by tasks/{build,argv,preflight,process}.yml. A per-tool lane
+# role sets these and delegates via `include_role: name=dxdfir_lane`. Empty/
+# neutral defaults here document the contract and keep the shared role
+# importable on its own.
 
 # Short lane token used in task names and diagnostics (e.g. "evtx").
 dxdfir_lane_name: lane
-# Python module the preflight import-checks (e.g. get_sybers_dxdfir.evtx).
-dxdfir_lane_module: ""
-# PYTHONPATH for the in-repo processor run + module import (a deployed install drops it).
+# PYTHONPATH for the image supply-chain guard (python3 -m get_sybers_dxdfir.images);
+# a deployed install drops it.
 dxdfir_lane_python_path: ""
-# Tool images the supply-chain guard requires (only get-sybers/* are checked).
-dxdfir_lane_images: []
-# Input dirs that must exist before processing: [{name, path}].
-dxdfir_lane_input_checks: []
-# The processor command argv — the one genuinely per-lane piece.
-dxdfir_lane_argv: []
+
+# The runs of this lane, in order: each is ONE confined `docker run` of one
+# GoDFIR-toolz tool image, built from that tool's contract.yml (tasks/argv.yml).
+#   - name:     label for task output
+#     contract: absolute path of the tool's contract.yml (the source of truth)
+#     image:    optional image ref overriding contract.image (e.g. a digest pin)
+#     subtool:  the dispatcher argument of a multi-tool image (plaso, signatures,
+#               byakugan); empty for a self-orchestrating tool
+#     env:      {NAME: value} overrides of the contract's env; every NAME must be
+#               declared in the contract; bool-typed vars are normalised to 1/0;
+#               empty string values are omitted (the image default applies)
+#     mounts:   [{host, path, mode}] host binds; `path` is a container path the
+#               contract declares as a mount (its default), or a path one of
+#               the run's env overrides names (a mounted filter file / operator
+#               ruleset the contract asks for through a variable); any other
+#               path is refused. `mode` is ro or rw. Every contract mount with
+#               required: true must be bound.
+#     network:  true keeps the docker bridge — honoured only when the contract
+#               declares network: optional; every other run gets --network none
+#     entrypoint / args: the argv pass-through the contracts reserve for
+#               debugging. The one consumer is the CAR verify gate (see
+#               dxdfir_byakugan/tasks/verify.yml).
+dxdfir_lane_runs: []
+
+# Runtime confinement applied to every run, before the tmpfs/network/mount/env
+# flags the contract adds (docs/framework/03 §3.4).
+dxdfir_lane_confinement:
+  - "--cap-drop"
+  - "ALL"
+  - "--security-opt"
+  - "no-new-privileges"
+  - "--pids-limit"
+  - "512"
+  - "--read-only"
+# tmpfs options for /tmp and every unbound optional read-write contract mount
+# (the tool's scratch under the read-only rootfs).
+dxdfir_lane_tmpfs_opts: "rw,nosuid,nodev,exec,size=1g"
+# The contract's uniform exit table (03 §3.5): 0 success, 1 nothing produced,
+# 2 config error, 3 partial. A run exiting outside this set fails the lane; 1 and
+# 3 are judged by the summary line (dxdfir_lane_require_no_failures) and the
+# output gate.
+dxdfir_lane_exit_ok: [0, 1, 3]
+
 # Output verification: scan dxdfir_lane_verify_dir for dxdfir_lane_verify_glob
-# (empty glob => skip the on-disk verify step).
+# (empty glob => skip the on-disk verify step and the default output gate).
 dxdfir_lane_verify_dir: ""
 dxdfir_lane_verify_glob: ""
 # Optional lane-specific output gate: a task file (absolute path) with the lane's
-# own trusted assert on the run summary (dxdfir_lane_run) + verification
-# (dxdfir_lane_verify), included at the end of the process block. Kept as a task —
-# not an expression string — because ansible-core rejects evaluating
+# own trusted assert on the run summaries (dxdfir_lane_summaries) + verification
+# (dxdfir_lane_verify), included at the end of the process block INSTEAD of the
+# default gate ("output on disk, or every run had nothing to do"). Kept as a task
+# — not an expression string — because ansible-core rejects evaluating
 # variable-sourced templates in `that:`.
 dxdfir_lane_gate_extra: ""
 
-# Assert the processor reported zero failures (failed==0). Default: require it.
-# Lanes whose processor legitimately exits 0 with per-item failures (plaso
-# per-image, memory per-plugin without symbols, godfir-toolz per-image) set this
-# false and gate purely on their own "produced output unless nothing to do".
+# Assert every run reported failed==0. Default: require it. Lanes whose tools
+# legitimately exit 3 (partial) with per-item failures (plaso per-image, memory
+# per-plugin without symbols, godfir-toolz per-tool, the detection sub-tools) set
+# this false and gate purely on "produced output unless nothing to do".
 dxdfir_lane_require_no_failures: true
-# Optional lane-specific preflight task file (absolute path), included after the
-# input-dir asserts and before the module/image guards.
-dxdfir_lane_preflight_extra: ""

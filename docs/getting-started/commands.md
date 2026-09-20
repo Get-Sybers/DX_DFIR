@@ -49,9 +49,9 @@ See the [collection concept](../architecture/processing-lanes.md#collections).
 
 | Command | What it does |
 |---|---|
-| `dxdfir build-car [DIR] [--rebuild]` | Build per-source CAR stores from the processed tree via the [Byakugan engine](https://github.com/Get-Sybers/byakugan). `--rebuild` re-derives existing stores. |
+| `dxdfir build-car [DIR] [--out DIR] [--rebuild] [--derive] [--stix]` | Build per-source CAR stores from the processed tree via the [Byakugan engine](https://github.com/Get-Sybers/byakugan) (`byakugan build`). `--rebuild` re-derives existing stores; `--derive` adds the derived relationship pass (`superset.db`); `--stix` the STIX 2.1 bundle. |
 | `dxdfir verify-car [--car-dir DIR]` | The [CAR correctness gate](../architecture/car-pipeline.md#verify). Run before trusting the CAR. |
-| `dxdfir build-timeline CAR_DIR [--out PATH] [--after ISO] [--before ISO]` | Build one time-ordered `timeline.jsonl` across a source or a whole tree (alias: `car-timeline`). |
+| `dxdfir build-timeline CAR_DIR [--out-dir DIR] [--force] [--after ISO] [--before ISO]` | Build one time-ordered `timeline.jsonl` across a source or a whole tree, beside the stores unless `--out-dir` (alias: `car-timeline`). |
 | `dxdfir stix export --hits FILE --out FILE [--push]` | Turn detection hits into a STIX 2.1 bundle (OpenCTI on the wire). See [stix/README](../../python/get_sybers_dxdfir/stix/README.md). |
 
 ## Analysis stack

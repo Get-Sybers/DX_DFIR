@@ -4,10 +4,10 @@ galaxy_info:
   namespace: get_sybers
   author: Get-Sybers
   description: >-
-    Process forensic disk images and VMware VM exports with Plaso (log2timeline +
-    psort) into enriched JSON Lines. Invokes the
-    get_sybers_dxdfir.plaso Python processor; one <host>.jsonl per image plus the
-    durable .plaso storage db.
+    Process forensic disk images, VM exports and loose trees with Plaso
+    (log2timeline + psort) into JSON Lines. Drives the multi-tool
+    get-sybers/plaso image from its contract; one timeline.jsonl per source plus
+    the durable .plaso storage file.
   company: Get-Sybers
   license: MIT
   min_ansible_version: "2.15"

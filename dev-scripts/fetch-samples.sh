@@ -185,7 +185,7 @@ classify_dir() { # group name  ->  path under $RAW
 # net-*.dmp.gz files), Windows writes crash dumps. The name-based rule above
 # routes .dmp to memory/; once the BYTES exist, a capture magic wins and the
 # file is re-routed to pcaps/ so zeek/suricata find it (memory can't parse
-# a capture anyway). Same magics as get_sybers_dxdfir.zeek.is_pcap.
+# a capture anyway). Same magics the zeek image's zeek-run discovery uses.
 is_pcap_magic() { # path
     local h; h="$(head -c4 "$1" 2>/dev/null | od -An -tx1 | tr -d ' \n')"
     case "$h" in a1b2c3d4|d4c3b2a1|a1b23c4d|4d3cb2a1|0a0d0d0a) return 0 ;; esac

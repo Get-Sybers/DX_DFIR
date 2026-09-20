@@ -135,9 +135,9 @@ done < <(find scripts -name "*.sh" -type f | sort)
 # ------------------------------------------------------------------------------
 group "Python unit tests (get_sybers_dxdfir)"
 # ------------------------------------------------------------------------------
-# The package's pure-logic tests — the processors, the CAR gate (carcheck), the
-# Elastic rules-as-code loader, the STIX exchange (and its argparse verbs — the
-# Go binary owns the CLI now). No docker, no
+# The package's pure-logic tests — the image supply-chain guard, the ruleset
+# fetchers, the Elastic rules-as-code loader, the STIX exchange (and its argparse
+# verbs — the Go binary owns the CLI now). No docker, no
 # evidence, no backend. Skipped when pytest is not installed (CI installs it
 # together with the package's own dependencies).
 if python3 -c 'import pytest' >/dev/null 2>&1; then
@@ -225,7 +225,7 @@ fi
 # after the real count passed 160. The harness prints the number; documents
 # point at the harness.
 _counts=$(grep -rnE '[0-9]{2,4} (static )?checks' --include='*.md' . 2>/dev/null \
-          | grep -vE '^\./(\.git|data_store)/' || true)
+          | grep -vE '^\./(\.git|data_store|docker/GoDFIR-toolz)/' || true)
 if [[ -z "$_counts" ]]; then
     pass "no document hardcodes the check count"
 else

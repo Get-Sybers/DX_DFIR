@@ -1,62 +1,98 @@
 ---
-# dxdfir_godfir_toolz: disk images -> GoDFIR-toolz artefact parse, one output dir per host.
-# The role GROUPS; the playbook DECIDES. Idempotence (skip a host dir that already
-# has output) lives in the Python processor, not in a task's `when:`. This role
-# asserts its own input rules, then delegates the shared preflight + process
-# skeleton to dxdfir_lane. Per-image "empty" (a non-Windows image with no artefact
-# set) is tolerated (dxdfir_lane_require_no_failures=false), so the gate is purely
-# "some host produced output, or there were no images / nothing but empties".
+# dxdfir_godfir_toolz: disk images -> the GoDFIR-toolz artefact parse. The role
+# GROUPS; the playbook DECIDES. Two kinds of run, each a contract-driven
+# container: the plaso image's image_export sub-tool pulls the godfir-toolz
+# artefact set out of every image into the export tree (a filter file mounted
+# read-only, PLASO_IMAGE_EXPORT_FILTER_FILE), then each self-orchestrating Go
+# tool image (gore, gojle, gole, goamcache, goappcompat, gosbe, gorb, gomft,
+# goese, goprefetch) content-detects its artefacts anywhere under that tree and
+# writes one folder per item under <out_dir>/<tool>/. Each tool skips items with
+# valid output unless <TOOL>_FORCE. A tool with nothing to parse (a non-Windows
+# image) exits 1 and a tool with a failed item exits 3 — both tolerated
+# (dxdfir_lane_require_no_failures=false), so the gate is purely "some tool
+# produced output, or there were no artefacts". This role asserts its own input
+# rules and declares the runs, then delegates the shared build + preflight +
+# process skeleton to dxdfir_lane.
 
 - name: "godfir-toolz | assert inputs"
   ansible.builtin.assert:
     that:
       - dxdfir_godfir_toolz_input_dir | length > 0
+      - dxdfir_godfir_toolz_tools | length > 0
     fail_msg: >-
-      dxdfir_godfir_toolz needs a non-empty
-      dxdfir_godfir_toolz_input_dir.
+      dxdfir_godfir_toolz needs a non-empty dxdfir_godfir_toolz_input_dir and at
+      least one tool in dxdfir_godfir_toolz_tools.
     quiet: true
   tags: [always]
 
-# role_path resolves to THIS role here — capture the lane-specific gate file so
-# dxdfir_lane includes godfir-toolz's output gate, not its own.
-- name: "godfir-toolz | resolve lane-specific task paths"
-  ansible.builtin.set_fact:
-    dxdfir_godfir_toolz_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
+# The VM-export tree is optional: an export run is declared for it when it exists.
+- name: "godfir-toolz | stat the optional VM-export tree"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_godfir_toolz_vm_dir }}"
+  when: dxdfir_godfir_toolz_vm_dir | length > 0
+  register: dxdfir_godfir_toolz_vm_stat
   tags: [always]
 
-# Output lands under the resolved dxdfir_godfir_toolz_out_dir default — the shared
-# tasks only consume it. This
-# lane drives ELEVEN get-sybers/* images (plaso for extraction, plus the ten Go
-# tool containers the processor can run — including goese for SRUM
-# and goprefetch for Prefetch) — every one is supply-chain-guarded. gowxt is built
-# but deliberately not run yet (#88), so it is intentionally not in this list.
-# dxdfir_godfir_toolz_vm_dir is optional (the processor tolerates its absence) so it
-# is not an input check.
+# Facts persist for the whole play (a serial "process all"), so the run list is
+# reset before it is accumulated.
+- name: "godfir-toolz | start from an empty run list"
+  ansible.builtin.set_fact:
+    dxdfir_godfir_toolz_runs: []
+  tags: [always]
+
+- name: "godfir-toolz | one image_export run per image tree"
+  ansible.builtin.set_fact:
+    dxdfir_godfir_toolz_runs: >-
+      {{ dxdfir_godfir_toolz_runs + [{
+           'name': 'image_export:' ~ (item | basename),
+           'contract': dxdfir_godfir_toolz_plaso_contract,
+           'image': dxdfir_godfir_toolz_plaso_image,
+           'subtool': 'image_export',
+           'env': {'PLASO_IMAGE_EXPORT_FILTER_FILE': '/filters/godfir-toolz.yaml',
+                   'PLASO_IMAGE_EXPORT_VSS': dxdfir_godfir_toolz_vss,
+                   'PLASO_IMAGE_EXPORT_FORCE': dxdfir_godfir_toolz_force},
+           'mounts': [{'host': item, 'path': '/input', 'mode': 'ro'},
+                      {'host': dxdfir_godfir_toolz_stage_dir, 'path': '/output', 'mode': 'rw'},
+                      {'host': dxdfir_godfir_toolz_filter_file, 'path': '/filters/godfir-toolz.yaml', 'mode': 'ro'}],
+         }] }}
+  loop: >-
+    {{ [dxdfir_godfir_toolz_input_dir]
+       + ([dxdfir_godfir_toolz_vm_dir]
+          if (dxdfir_godfir_toolz_vm_stat.stat | default({})).isdir | default(false) else []) }}
+  tags: [always]
+
+- name: "godfir-toolz | one run per Go tool over the export"
+  ansible.builtin.set_fact:
+    dxdfir_godfir_toolz_runs: >-
+      {{ dxdfir_godfir_toolz_runs + [{
+           'name': item,
+           'contract': dxdfir_godfir_toolz_toolz_dir ~ '/' ~ item ~ '/contract.yml',
+           'env': dict([[(item | upper) ~ '_FORCE', dxdfir_godfir_toolz_force]]),
+           'mounts': [{'host': dxdfir_godfir_toolz_stage_dir, 'path': '/input', 'mode': 'ro'},
+                      {'host': dxdfir_godfir_toolz_out_dir ~ '/' ~ item, 'path': '/output', 'mode': 'rw'}],
+         }] }}
+  loop: "{{ dxdfir_godfir_toolz_tools }}"
+  tags: [always]
+
+# The export tree is every Go tool's read-only input, but it does not exist
+# before the first export run — create it (container-writable) ahead of the
+# build so the read-only-mount check passes on a fresh host.
+- name: "godfir-toolz | ensure the export tree exists"
+  ansible.builtin.file:
+    path: "{{ dxdfir_godfir_toolz_stage_dir }}"
+    state: directory
+    mode: "0777"
+  tags: [always]
+
 - name: "godfir-toolz | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
     name: dxdfir_lane
   vars:
     dxdfir_lane_name: godfir-toolz
-    dxdfir_lane_module: get_sybers_dxdfir.godfir_toolz
     dxdfir_lane_python_path: "{{ dxdfir_godfir_toolz_python_path }}"
-    dxdfir_lane_images:
-      - "{{ dxdfir_godfir_toolz_plaso_image }}"
-      - "get-sybers/gore:latest"
-      - "get-sybers/gojle:latest"
-      - "get-sybers/gole:latest"
-      - "get-sybers/goamcache:latest"
-      - "get-sybers/goappcompat:latest"
-      - "get-sybers/gosbe:latest"
-      - "get-sybers/gorb:latest"
-      - "get-sybers/gomft:latest"
-      - "get-sybers/goese:latest"
-      - "get-sybers/goprefetch:latest"
-    dxdfir_lane_input_checks:
-      - name: disk-image input dir
-        path: "{{ dxdfir_godfir_toolz_input_dir }}"
-    dxdfir_lane_argv: "{{ dxdfir_godfir_toolz_argv }}"
+    dxdfir_lane_runs: "{{ dxdfir_godfir_toolz_runs }}"
     dxdfir_lane_verify_dir: "{{ dxdfir_godfir_toolz_out_dir }}"
-    dxdfir_lane_verify_glob: "*"
+    dxdfir_lane_verify_glob: "*.jsonl"
     dxdfir_lane_require_no_failures: false
-    dxdfir_lane_gate_extra: "{{ dxdfir_godfir_toolz_gate_extra }}"
+    dxdfir_lane_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
   tags: [always]
