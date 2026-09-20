@@ -1,0 +1,24 @@
+---
+# Build the confined `docker run` argv of every declared run (dxdfir_lane_runs)
+# from its tool's contract.yml. Facts persist for the whole play, so the built
+# list is reset first: a serial "process all" runs several lanes in one play.
+
+- name: "build | assert runs are declared | {{ dxdfir_lane_name }}"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_lane_runs | length > 0
+    fail_msg: >-
+      dxdfir_lane ({{ dxdfir_lane_name }}) needs at least one run in
+      dxdfir_lane_runs.
+    quiet: true
+
+- name: "build | start from an empty run list | {{ dxdfir_lane_name }}"
+  ansible.builtin.set_fact:
+    dxdfir_lane_runs_built: []
+
+- name: "build | one confined docker run per declared run | {{ dxdfir_lane_name }}"
+  ansible.builtin.include_tasks: argv.yml
+  loop: "{{ dxdfir_lane_runs }}"
+  loop_control:
+    loop_var: dxdfir_lane_spec
+    label: "{{ dxdfir_lane_spec.name }}"
