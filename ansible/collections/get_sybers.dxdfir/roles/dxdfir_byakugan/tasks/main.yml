@@ -3,8 +3,9 @@
 # DECIDES the action. Every action is one confined run of the multi-tool
 # get-sybers/byakugan image, driven from its contract
 # (docker/GoDFIR-toolz/byakugan/contract.yml) by the shared dxdfir_lane skeleton;
-# the engine's own idempotence (a source whose car.db exists is skipped unless
-# BYAKUGAN_BUILD_FORCE) lives in the engine, not a task's `when:`.
+# the engine's own idempotence (a source whose car_relationships.jsonl exists
+# is skipped unless BYAKUGAN_BUILD_FORCE) lives in the engine, not a task's
+# `when:`.
 
 - name: "car | assert inputs"
   ansible.builtin.assert:

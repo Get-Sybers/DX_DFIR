@@ -57,9 +57,10 @@ No shell scripts here either:
 - **`dxdfir build-car`** runs the external Byakugan engine inside the hardened
   `get-sybers/byakugan` image (cloned + built at the `sources.yml` pin by
   `dxdfir build-docker`), driven from the image's contract (`byakugan build`),
-  over the processed tree: one `car.db` and one `car_<object>.jsonl` per
-  populated object per source, under `data_store/processed/byakugan/<source>/`
-  (`--derive` adds `superset.db`).
+  over the processed tree: one `car_<object>.jsonl` per populated object plus
+  `car_relationships.jsonl` (always written, even empty) per source, under
+  `data_store/processed/byakugan/<source>/` (`--derive` adds
+  `car_inferred.jsonl`).
   **`dxdfir verify-car`** is the engine's own gate over what was written;
   **`dxdfir build-timeline`** unions a tree into one timeline JSONL.
 - The **Elastic-native backend** (`docker/elastic/`) is brought up with

@@ -1,16 +1,16 @@
 """Unit tests for the behaviour-sightings bridge (detections -> CAR entities ->
 STIX Sightings of ATT&CK attack-patterns over spindle-identified observed-data).
 
-No network, no docker: a synthetic ``car.db`` (the engine's per-object schema) and
-hand-written lane output exercise the join and the emitted object graph. The
-shape under test: the sighting sights the ATT&CK attack-pattern (MITRE's own id,
-referenced not shipped), its observed-data is keyed on the matched CAR row's
-spindle ``guid`` (so two detectors on one entity share the observation), the
-observed host is a where-sighted identity, and the bundle validates clean with
-ATT&CK ids as the permitted non-local references.
+No network, no docker: a synthetic materialised CAR source directory
+(``car_<object>.jsonl``, the engine's per-object schema) and hand-written lane
+output exercise the join and the emitted object graph. The shape under test:
+the sighting sights the ATT&CK attack-pattern (MITRE's own id, referenced not
+shipped), its observed-data is keyed on the matched CAR row's spindle ``guid``
+(so two detectors on one entity share the observation), the observed host is a
+where-sighted identity, and the bundle validates clean with ATT&CK ids as the
+permitted non-local references.
 """
 import json
-import sqlite3
 import uuid
 
 import pytest
@@ -29,25 +29,32 @@ HOST = "DESKTOP-M913391"
 WHEN = "2024-01-19T05:34:22.833000Z"
 
 
-def _make_car_db(path):
-    db = sqlite3.connect(path)
-    db.execute("CREATE TABLE flow (guid TEXT, timestamp TEXT, hostname TEXT, fqdn TEXT, src_ip TEXT, "
-               "dest_ip TEXT, src_port INT, dest_port INT, transport_protocol TEXT, "
-               "application_protocol TEXT, dest_fqdn TEXT, src_fqdn TEXT)")
-    db.execute("INSERT INTO flow VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-               (FLOW_GUID, "2024-01-19 05:34:22.000 +00:00", HOST, None, "10.0.0.5", C2_IP,
-                44100, 22, "tcp", "ssh", C2_FQDN, None))
-    db.execute("CREATE TABLE process (guid TEXT, timestamp TEXT, hostname TEXT, fqdn TEXT, pid INT, "
-               "command_line TEXT, exe TEXT, image_path TEXT, user TEXT, sid TEXT, "
-               "md5_hash TEXT, sha1_hash TEXT, sha256_hash TEXT)")
-    db.execute("INSERT INTO process VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-               (PROC_GUID, WHEN, HOST, None, 4242, "cmd  /c whoami", r"C:\Windows\System32\cmd.exe",
-                r"C:\Windows\System32\cmd.exe", "JDH", "S-1-5-21-1", None, None,
-                "a" * 64))
-    db.execute("CREATE TABLE file (guid TEXT, timestamp TEXT, hostname TEXT, fqdn TEXT, file_name TEXT, "
-               "file_path TEXT, md5_hash TEXT, sha1_hash TEXT, sha256_hash TEXT)")
-    db.commit()
-    db.close()
+def _write_jsonl(path, rows):
+    with open(path, "w") as fh:
+        for row in rows:
+            fh.write(json.dumps(row) + "\n")
+
+
+def _write_car_dir(root):
+    """One source's materialised CAR directory — the JSONL files ``add_store``
+    reads (the engine's per-object schema), standing in for a real Byakugan
+    build's output tree."""
+    root.mkdir(parents=True, exist_ok=True)
+    _write_jsonl(root / "car_flow.jsonl", [{
+        "guid": FLOW_GUID, "timestamp": "2024-01-19 05:34:22.000 +00:00", "hostname": HOST,
+        "fqdn": None, "src_ip": "10.0.0.5", "dest_ip": C2_IP, "src_port": 44100, "dest_port": 22,
+        "transport_protocol": "tcp", "application_protocol": "ssh", "dest_fqdn": C2_FQDN,
+        "src_fqdn": None,
+    }])
+    _write_jsonl(root / "car_process.jsonl", [{
+        "guid": PROC_GUID, "timestamp": WHEN, "hostname": HOST, "fqdn": None, "pid": 4242,
+        "command_line": "cmd  /c whoami", "exe": r"C:\Windows\System32\cmd.exe",
+        "image_path": r"C:\Windows\System32\cmd.exe", "user": "JDH", "sid": "S-1-5-21-1",
+        "md5_hash": None, "sha1_hash": None, "sha256_hash": "a" * 64,
+    }])
+    # file: Byakugan never populated it for this source -> no car_file.jsonl at
+    # all (populated objects only — never an empty stub).
+    (root / "car_relationships.jsonl").write_text("")  # always written, even empty
 
 
 def _write_detections(root):
@@ -83,19 +90,19 @@ def _write_detections(root):
 
 @pytest.fixture()
 def car_and_detections(tmp_path):
-    car_db = tmp_path / "car.db"
-    _make_car_db(str(car_db))
+    car_dir = tmp_path / "byakugan-source"
+    _write_car_dir(car_dir)
     det_dir = tmp_path / "signatures"
     det_dir.mkdir()
     _write_detections(det_dir)
-    return str(car_db), str(det_dir)
+    return str(car_dir), str(det_dir)
 
 
 # ------------------------------------------------------------------- the join
 def test_car_index_joins_by_ip_guid_and_pid(car_and_detections):
-    car_db, _ = car_and_detections
+    car_dir, _ = car_and_detections
     idx = behaviour.CarIndex()
-    idx.add_store(car_db)
+    idx.add_store(car_dir)
     # suricata: dest IP -> the flow
     suri = behaviour.Detection(source="suricata", detection_id="sig-suricata-alert",
                                name="x", ips=[C2_IP])
@@ -124,9 +131,9 @@ def test_detection_parsers_extract_techniques_and_keys(car_and_detections):
 
 # --------------------------------------------------------------- the sightings
 def test_sighting_of_attack_pattern_over_spindle_observed_data(car_and_detections):
-    car_db, det_dir = car_and_detections
+    car_dir, det_dir = car_and_detections
     idx = behaviour.CarIndex()
-    idx.add_store(car_db)
+    idx.add_store(car_dir)
     ai = attack_index.load_attack_index()
     dets = behaviour.load_detections(det_dir)
     objs, report = behaviour.behaviour_objects(dets, idx, case_id="case-1", attack=ai)
@@ -180,9 +187,9 @@ def test_shared_observed_data_across_detectors(car_and_detections):
     """hayabusa (T1059) and — if it resolved a technique — yara both touch the same
     process; whichever sights it references the ONE process observed-data (spindle
     guid = the shared key)."""
-    car_db, det_dir = car_and_detections
+    car_dir, det_dir = car_and_detections
     idx = behaviour.CarIndex()
-    idx.add_store(car_db)
+    idx.add_store(car_dir)
     dets = behaviour.load_detections(det_dir)
     objs, _ = behaviour.behaviour_objects(dets, idx, case_id="case-1")
     od_proc_id = objects.case_scoped_id("observed-data", "case-1", PROC_GUID, "process")
@@ -195,9 +202,9 @@ def test_shared_observed_data_across_detectors(car_and_detections):
 
 
 def test_bundle_validates_clean_with_attack_ids_as_external(car_and_detections):
-    car_db, det_dir = car_and_detections
+    car_dir, det_dir = car_and_detections
     idx = behaviour.CarIndex()
-    idx.add_store(car_db)
+    idx.add_store(car_dir)
     ai = attack_index.load_attack_index()
     dets = behaviour.load_detections(det_dir)
     bundle, _ = behaviour.build_behaviour_bundle(dets, idx, case_id="case-1", attack=ai)
@@ -208,12 +215,12 @@ def test_bundle_validates_clean_with_attack_ids_as_external(car_and_detections):
 
 
 def test_ids_are_deterministic(car_and_detections):
-    car_db, det_dir = car_and_detections
+    car_dir, det_dir = car_and_detections
     ai = attack_index.load_attack_index()
 
     def run():
         idx = behaviour.CarIndex()
-        idx.add_store(car_db)
+        idx.add_store(car_dir)
         b, _ = behaviour.build_behaviour_bundle(behaviour.load_detections(det_dir), idx,
                                                 case_id="case-1", attack=ai)
         return sorted(o["id"] for o in b["objects"])
@@ -221,10 +228,10 @@ def test_ids_are_deterministic(car_and_detections):
 
 
 def test_run_behaviour_writes_bundle(tmp_path, car_and_detections):
-    car_db, det_dir = car_and_detections
+    car_dir, det_dir = car_and_detections
     out = tmp_path / "behaviour.json"
     summary, bundle = behaviour.run_behaviour(
-        car_paths=[car_db], detections_dir=det_dir, case_id="case-1", out=str(out))
+        car_paths=[car_dir], detections_dir=det_dir, case_id="case-1", out=str(out))
     assert summary["ok"] and summary["validation"]["errors"] == []
     assert summary["bundle"] == str(out) and out.is_file()
     assert summary["summary"]["sightings"] >= 2
@@ -235,10 +242,10 @@ def test_run_behaviour_writes_bundle(tmp_path, car_and_detections):
 def test_no_car_entity_is_skipped_not_invented(tmp_path):
     """A detection that joins to nothing produces no sighting (never a fabricated
     entity) and is counted."""
-    car_db = tmp_path / "car.db"
-    _make_car_db(str(car_db))
+    car_dir = tmp_path / "byakugan-source"
+    _write_car_dir(car_dir)
     idx = behaviour.CarIndex()
-    idx.add_store(str(car_db))
+    idx.add_store(str(car_dir))
     orphan = behaviour.Detection(source="suricata", detection_id="sig-suricata-alert",
                                  name="ET nothing", techniques=[T_SCAN], ips=["203.0.113.9"],
                                  timestamp=WHEN)

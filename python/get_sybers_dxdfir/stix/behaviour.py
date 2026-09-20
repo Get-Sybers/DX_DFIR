@@ -5,10 +5,11 @@ detections light up behaviour over the cascaded, cross-source-resolved data**. A
 Suricata alert is one IP 5-tuple; a Hayabusa alert is one evtx record; a YARA hit
 is one process. On their own they say *what* fired, not *which entity across the
 rest of the evidence* it belongs to. This module performs that join — against the
-finished CAR stores (``car.db``) the engine wrote — and emits each join as a STIX
-2.1 **Sighting of the ATT&CK attack-pattern** the detection names, anchored to an
-``observed-data`` **keyed on the matched CAR row's spindle ``guid``** (the same
-behaviour-timeline entity every source of evidence converges onto).
+finished CAR (the materialised ``car_<object>.jsonl`` the engine wrote per
+source) — and emits each join as a STIX 2.1 **Sighting of the ATT&CK
+attack-pattern** the detection names, anchored to an ``observed-data`` **keyed
+on the matched CAR row's spindle ``guid``** (the same behaviour-timeline entity
+every source of evidence converges onto).
 
 Where :mod:`.export` sights the rule *indicator* over observed-data minted from
 the detection's OWN fields, this sights the **attack-pattern** (BP §5.2:
@@ -26,8 +27,9 @@ builders (:mod:`.objects`), the authoritative ATT&CK index (:mod:`.attack_index`
 and :mod:`.export`'s bundle assembly / validation, so a behaviour bundle merges
 object-for-object with the detection-export and Byakugan bundles.
 
-Join keys (offline, against ``car.db`` directly — the Elastic-native provenance
-join of ``detect/rules/*.car_join`` is a later phase):
+Join keys (offline, against the materialised CAR JSONL (``car_<object>.jsonl``)
+directly — the Elastic-native provenance join of ``detect/rules/*.car_join`` is
+a later phase):
 
     suricata  alert src/dest IP        -> CAR ``flow`` (src_ip / dest_ip)
     hayabusa  Sysmon ProcessGuid       -> CAR ``process`` (guid), else (host, pid)
@@ -38,7 +40,6 @@ from __future__ import annotations
 
 import json
 import os
-import sqlite3
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
@@ -46,11 +47,12 @@ from . import objects as o
 from .attack_index import AttackIndex, load_attack_index
 from .export import make_bundle, summarise, validate_bundle
 
-# The car.db schema is OWNED by the Byakugan engine (store.py defines the tables
-# and columns). These tuples are only this consumer's READ view of that contract —
-# the columns this join needs from the per-object store, read from car.db offline.
-# They are not a second definition of the schema; when the engine's schema changes
-# it is the source of truth. Only these three objects carry a joinable subject.
+# The car_<object>.jsonl schema is OWNED by the Byakugan engine (the CAR object
+# model defines the fields each line carries). These tuples are only this
+# consumer's READ view of that contract — the keys this join extracts from each
+# JSONL line, read from the materialised per-object store offline. They are not
+# a second definition of the schema; when the engine's schema changes it is the
+# source of truth. Only these three objects carry a joinable subject.
 _FLOW_COLS = ("guid", "timestamp", "hostname", "fqdn", "src_ip", "dest_ip", "src_port",
               "dest_port", "transport_protocol", "application_protocol", "dest_fqdn", "src_fqdn")
 _PROCESS_COLS = ("guid", "timestamp", "hostname", "fqdn", "pid", "command_line", "exe",
@@ -88,8 +90,9 @@ def _norm_ip(value) -> str | None:
 
 
 class CarIndex:
-    """Every joinable CAR entity across one or more ``car.db`` stores, indexed by
-    the keys the detection lanes carry. Built once, queried per detection."""
+    """Every joinable CAR entity across one or more materialised CAR source
+    directories, indexed by the keys the detection lanes carry. Built once,
+    queried per detection."""
 
     def __init__(self) -> None:
         self.flows_by_ip: dict[str, list[CarRow]] = {}
@@ -101,31 +104,31 @@ class CarIndex:
         self.stores: list[str] = []
 
     # -- ingest --------------------------------------------------------------
-    def add_store(self, car_db: str) -> None:
-        self.stores.append(car_db)
-        db = sqlite3.connect(f"file:{car_db}?mode=ro", uri=True)
-        try:
-            tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-            if "flow" in tables:
-                for row in self._rows(db, "flow", _FLOW_COLS):
-                    self._add_flow(row)
-            if "process" in tables:
-                for row in self._rows(db, "process", _PROCESS_COLS):
-                    self._add_process(row)
-            if "file" in tables:
-                for row in self._rows(db, "file", _FILE_COLS):
-                    self._add_file(row)
-        finally:
-            db.close()
+    def add_store(self, car_dir: str) -> None:
+        """Read one source's materialised CAR directory: whichever of
+        ``car_flow.jsonl`` / ``car_process.jsonl`` / ``car_file.jsonl`` it
+        carries. An object Byakugan never populated for this source has no
+        file at all — nothing to add, not an error (the same as an empty
+        table used to be)."""
+        self.stores.append(car_dir)
+        for object_type, cols, add in (
+            ("flow", _FLOW_COLS, self._add_flow),
+            ("process", _PROCESS_COLS, self._add_process),
+            ("file", _FILE_COLS, self._add_file),
+        ):
+            path = os.path.join(car_dir, f"car_{object_type}.jsonl")
+            if not os.path.isfile(path):
+                continue
+            for row in self._rows(path, cols):
+                add(row)
 
     @staticmethod
-    def _rows(db, table, cols) -> Iterable[dict]:
-        have = {r[1] for r in db.execute(f'PRAGMA table_info("{table}")')}
-        picked = [c for c in cols if c in have]
-        if "guid" not in picked:
-            return
-        for r in db.execute(f'SELECT {",".join(picked)} FROM "{table}"'):
-            yield dict(zip(picked, r))
+    def _rows(path: str, cols: tuple[str, ...]) -> Iterable[dict]:
+        """Each JSONL line -> this object's READ view: exactly ``cols``,
+        honest-null (a key the line does not carry reads as ``None``, same as
+        an unpopulated SQLite column used to)."""
+        for rec in _jsonl(path):
+            yield {c: rec.get(c) for c in cols}
 
     def _row(self, object_type: str, c: dict) -> CarRow | None:
         guid = c.get("guid")
@@ -433,11 +436,12 @@ def build_behaviour_bundle(detections: Iterable[Detection], car: CarIndex, **kw)
 def run_behaviour(*, car_paths: Iterable[str], detections_dir: str, case_id: str,
                   out: str | None = None, producer: str = o.DEFAULT_PRODUCER,
                   tlp: str | None = "amber", attack_index: str | None = None) -> tuple[dict, dict]:
-    """Read the CAR stores + the lane outputs, join, assemble, validate, write
-    (if ``out``). Returns ``(summary, bundle)``; ``summary['ok']`` is False when
-    validation failed (nothing is written then)."""
+    """Read the materialised CAR source directories + the lane outputs, join,
+    assemble, validate, write (if ``out``). Returns ``(summary, bundle)``;
+    ``summary['ok']`` is False when validation failed (nothing is written
+    then)."""
     car = CarIndex()
-    for p in _car_dbs(car_paths):
+    for p in _car_source_dirs(car_paths):
         car.add_store(p)
     detections = load_detections(detections_dir)
     attack = load_attack_index(attack_index)
@@ -458,17 +462,28 @@ def run_behaviour(*, car_paths: Iterable[str], detections_dir: str, case_id: str
 
 
 # ------------------------------------------------------------------- small helpers
-def _car_dbs(paths: Iterable[str]) -> list[str]:
-    """Resolve each path to the ``car.db`` files under it (a file is taken as-is; a
-    directory is walked for every ``car.db``)."""
+# The build's own done/skip marker (see ansible/.../dxdfir_byakugan): ALWAYS
+# written per source, even an empty one, so it is the reliable signal that a
+# directory is a finished CAR source — independent of which objects it
+# populated.
+_SOURCE_MARKER = "car_relationships.jsonl"
+
+
+def _car_source_dirs(paths: Iterable[str]) -> list[str]:
+    """Resolve each path to the materialised CAR source directories under it: a
+    directory carrying ``car_relationships.jsonl`` is a finished source and is
+    taken as-is; a directory that does not is walked for every such directory
+    beneath it."""
     found: list[str] = []
     for p in paths:
-        if os.path.isfile(p):
+        if not os.path.isdir(p):
+            continue
+        if os.path.isfile(os.path.join(p, _SOURCE_MARKER)):
             found.append(p)
-        elif os.path.isdir(p):
+        else:
             for cur, _dirs, files in os.walk(p):
-                if "car.db" in files:
-                    found.append(os.path.join(cur, "car.db"))
+                if _SOURCE_MARKER in files:
+                    found.append(cur)
     return sorted(dict.fromkeys(found))
 
 

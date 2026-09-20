@@ -26,9 +26,9 @@ dxdfir_byakugan_image: ""
 # deployed run installs the package instead.
 dxdfir_byakugan_python_path: "{{ dxdfir_byakugan_repo_root }}/python"
 
-# build: rebuild sources whose car.db already exists (BYAKUGAN_BUILD_FORCE).
+# build: rebuild sources whose car_relationships.jsonl already exists (BYAKUGAN_BUILD_FORCE).
 dxdfir_byakugan_rebuild: false
-# build: also run the derived relationship pass into superset.db (BYAKUGAN_BUILD_DERIVE).
+# build: also run the derived relationship pass into car_inferred.jsonl (BYAKUGAN_BUILD_DERIVE).
 dxdfir_byakugan_derive: false
 # build: also derive the STIX 2.1 bundle from the finished stores (BYAKUGAN_BUILD_STIX).
 dxdfir_byakugan_stix: false

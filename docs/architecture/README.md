@@ -45,7 +45,7 @@ raw ──process──▶ processed ──build-car──▶ car ──build-ti
  │                   │                      │                          │
  │ data_store/raw/   │ data_store/          │ data_store/processed/    │  (also read live in
  │ <type>/           │ processed/<leaf>/    │ car/<source>/            │   the Timeline tab)
- │                   │                      │  car.db + car_<obj>.jsonl │
+ │                   │                      │ car_<obj>.jsonl          │
  └───────────────────┴──────── Filebeat tails processed/ ──▶ logs-dxdfir.* data streams
 ```
 

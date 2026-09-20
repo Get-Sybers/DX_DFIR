@@ -21,7 +21,7 @@ nothing but filesystem convention:
 |---|---|---|
 | **Intake** (`collection.py`) | SQLite `.registry.db` (collections / files / events) + shadow files (`.collection`, `.collection.log`, `.collection.hashes`), SHA-1 | `name + relpath` |
 | **Processing** (lanes / roles) | *nothing* — bare files in shared `processed/<source>/<host>/`, discovered by extension-glob + hard-coded output-path contracts in Go | `host` / capture string |
-| **CAR** (Byakugan) | per-source `car.db` + `superset.db` + JSONL | `source_artefact` filename |
+| **CAR** (Byakugan) | per-source materialised JSONL (`car_<object>.jsonl` + `car_relationships.jsonl`) | `source_artefact` filename |
 
 The intake layer is well built; the gap is **reach** — that discipline stops at
 the edge of `raw/`. Concrete failure modes on the raw side:
@@ -55,7 +55,7 @@ of it.
 
 | In scope | Out of scope |
 |---|---|
-| Acquisition intake (disks, memory, captures, loose files) | The analysis graph — `car.db`, `superset.db`, the 13 CAR objects |
+| Acquisition intake (disks, memory, captures, loose files) | The analysis graph — the materialised CAR JSONL, the 13 CAR objects |
 | Storage structure — disks → volumes, serials, offsets | Detection / ES\|QL, `logs-car.*`, STIX sightings |
 | Files — extracted per volume, with hashes | Any link *into* CAR |
 | Extraction / processing runs — which tool, on what, producing what | Cross-source correlation (the engine's job — the 01–09 arc) |

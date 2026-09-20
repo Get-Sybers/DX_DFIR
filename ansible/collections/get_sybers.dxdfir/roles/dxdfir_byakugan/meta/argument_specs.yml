@@ -9,8 +9,9 @@ argument_specs:
         get-sybers/byakugan container (cloned + built at the repo-root
         sources.yml pin) and is driven from its contract by the shared
         dxdfir_lane skeleton. Three actions selected by dxdfir_byakugan_action:
-        build (`byakugan build`: per-source car.db + car_<object>.jsonl +
-        car_relationships.jsonl, superset.db with the derive pass), verify
+        build (`byakugan build`: per-source car_<object>.jsonl for each
+        populated object, car_relationships.jsonl always written — the
+        done/skip marker — car_inferred.jsonl with the derive pass), verify
         (`byakugan verify`: the engine's own correctness gate — the tree is
         its read-only input mount, the report verify.txt is written through
         the output mount, beside the stores by default — judged on the
@@ -48,12 +49,12 @@ argument_specs:
         type: bool
         required: false
         default: false
-        description: "build: rebuild sources whose car.db already exists (BYAKUGAN_BUILD_FORCE)."
+        description: "build: rebuild sources whose car_relationships.jsonl already exists (BYAKUGAN_BUILD_FORCE)."
       dxdfir_byakugan_derive:
         type: bool
         required: false
         default: false
-        description: "build: also run the derived relationship pass into superset.db (BYAKUGAN_BUILD_DERIVE)."
+        description: "build: also run the derived relationship pass into car_inferred.jsonl (BYAKUGAN_BUILD_DERIVE)."
       dxdfir_byakugan_stix:
         type: bool
         required: false
