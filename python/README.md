@@ -1,36 +1,26 @@
 # get_sybers_dxdfir
 
-The processing logic of the DX_DFIR pipeline as an importable, unit-tested Python
-package — the processors plus the `python -m` contract modules the front-end
-drives. The heavy per-item work (container runs, JSON reshaping) lives here; the
-`get_sybers.dxdfir` Ansible collection orchestrates it one action per task, and
-the user-facing **`dxdfir`** front-end is the Go binary built from `go/`.
+The host-side Python of the DX_DFIR pipeline as an importable, unit-tested
+package. It runs **no container**: every tool lane is an Ansible role of the
+`get_sybers.dxdfir` collection that builds its `docker run` from the tool's
+GoDFIR-toolz `contract.yml`. What lives here is what the pipeline still needs on
+the host:
 
-## Processors
-Each source is a module runnable standalone or through its role:
-```bash
-python -m get_sybers_dxdfir.zeek        --pcap-dir RAW/pcaps --out-dir PROCESSED/zeek
-python -m get_sybers_dxdfir.evtx        --evtx-dir RAW/logs/winevt --out-dir PROCESSED/windows_logs
-python -m get_sybers_dxdfir.plaso       --input-dir RAW/disk_images --out-dir PROCESSED/log2timeline --module dev-scripts/plaso/l2t_json_dxdfir.py
-python -m get_sybers_dxdfir.signatures  --output-dir PROCESSED/signatures --repo-root .
-```
-Every processor prints a machine-readable JSON summary (`processed`/`skipped`/
-`failed`/…) so its role can set an honest `changed_when`.
+| Module | Role |
+|---|---|
+| `get_sybers_dxdfir.images` | the tool-image supply-chain guard (`--require IMAGE` at every lane preflight, `--audit` for `dxdfir verify-images`), fed by the repo-root `images.yml` inventory |
+| `get_sybers_dxdfir.signatures.detectraptor` / `.suricata_rules` | pinned, checksum-verified ruleset fetchers (DetectRaptor YARA, ET Open Suricata) that land operator rulesets for the `dxdfir_signatures` role to mount |
+| `get_sybers_dxdfir.detect` | the Elastic detection rules-as-code (`detect/rules/`, ES|QL/EQL) and their loader/validator |
+| `get_sybers_dxdfir.stix` | the STIX 2.1 / OpenCTI exchange verbs (`python -m get_sybers_dxdfir.stix`, driven by `dxdfir stix`) |
 
-The CAR lane sits on top of the processed tree: `python -m get_sybers_dxdfir.mitrecar`
-drives the external [Byakugan](https://github.com/Get-Sybers/byakugan) engine inside
-the hardened `get-sybers/byakugan` image (cloned + built at the repo-root
-`sources.yml` pin by `dxdfir build-docker`; the lane maps host paths to container
-mounts and shells the image — one `car.db` + `car_<object>.jsonl` per source), and
-`python -m get_sybers_dxdfir.carcheck` is the correctness gate over what it wrote.
-The Elastic detection rules live as data under `get_sybers_dxdfir/detect/rules/`
-(`python -m get_sybers_dxdfir.detect.rules_loader` validates them).
+The user-facing **`dxdfir`** front-end is the Go binary built from `go/`.
 
 ## The `dxdfir` front-end (Go)
 The verbs live in the Go binary (`go/` — see [its README](../go/README.md)); it
-shells out to this package and never re-implements processing:
+drives the collection with `ansible-playbook` and shells out to this package only
+for the guard and the STIX verbs:
 ```bash
-dxdfir process zeek --pipeline elastic  # drive the dxdfir_zeek role (preflight → process → verify)
+dxdfir process zeek                     # drive the dxdfir_zeek role (build → preflight → process → verify)
 dxdfir process signatures -e '{"dxdfir_signatures_lanes":["yara"]}'
 dxdfir build-car                        # normalise every processed source into per-source CAR stores
 dxdfir verify-car                       # the CAR correctness gate over the materialised CAR
@@ -39,16 +29,12 @@ dxdfir validate                         # run the check harness
 dxdfir list                             # list processable sources
 man dxdfir                              # the manual (go/man/dxdfir.1)
 ```
-`process` drives the collection with `ansible-playbook` (the role's one action calls
-the matching `python -m get_sybers_dxdfir.<source>` for the tight loop). `build-car` and
-`verify-car` drive the CAR lane; the analysis backend is the Elastic-native stack
-(`docker/elastic`, brought up with compose), fed from the processed tree.
 `validate` runs the repo's check harness (`.github/tests/run-checks.sh`). The repo is
 auto-detected (or pass `--repo-root` / `$DFIR_REPO_ROOT`).
 
 ## Install
 ```bash
-pip install ./python          # the processor package (+ ansible-core, so ansible-playbook comes with it)
+pip install ./python          # the package (+ ansible-core, so ansible-playbook comes with it)
 install -Dm644 go/man/dxdfir.1 ~/.local/share/man/man1/dxdfir.1   # optional: man page
 ```
 The package installs no console script — the `dxdfir` command is the Go binary

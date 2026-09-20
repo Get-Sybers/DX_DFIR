@@ -19,10 +19,9 @@ dependencies = [
     # wheel bundle alike.
     "requests>=2.31",
     "docker>=7.0",
-    # The godfir-toolz lane renders its own plaso yaml_filter_file (image_export.py
-    # has no named forensic-artifact-definitions entry for the godfir-toolz set).
-    # Already a transitive dependency of ansible-core; declared directly since
-    # get_sybers_dxdfir now imports it itself.
+    # The image guard reads the repo-root images.yml inventory and the STIX
+    # exchange reads its YAML config/templates. Already a transitive dependency
+    # of ansible-core; declared directly since get_sybers_dxdfir imports it itself.
     "PyYAML>=6.0",
 ]
 

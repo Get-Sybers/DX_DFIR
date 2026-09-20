@@ -92,9 +92,10 @@ func NewRootCmd(version string) *cobra.Command {
 		Use:   "dxdfir",
 		Short: "DX_DFIR forensic pipeline front-end",
 		Long: "DX_DFIR forensic processing pipeline — process evidence, build + verify CAR, validate.\n\n" +
-			"A Go/termui front-end over the get_sybers.dxdfir Ansible collection and the\n" +
-			"get_sybers_dxdfir Python processors. Long-running processing and collection\n" +
-			"creation render a live dashboard on a terminal; output stays plain when piped.\n\n" +
+			"A Go/termui front-end over the get_sybers.dxdfir Ansible collection, whose roles\n" +
+			"run the GoDFIR-toolz tool containers from their contracts. Long-running processing\n" +
+			"and collection creation render a live dashboard on a terminal; output stays plain\n" +
+			"when piped.\n\n" +
 			"Commands read verb first — `register collection NAME`, `deploy stack`,\n" +
 			"`list collections`. The collection verbs also take a bare NAME in place of\n" +
 			"the noun: `register NAME`, `sort NAME`, `select NAME`.\n\n" +

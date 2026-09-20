@@ -65,22 +65,26 @@ lists every command (`man dxdfir` for the manual).
 <a name="how-it-runs"></a>
 
 A three-layer stack — the **`dxdfir` CLI** → the **`get_sybers.dxdfir` Ansible
-collection** (one role per source, one action per task) → the **`get_sybers_dxdfir`
-Python package** — writing the processed tree the CAR lane builds from and
-Filebeat ships. Each source runs as `dxdfir process <source>` (driving the
-matching `dxdfir_<source>` role); processors are also runnable as
-`python -m get_sybers_dxdfir.<source>`.
+collection** (one role per source, one action per task) → the
+**[GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) tool containers** —
+writing the processed tree the CAR lane builds from and Filebeat ships. Each
+source runs as `dxdfir process <source>` (driving the matching
+`dxdfir_<source>` role); the role builds every `docker run` purely from the
+tool's `contract.yml` (its environment variables and mounts) and the container
+discovers, batches and skips its own inputs. The `get_sybers_dxdfir` Python
+package keeps the image supply-chain guard, the detection rules-as-code and the
+STIX exchange — nothing in it runs a container.
 
 ## What it produces
 
 | Source | Command | Lands in (`data_store/processed/`) |
 |:---|:---|:---|
-| Disk images / VM exports (Plaso) | `process plaso` | `log2timeline/jsonl/` (Plaso `json_line`, one file per host) |
+| Disk images / VM exports (Plaso) | `process plaso` | `log2timeline/jsonl/<source>/timeline.jsonl` (Plaso `json_line`) + `log2timeline/storage/` (`.plaso`) |
 | PCAP (Zeek) | `process zeek` | `zeek/<capture>/` (`conn.json` + every other Zeek log) |
-| Windows event logs + Sysmon (goevtx) | `process evtx` | `windows_logs/<host>/` (goevtx JSON) |
-| Memory ([anamnesis](https://github.com/Get-Sybers/Anamnesis)) | `process memory` | `memory/<image>/` (per-plugin JSONL) |
-| GoDFIR-toolz artefacts — SRUM, registry, … | `process godfir-toolz` | `godfir-toolz/` |
-| YARA / Suricata / Hayabusa | `process signatures` | `signatures/<lane>/` (JSONL) |
+| Windows event logs + Sysmon (goevtx) | `process evtx` | `windows_logs/<log>/goevtx.jsonl` |
+| Memory ([anamnesis](https://github.com/Get-Sybers/Anamnesis)) | `process memory` | `memory/<image>/` (per-plugin JSONL + `car.db`) |
+| GoDFIR-toolz artefacts — SRUM, registry, … | `process godfir-toolz` | `godfir-toolz/<tool>/<item>/` |
+| YARA / Suricata / Hayabusa / disk scan | `process signatures` | `detections/<sub-tool>/<item>/` (JSONL) |
 
 The **CAR layer is materialised**: the [Byakugan](https://github.com/Get-Sybers/byakugan)
 engine (formerly PIIAT-MitreCar) normalises each processed source into finished

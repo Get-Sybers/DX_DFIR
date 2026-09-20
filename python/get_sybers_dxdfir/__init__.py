@@ -1,11 +1,12 @@
-"""get_sybers_dxdfir — the DX_DFIR processing package.
+"""get_sybers_dxdfir — the host-side Python of the DX_DFIR pipeline.
 
-Pure Python processors (zeek, plaso, memory, evtx, godfir_toolz, signatures),
-the CAR lane (mitrecar, carcheck), the Elastic detection rules (detect/) and the
-STIX exchange verbs (stix/); the Go `dxdfir` front-end (go/) drives them. The
-Ansible collection `get_sybers.dxdfir` invokes these as single actions; the
-playbook holds the decisions. See https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Extraction-Rules.md and
-epic #46.
+Nothing here runs a container: every tool lane is an Ansible role of the
+`get_sybers.dxdfir` collection that builds its `docker run` from the tool's
+GoDFIR-toolz contract.yml. This package keeps the tool-image supply-chain guard
+(images), the ruleset fetchers (signatures.detectraptor / suricata_rules), the
+Elastic detection rules-as-code (detect/) and the STIX exchange verbs (stix/);
+the Go `dxdfir` front-end (go/) drives the collection and shells out here only
+for the guard and the STIX verbs.
 """
 
 __version__ = "0.6.0"

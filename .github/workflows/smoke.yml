@@ -2,12 +2,12 @@ name: smoke
 
 # Runs the pipeline for real and asserts CORRECTNESS — the coverage `checks`
 # deliberately does not provide (issue #10). It processes sha256-pinned Sysmon
-# .evtx through the real evtx lane (goevtx), normalises the output into
-# materialised CAR with the external Byakugan engine (built into the
-# get-sybers/byakugan image below at the commit sources.yml pins), asserts every
-# Sysmon-sourced CAR object has rows
-# with its EvtxPayload-derived fields correctly populated, and runs the
-# verify-car gate over the same tree.
+# .evtx through the real evtx lane (the dxdfir_evtx role running goevtx from
+# its contract), normalises the output into materialised CAR with the external
+# Byakugan engine (the dxdfir_byakugan role running the get-sybers/byakugan
+# image built below at the commit sources.yml pins), asserts every
+# Sysmon-sourced CAR object has rows with its EvtxPayload-derived fields
+# correctly populated, and runs the verify-car gate over the same tree.
 # The EvtxPayload XML→JSON break that zeroed those fields passes `checks` but
 # fails this.
 #
@@ -24,12 +24,16 @@ on:
     - cron: "0 6 * * *"
   pull_request:
     paths:
-      - "python/get_sybers_dxdfir/evtx.py"
-      - "python/get_sybers_dxdfir/imageexport.py"
-      - "python/get_sybers_dxdfir/container.py"
+      # The lanes the smoke test drives, and the shared skeleton they run through.
+      - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_lane/**"
+      - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_evtx/**"
+      - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_byakugan/**"
+      - "ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-process-evtx.yml"
+      - "ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-car.yml"
+      - "ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-verify-car.yml"
+      - "ansible/collections/get_sybers.dxdfir/requirements.yml"
+      - "ansible.cfg"
       - "python/get_sybers_dxdfir/images.py"
-      - "python/get_sybers_dxdfir/mitrecar.py"
-      - "python/get_sybers_dxdfir/carcheck.py"
       - "python/pyproject.toml"
       # Every tool image (byakugan/goevtx included) builds from the GoDFIR-toolz
       # submodule, and the build wiring lives in the images role + manifest —
@@ -56,9 +60,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Submodule: docker/GoDFIR-toolz (every tool-image build context + the
-          # canonical hardening playbook). The goevtx image built below comes
-          # from the latter, so this MUST be recursive.
+          # Submodule: docker/GoDFIR-toolz (every tool-image build context, the
+          # canonical hardening playbook and every tool's contract.yml the roles
+          # are driven from). The goevtx image built below comes from it, so
+          # this MUST be recursive.
           submodules: recursive
 
       - name: Set up Python
@@ -66,21 +71,24 @@ jobs:
         with:
           python-version: "3.11"
 
-      # The smoke test drives the processors and the CAR lane directly
-      # (python -m get_sybers_dxdfir.<module> on PYTHONPATH=python). Installing
-      # the package brings its declared dependencies (PyYAML for the engine's
-      # model sources, among others) under the python/constraints.txt lock;
-      # nothing else is needed.
-      - name: Install the dxdfir package
-        run: python -m pip install --quiet --constraint python/constraints.txt ./python
+      # The smoke test drives the lanes with ansible-playbook. Installing the
+      # package brings ansible-core (and the docker SDK community.docker's
+      # modules import) under the python/constraints.txt lock; the collection's
+      # pinned dependencies (community.docker for the image self-heal,
+      # ansible.posix for the profile_tasks callback ansible.cfg enables) come
+      # from requirements.yml.
+      - name: Install the dxdfir package and the collection's dependencies
+        run: |
+          python -m pip install --quiet --constraint python/constraints.txt ./python
+          ansible-galaxy collection install -r ansible/collections/get_sybers.dxdfir/requirements.yml
 
       # The evtx lane runs goevtx (the static-Go .evtx parser); build it once
       # here (the smoke test asserts its presence and fails loudly if absent).
       - name: Build the goevtx image
         run: docker build -t get-sybers/goevtx:latest -f docker/GoDFIR-toolz/goevtx/Dockerfile docker/GoDFIR-toolz/goevtx
 
-      # The CAR lane (get_sybers_dxdfir.mitrecar) drives the external Byakugan
-      # engine inside the get-sybers/byakugan image: the docker build clones the
+      # The CAR lane (dxdfir_byakugan) drives the external Byakugan engine
+      # inside the get-sybers/byakugan image: the docker build clones the
       # engine at the byakugan pin in sources.yml and, in its own
       # stages, checks out the engine's nested model submodules (third_party/car +
       # attack-datasources) and builds the Go parse binary — so nothing about the

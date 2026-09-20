@@ -5,9 +5,12 @@
 # read-only) and writes timeline.jsonl into BYAKUGAN_TIMELINE_OUT_DIR — by
 # default the car dir itself, so the timeline lands beside the stores. An
 # existing timeline.jsonl is kept unless FORCE.
+- name: "car-timeline | resolve where timeline.jsonl lands"
+  ansible.builtin.set_fact:
+    dxdfir_byakugan_timeline_out_resolved: >-
+      {{ dxdfir_byakugan_timeline_out_dir | default(dxdfir_byakugan_timeline_dir, true) }}
+
 - name: "car-timeline | run the shared tool-lane skeleton"
-  vars:
-    _out_dir: "{{ dxdfir_byakugan_timeline_out_dir | default(dxdfir_byakugan_timeline_dir, true) }}"
   ansible.builtin.include_role:
     name: dxdfir_lane
   vars:
@@ -25,6 +28,6 @@
           BYAKUGAN_TIMELINE_BEFORE: "{{ dxdfir_byakugan_timeline_before }}"
         mounts:
           - {host: "{{ dxdfir_byakugan_timeline_dir }}", path: /input, mode: ro}
-          - {host: "{{ _out_dir }}", path: /output, mode: rw}
-    dxdfir_lane_verify_dir: "{{ _out_dir }}"
+          - {host: "{{ dxdfir_byakugan_timeline_out_resolved }}", path: /output, mode: rw}
+    dxdfir_lane_verify_dir: "{{ dxdfir_byakugan_timeline_out_resolved }}"
     dxdfir_lane_verify_glob: "timeline.jsonl"
