@@ -10,10 +10,12 @@ argument_specs:
         sources.yml pin) and is driven from its contract by the shared
         dxdfir_lane skeleton. Three actions selected by dxdfir_byakugan_action:
         build (`byakugan build`: per-source car.db + car_<object>.jsonl +
-        car_relationships.jsonl, superset.db with the derive pass), verify (the
-        engine's own byakugan.verify correctness gate over the tree, mounted
-        read-only) and timeline (`byakugan timeline`: one property-rich,
-        time-ordered CAR timeline).
+        car_relationships.jsonl, superset.db with the derive pass), verify
+        (`byakugan verify`: the engine's own correctness gate — the tree is
+        its read-only input mount, the report verify.txt is written through
+        the output mount, beside the stores by default — judged on the
+        summary's status ok) and timeline (`byakugan timeline`: one
+        property-rich, time-ordered CAR timeline).
     options:
       dxdfir_byakugan_action:
         type: str
@@ -83,3 +85,8 @@ argument_specs:
         type: str
         required: false
         description: "timeline: only events at/before this ISO timestamp."
+      dxdfir_byakugan_verify_out_dir:
+        type: str
+        required: false
+        default: ""
+        description: "verify: the directory the gate report verify.txt is written to (empty = the CAR tree itself, beside the stores)."

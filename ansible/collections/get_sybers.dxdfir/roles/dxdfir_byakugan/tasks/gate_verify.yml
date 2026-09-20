@@ -1,0 +1,43 @@
+---
+# car-verify gate, included at the end of dxdfir_lane's process block instead
+# of the default one: the verdict is the summary line's `status`, and `ok` is
+# the only pass. `failed` (exit 1) names the checks that failed in `failures`;
+# `nothing` (exit 1) means no materialised CAR under the tree — the default gate
+# would let both through as "nothing to do". The report (every check, the tally,
+# the verdict) is the run's stderr and verify.txt through the output mount; it
+# is shown here so the play output carries it on a pass as well as on a
+# failure, and its presence on disk is asserted alongside the verdict so a run
+# that passes without writing its report never goes unnoticed. A trusted
+# literal assert — dxdfir_lane_results + dxdfir_lane_summaries (one run) are
+# in scope from the shared process step.
+- name: "car-verify | the gate report"
+  ansible.builtin.debug:
+    msg: "{{ (dxdfir_lane_results.results | first).stderr_lines }}"
+
+- name: "car-verify | judge the run on the summary verdict (status ok)"
+  ansible.builtin.assert:
+    that:
+      - (dxdfir_lane_summaries | first).status == 'ok'
+    fail_msg: >-
+      car-verify: status {{ (dxdfir_lane_summaries | first).status }} over
+      {{ dxdfir_byakugan_dir }} —
+      {{ (dxdfir_lane_summaries | first).failures | default([])
+         | map(attribute='item') | join('; ')
+         | default('no materialised CAR under the tree (build the CAR first)', true) }}
+    quiet: true
+
+- name: "car-verify | stat the report the contract promises"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_byakugan_verify_out_resolved }}/verify.txt"
+  register: dxdfir_byakugan_verify_report
+
+- name: "car-verify | the report landed through the output mount"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_byakugan_verify_report.stat.exists
+      - dxdfir_byakugan_verify_report.stat.size | int > 0
+    fail_msg: >-
+      car-verify passed but wrote no report: {{ dxdfir_byakugan_verify_out_resolved }}/verify.txt
+      is missing or empty (the contract promises it whenever a materialised CAR
+      source is found).
+    quiet: true

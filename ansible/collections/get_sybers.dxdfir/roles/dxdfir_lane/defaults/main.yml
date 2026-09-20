@@ -29,8 +29,8 @@ dxdfir_lane_python_path: ""
 #     network:  true keeps the docker bridge — honoured only when the contract
 #               declares network: optional; every other run gets --network none
 #     entrypoint / args: the argv pass-through the contracts reserve for
-#               debugging. The one consumer is the CAR verify gate (see
-#               dxdfir_byakugan/tasks/verify.yml).
+#               debugging. No lane in the pipeline uses it: every run names a
+#               sub-tool or runs the self-orchestrating entrypoint.
 dxdfir_lane_runs: []
 
 # Runtime confinement applied to every run, before the tmpfs/network/mount/env

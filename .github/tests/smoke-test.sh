@@ -17,7 +17,8 @@
 #   image at the sources.yml pin, over the processed tree) -> assert each
 #   Sysmon-sourced CAR object has rows AND its EvtxPayload-derived fields are
 #   populated with the expected values -> run the verify-car gate (the role's
-#   verify action, the engine's own byakugan.verify) over the same tree.
+#   verify action: the engine's own `byakugan verify` sub-tool, env-driven from
+#   the contract like every lane) over the same tree.
 #
 # Fixtures: the `sysmon-attack-samples` group in dev-scripts/samples-manifest.tsv
 # (real Sysmon telemetry from sbousseaden/EVTX-ATTACK-SAMPLES, sha256-pinned, a
@@ -215,13 +216,21 @@ assert_has relationships -        source_guid,target_guid -                     
 
 # =============================================================================
 # The same tree through the promotion gate: populated, value-sane, traceable,
-# car_action in the engine model's vocabulary.
+# car_action in the engine model's vocabulary. `byakugan verify` reads the tree
+# as BYAKUGAN_VERIFY_INPUT_DIR (read-only) and writes its report, verify.txt,
+# beside the stores; the role passes only on the summary's status == ok and
+# shows the report in the play output.
 section "The verify-car gate over the same tree (dxdfir_byakugan verify)"
 if ansible-playbook "$PLAYBOOKS/dxdfir-verify-car.yml" -e "dxdfir_byakugan_dir=$CAR_DIR" >"$LOG_DIR/gate.out" 2>&1; then
-    pass "verify-car: $(grep -oE 'passed: +[0-9]+' "$LOG_DIR/gate.out" | head -1 | tr -s ' '), no failures"
+    pass "verify-car: $(grep -oE 'passed: +[0-9]+' "$LOG_DIR/gate.out" | head -1 | tr -s ' '), status ok"
+    if [[ -s "$CAR_DIR/verify.txt" ]]; then
+        pass "verify.txt written beside the stores"
+    else
+        fail "verify.txt missing under $CAR_DIR"
+    fi
 else
-    grep -E '✗|❌|not loadable|no materialised CAR|rc=' "$LOG_DIR/gate.out" >&2 || tail -20 "$LOG_DIR/gate.out" >&2
-    fail "verify-car reported failures (details above)"
+    grep -E '✗|❌|not loadable|no materialised CAR|car-verify: status|rc=' "$LOG_DIR/gate.out" >&2 || tail -20 "$LOG_DIR/gate.out" >&2
+    fail "verify-car did not pass (details above)"
 fi
 
 # =============================================================================
