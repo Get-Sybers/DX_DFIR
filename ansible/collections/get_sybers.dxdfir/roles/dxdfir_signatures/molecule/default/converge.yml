@@ -6,9 +6,13 @@
     dxdfir_signatures_repo_root: /tmp/dxdfir_signatures_molecule/repo
     dxdfir_signatures_out_dir: /tmp/dxdfir_signatures_molecule/repo/data_store/processed/detections
     dxdfir_signatures_lanes: [yara]
-    # the fake repo has no python package — point PYTHONPATH at the real repo.
+    dxdfir_signatures_yara_sources: [files]
+    # the fixture rule, mounted into the image as the operator ruleset
+    dxdfir_signatures_yara_rules: /tmp/dxdfir_signatures_molecule/repo/data_store/dependencies/yara-rules/demo.yar
+    # the fake repo has no contracts or python package — point both at the real repo.
+    dxdfir_signatures_contract: "{{ (playbook_dir + '/../../../../../../../docker/GoDFIR-toolz/signatures/contract.yml') | realpath }}"
     dxdfir_signatures_python_path: "{{ (playbook_dir + '/../../../../../../../python') | realpath }}"
   tasks:
-    - name: "converge | run dxdfir_signatures (elastic, yara lane)"
+    - name: "converge | run dxdfir_signatures (yara over the loose files)"
       ansible.builtin.include_role:
         name: dxdfir_signatures

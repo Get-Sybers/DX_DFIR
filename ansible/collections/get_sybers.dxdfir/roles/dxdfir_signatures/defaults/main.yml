@@ -5,53 +5,70 @@
 dxdfir_signatures_repo_root: "{{ role_path }}/../../../../.."
 
 dxdfir_signatures_out_dir: "{{ dxdfir_signatures_repo_root }}/data_store/processed/detections"
-# Output base — consumed by
-# tasks/process.yml. Override directly to send output to a custom location.
-# Which detection lanes to run; empty = all (yara, suricata, hayabusa).
+# Output base: one folder per sub-tool (yara/<source>/, suricata/, hayabusa/,
+# scan/), each holding one folder per item. Override directly to send output to
+# a custom location.
+
+# Which sub-tools of the signatures image to run; empty = all four.
+#   yara      the baked (or a mounted) YARA ruleset over loose files and memory images
+#   suricata  offline replay of every capture with the baked (or a mounted) ruleset
+#   hayabusa  Sigma over every .evtx tree (loose logs + the evtx lane's image export)
+#   scan      gomount -> goyara over every disk image, in userspace (no /dev/fuse)
 dxdfir_signatures_lanes: []
-# Where the hayabusa lane stages disk-image EVTX extractions (empty => the evtx
-# processor's own stage, data_store/processed/windows_logs/_extracted_evtx —
-# images already staged by either lane are reused, never re-extracted).
-dxdfir_signatures_stage_dir: ""
-# Include Volume Shadow Copies when staging disk images for the hayabusa lane.
-dxdfir_signatures_vss: false
-# YARA sources to run (comma list of files,disk,memory); empty = all.
-dxdfir_signatures_yara_sources: ""
-# The captures the suricata sub-lane replays (empty => the processor default,
-# data_store/raw/pcaps). A collection sets this to its sorted pcaps/ subdir
-# (collection.LANES: signatures -> dxdfir_signatures_pcap_dir); without it a
-# sorted collection's captures never reach suricata.
-dxdfir_signatures_pcap_dir: ""
-# Disk images the yara disk scan + hayabusa image-EVTX extraction read (empty =>
-# processor default data_store/raw/disk_images). A collection scopes this to its
-# sorted disk_images/ subdir (collection.LANES: signatures -> dxdfir_signatures_disk_dir).
-dxdfir_signatures_disk_dir: ""
-# Memory images the yara memory scan reads (empty => data_store/raw/memory). A
-# collection scopes this to its sorted memory/ subdir
-# (collection.LANES: signatures -> dxdfir_signatures_memory_dir).
-dxdfir_signatures_memory_dir: ""
-# Per-pcap Suricata tuning file (INI template; empty => the processor's default,
-# data_store/dependencies/suricata-tuning.conf). Written as an editable template
-# on first run; while template-only or invalid, HOME_NET is auto-detected per
-# pcap and recorded into it. Tuning is reset per pcap — nothing carries over.
-dxdfir_signatures_suricata_tuning_file: ""
-# --fetch provisions rules/binaries when online (never in an air-gapped run).
-dxdfir_signatures_fetch: false
-# In-repo runs use PYTHONPATH; a deployed run installs the package instead.
+# The yara sub-tool's sources: files (loose files) and/or memory (raw memory
+# images, scanned directly); disk images are the scan sub-tool.
+dxdfir_signatures_yara_sources: [files, memory]
+
+# The evidence each sub-tool reads. Subdirs come from the shared evidence
+# taxonomy (evidence-taxonomy/), the one source of truth for where sort files
+# evidence AND where this role reads it; a missing taxonomy file falls back to
+# the conventional subdir. A collection scopes these to its sorted subdirs
+# (go/internal/collection: signatures -> dxdfir_signatures_{pcap,disk,memory}_dir).
+# A directory that does not exist is skipped (its run is not declared).
+dxdfir_signatures_files_dir: "{{ dxdfir_signatures_repo_root }}/data_store/raw/other_raw_data"
+dxdfir_signatures_memory_dir: >-
+  {{ dxdfir_signatures_repo_root }}/data_store/raw/{{
+  ((lookup('file', dxdfir_signatures_repo_root ~ '/evidence-taxonomy/memory.yml',
+  errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('memory', true) }}
+dxdfir_signatures_pcap_dir: >-
+  {{ dxdfir_signatures_repo_root }}/data_store/raw/{{
+  ((lookup('file', dxdfir_signatures_repo_root ~ '/evidence-taxonomy/pcaps.yml',
+  errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('pcaps', true) }}
+dxdfir_signatures_disk_dir: >-
+  {{ dxdfir_signatures_repo_root }}/data_store/raw/{{
+  ((lookup('file', dxdfir_signatures_repo_root ~ '/evidence-taxonomy/disk_images.yml',
+  errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('disk_images', true) }}
+dxdfir_signatures_evtx_dir: >-
+  {{ dxdfir_signatures_repo_root }}/data_store/raw/{{
+  ((lookup('file', dxdfir_signatures_repo_root ~ '/evidence-taxonomy/logs_winevt.yml',
+  errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('logs/winevt', true) }}
+# The evtx lane's disk-image export (one canonical stage, shared): hayabusa
+# runs over it too when it exists, so an image is exported once for both lanes.
+dxdfir_signatures_evtx_stage_dir: "{{ dxdfir_signatures_repo_root }}/data_store/processed/windows_logs/_extracted_evtx"
+
+# Operator rulesets, mounted read-only into the image and named by the
+# sub-tool's *_RULES variable. Empty = the ruleset baked into the image (the
+# DetectRaptor merge for yara/scan, the ET Open merge for suricata, hayabusa's
+# default Sigma set). See docs/Signature-Rules.md.
+dxdfir_signatures_yara_rules: ""        # a rules file or compiled index (yara + scan)
+dxdfir_signatures_suricata_rules: ""    # a suricata.rules file
+dxdfir_signatures_hayabusa_rules: ""    # a Sigma rules directory
+# Suricata tuning: comma- or space-separated key=value --set entries
+# (SIGNATURES_SURICATA_SET), e.g. "vars.address-groups.HOME_NET=[10.0.0.0/8]".
+dxdfir_signatures_suricata_set: ""
+# hayabusa output profile (SIGNATURES_HAYABUSA_PROFILE); empty = the contract's
+# default (verbose, which carries the MITRE columns).
+dxdfir_signatures_hayabusa_profile: ""
+# scan: gomount --filter glob over the volume paths to stream
+# (SIGNATURES_SCAN_FILTER); empty = every file.
+dxdfir_signatures_scan_filter: ""
+
+# The tool contract the lane is driven from — the single source of truth for the
+# signatures image's per-sub-tool env vars (SIGNATURES_<SUBTOOL>_*) and mounts.
+dxdfir_signatures_contract: "{{ dxdfir_signatures_repo_root }}/docker/GoDFIR-toolz/signatures/contract.yml"
+# Empty = the contract's image (get-sybers/signatures:latest); set to pin a digest.
+dxdfir_signatures_image: ""
+# PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); a
+# deployed run installs the package instead.
 dxdfir_signatures_python_path: "{{ dxdfir_signatures_repo_root }}/python"
 dxdfir_signatures_force: false
-
-# The processor command argv, handed to the shared dxdfir_lane process step. This
-# is the one genuinely per-lane piece; the run/verify/gate skeleton is shared.
-dxdfir_signatures_argv: >-
-  {{ ['python3', '-m', 'get_sybers_dxdfir.signatures', '--output-dir', dxdfir_signatures_out_dir, '--repo-root', dxdfir_signatures_repo_root]
-  + (dxdfir_signatures_lanes | map('regex_replace', '^', '--only=') | list)
-  + (['--stage-dir', dxdfir_signatures_stage_dir] if dxdfir_signatures_stage_dir | length > 0 else [])
-  + (['--vss'] if dxdfir_signatures_vss | bool else [])
-  + (['--yara-sources', dxdfir_signatures_yara_sources] if dxdfir_signatures_yara_sources | length > 0 else [])
-  + (['--tuning-file', dxdfir_signatures_suricata_tuning_file] if dxdfir_signatures_suricata_tuning_file | length > 0 else [])
-  + (['--pcap-dir', dxdfir_signatures_pcap_dir] if dxdfir_signatures_pcap_dir | length > 0 else [])
-  + (['--disk-dir', dxdfir_signatures_disk_dir] if dxdfir_signatures_disk_dir | length > 0 else [])
-  + (['--memory-dir', dxdfir_signatures_memory_dir] if dxdfir_signatures_memory_dir | length > 0 else [])
-  + (['--fetch'] if dxdfir_signatures_fetch | bool else [])
-  + (['--force'] if dxdfir_signatures_force | bool else []) }}

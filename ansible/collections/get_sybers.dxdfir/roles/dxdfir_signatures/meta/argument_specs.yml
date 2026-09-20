@@ -1,98 +1,107 @@
 ---
 argument_specs:
   main:
-    short_description: "YARA / Suricata / Hayabusa detection lanes -> JSONL."
+    short_description: "YARA / Suricata / Hayabusa / disk-scan detection sub-tools -> JSONL."
     description:
       - >-
-        Runs the signature engines over the evidence and writes one <lane>/ folder of
-        detection JSONL under the output dir. Standalone — no processor run is needed
-        first. YARA covers loose files, disk images (mounted read-only; needs
-        /dev/fuse) and memory (raw-image YARA scan); Suricata covers every capture
-        the zeek processor discovers (magic-first); Hayabusa covers loose Windows
-        Event Logs AND disk images via the staged image_export extraction it shares
-        with the evtx processor (extracted once, reused by both). A source whose host
-        prerequisites are missing notes it and produces nothing. Idempotent: a lane
-        whose output already exists is skipped.
+        Drives the multi-tool get-sybers/signatures image from its contract, one
+        run per sub-tool and evidence tree: yara over loose files and memory
+        images, suricata over the captures, hayabusa over the .evtx trees (loose
+        logs and the evtx lane's disk-image export), scan (gomount -> goyara,
+        userspace, no /dev/fuse) over the disk images. Each sub-tool discovers,
+        batches and skips its own items; output is one folder per item under
+        <out_dir>/<subtool>/. An evidence tree that does not exist is skipped.
+        Rules are the ones baked into the image unless an operator ruleset is
+        given. Standalone — no processor run is needed first.
     options:
       dxdfir_signatures_out_dir:
         type: str
         required: false
-        description: "Output dir (default data_store/processed/detections); override to send output to a custom location."
+        description: "Output dir (default data_store/processed/detections); one folder per sub-tool."
       dxdfir_signatures_lanes:
         type: list
         elements: str
         required: false
         default: []
-        description: "Lanes to run; empty = all. Any of: yara, suricata, hayabusa."
-      dxdfir_signatures_stage_dir:
-        type: str
-        required: false
-        default: ""
-        description: >-
-          Where the hayabusa lane stages disk-image EVTX extractions. Empty => the
-          evtx processor's stage (data_store/processed/windows_logs/_extracted_evtx),
-          so images staged by either lane are reused, never re-extracted.
-      dxdfir_signatures_vss:
-        type: bool
-        required: false
-        default: false
-        description: "Include Volume Shadow Copies when staging disk images (hayabusa lane)."
+        description: "Sub-tools to run; empty = all. Any of: yara, suricata, hayabusa, scan."
       dxdfir_signatures_yara_sources:
+        type: list
+        elements: str
+        required: false
+        default: [files, memory]
+        description: "The yara sub-tool's sources: files (loose files) and/or memory (raw memory images)."
+      dxdfir_signatures_files_dir:
         type: str
         required: false
-        default: ""
-        description: "YARA sources to run, comma list of files,disk,memory; empty = all."
-      dxdfir_signatures_suricata_tuning_file:
-        type: str
-        required: false
-        default: ""
-        description: >-
-          Per-pcap Suricata tuning file (INI; empty => the processor's default,
-          data_store/dependencies/suricata-tuning.conf). Written as an editable
-          template on first run; while it holds no real sections — or is not valid —
-          HOME_NET is auto-detected per pcap and the derived values are recorded
-          into it for the operator to edit. Tuning is reset per pcap.
-      dxdfir_signatures_pcap_dir:
-        type: str
-        required: false
-        default: ""
-        description: >-
-          Directory of captures the suricata sub-lane replays (empty => the
-          processor default, data_store/raw/pcaps). A collection sets this to its
-          sorted pcaps/ subdir (collection.LANES: signatures ->
-          dxdfir_signatures_pcap_dir) so a sorted collection's captures reach
-          suricata; without it the sub-lane finds nothing.
-      dxdfir_signatures_disk_dir:
-        type: str
-        required: false
-        default: ""
-        description: >-
-          Directory of disk images the yara disk scan and the hayabusa image-EVTX
-          extraction read (empty => the processor default,
-          data_store/raw/disk_images). A collection sets this to its sorted
-          disk_images/ subdir (collection.LANES: signatures -> dxdfir_signatures_disk_dir).
+        description: "Loose files the yara sub-tool scans (default data_store/raw/other_raw_data); every immediate child is a target."
       dxdfir_signatures_memory_dir:
         type: str
         required: false
-        default: ""
-        description: >-
-          Directory of memory images the yara memory scan reads (empty => the
-          processor default, data_store/raw/memory). A collection sets this to its
-          sorted memory/ subdir (collection.LANES: signatures -> dxdfir_signatures_memory_dir).
-      dxdfir_signatures_fetch:
-        type: bool
+        description: "Memory images the yara sub-tool scans directly (default data_store/raw/memory)."
+      dxdfir_signatures_pcap_dir:
+        type: str
         required: false
-        default: false
+        description: "Captures the suricata sub-tool replays (default data_store/raw/pcaps)."
+      dxdfir_signatures_evtx_dir:
+        type: str
+        required: false
+        description: "Loose .evtx tree the hayabusa sub-tool scans (default data_store/raw/logs/winevt)."
+      dxdfir_signatures_evtx_stage_dir:
+        type: str
+        required: false
         description: >-
-          Provision rules when online: the YARA lane fetches the pinned
-          DetectRaptor ruleset when it has no rules yet (sha256-verified,
-          idempotent); other lanes note missing deps.
+          The evtx lane's disk-image export (default
+          data_store/processed/windows_logs/_extracted_evtx); hayabusa scans it
+          too when present, so an image is exported once for both lanes.
+      dxdfir_signatures_disk_dir:
+        type: str
+        required: false
+        description: "Disk images the scan sub-tool streams through goyara (default data_store/raw/disk_images)."
+      dxdfir_signatures_yara_rules:
+        type: str
+        required: false
+        default: ""
+        description: "Operator YARA ruleset file (yara + scan; SIGNATURES_YARA_RULES / SIGNATURES_SCAN_RULES); empty = the baked DetectRaptor merge."
+      dxdfir_signatures_suricata_rules:
+        type: str
+        required: false
+        default: ""
+        description: "Operator suricata.rules file (SIGNATURES_SURICATA_RULES); empty = the baked ET Open merge."
+      dxdfir_signatures_hayabusa_rules:
+        type: str
+        required: false
+        default: ""
+        description: "Operator Sigma rules directory (SIGNATURES_HAYABUSA_RULES); empty = the baked default set."
+      dxdfir_signatures_suricata_set:
+        type: str
+        required: false
+        default: ""
+        description: "Suricata --set tuning entries, comma- or space-separated key=value (SIGNATURES_SURICATA_SET)."
+      dxdfir_signatures_hayabusa_profile:
+        type: str
+        required: false
+        default: ""
+        description: "hayabusa output profile (SIGNATURES_HAYABUSA_PROFILE); empty = verbose."
+      dxdfir_signatures_scan_filter:
+        type: str
+        required: false
+        default: ""
+        description: "scan: gomount --filter glob over the volume paths (SIGNATURES_SCAN_FILTER); empty = every file."
+      dxdfir_signatures_contract:
+        type: str
+        required: false
+        description: "The signatures contract.yml the runs are built from (default docker/GoDFIR-toolz/signatures/contract.yml)."
+      dxdfir_signatures_image:
+        type: str
+        required: false
+        default: ""
+        description: "Image ref overriding the contract's (get-sybers/signatures:latest); e.g. a digest pin."
       dxdfir_signatures_python_path:
         type: str
         required: false
-        description: "PYTHONPATH to the get_sybers_dxdfir package (in-repo/dev runs)."
+        description: "PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); in-repo runs."
       dxdfir_signatures_force:
         type: bool
         required: false
         default: false
-        description: "Regenerate lane outputs that already exist."
+        description: "Rescan items that already have output (SIGNATURES_<SUBTOOL>_FORCE)."

@@ -1,46 +1,184 @@
 ---
-# dxdfir_signatures: YARA / Suricata / Hayabusa detection lanes -> JSONL. The role
-# GROUPS; the playbook DECIDES. Idempotence (skip lanes whose output exists) lives
-# in the Python processor, not in a task's `when:`. This role asserts its own input
-# rules, then delegates the shared preflight + process skeleton to dxdfir_lane.
+# dxdfir_signatures: the detection lane -> JSON Lines. The role GROUPS; the
+# playbook DECIDES. The lane drives the multi-tool get-sybers/signatures image
+# from its contract (docker/GoDFIR-toolz/signatures/contract.yml): one run per
+# sub-tool and evidence tree — `signatures-entry yara` over loose files and over
+# memory images, `signatures-entry suricata` over the captures,
+# `signatures-entry hayabusa` over the .evtx trees, `signatures-entry scan`
+# (gomount -> goyara, userspace) over the disk images — each discovering,
+# batching and skipping its own items (SIGNATURES_<SUBTOOL>_FORCE reruns). An
+# evidence tree that does not exist is skipped: its run is not declared. A
+# sub-tool with nothing to scan exits 1 and one with a failed item exits 3, both
+# tolerated (dxdfir_lane_require_no_failures=false); the gate is "some detection
+# output landed, or there was nothing to scan". This role asserts its own input
+# rules and declares the runs, then delegates the shared build + preflight +
+# process skeleton to dxdfir_lane.
 
 - name: "signatures | assert inputs"
   ansible.builtin.assert:
     that:
-      - dxdfir_signatures_lanes | difference(['yara', 'suricata', 'hayabusa']) | length == 0
+      - dxdfir_signatures_lanes | difference(['yara', 'suricata', 'hayabusa', 'scan']) | length == 0
+      - dxdfir_signatures_yara_sources | difference(['files', 'memory']) | length == 0
     fail_msg: >-
-      dxdfir_signatures_lanes may only contain yara/suricata/hayabusa.
+      dxdfir_signatures_lanes may only contain yara/suricata/hayabusa/scan and
+      dxdfir_signatures_yara_sources only files/memory.
     quiet: true
   tags: [always]
 
-# role_path resolves to THIS role here — capture the lane-specific gate file so
-# dxdfir_lane includes signatures' output gate, not its own.
-- name: "signatures | resolve lane-specific task paths"
+- name: "signatures | resolve the selected sub-tools"
   ansible.builtin.set_fact:
-    dxdfir_signatures_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
+    dxdfir_signatures_selected: >-
+      {{ dxdfir_signatures_lanes if dxdfir_signatures_lanes | length > 0
+         else ['yara', 'suricata', 'hayabusa', 'scan'] }}
   tags: [always]
 
-# Per-lane inputs (rules, pcaps, evtx, images) are optional — each lane notes and
-# skips when its inputs/tools are missing — so only the data_store anchor is
-# declared as a required input; output lands under the resolved
-# dxdfir_signatures_out_dir default.
+# Every evidence tree is optional: a run is declared only for the ones present.
+- name: "signatures | stat each evidence tree"
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  loop:
+    - {name: files, path: "{{ dxdfir_signatures_files_dir }}"}
+    - {name: memory, path: "{{ dxdfir_signatures_memory_dir }}"}
+    - {name: pcaps, path: "{{ dxdfir_signatures_pcap_dir }}"}
+    - {name: evtx, path: "{{ dxdfir_signatures_evtx_dir }}"}
+    - {name: evtx_stage, path: "{{ dxdfir_signatures_evtx_stage_dir }}"}
+    - {name: disk, path: "{{ dxdfir_signatures_disk_dir }}"}
+  loop_control:
+    label: "{{ item.name }}"
+  register: dxdfir_signatures_stats
+  tags: [always]
+
+- name: "signatures | resolve which evidence trees are present"
+  ansible.builtin.set_fact:
+    dxdfir_signatures_present: >-
+      {{ dict(dxdfir_signatures_stats.results | map(attribute='item.name')
+              | zip(dxdfir_signatures_stats.results | map(attribute='stat.isdir', default=false))) }}
+  tags: [always]
+
+# Facts persist for the whole play (a serial "process all"), so the run list is
+# reset before it is accumulated. The optional operator rulesets are one extra
+# read-only mount each, named to the sub-tool by its *_RULES variable.
+- name: "signatures | start from an empty run list"
+  ansible.builtin.set_fact:
+    dxdfir_signatures_runs: []
+    dxdfir_signatures_yara_rules_mount: >-
+      {{ [{'host': dxdfir_signatures_yara_rules, 'path': '/rules/yara.yar', 'mode': 'ro'}]
+         if dxdfir_signatures_yara_rules | length > 0 else [] }}
+    dxdfir_signatures_yara_rules_env: "{{ '/rules/yara.yar' if dxdfir_signatures_yara_rules | length > 0 else '' }}"
+  tags: [always]
+
+- name: "signatures | one yara run per selected source"
+  ansible.builtin.set_fact:
+    dxdfir_signatures_runs: >-
+      {{ dxdfir_signatures_runs + [{
+           'name': 'yara:' ~ item.name,
+           'contract': dxdfir_signatures_contract,
+           'image': dxdfir_signatures_image,
+           'subtool': 'yara',
+           'env': {'SIGNATURES_YARA_FORCE': dxdfir_signatures_force,
+                   'SIGNATURES_YARA_RULES': dxdfir_signatures_yara_rules_env},
+           'mounts': [{'host': item.path, 'path': '/input', 'mode': 'ro'},
+                      {'host': dxdfir_signatures_out_dir ~ '/yara/' ~ item.name, 'path': '/output', 'mode': 'rw'}]
+                     + dxdfir_signatures_yara_rules_mount,
+         }] }}
+  loop:
+    - {name: files, path: "{{ dxdfir_signatures_files_dir }}"}
+    - {name: memory, path: "{{ dxdfir_signatures_memory_dir }}"}
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - "'yara' in dxdfir_signatures_selected"
+    - item.name in dxdfir_signatures_yara_sources
+    - dxdfir_signatures_present[item.name] | bool
+  tags: [always]
+
+- name: "signatures | the suricata run over the captures"
+  ansible.builtin.set_fact:
+    dxdfir_signatures_runs: >-
+      {{ dxdfir_signatures_runs + [{
+           'name': 'suricata',
+           'contract': dxdfir_signatures_contract,
+           'image': dxdfir_signatures_image,
+           'subtool': 'suricata',
+           'env': {'SIGNATURES_SURICATA_FORCE': dxdfir_signatures_force,
+                   'SIGNATURES_SURICATA_SET': dxdfir_signatures_suricata_set,
+                   'SIGNATURES_SURICATA_RULES': ('/rules/suricata.rules' if dxdfir_signatures_suricata_rules | length > 0 else '')},
+           'mounts': [{'host': dxdfir_signatures_pcap_dir, 'path': '/input', 'mode': 'ro'},
+                      {'host': dxdfir_signatures_out_dir ~ '/suricata', 'path': '/output', 'mode': 'rw'}]
+                     + ([{'host': dxdfir_signatures_suricata_rules, 'path': '/rules/suricata.rules', 'mode': 'ro'}]
+                        if dxdfir_signatures_suricata_rules | length > 0 else []),
+         }] }}
+  when:
+    - "'suricata' in dxdfir_signatures_selected"
+    - dxdfir_signatures_present.pcaps | bool
+  tags: [always]
+
+- name: "signatures | one hayabusa run per .evtx tree"
+  ansible.builtin.set_fact:
+    dxdfir_signatures_runs: >-
+      {{ dxdfir_signatures_runs + [{
+           'name': 'hayabusa:' ~ item.name,
+           'contract': dxdfir_signatures_contract,
+           'image': dxdfir_signatures_image,
+           'subtool': 'hayabusa',
+           'env': {'SIGNATURES_HAYABUSA_FORCE': dxdfir_signatures_force,
+                   'SIGNATURES_HAYABUSA_PROFILE': dxdfir_signatures_hayabusa_profile,
+                   'SIGNATURES_HAYABUSA_RULES': ('/rules/hayabusa' if dxdfir_signatures_hayabusa_rules | length > 0 else '')},
+           'mounts': [{'host': item.path, 'path': '/input', 'mode': 'ro'},
+                      {'host': dxdfir_signatures_out_dir ~ '/hayabusa', 'path': '/output', 'mode': 'rw'}]
+                     + ([{'host': dxdfir_signatures_hayabusa_rules, 'path': '/rules/hayabusa', 'mode': 'ro'}]
+                        if dxdfir_signatures_hayabusa_rules | length > 0 else []),
+         }] }}
+  loop:
+    - {name: evtx, path: "{{ dxdfir_signatures_evtx_dir }}"}
+    - {name: evtx_stage, path: "{{ dxdfir_signatures_evtx_stage_dir }}"}
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - "'hayabusa' in dxdfir_signatures_selected"
+    - dxdfir_signatures_present[item.name] | bool
+  tags: [always]
+
+- name: "signatures | the scan run over the disk images"
+  ansible.builtin.set_fact:
+    dxdfir_signatures_runs: >-
+      {{ dxdfir_signatures_runs + [{
+           'name': 'scan',
+           'contract': dxdfir_signatures_contract,
+           'image': dxdfir_signatures_image,
+           'subtool': 'scan',
+           'env': {'SIGNATURES_SCAN_FORCE': dxdfir_signatures_force,
+                   'SIGNATURES_SCAN_FILTER': dxdfir_signatures_scan_filter,
+                   'SIGNATURES_SCAN_RULES': dxdfir_signatures_yara_rules_env},
+           'mounts': [{'host': dxdfir_signatures_disk_dir, 'path': '/input', 'mode': 'ro'},
+                      {'host': dxdfir_signatures_out_dir ~ '/scan', 'path': '/output', 'mode': 'rw'}]
+                     + dxdfir_signatures_yara_rules_mount,
+         }] }}
+  when:
+    - "'scan' in dxdfir_signatures_selected"
+    - dxdfir_signatures_present.disk | bool
+  tags: [always]
+
+# Nothing to scan at all (no evidence tree present for the selected sub-tools)
+# is a legitimate no-op, not a failure: say so and stop before the skeleton,
+# which needs at least one run.
+- name: "signatures | note when no evidence tree is present for the selected sub-tools"
+  ansible.builtin.debug:
+    msg: >-
+      signatures: no evidence tree present for {{ dxdfir_signatures_selected }}
+      (present: {{ dxdfir_signatures_present }}) — nothing to scan.
+  when: dxdfir_signatures_runs | length == 0
+  tags: [always]
+
 - name: "signatures | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
     name: dxdfir_lane
   vars:
     dxdfir_lane_name: signatures
-    dxdfir_lane_module: get_sybers_dxdfir.signatures
     dxdfir_lane_python_path: "{{ dxdfir_signatures_python_path }}"
-    # The detection tools run in the one signatures image; the yara-disk scan and
-    # the hayabusa image-EVTX extraction ALSO run the plaso image for their
-    # userspace disk-image extraction (imageexport.PLASO_IMAGE), so the lane must
-    # ensure both are built and supply-chain-guarded.
-    dxdfir_lane_images: ["get-sybers/signatures:latest", "get-sybers/plaso:latest"]
-    dxdfir_lane_input_checks:
-      - name: data_store anchor
-        path: "{{ dxdfir_signatures_repo_root }}/data_store"
-    dxdfir_lane_argv: "{{ dxdfir_signatures_argv }}"
+    dxdfir_lane_runs: "{{ dxdfir_signatures_runs }}"
     dxdfir_lane_verify_dir: "{{ dxdfir_signatures_out_dir }}"
     dxdfir_lane_verify_glob: "*.jsonl"
-    dxdfir_lane_gate_extra: "{{ dxdfir_signatures_gate_extra }}"
+    dxdfir_lane_require_no_failures: false
+  when: dxdfir_signatures_runs | length > 0
   tags: [always]
