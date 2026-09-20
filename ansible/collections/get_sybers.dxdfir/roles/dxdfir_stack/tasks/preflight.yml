@@ -40,3 +40,123 @@
       {{ dxdfir_stack_env_file }} is missing — copy docker/elastic/.env.example to
       docker/elastic/.env and set the passwords/keys before running the stack.
     quiet: true
+
+# PULL-CAPACITY GATE (deploy/start only — the actions that pull images). A
+# short image store fails mid-pull with containerd's "no space left on
+# device", so: images still to pull -> measure the stores -> reclaim once when
+# short (a prune is a no-op when there is nothing to reclaim) -> re-measure ->
+# assert. A doomed pull becomes one clear failure, a recoverable one
+# self-heals, and a host whose images are already local is never gated.
+# stop/destroy/status stay ungated — they are how an operator frees space.
+- name: "stack-preflight | pull-capacity gate"
+  when: dxdfir_stack_action in ['deploy', 'start']
+  block:
+    - name: "stack-preflight | the images the stack runs"
+      ansible.builtin.command:
+        argv:
+          - docker
+          - compose
+          - --project-directory
+          - "{{ dxdfir_stack_compose_dir }}"
+          - --env-file
+          - "{{ dxdfir_stack_env_file }}"
+          - config
+          - --images
+      register: dxdfir_stack_images
+      changed_when: false
+
+    - name: "stack-preflight | which of them are already local"
+      community.docker.docker_image_info:
+        name: "{{ dxdfir_stack_images.stdout_lines | unique }}"
+      register: dxdfir_stack_local
+
+    - name: "stack-preflight | the images still to pull"
+      ansible.builtin.set_fact:
+        dxdfir_stack_missing_images: >-
+          {{ dxdfir_stack_images.stdout_lines | unique
+             | difference(dxdfir_stack_local.images
+                          | map(attribute='RepoTags') | flatten) }}
+
+    - name: "stack-preflight | gate the stores while a pull is coming"
+      when: dxdfir_stack_missing_images | length > 0
+      vars:
+        dxdfir_stack_need_bytes: "{{ dxdfir_stack_min_free_gib | int * 1024 * 1024 * 1024 }}"
+      block:
+        - name: "stack-preflight | measure free space on the image stores"
+          ansible.builtin.command:
+            argv: ["df", "--output=avail", "--block-size=1", "{{ item }}"]
+          loop: "{{ dxdfir_stack_image_store_paths }}"
+          register: dxdfir_stack_df
+          changed_when: false
+          failed_when: false
+
+        - name: "stack-preflight | the tightest store decides"
+          ansible.builtin.set_fact:
+            dxdfir_stack_free_bytes: "{{ (_avail | min) if _avail | length > 0 else -1 }}"
+          vars:
+            _avail: >-
+              {{ dxdfir_stack_df.results | selectattr('rc', 'equalto', 0)
+                 | map(attribute='stdout_lines') | map('last')
+                 | map('trim') | map('int') | list }}
+
+        - name: "stack-preflight | assert an image store was measurable"
+          ansible.builtin.assert:
+            that:
+              - dxdfir_stack_free_bytes | int >= 0
+            fail_msg: >-
+              none of dxdfir_stack_image_store_paths
+              ({{ dxdfir_stack_image_store_paths | join(', ') }}) exists on this
+              host — point it at the docker data-root.
+            quiet: true
+
+        - name: "stack-preflight | reclaim docker space (self-heal, only when short)"
+          community.docker.docker_prune:
+            containers: true
+            images: true
+            images_filters:
+              dangling: "{{ not (dxdfir_stack_reclaim_all_images | bool) }}"
+            networks: true
+            builder_cache: true
+          register: dxdfir_stack_prune
+          changed_when: >-
+            (dxdfir_stack_prune.containers | default([]) | length
+             + dxdfir_stack_prune.images | default([]) | length
+             + dxdfir_stack_prune.networks | default([]) | length) > 0
+            or (dxdfir_stack_prune.builder_cache_space_reclaimed | default(0) | int) > 0
+          when: dxdfir_stack_free_bytes | int < dxdfir_stack_need_bytes | int
+
+        - name: "stack-preflight | re-measure after the reclaim"
+          ansible.builtin.command:
+            argv: ["df", "--output=avail", "--block-size=1", "{{ item }}"]
+          loop: "{{ dxdfir_stack_image_store_paths }}"
+          register: dxdfir_stack_df
+          changed_when: false
+          failed_when: false
+          when: dxdfir_stack_prune is not skipped
+
+        - name: "stack-preflight | the tightest store, after the reclaim"
+          ansible.builtin.set_fact:
+            dxdfir_stack_free_bytes: "{{ (_avail | min) if _avail | length > 0 else -1 }}"
+          vars:
+            _avail: >-
+              {{ dxdfir_stack_df.results | selectattr('rc', 'equalto', 0)
+                 | map(attribute='stdout_lines') | map('last')
+                 | map('trim') | map('int') | list }}
+          when: dxdfir_stack_prune is not skipped
+
+        - name: "stack-preflight | assert the stores can hold the pull"
+          ansible.builtin.assert:
+            that:
+              - dxdfir_stack_free_bytes | int >= dxdfir_stack_need_bytes | int
+            fail_msg: >-
+              {{ dxdfir_stack_missing_images | length }} stack image(s) still to
+              pull, but the tightest of {{ dxdfir_stack_image_store_paths | join(', ') }}
+              has {{ ((dxdfir_stack_free_bytes | int) / 1073741824) | round(1) }} GiB free
+              (dxdfir_stack_min_free_gib wants {{ dxdfir_stack_min_free_gib }}).
+              The reclaim already ran — free space (docker system prune -a, drop
+              stale build output/evidence, grow the disk) and rerun.
+            success_msg: >-
+              image stores clear the pull:
+              {{ ((dxdfir_stack_free_bytes | int) / 1073741824) | round(1) }} GiB free
+              >= {{ dxdfir_stack_min_free_gib }} GiB.
+            quiet: true
