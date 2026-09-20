@@ -15,14 +15,24 @@
     dxdfir_lane_contract: "{{ lookup('file', dxdfir_lane_spec.contract) | from_yaml }}"
 
 # Every env override must be a variable the contract declares; every mount the
-# contract requires must be bound; a multi-tool image must be given one of its
-# declared sub-tools (unless the debug pass-through is used deliberately).
+# contract requires must be bound; every mount's CONTAINER path must be one the
+# contract declares — or a path a declared env override names, which is how a
+# contract asks for a mounted file it does not list as a mount (the plaso
+# image_export filter file named by PLASO_IMAGE_EXPORT_FILTER_FILE, an operator
+# ruleset named by SIGNATURES_<SUBTOOL>_RULES) — so a lane cannot bind a path
+# the tool's interface knows nothing about; a multi-tool image must be given
+# one of its declared sub-tools (unless the debug pass-through is used
+# deliberately).
 - name: "argv | the run spec is within the contract | {{ dxdfir_lane_spec.name }}"
   vars:
     _env_undeclared: >-
       {{ (dxdfir_lane_spec.env | default({})) | list
          | difference(dxdfir_lane_contract.env | default({}) | list) }}
     _bound: "{{ dxdfir_lane_spec.mounts | default([]) | map(attribute='path') | list }}"
+    _declared: "{{ dxdfir_lane_contract.mounts | default([]) | map(attribute='path') | list }}"
+    _env_named: >-
+      {{ (dxdfir_lane_spec.env | default({})).values() | reject('none') | map('string') | list }}
+    _mounts_undeclared: "{{ _bound | difference(_declared + _env_named) }}"
     _required_unbound: >-
       {{ dxdfir_lane_contract.mounts | default([])
          | selectattr('required', 'equalto', true) | map(attribute='path') | difference(_bound) }}
@@ -32,6 +42,7 @@
       - dxdfir_lane_contract.tool is defined
       - dxdfir_lane_contract.image is defined
       - _env_undeclared | length == 0
+      - _mounts_undeclared | length == 0
       - (_required_unbound | length == 0) or (dxdfir_lane_spec.entrypoint is defined)
       - (_subtool | length == 0) or (_subtool in (dxdfir_lane_contract.subtools | default([])))
       - >-
@@ -41,8 +52,10 @@
     fail_msg: >-
       {{ dxdfir_lane_name }}/{{ dxdfir_lane_spec.name }} does not fit
       {{ dxdfir_lane_spec.contract }}: undeclared env {{ _env_undeclared }},
-      unbound required mounts {{ _required_unbound }}, sub-tool
-      '{{ _subtool }}' (declared: {{ dxdfir_lane_contract.subtools | default([]) }}).
+      undeclared mount paths {{ _mounts_undeclared }} (declared:
+      {{ _declared }}, env-named: {{ _env_named }}), unbound required mounts
+      {{ _required_unbound }}, sub-tool '{{ _subtool }}' (declared:
+      {{ dxdfir_lane_contract.subtools | default([]) }}).
     quiet: true
 
 # The read-only mounts are the evidence (and any operator ruleset). They must

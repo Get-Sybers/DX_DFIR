@@ -20,9 +20,12 @@ dxdfir_lane_python_path: ""
 #     env:      {NAME: value} overrides of the contract's env; every NAME must be
 #               declared in the contract; bool-typed vars are normalised to 1/0;
 #               empty string values are omitted (the image default applies)
-#     mounts:   [{host, path, mode}] host binds; `path` is the container path the
-#               contract declares (its default), `mode` is ro or rw. Every
-#               contract mount with required: true must be bound.
+#     mounts:   [{host, path, mode}] host binds; `path` is a container path the
+#               contract declares as a mount (its default), or a path one of
+#               the run's env overrides names (a mounted filter file / operator
+#               ruleset the contract asks for through a variable); any other
+#               path is refused. `mode` is ro or rw. Every contract mount with
+#               required: true must be bound.
 #     network:  true keeps the docker bridge — honoured only when the contract
 #               declares network: optional; every other run gets --network none
 #     entrypoint / args: the argv pass-through the contracts reserve for
