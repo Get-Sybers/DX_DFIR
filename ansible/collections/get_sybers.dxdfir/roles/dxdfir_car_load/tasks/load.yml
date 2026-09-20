@@ -39,26 +39,30 @@
       to docker/elastic/.env and set the passwords before loading the CAR.
     quiet: true
 
-# One password per line matching ^KEY=, prefix stripped, then ONE wrapping
-# quote pair — dotenv files commonly quote values, and the repo's own Python
-# readers strip exactly this (.strip("'\"") in tui/riskgate), so a quoted
-# value must resolve to the same secret here too. regex_replace (not
-# regex_search's group extraction) because it always returns a plain string,
-# matched or not — no ambiguity over whether the result comes back wrapped in
-# a list.
+# One password per line matching KEY= — accepting the same dotenv variants
+# the repo's other readers do (go tui readElasticEnv trims a leading
+# `export ` and surrounding whitespace; the Python readers .strip("'\"") a
+# wrapping quote pair), so the same .env resolves to the same secret on
+# every path: optional leading whitespace / `export `, optional whitespace
+# around `=`, trailing whitespace trimmed, then ONE wrapping quote pair
+# stripped. regex_replace (not regex_search's group extraction) because it
+# always returns a plain string, matched or not — no ambiguity over whether
+# the result comes back wrapped in a list.
 - name: "car-load | read the stack credentials from .env"
   no_log: true
   vars:
     _env_lines: "{{ lookup('ansible.builtin.file', dxdfir_car_load_env_file).split('\n') }}"
   ansible.builtin.set_fact:
     dxdfir_car_load_elastic_password: >-
-      {{ (_env_lines | select('match', '^ELASTIC_PASSWORD=') | list | first | default('', true))
-         | regex_replace('^ELASTIC_PASSWORD=', '')
+      {{ (_env_lines | select('match', '^\s*(export\s+)?ELASTIC_PASSWORD\s*=') | list | first | default('', true))
+         | regex_replace('^\s*(export\s+)?ELASTIC_PASSWORD\s*=\s*', '')
+         | trim
          | regex_replace('^"(.*)"$', '\g<1>')
          | regex_replace("^'(.*)'$", '\g<1>') }}
     dxdfir_car_load_byakugan_loader_password: >-
-      {{ (_env_lines | select('match', '^BYAKUGAN_LOADER_PASSWORD=') | list | first | default('', true))
-         | regex_replace('^BYAKUGAN_LOADER_PASSWORD=', '')
+      {{ (_env_lines | select('match', '^\s*(export\s+)?BYAKUGAN_LOADER_PASSWORD\s*=') | list | first | default('', true))
+         | regex_replace('^\s*(export\s+)?BYAKUGAN_LOADER_PASSWORD\s*=\s*', '')
+         | trim
          | regex_replace('^"(.*)"$', '\g<1>')
          | regex_replace("^'(.*)'$", '\g<1>') }}
 

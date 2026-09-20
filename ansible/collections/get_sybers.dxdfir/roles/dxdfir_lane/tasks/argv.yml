@@ -9,8 +9,9 @@
 #
 # Read-only checks only (the daemon is not touched, no directory is created),
 # with one narrow exception: a run that declares secret_env gets a 0600
-# --env-file written here (never logged, removed again by process.yml's
-# always: block) so a secret value never sits on the docker run argv, where a
+# --env-file written here (never logged, removed again by the always: block
+# in tasks/main.yml — covering every exit path, a build/preflight failure
+# included) so a secret value never sits on the docker run argv, where a
 # process listing or ansible's own command-echo would show it in cleartext.
 #
 # The built run is appended to dxdfir_lane_runs_built for preflight + process.
