@@ -5,22 +5,24 @@
   vars:
     molecule_out: /tmp/dxdfir_plaso_molecule/out
   tasks:
-    - name: "molecule-verify | find the dxdfir_plaso_produced enriched JSONL"
+    - name: "molecule-verify | find the dxdfir_plaso_produced rendered timelines"
       ansible.builtin.find:
         paths: "{{ molecule_out }}/jsonl"
-        patterns: "*.jsonl"
+        patterns: "timeline.jsonl"
+        recurse: true
       register: dxdfir_plaso_produced
 
-    - name: "molecule-verify | find the durable .plaso storage db"
+    - name: "molecule-verify | find the durable .plaso storage files"
       ansible.builtin.find:
-        paths: "{{ molecule_out }}/plaso"
+        paths: "{{ molecule_out }}/storage"
         patterns: "*.plaso"
+        recurse: true
       register: dxdfir_plaso_dbs
 
-    - name: "molecule-verify | assert a timeline and its .plaso db exist"
+    - name: "molecule-verify | assert a timeline and its .plaso storage file exist"
       ansible.builtin.assert:
         that:
           - dxdfir_plaso_produced.matched | int > 0
           - dxdfir_plaso_dbs.matched | int > 0
-        fail_msg: "no <host>.jsonl and/or .plaso db dxdfir_plaso_produced from the sample image"
+        fail_msg: "no timeline.jsonl and/or .plaso storage file dxdfir_plaso_produced from the sample image"
         quiet: true

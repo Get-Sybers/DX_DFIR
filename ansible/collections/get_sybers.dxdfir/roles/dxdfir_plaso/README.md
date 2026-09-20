@@ -1,38 +1,48 @@
 # dxdfir_plaso
 
-Process **forensic disk images** and **VMware VM exports** with **Plaso**
-(log2timeline + psort) into enriched JSON Lines. The
-role is structure only — it asserts inputs, runs a preflight (docker, input dir, the
-`l2t_json_dxdfir` output module), then invokes the `get_sybers_dxdfir.plaso` Python
-processor as a **single action** (the two-step container work happens inside
-Python). One `<host>.jsonl` per image (named by the resolved `image_hostname`), plus
-the durable `.plaso` storage db and a per-image log.
+Process **forensic disk images**, **VM exports** and (opt-in) **loose artefact
+trees** with **Plaso** (log2timeline + psort) into JSON Lines. The role is
+structure only — it asserts its inputs and declares the runs, each driven purely
+by the plaso image's contract (`docker/GoDFIR-toolz/plaso/contract.yml`): the
+shared `dxdfir_lane` skeleton builds the confined `docker run` from it
+(`-e PLASO_<SUBTOOL>_*`, `-v` for `/input` and `/output`, a `/work` tmpfs) and
+hands the multi-tool image its sub-tool name and nothing else. No host-side
+processor, no mounted output module.
+
+## Runs
+1. `plaso-entry log2timeline` over `dxdfir_plaso_input_dir` — and over
+   `dxdfir_plaso_vm_dir` / `dxdfir_plaso_loose_dir` when they exist — into
+   `storage/`: one folder per source holding `<source>.plaso` +
+   `log2timeline.log`. Every disk image under the tree and every immediate
+   sub-directory (a staged tree) is an item.
+2. `plaso-entry psort` over `storage/` into `jsonl/`: one folder per source
+   holding `timeline.jsonl` (the `json_line` output module) + `psort.log`.
+
+Each sub-tool discovers, batches and skips its own items; `<source>` is the
+input path relative to the input dir with separators folded to `_`.
 
 ## Role variables
 | Variable | Default | Description |
 |---|---|---|
-| `dxdfir_plaso_input_dir` | `<repo>/data_store/raw/disk_images` | Disk-image tree (E01/raw/img/dd/vmdk/vhd/vhdx/aff), recursed. |
-| `dxdfir_plaso_vm_dir` | `<repo>/data_store/raw/VM_files` | VMware VM export folders (one per VM); optional. |
-| `dxdfir_plaso_out_dir` | `<repo>/data_store/processed/log2timeline` | Output base (override to redirect). |
-| `dxdfir_plaso_module` | `<repo>/dev-scripts/plaso/l2t_json_dxdfir.py` | Custom psort output module. |
-| `dxdfir_plaso_image` | `get-sybers/plaso:latest` | The hardened in-repo Plaso image (`playbooks/dxdfir-build-images.yml`). |
-| `dxdfir_plaso_python_path` | `<repo>/python` | PYTHONPATH to `get_sybers_dxdfir` (in-repo runs). |
-| `dxdfir_plaso_force` | `false` | Reprocess images that already have output. |
-
-## Discovery
-Content-first: each file is identified by magic bytes (EWF/EWF2, VMDK, VHD/VHDX,
-QCOW2), with the extension as a fallback (raw/dd/img/aff carry no signature). Raw
-VMDK extents and EWF continuation segments are never processed on their own. VM
-exports pick the latest snapshot descriptor, else the single base descriptor; an
-ambiguous/missing descriptor is a **warning** (skipped), not a failure.
+| `dxdfir_plaso_input_dir` | `<repo>/data_store/raw/disk_images` | Disk-image tree, recursed. |
+| `dxdfir_plaso_vm_dir` | `<repo>/data_store/raw/VM_files` | VM export folders (one per VM); processed when present. |
+| `dxdfir_plaso_loose_dir` | `""` | Loose-artefact trees (one folder per host); opt-in. |
+| `dxdfir_plaso_out_dir` | `<repo>/data_store/processed/log2timeline` | Output base; `storage/` and `jsonl/` hang off it. |
+| `dxdfir_plaso_storage_dir` | `<out_dir>/storage` | log2timeline output (`<source>/<source>.plaso`). |
+| `dxdfir_plaso_jsonl_dir` | `<out_dir>/jsonl` | psort output (`<source>/timeline.jsonl`). |
+| `dxdfir_plaso_contract` | `<repo>/docker/GoDFIR-toolz/plaso/contract.yml` | The contract the runs are built from. |
+| `dxdfir_plaso_image` | `""` (the contract's `get-sybers/plaso:latest`) | Image ref override, e.g. a digest pin. |
+| `dxdfir_plaso_vss` | `true` | log2timeline: process every VSS store (`PLASO_LOG2TIMELINE_VSS`). |
+| `dxdfir_plaso_parsers` | `""` | log2timeline: parser preset/list (`PLASO_LOG2TIMELINE_PARSERS`). |
+| `dxdfir_plaso_output_format` | `json_line` | psort: the output module (`PLASO_PSORT_OUTPUT_FORMAT`). |
+| `dxdfir_plaso_python_path` | `<repo>/python` | PYTHONPATH for the image supply-chain guard (`get_sybers_dxdfir.images`). |
+| `dxdfir_plaso_force` | `false` | Rerun sources that already have a storage file / rendered timeline. |
 
 ## Idempotence
-An image whose `.plaso` db AND recorded json_line output both exist is skipped — a
-`.host` marker records the resolved output name, so a prior **failed** psort (db
-present, no marker) is not mistaken for done. The skip lives in the Python
-processor, never in a task `when:`. Per-image failures (a weird image yielding 0
-events) are tolerated: the verify gate is "some timeline was produced, or there were
-no sources".
+A source whose `.plaso` storage file (log2timeline) or `timeline.jsonl` (psort)
+already exists is skipped by the sub-tool itself, never by a task `when:`.
+Per-source failures are tolerated (a source yielding 0 events): the gate is "some
+timeline was produced, or there were no sources".
 
 ## Example
 ```bash
@@ -40,10 +50,8 @@ ansible-playbook playbooks/dxdfir-process-plaso.yml
 ```
 
 ## Testing
-Python unit tests cover the pure logic (magic-byte format detection incl. the VHD
-footer path, extension fallback, VM descriptor selection, discovery, the
-`.plaso`+marker+jsonl idempotence guard, hostname sanitisation). The **Molecule**
-scenario needs a small parseable image (large/binary — not shipped):
+The **Molecule** scenario needs a small parseable image (large/binary — not
+shipped):
 ```bash
 molecule test -- -e molecule_sample_image=/path/tiny.raw
 ```
