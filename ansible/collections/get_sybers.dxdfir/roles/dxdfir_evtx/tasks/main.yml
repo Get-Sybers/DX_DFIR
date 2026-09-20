@@ -1,8 +1,14 @@
 ---
-# dxdfir_evtx: .evtx -> goevtx JSON. The role GROUPS; the playbook DECIDES.
-# Idempotence (skip logs whose .json output exists) lives in the Python
-# processor, not in a task's `when:`. This role asserts its own input rules, then
-# delegates the shared preflight + process skeleton to dxdfir_lane.
+# dxdfir_evtx: .evtx -> goevtx JSON Lines. The role GROUPS; the playbook DECIDES.
+# The lane runs the self-orchestrating get-sybers/goevtx image directly from its
+# contract (docker/GoDFIR-toolz/goevtx/contract.yml): goevtx finds every event log
+# under /input (by .evtx extension or ElfFile signature), writes one folder of
+# goevtx.jsonl per log under /output and skips a log that already has valid
+# output unless GOEVTX_FORCE. With dxdfir_evtx_image_src set, the plaso image's
+# image_export sub-tool first exports WindowsEventLogs from every disk image
+# into the stage dir, and goevtx parses that stage too. This role asserts its
+# own input rules and declares the runs, then delegates the shared build +
+# preflight + process skeleton to dxdfir_lane.
 
 - name: "evtx | assert inputs"
   ansible.builtin.assert:
@@ -15,30 +21,45 @@
     quiet: true
   tags: [always]
 
-# role_path resolves to THIS role here — capture the lane-specific gate file so
-# dxdfir_lane includes evtx's output gate. The goevtx-image-present check is no
-# longer lane-specific: the shared preflight's built gate asserts every
-# dxdfir_lane_images entry (goevtx included) is built.
-- name: "evtx | resolve lane-specific task paths"
+# The runs, in order: the optional image export (plaso image_export, a filtered
+# WindowsEventLogs pull), then goevtx over the loose logs, then goevtx over the
+# staged export. Each is one contract-driven container.
+- name: "evtx | declare the runs"
   ansible.builtin.set_fact:
-    dxdfir_evtx_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
+    dxdfir_evtx_runs: >-
+      {{ ([{'name': 'image_export',
+            'contract': dxdfir_evtx_plaso_contract,
+            'image': dxdfir_evtx_plaso_image,
+            'subtool': 'image_export',
+            'env': {'PLASO_IMAGE_EXPORT_ARTIFACT_FILTERS': 'WindowsEventLogs',
+                    'PLASO_IMAGE_EXPORT_VSS': dxdfir_evtx_vss,
+                    'PLASO_IMAGE_EXPORT_FORCE': dxdfir_evtx_force},
+            'mounts': [{'host': dxdfir_evtx_image_src, 'path': '/input', 'mode': 'ro'},
+                       {'host': dxdfir_evtx_stage_dir, 'path': '/output', 'mode': 'rw'}]}]
+          if dxdfir_evtx_image_src | length > 0 else [])
+       + ([{'name': 'goevtx',
+            'contract': dxdfir_evtx_contract,
+            'image': dxdfir_evtx_image,
+            'env': {'GOEVTX_FORCE': dxdfir_evtx_force},
+            'mounts': [{'host': dxdfir_evtx_evtx_dir, 'path': '/input', 'mode': 'ro'},
+                       {'host': dxdfir_evtx_out_dir, 'path': '/output', 'mode': 'rw'}]}]
+          if dxdfir_evtx_evtx_dir | length > 0 else [])
+       + ([{'name': 'goevtx-staged',
+            'contract': dxdfir_evtx_contract,
+            'image': dxdfir_evtx_image,
+            'env': {'GOEVTX_FORCE': dxdfir_evtx_force},
+            'mounts': [{'host': dxdfir_evtx_stage_dir, 'path': '/input', 'mode': 'ro'},
+                       {'host': dxdfir_evtx_out_dir, 'path': '/output', 'mode': 'rw'}]}]
+          if dxdfir_evtx_image_src | length > 0 else []) }}
   tags: [always]
 
-# Output lands under the resolved dxdfir_evtx_out_dir default — the shared
-# tasks only consume it.
 - name: "evtx | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
     name: dxdfir_lane
   vars:
     dxdfir_lane_name: evtx
-    dxdfir_lane_module: get_sybers_dxdfir.evtx
     dxdfir_lane_python_path: "{{ dxdfir_evtx_python_path }}"
-    dxdfir_lane_images: ["{{ dxdfir_evtx_image }}", "{{ dxdfir_evtx_plaso_image }}"]
-    dxdfir_lane_input_checks: >-
-      {{ [{'name': 'evtx dir', 'path': dxdfir_evtx_evtx_dir}]
-         if dxdfir_evtx_evtx_dir | length > 0 else [] }}
-    dxdfir_lane_argv: "{{ dxdfir_evtx_argv }}"
+    dxdfir_lane_runs: "{{ dxdfir_evtx_runs }}"
     dxdfir_lane_verify_dir: "{{ dxdfir_evtx_out_dir }}"
-    dxdfir_lane_verify_glob: "*_EvtxECmd_Output.json"
-    dxdfir_lane_gate_extra: "{{ dxdfir_evtx_gate_extra }}"
+    dxdfir_lane_verify_glob: "goevtx.jsonl"
   tags: [always]

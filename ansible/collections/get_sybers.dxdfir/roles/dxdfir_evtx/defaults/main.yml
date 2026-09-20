@@ -13,56 +13,34 @@ dxdfir_evtx_evtx_lane: >-
   | default('logs/winevt', true) }}
 dxdfir_evtx_evtx_dir: "{{ dxdfir_evtx_repo_root }}/data_store/raw/{{ dxdfir_evtx_evtx_lane }}"
 dxdfir_evtx_out_dir: "{{ dxdfir_evtx_repo_root }}/data_store/processed/windows_logs"
-# Output base — consumed by
-# tasks/process.yml. Override directly to send output to a custom location.
+# Output base — one folder per log holding goevtx.jsonl. Override directly to
+# send output to a custom location.
 
-# Disk-image inputs (optional): a disk image (E01/raw/VMDK) or a directory of them.
-# When set, WindowsEventLogs (.evtx) are extracted with log2timeline/plaso
-# image_export.py into the stage dir and processed alongside dxdfir_evtx_evtx_dir, so
-# the lane consumes images directly. Empty (default) => loose .evtx only.
+# Disk-image inputs (optional): a directory of disk images (E01/raw/VMDK/…).
+# When set, WindowsEventLogs (.evtx) are exported from every image by the plaso
+# image's image_export sub-tool into the stage dir, and goevtx parses that stage
+# alongside dxdfir_evtx_evtx_dir, so the lane consumes images directly. Empty
+# (default) => loose .evtx only.
 dxdfir_evtx_image_src: ""
-# Where --image-src extractions land. Per-image subdirs, reused across runs (an
-# image whose logs are already staged is not re-pulled). Pinned to ONE canonical
-# stage — the same default the dxdfir_signatures hayabusa lane uses — so the
-# processing run and the detection lane share the extraction instead of each
-# re-pulling the image.
+# Where the image exports land: one folder per image, reused across runs (an
+# image already exported is not re-pulled unless force). Pinned to ONE canonical
+# stage — the same the dxdfir_signatures hayabusa run reads — so the parse and
+# the detection lane share the export instead of each re-pulling the image.
 dxdfir_evtx_stage_dir: "{{ dxdfir_evtx_repo_root }}/data_store/processed/windows_logs/_extracted_evtx"
-# Include Volume Shadow Copies when extracting from a disk image.
+# Export from every Volume Shadow Copy too (PLASO_IMAGE_EXPORT_VSS).
 dxdfir_evtx_vss: false
-# Container providing image_export.py for disk-image extraction (already shipped for
-# the disk/signature lanes).
-dxdfir_evtx_plaso_image: "get-sybers/plaso:latest"
 
-# Hayabusa (Sigma detection) over the same .evtx this lane collects — loose or
-# image-extracted. Enrichment: a missing binary or zero detections is a note, not a
-# failure, so leaving this on is safe even without the binary provisioned.
-dxdfir_evtx_hayabusa: true
-# Dir holding the hayabusa binary (+ rules/). Empty => the processor's default,
-# data_store/dependencies/hayabusa under the CWD.
-dxdfir_evtx_hayabusa_dir: "{{ dxdfir_evtx_repo_root }}/data_store/dependencies/hayabusa"
-# Sigma rules dir (empty => rules/ beside the binary).
-dxdfir_evtx_hayabusa_rules: ""
+# The tool contracts the lane is driven from — the single source of truth for
+# each image's env vars and mounts.
+dxdfir_evtx_contract: "{{ dxdfir_evtx_repo_root }}/docker/GoDFIR-toolz/goevtx/contract.yml"
+dxdfir_evtx_plaso_contract: "{{ dxdfir_evtx_repo_root }}/docker/GoDFIR-toolz/plaso/contract.yml"
+# Empty = the contract's image (get-sybers/goevtx:latest — the static-Go .evtx
+# parser on go-evtx, built FROM scratch from docker/GoDFIR-toolz/goevtx); set to
+# pin a digest. Likewise for the plaso image the export step runs.
+dxdfir_evtx_image: ""
+dxdfir_evtx_plaso_image: ""
 
-# The .evtx parser is the static-Go goevtx (get-sybers/goevtx, on go-evtx) — no .NET
-# runtime, no DLL to supply, no operator release. Built FROM scratch from
-# docker/GoDFIR-toolz/goevtx by the dxdfir_images role. Override the tag if
-# needed:
-dxdfir_evtx_image: "get-sybers/goevtx:latest"
-
-# In-repo runs use PYTHONPATH; a deployed run installs the package instead.
+# PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); a
+# deployed run installs the package instead.
 dxdfir_evtx_python_path: "{{ dxdfir_evtx_repo_root }}/python"
 dxdfir_evtx_force: false
-
-# The processor command argv, handed to the shared dxdfir_lane process step. This
-# is the one genuinely per-lane piece; the run/verify/gate skeleton is shared.
-dxdfir_evtx_argv: >-
-  {{ ['python3', '-m', 'get_sybers_dxdfir.evtx', '--out-dir', dxdfir_evtx_out_dir, '--image', dxdfir_evtx_image]
-  + (['--evtx-dir', dxdfir_evtx_evtx_dir] if dxdfir_evtx_evtx_dir | length > 0 else [])
-  + (['--image-src', dxdfir_evtx_image_src, '--plaso-image', dxdfir_evtx_plaso_image]
-  + (['--stage-dir', dxdfir_evtx_stage_dir] if dxdfir_evtx_stage_dir | length > 0 else [])
-  + (['--vss'] if dxdfir_evtx_vss | bool else [])
-  if dxdfir_evtx_image_src | length > 0 else [])
-  + (['--hayabusa', '--hayabusa-dir', dxdfir_evtx_hayabusa_dir]
-  + (['--hayabusa-rules', dxdfir_evtx_hayabusa_rules] if dxdfir_evtx_hayabusa_rules | length > 0 else [])
-  if dxdfir_evtx_hayabusa | bool else [])
-  + (['--force'] if dxdfir_evtx_force | bool else []) }}
