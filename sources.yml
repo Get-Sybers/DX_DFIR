@@ -21,7 +21,7 @@
 # attack-datasources submodules at build time (recursive clone required).
 byakugan:
   url: https://github.com/Get-Sybers/Byakugan
-  ref: f194d8045062b8a252b549e3843fe97a47d0e351  # Byakugan#99 branch: contract v3 + load sub-tool + timeline --elastic; re-pin to main after merge
+  ref: 9bc7a1d03a0eda5821f5468e82c41287dd17a822  # Get-Sybers/Byakugan main (PR #100 merged): the Elastic served store — contract v3, load sub-tool, timeline --elastic
   consumed: "docker/GoDFIR-toolz/byakugan/Dockerfile (BYAKUGAN_REF build-arg)"
 
 # anamnesis (pure-Go memory forensics on MemProcFS — no Volatility, no Python) —
