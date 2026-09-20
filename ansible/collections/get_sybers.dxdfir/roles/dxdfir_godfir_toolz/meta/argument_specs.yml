@@ -1,19 +1,20 @@
 ---
 argument_specs:
   main:
-    short_description: "disk images -> GoDFIR-toolz artefact parse, one output dir per host."
+    short_description: "disk images -> GoDFIR-toolz artefact parse, one folder per tool and item."
     description:
       - >-
-        Discovers disk images under dxdfir_godfir_toolz_input_dir (and VM exports under
-        dxdfir_godfir_toolz_vm_dir), extracts the godfir-toolz artefact set (registry hives +
-        transaction logs, Amcache, jump lists/lnk, Recycle Bin $I records, Windows
-        Timeline database, SRUM database, resident $MFT) with a plaso YAML collection
-        filter, then runs each hardened GoDFIR-toolz container over what was pulled
-        out (gore, gojle, gole, goamcache, goappcompat, gosbe, gorb, gomft) plus
-        goese for SRUM (one JSONL per provider table, when SRUDB.dat was
-        extracted) and goprefetch for Prefetch. Idempotent at the
-        host level: a host output dir that already holds any file is skipped unless
-        dxdfir_godfir_toolz_force.
+        Exports the godfir-toolz artefact set (registry hives + transaction logs,
+        Amcache, jump lists/.lnk, Recycle Bin $I records, Windows Timeline
+        database, SRUM database, Prefetch, resident $MFT) out of every disk image
+        under dxdfir_godfir_toolz_input_dir (and dxdfir_godfir_toolz_vm_dir when
+        it exists) with the plaso image's image_export sub-tool and the role's
+        filter file, then runs each self-orchestrating Go tool image
+        (dxdfir_godfir_toolz_tools) over the export from its contract: every tool
+        content-detects its artefacts and writes <out_dir>/<tool>/<item>/<tool>.jsonl.
+        Idempotent per item: a tool skips an item with valid output unless
+        dxdfir_godfir_toolz_force. A tool with nothing to parse or a failed item
+        is tolerated; the gate is "some tool produced output, or no artefacts".
     options:
       dxdfir_godfir_toolz_input_dir:
         type: str
@@ -22,31 +23,48 @@ argument_specs:
       dxdfir_godfir_toolz_vm_dir:
         type: str
         required: false
-        description: "VMware VM export folders (one sub-folder per VM); optional."
+        description: "VM export folders (one sub-folder per VM); optional — exported when the directory exists."
       dxdfir_godfir_toolz_out_dir:
         type: str
         required: false
-        description: "Output dir (default data_store/processed/godfir-toolz); override to send output to a custom location."
+        description: "Output dir (default data_store/processed/godfir-toolz); one folder per tool."
+      dxdfir_godfir_toolz_stage_dir:
+        type: str
+        required: false
+        description: "Where the artefact export lands (default <out_dir>/_extracted); one folder per image."
+      dxdfir_godfir_toolz_toolz_dir:
+        type: str
+        required: false
+        description: "The GoDFIR-toolz submodule root holding every <tool>/contract.yml."
+      dxdfir_godfir_toolz_plaso_contract:
+        type: str
+        required: false
+        description: "The plaso contract.yml the export runs are built from."
+      dxdfir_godfir_toolz_filter_file:
+        type: str
+        required: false
+        description: "The image_export filter file (plaso yaml_filter_file format) declaring the artefact set."
       dxdfir_godfir_toolz_plaso_image:
         type: str
         required: false
-        default: "get-sybers/plaso:latest"
-        description: >-
-          The hardened in-repo Plaso image, used for artefact EXTRACTION only
-          (image_export.py against a YAML collection filter). SRUM and Prefetch
-          are parsed by the Linux-native Go substitutes (get-sybers/goese,
-          get-sybers/goprefetch), not Plaso.
+        default: ""
+        description: "Image ref overriding the plaso contract's (get-sybers/plaso:latest) for the export."
       dxdfir_godfir_toolz_vss:
         type: bool
         required: false
         default: false
-        description: "Also extract from Volume Shadow Copies during artefact extraction."
+        description: "Also export from Volume Shadow Copies (PLASO_IMAGE_EXPORT_VSS)."
+      dxdfir_godfir_toolz_tools:
+        type: list
+        elements: str
+        required: false
+        description: "The Go tools to run over the export, in order (each <toolz_dir>/<tool>/contract.yml)."
       dxdfir_godfir_toolz_python_path:
         type: str
         required: false
-        description: "PYTHONPATH to the get_sybers_dxdfir package (in-repo/dev runs)."
+        description: "PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); in-repo runs."
       dxdfir_godfir_toolz_force:
         type: bool
         required: false
         default: false
-        description: "Reprocess hosts that already have output."
+        description: "Re-export images and reparse items that already have output."

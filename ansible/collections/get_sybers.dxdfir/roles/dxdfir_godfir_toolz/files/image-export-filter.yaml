@@ -1,0 +1,84 @@
+# The godfir-toolz artefact set, as the plaso image_export sub-tool's filter file
+# (PLASO_IMAGE_EXPORT_FILTER_FILE; plaso's yaml_filter_file format, one document
+# per group). The set has no named forensic-artifact-definitions entry, so it is
+# declared here. path_separator '/' — dfVFS location matching is per-segment and
+# separator-agnostic, so a plain forward-slash path needs no %variable
+# expansion; "paths" entries are per-segment regex, matched case-insensitively.
+#
+# The hive groups pull the .LOG1/.LOG2 transaction logs ALONGSIDE each hive:
+# the registry-family tools (gore/gosbe/goamcache/goappcompat) replay them for
+# dirty-hive fidelity — never extract one without the other.
+---
+description: Amcache (program-execution inventory hive + dirty-hive logs)
+type: include
+path_separator: /
+paths:
+  - '/Windows/AppCompat/Programs/Amcache\.hve'
+  - '/Windows/AppCompat/Programs/Amcache\.hve\.LOG1'
+  - '/Windows/AppCompat/Programs/Amcache\.hve\.LOG2'
+---
+description: System-wide registry hives + dirty-hive transaction logs
+type: include
+path_separator: /
+paths:
+  - '/Windows/System32/config/SYSTEM'
+  - '/Windows/System32/config/SYSTEM\.LOG1'
+  - '/Windows/System32/config/SYSTEM\.LOG2'
+  - '/Windows/System32/config/SOFTWARE'
+  - '/Windows/System32/config/SOFTWARE\.LOG1'
+  - '/Windows/System32/config/SOFTWARE\.LOG2'
+  - '/Windows/System32/config/SAM'
+  - '/Windows/System32/config/SAM\.LOG1'
+  - '/Windows/System32/config/SAM\.LOG2'
+  - '/Windows/System32/config/SECURITY'
+  - '/Windows/System32/config/SECURITY\.LOG1'
+  - '/Windows/System32/config/SECURITY\.LOG2'
+---
+description: Per-user registry hives (NTUSER.DAT / UsrClass.dat) + logs
+type: include
+path_separator: /
+paths:
+  - '/Users/.*/NTUSER\.DAT'
+  - '/Users/.*/NTUSER\.DAT\.LOG1'
+  - '/Users/.*/NTUSER\.DAT\.LOG2'
+  - '/Users/.*/AppData/Local/Microsoft/Windows/UsrClass\.dat'
+  - '/Users/.*/AppData/Local/Microsoft/Windows/UsrClass\.dat\.LOG1'
+  - '/Users/.*/AppData/Local/Microsoft/Windows/UsrClass\.dat\.LOG2'
+---
+description: Jump lists and .lnk shortcuts (Explorer "Recent")
+type: include
+path_separator: /
+paths:
+  - '/Users/.*/AppData/Roaming/Microsoft/Windows/Recent/.*\.lnk'
+  - '/Users/.*/AppData/Roaming/Microsoft/Windows/Recent/AutomaticDestinations/.*'
+  - '/Users/.*/AppData/Roaming/Microsoft/Windows/Recent/CustomDestinations/.*'
+---
+description: Recycle Bin $I metadata records
+type: include
+path_separator: /
+paths:
+  - '/\$Recycle\.Bin/.*/\$I.*'
+---
+description: Windows Timeline activity database (gowxt input)
+type: include
+path_separator: /
+paths:
+  - '/Users/.*/AppData/Local/ConnectedDevicesPlatform/.*/ActivitiesCache\.db'
+---
+description: System Resource Usage Monitor (SRUM) database (goese input)
+type: include
+path_separator: /
+paths:
+  - '/Windows/System32/sru/SRUDB\.dat'
+---
+description: Windows Prefetch (.pf) (goprefetch input)
+type: include
+path_separator: /
+paths:
+  - '/Windows/Prefetch/.*\.pf'
+---
+description: Master File Table, when resident (gomft input)
+type: include
+path_separator: /
+paths:
+  - '/\$MFT'

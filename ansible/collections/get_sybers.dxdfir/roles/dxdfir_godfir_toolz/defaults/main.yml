@@ -15,32 +15,52 @@ dxdfir_godfir_toolz_input_lane: >-
   errors='ignore') | default('', true) | from_yaml) or {}).subdir
   | default('disk_images', true) }}
 dxdfir_godfir_toolz_input_dir: "{{ dxdfir_godfir_toolz_repo_root }}/data_store/raw/{{ dxdfir_godfir_toolz_input_lane }}"
-# VMware VM export folders (one per VM) — optional, mirrors dxdfir_plaso. The
-# VM_files subdir is likewise taken from the taxonomy.
+# VM export folders (one per VM) — optional, mirrors dxdfir_plaso: processed
+# when the directory exists. The VM_files subdir is likewise taken from the taxonomy.
 dxdfir_godfir_toolz_vm_lane: >-
   {{ ((lookup('file', dxdfir_godfir_toolz_repo_root ~ '/evidence-taxonomy/vm_files.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir
   | default('VM_files', true) }}
 dxdfir_godfir_toolz_vm_dir: "{{ dxdfir_godfir_toolz_repo_root }}/data_store/raw/{{ dxdfir_godfir_toolz_vm_lane }}"
 dxdfir_godfir_toolz_out_dir: "{{ dxdfir_godfir_toolz_repo_root }}/data_store/processed/godfir-toolz"
-# Output base — consumed by
-# tasks/process.yml. Override directly to send output to a custom location.
-# The hardened in-repo Plaso image, used for artefact extraction (image_export.py)
-# and the SRUM two-step (log2timeline.py/psort.py) — build with dxdfir-build-images.
-dxdfir_godfir_toolz_plaso_image: "get-sybers/plaso:latest"
-# Also extract from Volume Shadow Copies during artefact extraction.
+# Output base: one folder per tool (<out_dir>/<tool>/<item>/<tool>.jsonl), the
+# artefact export under _extracted/. Override directly to send output to a
+# custom location.
+dxdfir_godfir_toolz_stage_dir: "{{ dxdfir_godfir_toolz_out_dir }}/_extracted"
+
+# The GoDFIR-toolz submodule root: every tool's contract.yml lives at
+# <toolz_dir>/<tool>/contract.yml.
+dxdfir_godfir_toolz_toolz_dir: "{{ dxdfir_godfir_toolz_repo_root }}/docker/GoDFIR-toolz"
+# The artefact export runs the plaso image's image_export sub-tool with the
+# filter file below (the godfir-toolz artefact set: registry hives + transaction
+# logs, Amcache, jump lists/.lnk, Recycle Bin $I records, the Windows Timeline
+# database, SRUM, Prefetch, a resident $MFT).
+dxdfir_godfir_toolz_plaso_contract: "{{ dxdfir_godfir_toolz_toolz_dir }}/plaso/contract.yml"
+dxdfir_godfir_toolz_filter_file: "{{ role_path }}/files/image-export-filter.yaml"
+# Empty = the plaso contract's image (get-sybers/plaso:latest); set to pin a digest.
+dxdfir_godfir_toolz_plaso_image: ""
+# Also export from Volume Shadow Copies (PLASO_IMAGE_EXPORT_VSS).
 dxdfir_godfir_toolz_vss: false
-# In-repo runs use PYTHONPATH; a deployed run installs the package instead.
+
+# The Go tools run over the export, in this order — one contract-driven
+# container each (<TOOL>_FORCE; /input ro = the export, /output = <out_dir>/<tool>).
+# Each tool content-detects its own artefacts anywhere under the tree, so all
+# run over the whole export; one finding nothing exits 1 (nothing produced),
+# which the lane tolerates. gowxt (Windows Timeline) is built but not yet run
+# (#88) — add it here once validated against a real ActivitiesCache.db.
+dxdfir_godfir_toolz_tools:
+  - gore          # registry batch (recmd_batch shape)
+  - gojle         # jump lists
+  - gole          # .lnk shortcuts
+  - goamcache     # Amcache.hve
+  - goappcompat   # AppCompatCache (ShimCache)
+  - gosbe         # ShellBags
+  - gorb          # Recycle Bin $I records
+  - gomft         # $MFT
+  - goese         # SRUM / SUM ESE databases
+  - goprefetch    # Prefetch
+
+# PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); a
+# deployed run installs the package instead.
 dxdfir_godfir_toolz_python_path: "{{ dxdfir_godfir_toolz_repo_root }}/python"
 dxdfir_godfir_toolz_force: false
-
-# The processor command argv, handed to the shared dxdfir_lane process step. This
-# is the one genuinely per-lane piece; the run/verify/gate skeleton is shared.
-dxdfir_godfir_toolz_argv: >-
-  {{ ['python3', '-m', 'get_sybers_dxdfir.godfir_toolz',
-  '--input-dir', dxdfir_godfir_toolz_input_dir,
-  '--vm-dir', dxdfir_godfir_toolz_vm_dir,
-  '--out-dir', dxdfir_godfir_toolz_out_dir,
-  '--plaso-image', dxdfir_godfir_toolz_plaso_image]
-  + (['--vss'] if dxdfir_godfir_toolz_vss | bool else [])
-  + (['--force'] if dxdfir_godfir_toolz_force | bool else []) }}
