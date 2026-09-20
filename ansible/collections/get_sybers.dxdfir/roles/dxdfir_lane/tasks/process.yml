@@ -24,6 +24,11 @@
         {{ dxdfir_lane_runs_built | map(attribute='mounts') | flatten
            | selectattr('mode', 'equalto', 'rw') | map(attribute='host') | unique | list }}
 
+    # The containers are run without self-judgement: the registered result is a
+    # list (one entry per run under .results), and the verdict is taken over
+    # that list explicitly below — every run against the contract's exit table,
+    # the lane's changed state from every summary line — so no condition ever
+    # reads a single .rc/.stdout off the looped register.
     - name: "process | run the tool container | {{ dxdfir_lane_name }}"
       ansible.builtin.command:
         argv: "{{ item.argv }}"
@@ -31,12 +36,33 @@
       loop_control:
         label: "{{ item.name }}"
       register: dxdfir_lane_results
-      changed_when: (dxdfir_lane_results.stdout | from_json).processed | int > 0
-      failed_when: dxdfir_lane_results.rc not in dxdfir_lane_exit_ok
+      changed_when: false
+      failed_when: false
 
+    # The contract's uniform exit table, per run: 0 success and 1 nothing to do
+    # pass here, 3 partial passes here and is judged by the summary line below,
+    # 2 config error (or anything outside the table — docker itself failing)
+    # fails the lane naming the run.
+    - name: "process | judge each run by the contract exit table | {{ dxdfir_lane_name }}"
+      ansible.builtin.assert:
+        that:
+          - item.rc | int in dxdfir_lane_exit_ok
+        fail_msg: >-
+          {{ dxdfir_lane_name }}/{{ item.item.name }} exited {{ item.rc }} —
+          not in the contract's exit table {{ dxdfir_lane_exit_ok }}
+          (2 = config error). stderr: {{ item.stderr | default('') | trim | truncate(800) }}
+        quiet: true
+      loop: "{{ dxdfir_lane_results.results }}"
+      loop_control:
+        label: "{{ item.item.name }} rc={{ item.rc }}"
+      when: dxdfir_lane_results is not skipped
+
+    # One JSON summary line per run; the lane changed when any run processed
+    # something (an idempotent rerun skips every item and reports processed 0).
     - name: "process | collect the summary lines | {{ dxdfir_lane_name }}"
       ansible.builtin.set_fact:
         dxdfir_lane_summaries: "{{ dxdfir_lane_results.results | map(attribute='stdout') | map('from_json') | list }}"
+      changed_when: dxdfir_lane_summaries | map(attribute='processed') | map('int') | sum > 0
       when: dxdfir_lane_results is not skipped
 
     - name: "process | verify output on disk | {{ dxdfir_lane_name }}"
