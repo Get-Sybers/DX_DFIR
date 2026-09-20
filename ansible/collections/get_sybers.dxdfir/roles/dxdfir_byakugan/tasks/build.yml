@@ -1,28 +1,30 @@
 ---
-# Materialise the per-source CAR stores (car.db + superset.db + car_<object>.jsonl
-# + car_relationships.jsonl) from the processed tree, via the external engine.
-# On any failure the rescue surfaces the engine's stdout/stderr as one diagnostic.
-- name: "car-build | materialise and verify | build"
-  block:
-    - name: "car-build | run the CAR engine"
-      ansible.builtin.command:
-        argv: "{{ dxdfir_byakugan_build_argv }}"
-      environment:
-        PYTHONPATH: "{{ dxdfir_byakugan_python_path }}"
-      register: dxdfir_byakugan_run
-      changed_when: dxdfir_byakugan_run.rc == 0
-
-    - name: "car-build | verify CAR stores landed on disk"
-      ansible.builtin.find:
-        paths: "{{ dxdfir_byakugan_dir }}"
-        patterns: ["car.db", "car_*.jsonl"]
-        recurse: true
-      register: dxdfir_byakugan_verify
-      when: dxdfir_byakugan_in | length == 0
-  rescue:
-    - name: "car-build | surface engine diagnostics"
-      ansible.builtin.fail:
-        msg: >-
-          dxdfir_byakugan build failed.
-          Stdout: {{ dxdfir_byakugan_run.stdout | default('(no output)') | trim | truncate(1000) }}
-          Stderr: {{ dxdfir_byakugan_run.stderr | default('') | trim | truncate(1000) }}
+# Materialise the per-source CAR stores (car.db + car_<object>.jsonl, superset.db
+# with the derive pass) from the processed tree: `byakugan build` batches over
+# BYAKUGAN_BUILD_INPUT_DIR (the processed tree, read-only) into
+# BYAKUGAN_BUILD_OUT_DIR (the byakugan/ tree, read-write) — one store per
+# discovered source, a source whose car.db exists skipped unless FORCE. One
+# failing source never stops the rest (the engine exits 3, partial), so the
+# lane tolerates per-source failures and gates on "a store landed, or there
+# were no sources".
+- name: "car-build | run the shared tool-lane skeleton"
+  ansible.builtin.include_role:
+    name: dxdfir_lane
+  vars:
+    dxdfir_lane_name: car-build
+    dxdfir_lane_python_path: "{{ dxdfir_byakugan_python_path }}"
+    dxdfir_lane_runs:
+      - name: build
+        contract: "{{ dxdfir_byakugan_contract }}"
+        image: "{{ dxdfir_byakugan_image }}"
+        subtool: build
+        env:
+          BYAKUGAN_BUILD_FORCE: "{{ dxdfir_byakugan_rebuild }}"
+          BYAKUGAN_BUILD_DERIVE: "{{ dxdfir_byakugan_derive }}"
+          BYAKUGAN_BUILD_STIX: "{{ dxdfir_byakugan_stix }}"
+        mounts:
+          - {host: "{{ dxdfir_byakugan_processed_dir }}", path: /input, mode: ro}
+          - {host: "{{ dxdfir_byakugan_dir }}", path: /output, mode: rw}
+    dxdfir_lane_verify_dir: "{{ dxdfir_byakugan_dir }}"
+    dxdfir_lane_verify_glob: "car.db"
+    dxdfir_lane_require_no_failures: false

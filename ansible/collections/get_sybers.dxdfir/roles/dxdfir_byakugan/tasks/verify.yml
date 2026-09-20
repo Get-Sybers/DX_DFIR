@@ -1,14 +1,50 @@
 ---
 # The CAR correctness promotion gate over the materialised tree: each exercised
 # object populated, values sane, car_action in the model's vocabulary, every row
-# traceable, relationship edges naming real endpoints. carcheck exits non-zero
-# (1 checks failed, 2 no CAR present) — failed_when turns that into a play failure
-# with the report on stdout.
+# traceable, relationship edges naming real endpoints. The gate is the engine's
+# own `byakugan.verify` — the object model and its vocabulary never leave the
+# engine image; this role only mounts the tree read-only and relays the report
+# and the verdict (exit 1 a check failed, 2 no CAR present).
+#
+# DEVIATION, declared: the byakugan contract at the pinned GoDFIR-toolz revision
+# dispatches build|timeline|car-vocab only — it has no verify sub-tool — so this
+# is the one run in the pipeline that uses the contracts' argv pass-through
+# (--entrypoint to the image's own interpreter, `-m byakugan.verify /input`)
+# instead of a sub-tool name. It goes away the moment the contract declares
+# `verify` (BYAKUGAN_VERIFY_INPUT_DIR); nothing else about the run differs — the
+# same confinement, the same image, the same read-only evidence mount.
+- name: "car-verify | build the confined engine run"
+  ansible.builtin.include_role:
+    name: dxdfir_lane
+    tasks_from: build
+  vars:
+    dxdfir_lane_name: car-verify
+    dxdfir_lane_runs:
+      - name: verify
+        contract: "{{ dxdfir_byakugan_contract }}"
+        image: "{{ dxdfir_byakugan_image }}"
+        entrypoint: /usr/bin/python3
+        args: ["-m", "byakugan.verify", "/input"]
+        mounts:
+          - {host: "{{ dxdfir_byakugan_dir }}", path: /input, mode: ro}
+
+- name: "car-verify | preflight the engine image"
+  ansible.builtin.include_role:
+    name: dxdfir_lane
+    tasks_from: preflight
+  vars:
+    dxdfir_lane_name: car-verify
+    dxdfir_lane_python_path: "{{ dxdfir_byakugan_python_path }}"
+
+# The gate's stdout is its report, not a summary line; the return code is the
+# verdict — failed_when turns it into a play failure with the report shown.
 - name: "car-verify | run the CAR correctness gate"
   ansible.builtin.command:
-    argv: "{{ dxdfir_byakugan_verify_argv }}"
-  environment:
-    PYTHONPATH: "{{ dxdfir_byakugan_python_path }}"
+    argv: "{{ (dxdfir_lane_runs_built | first).argv }}"
   register: dxdfir_byakugan_gate
   changed_when: false
   failed_when: dxdfir_byakugan_gate.rc != 0
+
+- name: "car-verify | the gate report"
+  ansible.builtin.debug:
+    msg: "{{ dxdfir_byakugan_gate.stdout_lines }}"

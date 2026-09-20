@@ -32,7 +32,7 @@
       - dxdfir_lane_contract.tool is defined
       - dxdfir_lane_contract.image is defined
       - _env_undeclared | length == 0
-      - _required_unbound | length == 0
+      - (_required_unbound | length == 0) or (dxdfir_lane_spec.entrypoint is defined)
       - (_subtool | length == 0) or (_subtool in (dxdfir_lane_contract.subtools | default([])))
       - >-
         (_subtool | length > 0)

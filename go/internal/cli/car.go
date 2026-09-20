@@ -9,27 +9,28 @@ import (
 )
 
 // The CAR stage is Ansible-orchestrated (dxdfir_byakugan role): build / verify /
-// timeline each front a thin playbook so the CLI drives Ansible, not Python
-// directly. The processors still do the work — the role invokes them.
+// timeline each front a thin playbook so the CLI drives Ansible, which runs the
+// get-sybers/byakugan image from its contract (env vars + mounts).
 
 // newBuildCarCmd — `dxdfir build-car` → dxdfir-build-car.yml.
 func newBuildCarCmd(env *Env) *cobra.Command {
 	var (
-		inPath    string
-		out       string
-		host      string
-		artefacts string
-		rebuild   bool
+		out     string
+		rebuild bool
+		derive  bool
+		stix    bool
 	)
 	cmd := &cobra.Command{
 		Use:   "build-car [PROCESSED_DIR]",
-		Short: "Build the per-source CAR stores (car.db + superset.db) from processed evidence.",
+		Short: "Build the per-source CAR stores (car.db + car_<object>.jsonl) from processed evidence.",
 		Long: "Build the per-source CAR stores from processed evidence, via the dxdfir_byakugan\n" +
-			"Ansible role.\n\n" +
-			"Default (batch): discover every source under the processed tree (PROCESSED_DIR,\n" +
-			"or <repo>/data_store/processed) and build each one's car.db + superset.db.\n" +
-			"Single-source (--in): one processed file/dir -> one car.db. A source whose car.db\n" +
-			"already exists is left as-is; pass --rebuild to re-derive it from the current maps.",
+			"Ansible role (`byakugan build` over the processed tree).\n\n" +
+			"Discovers every source under the processed tree (PROCESSED_DIR, or\n" +
+			"<repo>/data_store/processed) and builds each one's car.db + car_<object>.jsonl\n" +
+			"under the CAR tree (--out, or <repo>/data_store/processed/byakugan). A source whose\n" +
+			"car.db already exists is left as-is; pass --rebuild to re-derive it from the current\n" +
+			"maps. --derive adds the derived relationship pass (superset.db); --stix also\n" +
+			"derives the STIX 2.1 bundle.",
 		GroupID: groupCAR,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -38,19 +39,18 @@ func newBuildCarCmd(env *Env) *cobra.Command {
 				return err
 			}
 			vars := []string{"dxdfir_byakugan_action=build"}
-			if inPath != "" {
-				vars = append(vars, "dxdfir_byakugan_in="+inPath)
-				vars = appendVar(vars, "dxdfir_byakugan_out", out)
-				vars = appendVar(vars, "dxdfir_byakugan_host", host)
-				vars = appendVar(vars, "dxdfir_byakugan_artefacts", artefacts)
-			} else {
-				if len(args) > 0 && args[0] != "" {
-					vars = append(vars, "dxdfir_byakugan_processed_dir="+args[0])
-				}
-				vars = appendVar(vars, "dxdfir_byakugan_out", out)
-				if rebuild {
-					vars = append(vars, "dxdfir_byakugan_rebuild=true")
-				}
+			if len(args) > 0 && args[0] != "" {
+				vars = append(vars, "dxdfir_byakugan_processed_dir="+args[0])
+			}
+			vars = appendVar(vars, "dxdfir_byakugan_dir", out)
+			if rebuild {
+				vars = append(vars, "dxdfir_byakugan_rebuild=true")
+			}
+			if derive {
+				vars = append(vars, "dxdfir_byakugan_derive=true")
+			}
+			if stix {
+				vars = append(vars, "dxdfir_byakugan_stix=true")
 			}
 			plan, err := ansiblePlan(r, ap, "dxdfir-build-car.yml", vars, false)
 			if err != nil {
@@ -60,11 +60,10 @@ func newBuildCarCmd(env *Env) *cobra.Command {
 			return exitCode(code)
 		},
 	}
-	cmd.Flags().StringVar(&inPath, "in", "", "Single-source: one processed file/dir -> one car.db.")
-	cmd.Flags().StringVar(&out, "out", "", "Output dir (single-source: this source's car dir; batch: the car/ root).")
-	cmd.Flags().StringVar(&host, "host", "", "Single-source: fallback source_host where the map derives none.")
-	cmd.Flags().StringVar(&artefacts, "artefacts", "", "Single-source: comma-separated artefact map keys (default: route by filename).")
+	cmd.Flags().StringVar(&out, "out", "", "The CAR tree to write (default: <repo>/data_store/processed/byakugan).")
 	cmd.Flags().BoolVar(&rebuild, "rebuild", false, "Rebuild CAR stores that already exist (e.g. after a map/coverage change).")
+	cmd.Flags().BoolVar(&derive, "derive", false, "Also run the derived relationship pass into superset.db.")
+	cmd.Flags().BoolVar(&stix, "stix", false, "Also derive the STIX 2.1 bundle from the finished stores.")
 	return cmd
 }
 
@@ -102,7 +101,8 @@ func newVerifyCarCmd(env *Env) *cobra.Command {
 // Verb-first spelling; `car-timeline` stays as an alias.
 func newCarTimelineCmd(env *Env) *cobra.Command {
 	var (
-		out    string
+		outDir string
+		force  bool
 		host   string
 		after  string
 		before string
@@ -112,9 +112,10 @@ func newCarTimelineCmd(env *Env) *cobra.Command {
 		Aliases: []string{"car-timeline"},
 		Short:   "Build one property-rich, time-ordered CAR timeline from car.db + superset.db.",
 		Long: "Build one property-rich, time-ordered CAR timeline (dxdfir_byakugan role, timeline\n" +
-			"action). Unions the object events and relationship edges from a source's CAR\n" +
-			"stores into <car_dir>/timeline.jsonl. Point it at one source's car directory, or\n" +
-			"a tree to aggregate every source under it.",
+			"action — `byakugan timeline`). Unions the object events and relationship edges\n" +
+			"from a source's CAR stores into timeline.jsonl beside them (or under --out-dir).\n" +
+			"Point it at one source's car directory, or a tree to aggregate every source under\n" +
+			"it. An existing timeline.jsonl is kept unless --force.",
 		GroupID: groupCAR,
 		Args:    cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -123,7 +124,10 @@ func newCarTimelineCmd(env *Env) *cobra.Command {
 				return err
 			}
 			vars := []string{"dxdfir_byakugan_action=timeline", "dxdfir_byakugan_timeline_dir=" + args[0]}
-			vars = appendVar(vars, "dxdfir_byakugan_timeline_out", out)
+			vars = appendVar(vars, "dxdfir_byakugan_timeline_out_dir", outDir)
+			if force {
+				vars = append(vars, "dxdfir_byakugan_timeline_force=true")
+			}
 			vars = appendVar(vars, "dxdfir_byakugan_timeline_host", host)
 			vars = appendVar(vars, "dxdfir_byakugan_timeline_after", after)
 			vars = appendVar(vars, "dxdfir_byakugan_timeline_before", before)
@@ -135,7 +139,8 @@ func newCarTimelineCmd(env *Env) *cobra.Command {
 			return exitCode(code)
 		},
 	}
-	cmd.Flags().StringVar(&out, "out", "", "Output path (default: <car_dir>/timeline.jsonl).")
+	cmd.Flags().StringVar(&outDir, "out-dir", "", "Directory timeline.jsonl is written to (default: CAR_DIR itself).")
+	cmd.Flags().BoolVar(&force, "force", false, "Rewrite an existing timeline.jsonl.")
 	cmd.Flags().StringVar(&host, "host", "", "Only events whose source_host matches.")
 	cmd.Flags().StringVar(&after, "after", "", "Only events at/after this ISO timestamp.")
 	cmd.Flags().StringVar(&before, "before", "", "Only events at/before this ISO timestamp.")

@@ -1,20 +1,30 @@
 ---
 # Union a source's car.db + superset.db (object events + relationship edges) into
-# one property-rich, time-ordered CAR timeline JSONL. Point dxdfir_byakugan_timeline_dir
-# at one source's car dir, or a tree to aggregate every source under it.
-- name: "car-timeline | build the unified CAR timeline"
-  block:
-    - name: "car-timeline | run the timeline builder"
-      ansible.builtin.command:
-        argv: "{{ dxdfir_byakugan_timeline_argv }}"
-      environment:
-        PYTHONPATH: "{{ dxdfir_byakugan_python_path }}"
-      register: dxdfir_byakugan_timeline_run
-      changed_when: dxdfir_byakugan_timeline_run.rc == 0
-  rescue:
-    - name: "car-timeline | surface timeline diagnostics"
-      ansible.builtin.fail:
-        msg: >-
-          dxdfir_byakugan timeline failed.
-          Stdout: {{ dxdfir_byakugan_timeline_run.stdout | default('(no output)') | trim | truncate(1000) }}
-          Stderr: {{ dxdfir_byakugan_timeline_run.stderr | default('') | trim | truncate(1000) }}
+# one property-rich, time-ordered CAR timeline: `byakugan timeline` reads
+# BYAKUGAN_TIMELINE_INPUT_DIR (one source's car dir, or a tree to aggregate,
+# read-only) and writes timeline.jsonl into BYAKUGAN_TIMELINE_OUT_DIR — by
+# default the car dir itself, so the timeline lands beside the stores. An
+# existing timeline.jsonl is kept unless FORCE.
+- name: "car-timeline | run the shared tool-lane skeleton"
+  vars:
+    _out_dir: "{{ dxdfir_byakugan_timeline_out_dir | default(dxdfir_byakugan_timeline_dir, true) }}"
+  ansible.builtin.include_role:
+    name: dxdfir_lane
+  vars:
+    dxdfir_lane_name: car-timeline
+    dxdfir_lane_python_path: "{{ dxdfir_byakugan_python_path }}"
+    dxdfir_lane_runs:
+      - name: timeline
+        contract: "{{ dxdfir_byakugan_contract }}"
+        image: "{{ dxdfir_byakugan_image }}"
+        subtool: timeline
+        env:
+          BYAKUGAN_TIMELINE_FORCE: "{{ dxdfir_byakugan_timeline_force }}"
+          BYAKUGAN_TIMELINE_HOST: "{{ dxdfir_byakugan_timeline_host }}"
+          BYAKUGAN_TIMELINE_AFTER: "{{ dxdfir_byakugan_timeline_after }}"
+          BYAKUGAN_TIMELINE_BEFORE: "{{ dxdfir_byakugan_timeline_before }}"
+        mounts:
+          - {host: "{{ dxdfir_byakugan_timeline_dir }}", path: /input, mode: ro}
+          - {host: "{{ _out_dir }}", path: /output, mode: rw}
+    dxdfir_lane_verify_dir: "{{ _out_dir }}"
+    dxdfir_lane_verify_glob: "timeline.jsonl"
