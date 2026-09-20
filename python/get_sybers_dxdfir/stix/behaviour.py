@@ -24,7 +24,7 @@ technique, or that joins to no CAR entity, is counted and skipped — never give
 invented attack-pattern or a fabricated entity. Reuses the exchange's object
 builders (:mod:`.objects`), the authoritative ATT&CK index (:mod:`.attack_index`)
 and :mod:`.export`'s bundle assembly / validation, so a behaviour bundle merges
-object-for-object with the detection-export and PIIAT bundles.
+object-for-object with the detection-export and Byakugan bundles.
 
 Join keys (offline, against ``car.db`` directly — the Elastic-native provenance
 join of ``detect/rules/*.car_join`` is a later phase):

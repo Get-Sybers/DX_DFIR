@@ -1,7 +1,7 @@
 """``dxdfir stix`` — the exchange verbs (stdlib argparse; the Go front-end passes
 argv through to ``python -m get_sybers_dxdfir.stix`` verbatim).
 
-    dxdfir stix export --hits detections.jsonl [--bundle piiat.json] --out bundle.json [--push]
+    dxdfir stix export --hits detections.jsonl [--bundle byakugan.json] --out bundle.json [--push]
     dxdfir stix pull --out cti.ndjson [--since 2026-01-01T00:00:00Z]        # OpenCTI -> cti-* copy
     dxdfir stix sightings --alerts alerts.json --out sightings.json [--push]  # matches -> OpenCTI
 
@@ -30,7 +30,7 @@ def _err(message: str) -> None:
 
 def _cmd_export(args: argparse.Namespace) -> None:
     """Export detections as STIX 2.1 sightings + indicators (`indicates` -> MITRE's own
-    ATT&CK attack-pattern ids), merge PIIAT bundles through, write the bundle, optionally push it.
+    ATT&CK attack-pattern ids), merge Byakugan bundles through, write the bundle, optionally push it.
     """
     if not args.hits and not args.bundle:
         _err("nothing to export: give --hits and/or --bundle")
@@ -183,20 +183,20 @@ def _cmd_sightings(args: argparse.Namespace) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=PROG,
-        description="STIX 2.1 exchange — detections as sightings/indicators, PIIAT bundles "
+        description="STIX 2.1 exchange — detections as sightings/indicators, Byakugan bundles "
                     "passed through, optional OpenCTI push.")
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
 
     p = sub.add_parser(
         "export",
-        help="Export detections as STIX 2.1 sightings + indicators, merge PIIAT bundles "
+        help="Export detections as STIX 2.1 sightings + indicators, merge Byakugan bundles "
              "through, write the bundle, optionally push it.",
         description=_cmd_export.__doc__)
     p.add_argument("--hits", action="append", type=Path, metavar="<path>",
                    help="Detection hits: `dxdfir detect --jsonl-out` JSONL, an Elasticsearch "
                         "_search response, or alert / car-detections documents (repeatable).")
     p.add_argument("--bundle", action="append", type=Path, metavar="<path>",
-                   help="STIX 2.1 bundle(s) to pass through unchanged, e.g. PIIAT's projection (repeatable).")
+                   help="STIX 2.1 bundle(s) to pass through unchanged, e.g. Byakugan's projection (repeatable).")
     p.add_argument("--out", type=Path, metavar="<path>",
                    help="Write the bundle here (default: config `out`, else stdout).")
     p.add_argument("--config", type=Path, metavar="<path>", help="JSON/YAML config file (see stix/README.md).")
