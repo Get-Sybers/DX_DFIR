@@ -39,6 +39,25 @@ argument_specs:
         required: false
         default: [elasticsearch, kibana]
         description: "Compose services the ensure_running gate brings up and requires for the stack to count as up."
+      dxdfir_stack_min_free_gib:
+        type: int
+        required: false
+        default: 15
+        description: >-
+          deploy/start: free GiB the image stores must offer while stack images
+          are still to be pulled; when short, the preflight reclaims (prune)
+          once before asserting.
+      dxdfir_stack_image_store_paths:
+        type: list
+        elements: str
+        required: false
+        default: [/var/lib/docker, /var/lib/containerd]
+        description: "Filesystems holding pulled image content; the tightest one decides the pull-capacity gate."
+      dxdfir_stack_reclaim_all_images:
+        type: bool
+        required: false
+        default: false
+        description: "Reclaim may evict ALL unused images, not just dangling ones (evicts warm tool images — off by default)."
   ensure_running:
     short_description: "Ensure the required compose services are running (bring the stack up)."
     description:

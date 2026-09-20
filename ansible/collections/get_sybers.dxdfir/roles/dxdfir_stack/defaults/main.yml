@@ -27,3 +27,18 @@ dxdfir_stack_remove_volumes: false
 dxdfir_stack_required_services:
   - elasticsearch
   - kibana
+
+# Pull-capacity gate (tasks/preflight.yml, deploy/start only): free space (GiB)
+# the image stores must offer while stack images are still to be pulled — a full
+# cold pull of the five services runs ~10 GiB unpacked plus in-flight compressed
+# layers. When short, the gate reclaims once (prune) before asserting.
+dxdfir_stack_min_free_gib: 15
+# The filesystems holding pulled image content: docker's data-root and, with the
+# containerd image store, containerd's content store. The tightest one decides.
+dxdfir_stack_image_store_paths:
+  - /var/lib/docker
+  - /var/lib/containerd
+# Reclaim may also evict ALL unused images instead of only dangling build
+# leftovers. Off by default: it would evict the warm get-sybers/* tool images
+# and force full rebuilds.
+dxdfir_stack_reclaim_all_images: false

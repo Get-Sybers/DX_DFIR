@@ -12,10 +12,10 @@ The engine stays Elastic; this package is the EXCHANGE interface of Byakugan
    ``misc.Detections`` envelope) or from Elastic documents — a Detection
    Engine alert, a query-stamped evidence line, a ``car-detections`` lookup
    row, or a whole ``_search`` response (:mod:`.hits`).
-2. **PIIAT bundles pass through.** PIIAT projects its CAR stores to STIX itself
+2. **Byakugan bundles pass through.** Byakugan projects its CAR stores to STIX itself
    (SCOs / observed-data / SROs derived from car.db + superset.db + native, both
    relationship classes labelled ``declared`` / ``derived``). DX never re-derives
-   them and never imports PIIAT: a PIIAT bundle is merged object-for-object,
+   them and never imports Byakugan: a Byakugan bundle is merged object-for-object,
    ids untouched, into the same output bundle (:mod:`.export`).
 
 Ids follow D4: content-keyed objects (indicator, identity, relationship,
@@ -37,7 +37,7 @@ under ECS ``threat.indicator.*`` — for Elastic's own indicator-match rule to
 flag evidence against, and the alerts that rule raises go back as sightings of
 the platform's indicators. The engine is Elastic's; OpenCTI is the wire.
 
-    dxdfir stix export --hits detections.jsonl --bundle piiat.json --out bundle.json [--push]
+    dxdfir stix export --hits detections.jsonl --bundle byakugan.json --out bundle.json [--push]
     dxdfir stix pull --out cti.ndjson
     dxdfir stix sightings --alerts alerts.json --out sightings.json [--push]
 """

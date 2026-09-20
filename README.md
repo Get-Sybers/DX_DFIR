@@ -87,7 +87,7 @@ STIX exchange — nothing in it runs a container.
 | YARA / Suricata / Hayabusa / disk scan | `process signatures` | `detections/<sub-tool>/<item>/` (JSONL) |
 
 The **CAR layer is materialised**: the [Byakugan](https://github.com/Get-Sybers/byakugan)
-engine (formerly PIIAT-MitreCar) normalises each processed source into finished
+engine normalises each processed source into finished
 CAR events — one `car_<object>.jsonl` per object (13 objects) plus
 `car_relationships.jsonl` — under `processed/byakugan/<source>/`. The engine runs
 entirely inside the hardened `get-sybers/byakugan` image, cloned + built at the

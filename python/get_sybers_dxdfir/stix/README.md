@@ -1,14 +1,14 @@
 # STIX 2.1 exchange (`dxdfir stix`)
 
-The exchange interface of Byakugan: detections out as STIX 2.1, PIIAT's STIX
+The exchange interface of Byakugan: detections out as STIX 2.1, Byakugan's STIX
 projection passed through, OpenCTI as the wire. The engine stays Elastic; this
-package never imports PIIAT and never re-derives what PIIAT already projected.
+package never imports Byakugan and never re-derives what Byakugan already projected.
 What it emits follows the OASIS *STIX Best Practices Guide v1.0* (cn01) — the
 section references below are to it (BP) and to the STIX 2.1 specification.
 
 ```bash
 dxdfir stix export --hits detections.jsonl --out bundle.json
-dxdfir stix export --hits alerts.json --bundle piiat-case.json --case CASE-17 --push
+dxdfir stix export --hits alerts.json --bundle byakugan-case.json --case CASE-17 --push
 ```
 
 ## What a hit becomes
@@ -90,11 +90,11 @@ them; the sightings still tell it what fired and where.
 
 ## Pass-through (`--bundle`, repeatable)
 
-PIIAT projects its CAR stores (car.db + superset.db + native) to STIX itself —
+Byakugan projects its CAR stores (car.db + superset.db + native) to STIX itself —
 SCOs, observed-data, and SROs for both relationship classes, labelled
-`declared` / `derived`. A PIIAT bundle is merged object-for-object with ids
+`declared` / `derived`. A Byakugan bundle is merged object-for-object with ids
 untouched; a duplicate id keeps the newest `modified`. The summary counts
-relationships per class (DX's from the extension, PIIAT's from its labels).
+relationships per class (DX's from the extension, Byakugan's from its labels).
 
 ## Validation
 

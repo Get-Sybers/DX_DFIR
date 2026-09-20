@@ -7,7 +7,23 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Added
+- **`dxdfir deploy stack` self-heals a short image store instead of dying
+  mid-pull** (containerd: "no space left on device"). The `dxdfir_stack`
+  preflight gains a pull-capacity gate on deploy/start: while stack images are
+  still to be pulled it measures the image stores
+  (`dxdfir_stack_image_store_paths`), reclaims once when short (docker prune —
+  stopped containers, dangling images, unused networks, build cache;
+  `dxdfir_stack_reclaim_all_images` widens it), and asserts
+  `dxdfir_stack_min_free_gib` with one clear failure otherwise. A host whose
+  images are already local is never gated; stop/destroy/status stay ungated.
+
 ### Changed
+- The memory lane follows the Anamnesis plugin-id rename
+  (`windows.piiat.*` → `windows.anamnesis.*`) and the stix docs/tests call the
+  CAR engine's pass-through bundles Byakugan bundles — the last piiat-era
+  naming. Both `sources.yml` pins predate the renames; bump them once the
+  renames land on the tools' default branches.
 - **Every tool lane runs its container from ansible, driven by the tool's
   GoDFIR-toolz `contract.yml`.** The `dxdfir_lane` skeleton builds each confined
   `docker run` from the contract (`-e` per declared variable, `-v` per mount) and

@@ -558,13 +558,13 @@ def test_validate_bundle_flags_defects(rules, attack):
     assert any("extension-definition must reach the consumer" in x for x in w)
 
 
-def test_piiat_bundle_passes_through_untouched(rules, tmp_path):
+def test_byakugan_bundle_passes_through_untouched(rules, tmp_path):
     own, _ = export.hit_objects([_hit(SURICATA)], rules=rules)
     shared_ip = objects.ip_address("10.0.0.5")                  # same spec id both sides derive
     newer = dict(own[objects.global_id("indicator", "sig-suricata-alert")], modified="2027-01-01T00:00:00.000Z",
                  name="Suricata IDS alert (revised)")
     now = "2026-09-02T10:00:00.000Z"
-    piiat = {"type": "bundle", "id": "bundle--" + str(uuid.uuid4()), "objects": [
+    byakugan = {"type": "bundle", "id": "bundle--" + str(uuid.uuid4()), "objects": [
         shared_ip,
         {"type": "observed-data", "spec_version": "2.1", "id": "observed-data--" + str(uuid.uuid4()),
          "created": now, "modified": now, "first_observed": now, "last_observed": now,
@@ -576,24 +576,24 @@ def test_piiat_bundle_passes_through_untouched(rules, tmp_path):
         {"type": "relationship", "spec_version": "2.1", "id": "relationship--" + str(uuid.uuid4()),
          "created": now, "modified": now, "relationship_type": "related-to",
          "source_ref": "file--" + str(uuid.uuid4()), "target_ref": "process--" + str(uuid.uuid4()),
-         "labels": ["derived"], "x_piiat_inferred": True},
+         "labels": ["derived"], "x_byakugan_inferred": True},
         newer,
         "not an object",
     ]}
-    path = tmp_path / "piiat.json"
-    path.write_text(json.dumps(piiat))
+    path = tmp_path / "byakugan.json"
+    path.write_text(json.dumps(byakugan))
     bundle, report = export.assemble([_hit(SURICATA)], [export.load_bundle(str(path))], rules=rules)
     counts = report["merged"][0]
     assert (counts["added"], counts["kept"], counts["replaced"], counts["invalid"]) == (3, 1, 1, 1)
     assert report["hits"]["sightings"] == 1
     assert sum(1 for x in bundle["objects"] if x["id"] == shared_ip["id"]) == 1
     assert next(x for x in bundle["objects"] if x["id"] == newer["id"])["name"] == "Suricata IDS alert (revised)"
-    # PIIAT's objects are neither re-marked nor re-keyed; their labels still say their class
-    passed = next(x for x in bundle["objects"] if x.get("x_piiat_inferred"))
+    # Byakugan's objects are neither re-marked nor re-keyed; their labels still say their class
+    passed = next(x for x in bundle["objects"] if x.get("x_byakugan_inferred"))
     assert "object_marking_refs" not in passed and passed["labels"] == ["derived"]
     assert export.summarise(bundle)["relationship_classes"] == {"declared": 1, "derived": 3}
     errors, warnings = export.validate_bundle(bundle)
-    assert errors == [] and warnings                       # PIIAT refs held elsewhere, its x_ property: warned, not refused
+    assert errors == [] and warnings                       # Byakugan refs held elsewhere, its x_ property: warned, not refused
     not_a_bundle = tmp_path / "hits.json"
     not_a_bundle.write_text("[]")
     with pytest.raises(ValueError):

@@ -15,7 +15,7 @@ each in its own ``observed-data`` (STIX 2.1 §4.14 / BP §5.9). Identical rows
 rule's dates, the observation time), never the export clock, so a re-export
 is the same version of the same objects (§3.2 / §3.6).
 
-``merge_objects()`` folds PIIAT's bundles in object-for-object. PIIAT projects
+``merge_objects()`` folds Byakugan's bundles in object-for-object. Byakugan projects
 its CAR stores to STIX itself; DX does not re-derive anything, does not touch
 ids, and resolves a duplicate id by keeping the newest ``modified`` — nothing
 is dropped for being unfamiliar, so a superset of both producers reaches the
@@ -483,7 +483,7 @@ def validate_bundle(bundle, *, external_ids: Iterable[str] = ()) -> tuple[list[s
 
 def relationship_class(obj: dict) -> str:
     """``declared`` / ``derived`` from an SRO's DX_DFIR extension — or from
-    the labels a pass-through producer (PIIAT) set; ``unlabelled`` when
+    the labels a pass-through producer (Byakugan) set; ``unlabelled`` when
     nobody said."""
     cls = o.extension_of(obj).get("relationship_class")
     if cls in o.RELATIONSHIP_CLASSES:
