@@ -18,6 +18,7 @@ The binary never re-implements processing. It shells out to what already exists:
 | `process` | `ansible-playbook … dxdfir-process-<lane>.yml` (per lane), progress reconstructed by watching output files |
 | `build-docker` | `ansible-playbook … dxdfir-build-images.yml` |
 | `build-car` / `verify-car` / `build-timeline` | `ansible-playbook … dxdfir-{build-car,verify-car,car-timeline}.yml` (the `dxdfir_byakugan` role over the engine + carcheck gate) |
+| `load-car` | `ansible-playbook … dxdfir-load-car.yml` (the `dxdfir_car_load` role — `byakugan load` into `logs-car.*`, behind the `dxdfir_stack` ensure_running gate) |
 | `verify-images` | `ansible-playbook … dxdfir-verify-images.yml` |
 | `register` / `collection …` | native Go (`internal/collection`: the SQLite registry, magic-byte classify, sort/promote/link, and the SHA-1 manifest — no subprocess) |
 | `stix …` | `python -m get_sybers_dxdfir.stix …` (data → stdout, summary → stderr) |

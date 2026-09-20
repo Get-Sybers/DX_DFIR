@@ -1,0 +1,122 @@
+---
+# Bulk-load the materialised CAR tree into the running Elastic stack:
+# `byakugan load` reads BYAKUGAN_LOAD_INPUT_DIR (the CAR tree `byakugan build`
+# wrote, read-only) and — BYAKUGAN_LOAD_ES_URL set, push mode — POSTs it into
+# logs-car.<object>-<namespace> x13, logs-car.rel-<namespace> and
+# logs-car.inferred-<namespace>, writing its bundles/manifest/report through
+# BYAKUGAN_LOAD_OUT_DIR. The stack must be up first (its data streams need the
+# running Elasticsearch this pushes to) and reachable by service name, so this
+# runs behind the stack's ensure_running gate and on its compose network.
+
+# 1. The compose services this pushes to/through must be running first — the
+# same idempotent, self-healing gate stack deploy/start use (see
+# docs/reference/ansible-standards.md: dxdfir_stack ensure_running is for
+# "anything that ingests into / queries elasticsearch"). Reused via
+# include_role (not a bare include_tasks) so dxdfir_stack's OWN defaults
+# (compose dir, .env file, the services it requires — elasticsearch + kibana,
+# already what this role needs) resolve correctly from outside that role.
+- name: "car-load | the elastic stack is up before anything ingests"
+  ansible.builtin.include_role:
+    name: dxdfir_stack
+    tasks_from: ensure_running
+
+# 2. Credentials come from docker/elastic/.env, never duplicated into a
+# second secret store. A missing .env fails clearly here rather than loading
+# with empty credentials — ensure_running.yml, reused directly above, does not
+# itself run dxdfir_stack's own preflight (which is where that check normally
+# lives), so this role asserts it again at its own layer.
+- name: "car-load | stat the elastic .env"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_car_load_env_file }}"
+  register: dxdfir_car_load_env_stat
+
+- name: "car-load | the elastic .env is present"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_car_load_env_stat.stat.exists
+    fail_msg: >-
+      {{ dxdfir_car_load_env_file }} is missing — copy docker/elastic/.env.example
+      to docker/elastic/.env and set the passwords before loading the CAR.
+    quiet: true
+
+# One password per line matching ^KEY=, prefix stripped. regex_replace (not
+# regex_search's group extraction) because it always returns a plain string,
+# matched or not — no ambiguity over whether the result comes back wrapped in
+# a list.
+- name: "car-load | read the stack credentials from .env"
+  no_log: true
+  vars:
+    _env_lines: "{{ lookup('ansible.builtin.file', dxdfir_car_load_env_file).split('\n') }}"
+  ansible.builtin.set_fact:
+    dxdfir_car_load_elastic_password: >-
+      {{ (_env_lines | select('match', '^ELASTIC_PASSWORD=') | list | first | default('', true))
+         | regex_replace('^ELASTIC_PASSWORD=', '') }}
+    dxdfir_car_load_byakugan_loader_password: >-
+      {{ (_env_lines | select('match', '^BYAKUGAN_LOADER_PASSWORD=') | list | first | default('', true))
+         | regex_replace('^BYAKUGAN_LOADER_PASSWORD=', '') }}
+
+# Setup-mode template PUTs (and, with the Kibana import on, the saved-objects
+# import) need cluster/Kibana privileges logs_car_writer deliberately does not
+# have (docker/elastic/config/setup.sh) — so a setup run authenticates as the
+# elastic superuser; a steady-state, repeatable run (setup=false, the
+# templates already exist) authenticates as byakugan_loader, scoped to
+# logs-car.* only.
+- name: "car-load | resolve the identity this run authenticates as"
+  no_log: true
+  ansible.builtin.set_fact:
+    dxdfir_car_load_es_user_resolved: >-
+      {{ dxdfir_car_load_elastic_user if dxdfir_car_load_setup | bool else dxdfir_car_load_loader_user }}
+    dxdfir_car_load_es_password_resolved: >-
+      {{ dxdfir_car_load_elastic_password if dxdfir_car_load_setup | bool
+         else dxdfir_car_load_byakugan_loader_password }}
+
+- name: "car-load | the resolved credential is non-empty"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_car_load_es_password_resolved | length > 0
+    fail_msg: >-
+      {{ 'ELASTIC_PASSWORD' if dxdfir_car_load_setup | bool else 'BYAKUGAN_LOADER_PASSWORD' }}
+      is not set in {{ dxdfir_car_load_env_file }}.
+    quiet: true
+
+# 3. Drive the byakugan image's `load` sub-tool through the shared tool-lane
+# skeleton: /input the materialised CAR tree (ro), /output this run's bundles +
+# manifest + report (rw), /certs the stack's CA off the compose `certs` named
+# volume (ro) — BYAKUGAN_LOAD_ES_CA_FILE already defaults to /certs/ca/ca.crt,
+# matching where it lands, and BYAKUGAN_LOAD_INPUT_DIR/_OUT_DIR already
+# default to /input//output, matching the mounts, so neither is restated here.
+# Namespace/setup/force are plain env (the playbook passes them through as
+# -e); the password goes through secret_env — never the docker run argv — and
+# BYAKUGAN_LOAD_KIBANA_URL is sent only when setup AND the kibana-import var
+# are both on (the contract requires setup for the import).
+- name: "car-load | run the shared tool-lane skeleton"
+  ansible.builtin.include_role:
+    name: dxdfir_lane
+  vars:
+    dxdfir_lane_name: car-load
+    dxdfir_lane_python_path: "{{ dxdfir_car_load_python_path }}"
+    dxdfir_lane_runs:
+      - name: load
+        contract: "{{ dxdfir_car_load_contract }}"
+        image: "{{ dxdfir_car_load_image }}"
+        subtool: load
+        env:
+          BYAKUGAN_LOAD_ES_URL: "{{ dxdfir_car_load_es_url }}"
+          BYAKUGAN_LOAD_NAMESPACE: "{{ dxdfir_car_load_namespace }}"
+          BYAKUGAN_LOAD_SETUP: "{{ dxdfir_car_load_setup }}"
+          BYAKUGAN_LOAD_FORCE: "{{ dxdfir_car_load_force }}"
+          BYAKUGAN_LOAD_KIBANA_URL: >-
+            {{ dxdfir_car_load_kibana_url
+               if (dxdfir_car_load_setup | bool and dxdfir_car_load_kibana_import | bool)
+               else '' }}
+          BYAKUGAN_LOAD_ES_USER: "{{ dxdfir_car_load_es_user_resolved }}"
+        secret_env:
+          BYAKUGAN_LOAD_ES_PASSWORD: "{{ dxdfir_car_load_es_password_resolved }}"
+        mounts:
+          - {host: "{{ dxdfir_car_load_dir }}", path: /input, mode: ro}
+          - {host: "{{ dxdfir_car_load_out_dir }}", path: /output, mode: rw}
+          - {path: /certs, mode: ro, volume: true, source: "{{ dxdfir_car_load_certs_volume }}"}
+        network: "{{ dxdfir_car_load_network }}"
+    dxdfir_lane_verify_dir: "{{ dxdfir_car_load_out_dir }}"
+    dxdfir_lane_verify_glob: "manifest.json"
+    dxdfir_lane_require_no_failures: false

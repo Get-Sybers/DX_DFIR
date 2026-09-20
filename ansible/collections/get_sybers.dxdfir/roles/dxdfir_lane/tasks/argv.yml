@@ -7,36 +7,59 @@
 # a self-orchestrating image runs with no arguments, a multi-tool image gets its
 # sub-tool name and nothing else.
 #
-# Read-only checks only (the daemon is not touched, no directory is created);
-# the built run is appended to dxdfir_lane_runs_built for preflight + process.
+# Read-only checks only (the daemon is not touched, no directory is created),
+# with one narrow exception: a run that declares secret_env gets a 0600
+# --env-file written here (never logged, removed again by process.yml's
+# always: block) so a secret value never sits on the docker run argv, where a
+# process listing or ansible's own command-echo would show it in cleartext.
+#
+# The built run is appended to dxdfir_lane_runs_built for preflight + process.
 
 - name: "argv | read the tool contract | {{ dxdfir_lane_spec.name }}"
   ansible.builtin.set_fact:
     dxdfir_lane_contract: "{{ lookup('file', dxdfir_lane_spec.contract) | from_yaml }}"
 
-# Every env override must be a variable the contract declares; every mount the
-# contract requires must be bound; every mount's CONTAINER path must be one the
-# contract declares — or a path a declared env override names, which is how a
-# contract asks for a mounted file it does not list as a mount (the plaso
-# image_export filter file named by PLASO_IMAGE_EXPORT_FILTER_FILE, an operator
-# ruleset named by SIGNATURES_<SUBTOOL>_RULES) — so a lane cannot bind a path
-# the tool's interface knows nothing about; a multi-tool image must be given
-# one of its declared sub-tools (unless the debug pass-through is used
-# deliberately).
+# Every env override must be a variable the contract declares — secret_env
+# (rendered through a --env-file instead of -e; see below) counts as env here
+# too, since the contract does not care HOW a value reaches it; every mount
+# the contract requires must be bound; every mount's CONTAINER path must be
+# one the contract declares — or a path a declared env override names, which
+# is how a contract asks for a mounted file it does not list as a mount (the
+# plaso image_export filter file named by PLASO_IMAGE_EXPORT_FILTER_FILE, an
+# operator ruleset named by SIGNATURES_<SUBTOOL>_RULES) — so a lane cannot
+# bind a path the tool's interface knows nothing about; a multi-tool image
+# must be given one of its declared sub-tools (unless the debug pass-through
+# is used deliberately). Every mount also names exactly one of a host bind
+# path or a volume: true + source (a docker named volume, e.g. the compose
+# `certs` volume) — never both, never neither, or the docker run built below
+# would silently mount a corrupted or empty source.
 - name: "argv | the run spec is within the contract | {{ dxdfir_lane_spec.name }}"
   vars:
     _env_undeclared: >-
-      {{ (dxdfir_lane_spec.env | default({})) | list
+      {{ ((dxdfir_lane_spec.env | default({})) | list
+          + (dxdfir_lane_spec.secret_env | default({})) | list)
          | difference(dxdfir_lane_contract.env | default({}) | list) }}
     _bound: "{{ dxdfir_lane_spec.mounts | default([]) | map(attribute='path') | list }}"
     _declared: "{{ dxdfir_lane_contract.mounts | default([]) | map(attribute='path') | list }}"
     _env_named: >-
-      {{ (dxdfir_lane_spec.env | default({})).values() | reject('none') | map('string') | list }}
+      {{ ((dxdfir_lane_spec.env | default({})).values() | list
+          + (dxdfir_lane_spec.secret_env | default({})).values() | list)
+         | reject('none') | map('string') | list }}
     _mounts_undeclared: "{{ _bound | difference(_declared + _env_named) }}"
     _required_unbound: >-
       {{ dxdfir_lane_contract.mounts | default([])
          | selectattr('required', 'equalto', true) | map(attribute='path') | difference(_bound) }}
     _subtool: "{{ dxdfir_lane_spec.subtool | default('') }}"
+    _mounts_lhs_conflict: >-
+      {{ dxdfir_lane_spec.mounts | default([])
+         | selectattr('host', 'defined') | selectattr('source', 'defined') | map(attribute='path') | list }}
+    _mounts_lhs_missing: >-
+      {{ dxdfir_lane_spec.mounts | default([])
+         | rejectattr('host', 'defined') | rejectattr('source', 'defined') | map(attribute='path') | list }}
+    _volume_unsourced: >-
+      {{ dxdfir_lane_spec.mounts | default([])
+         | selectattr('volume', 'defined') | selectattr('volume', 'equalto', true)
+         | rejectattr('source', 'defined') | map(attribute='path') | list }}
   ansible.builtin.assert:
     that:
       - dxdfir_lane_contract.tool is defined
@@ -49,24 +72,34 @@
         (_subtool | length > 0)
         or (dxdfir_lane_contract.entrypoint | default('') != 'multi-tool')
         or (dxdfir_lane_spec.entrypoint is defined)
+      - _mounts_lhs_conflict | length == 0
+      - _mounts_lhs_missing | length == 0
+      - _volume_unsourced | length == 0
     fail_msg: >-
       {{ dxdfir_lane_name }}/{{ dxdfir_lane_spec.name }} does not fit
       {{ dxdfir_lane_spec.contract }}: undeclared env {{ _env_undeclared }},
       undeclared mount paths {{ _mounts_undeclared }} (declared:
       {{ _declared }}, env-named: {{ _env_named }}), unbound required mounts
       {{ _required_unbound }}, sub-tool '{{ _subtool }}' (declared:
-      {{ dxdfir_lane_contract.subtools | default([]) }}).
+      {{ dxdfir_lane_contract.subtools | default([]) }}), mounts naming both
+      host and source {{ _mounts_lhs_conflict }}, mounts naming neither
+      {{ _mounts_lhs_missing }}, volume mounts missing source
+      {{ _volume_unsourced }}.
     quiet: true
 
 # The read-only mounts are the evidence (and any operator ruleset). They must
 # exist — docker would otherwise create an empty root-owned directory in their
 # place — and their owning group is granted to the container (--group-add) so the
 # image's non-root uid can read a locked-down tree (data_store is root:docker 750
-# on a hardened host) without running as root.
+# on a hardened host) without running as root. A volume: true mount has no host
+# path to stat — it names an existing docker named volume instead — so it is
+# excluded here (and so, for free, from --group-add below too).
 - name: "argv | stat each read-only mount | {{ dxdfir_lane_spec.name }}"
   ansible.builtin.stat:
     path: "{{ item.host }}"
-  loop: "{{ dxdfir_lane_spec.mounts | default([]) | selectattr('mode', 'equalto', 'ro') | list }}"
+  loop: >-
+    {{ dxdfir_lane_spec.mounts | default([]) | selectattr('mode', 'equalto', 'ro')
+       | rejectattr('volume', 'defined') | list }}
   loop_control:
     label: "{{ item.path }}"
   register: dxdfir_lane_ro_stats
@@ -83,11 +116,51 @@
   loop_control:
     label: "{{ item.item.path }}"
 
+# Secret env: values that must never sit on the docker run argv (a password),
+# where a process listing or ansible's own command-echo would show them in
+# cleartext. One 0600 temp env-file per run that declares secret_env — created
+# here, removed again by process.yml's always: block once that run has
+# executed (pass or fail) — never a bind mount, never logged (the write task's
+# content: parameter carries the cleartext values, so it is no_log: true).
+- name: "argv | create the secret env-file | {{ dxdfir_lane_spec.name }}"
+  ansible.builtin.tempfile:
+    state: file
+    suffix: ".env"
+  register: dxdfir_lane_secret_env_file
+  when: (dxdfir_lane_spec.secret_env | default({})) | length > 0
+
+- name: "argv | write the secret env-file (0600, never logged) | {{ dxdfir_lane_spec.name }}"
+  no_log: true
+  vars:
+    _secret: "{{ dxdfir_lane_spec.secret_env | default({}) }}"
+    _secret_bool_keys: >-
+      {{ dxdfir_lane_contract.env | default({}) | dict2items
+         | selectattr('value.type', 'defined') | selectattr('value.type', 'equalto', 'bool')
+         | map(attribute='key') | list }}
+    _secret_bools: "{{ _secret | dict2items | selectattr('key', 'in', _secret_bool_keys) | list }}"
+    _secret_strings: >-
+      {{ _secret | dict2items | rejectattr('key', 'in', _secret_bool_keys)
+         | rejectattr('value', 'none') | rejectattr('value', 'equalto', '') | list }}
+    _secret_kv: >-
+      {{ (_secret_bools | map(attribute='key')
+          | zip(_secret_bools | map(attribute='value') | map('bool') | map('ternary', '1', '0'))
+          | map('join', '=') | list)
+         + (_secret_strings | map(attribute='key')
+            | zip(_secret_strings | map(attribute='value') | map('string'))
+            | map('join', '=') | list) }}
+  ansible.builtin.copy:
+    dest: "{{ dxdfir_lane_secret_env_file.path }}"
+    content: "{{ _secret_kv | join('\n') }}"
+    mode: "0600"
+  when: (dxdfir_lane_spec.secret_env | default({})) | length > 0
+
 # Confinement + tmpfs (for /tmp and every optional read-write contract mount
 # left unbound: the tool's /work scratch, suricata's /var/run) + network (none
-# unless the contract allows it AND the spec asks) + --group-add + the contract
-# mounts and env + the image (+ sub-tool). Filter-only expressions: a jinja
-# block would come back as a string, not a list.
+# unless the contract allows it AND the spec asks — see _network_name/
+# _network_bridge below) + --group-add + the contract mounts (a host bind or a
+# named docker volume, per mount) and env (plain -e, or a secret's --env-file)
+# + the image (+ sub-tool). Filter-only expressions: a jinja block would come
+# back as a string, not a list.
 - name: "argv | build the confined docker run | {{ dxdfir_lane_spec.name }}"
   vars:
     _env: "{{ dxdfir_lane_spec.env | default({}) }}"
@@ -107,8 +180,16 @@
             | zip(_strings | map(attribute='value') | map('string'))
             | map('join', '=') | list) }}
     _mounts: "{{ dxdfir_lane_spec.mounts | default([]) }}"
+    # The bind SOURCE: a mount's host path, or (map's own default=, for the
+    # mount entries that have no .host at all) its named-volume source — never
+    # both on one entry (asserted above), so joining the pair with '' picks
+    # whichever one is actually set.
+    _lhs: >-
+      {{ (_mounts | map(attribute='host', default='') | list)
+         | zip(_mounts | map(attribute='source', default='') | list)
+         | map('join', '') | list }}
     _binds: >-
-      {{ _mounts | map(attribute='host')
+      {{ _lhs
          | zip(_mounts | map(attribute='path'), _mounts | map(attribute='mode'))
          | map('join', ':') | list }}
     _tmpfs_paths: >-
@@ -121,11 +202,26 @@
     _gids: >-
       {{ dxdfir_lane_ro_stats.results | map(attribute='stat.gid') | map('string')
          | reject('equalto', '0') | unique | list }}
-    _network: >-
-      {{ (dxdfir_lane_spec.network | default(false) | bool)
-         and (dxdfir_lane_contract.network | default('none') == 'optional') }}
+    # network: false/absent -> --network none (confined, the default for every
+    # tool). true -> keep the docker bridge (legacy opt-in — the memory lane's
+    # outbound symbol fetch). A non-empty STRING -> attach to that named
+    # docker network instead (e.g. byakugan_default, so the container can
+    # resolve the elastic stack's compose services by name): --network NAME
+    # replaces --network none. Either form is honoured ONLY when the contract
+    # itself declares `network: optional`; every other run is forced off,
+    # unconditionally, regardless of what the spec asks.
+    _network_value: "{{ dxdfir_lane_spec.network | default(false) }}"
+    _network_optional: "{{ dxdfir_lane_contract.network | default('none') == 'optional' }}"
+    _network_name: >-
+      {{ _network_value
+         if (_network_value is string and _network_value | length > 0 and _network_optional | bool)
+         else '' }}
+    _network_bridge: >-
+      {{ (_network_value is not string) and (_network_value | bool) and (_network_optional | bool) }}
     _image: "{{ dxdfir_lane_spec.image | default(dxdfir_lane_contract.image, true) }}"
     _subtool: "{{ dxdfir_lane_spec.subtool | default('') }}"
+    _secret: "{{ dxdfir_lane_spec.secret_env | default({}) }}"
+    _env_file: "{{ dxdfir_lane_secret_env_file.path | default('') if (_secret | length > 0) else '' }}"
   ansible.builtin.set_fact:
     dxdfir_lane_runs_built: >-
       {{ dxdfir_lane_runs_built + [{
@@ -133,13 +229,17 @@
            'tool': dxdfir_lane_contract.tool,
            'image': _image,
            'mounts': _mounts,
+           'env_file': _env_file,
            'argv': ['docker', 'run', '--rm'] + dxdfir_lane_confinement
                    + (['--tmpfs'] | product(_tmpfs) | flatten)
-                   + ([] if _network | bool else ['--network', 'none'])
+                   + (['--network', _network_name] if _network_name | length > 0
+                      else [] if _network_bridge | bool
+                      else ['--network', 'none'])
                    + (['--group-add'] | product(_gids) | flatten)
                    + (['--entrypoint', dxdfir_lane_spec.entrypoint] if dxdfir_lane_spec.entrypoint is defined else [])
                    + (['-v'] | product(_binds) | flatten)
                    + (['-e'] | product(_env_kv) | flatten)
+                   + (['--env-file', _env_file] if _env_file | length > 0 else [])
                    + [_image]
                    + ([_subtool] if _subtool | length > 0 else [])
                    + (dxdfir_lane_spec.args | default([])),

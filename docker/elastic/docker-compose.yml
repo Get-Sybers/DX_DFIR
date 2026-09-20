@@ -21,6 +21,7 @@ services:
     environment:
       ELASTIC_PASSWORD: "${ELASTIC_PASSWORD:?set it in docker/elastic/.env (see .env.example)}"
       KIBANA_SYSTEM_PASSWORD: "${KIBANA_SYSTEM_PASSWORD:?set it in docker/elastic/.env (see .env.example)}"
+      BYAKUGAN_LOADER_PASSWORD: "${BYAKUGAN_LOADER_PASSWORD:?set it in docker/elastic/.env (see .env.example)}"
     volumes:
       - ./config/setup.sh:/usr/local/bin/byakugan-setup:ro
       - certs:/usr/share/elasticsearch/config/certs

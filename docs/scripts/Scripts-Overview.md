@@ -65,7 +65,9 @@ No shell scripts here either:
 - The **Elastic-native backend** (`docker/elastic/`) is brought up with
   `docker compose` (see its README). Filebeat tails the processed tree directly
   (`ELASTIC_INGEST_DIR` is the knob) into `logs-dxdfir.<type>-*` data
-  streams; the CAR→ECS load into `logs-car.*` is the next phase
+  streams; **`dxdfir load-car`** bulk-loads the materialised CAR into
+  `logs-car.*` instead (the `dxdfir_car_load` role, `byakugan load`) — the
+  `car-detections` lookup index is still the next phase
   ([risk gate](/docs/riskgate.md)).
 
 ## Provisioning scripts

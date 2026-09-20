@@ -116,12 +116,18 @@ docker compose ps               # setup exits 0; the rest go (healthy)
 - Filebeat tails the tree mounted at `ELASTIC_INGEST_DIR` (`<type>/**/*.json[l]`)
   and writes each line into the `logs-dxdfir.<type>-<namespace>` data stream —
   point `ELASTIC_INGEST_DIR` at `data_store/processed` (or mount your own curated
-  `<type>/` tree). Filebeat's own registry keeps re-runs idempotent.
-- The CAR→ECS load of `processed/byakugan/` into the `logs-car.*` data streams and the
-  `car-detections` lookup index is the next phase; the Phase-0
-  [risk gate](/docs/riskgate.md) proves the two assumptions it rests on
-  (evidence-time detection runs, ES|QL `LOOKUP JOIN`) and documents the
-  projection.
+  `<type>/` tree). Filebeat's own registry keeps re-runs idempotent. It excludes
+  `processed/byakugan/` and `processed/byakugan-load/` — the CAR is delivered
+  ECS-projected instead (next bullet), not as raw evidence.
+- `dxdfir load-car` bulk-loads the materialised CAR (`processed/byakugan/`) into
+  the `logs-car.<object>-<namespace>` x13, `logs-car.rel-<namespace>` and
+  `logs-car.inferred-<namespace>` data streams (the `dxdfir_car_load` role,
+  `byakugan load`, behind the stack's own bring-up gate). `--setup` (the
+  default, first run) applies the index/component templates; `--no-setup` for
+  routine repeat loads once they exist. The `car-detections` lookup index is
+  still the next phase; the Phase-0 [risk gate](/docs/riskgate.md) proves the
+  two assumptions it rests on (evidence-time detection runs, ES|QL
+  `LOOKUP JOIN`) and documents the projection.
 
 ### Step 9: Detect and exchange
 - The detections are Elastic rules-as-code — one ES|QL or EQL rule file per

@@ -1,0 +1,123 @@
+---
+argument_specs:
+  main:
+    short_description: "Bulk-load a materialised CAR tree into this repo's Elastic stack."
+    description:
+      - >-
+        Loads data_store/processed/byakugan (or dxdfir_car_load_dir) into
+        logs-car.<object>-<namespace> x13, logs-car.rel-<namespace> and
+        logs-car.inferred-<namespace> via the external Byakugan engine's
+        `load` sub-tool, run as the get-sybers/byakugan image from its
+        contract by the shared dxdfir_lane skeleton — behind the dxdfir_stack
+        ensure_running gate (the compose services must be running first) and
+        on the stack's compose network, so it can reach elasticsearch/kibana
+        by service name. One action for now (load); the playbook decides.
+      - >-
+        Push mode always: BYAKUGAN_LOAD_ES_URL is always set, so this loads
+        straight into the live stack rather than only rendering bundles.
+        Authenticates as the elastic superuser on a setup run (index/component
+        template creation, and the Kibana saved-objects import when that is
+        also on, need privileges the loader identity deliberately lacks) or as
+        the least-privilege byakugan_loader identity otherwise (see
+        docker/elastic/config/setup.sh: role logs_car_writer, create_doc /
+        create_index / read / view_index_metadata on logs-car.* only). Either
+        way the password never reaches the docker run argv — it is passed
+        through dxdfir_lane's secret_env, a 0600 --env-file.
+    options:
+      dxdfir_car_load_action:
+        type: str
+        required: false
+        default: load
+        choices: [load]
+        description: "Which CAR-load action to run (one for now)."
+      dxdfir_car_load_dir:
+        type: str
+        required: false
+        description: "The materialised CAR tree to load (default data_store/processed/byakugan)."
+      dxdfir_car_load_out_dir:
+        type: str
+        required: false
+        description: >-
+          Where this run's elastic/*.ndjson bundles, manifest.json and
+          load.txt land (default data_store/processed/byakugan-load).
+      dxdfir_car_load_contract:
+        type: str
+        required: false
+        description: "The byakugan contract.yml the run is built from (default docker/GoDFIR-toolz/byakugan/contract.yml)."
+      dxdfir_car_load_image:
+        type: str
+        required: false
+        default: ""
+        description: "Image ref overriding the contract's (get-sybers/byakugan:latest); e.g. a digest pin."
+      dxdfir_car_load_python_path:
+        type: str
+        required: false
+        description: "PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); in-repo runs."
+      dxdfir_car_load_compose_dir:
+        type: str
+        required: false
+        description: "The elastic stack's compose dir (default docker/elastic)."
+      dxdfir_car_load_env_file:
+        type: str
+        required: false
+        description: >-
+          The stack's .env, read for ELASTIC_PASSWORD / BYAKUGAN_LOADER_PASSWORD
+          (default docker/elastic/.env).
+      dxdfir_car_load_es_url:
+        type: str
+        required: false
+        default: "https://elasticsearch:9200"
+        description: "Elasticsearch base URL (push mode; always set) — BYAKUGAN_LOAD_ES_URL."
+      dxdfir_car_load_namespace:
+        type: str
+        required: false
+        default: "default"
+        description: "The Elastic data-stream namespace — BYAKUGAN_LOAD_NAMESPACE."
+      dxdfir_car_load_setup:
+        type: bool
+        required: false
+        default: true
+        description: >-
+          Apply the rendered index/component templates before loading
+          (BYAKUGAN_LOAD_SETUP); also authenticates this run as the elastic
+          superuser instead of byakugan_loader. First-run-friendly default;
+          pass false for routine repeat loads once the templates exist.
+      dxdfir_car_load_force:
+        type: bool
+        required: false
+        default: false
+        description: "Re-render bundles and re-push even when already loaded — BYAKUGAN_LOAD_FORCE."
+      dxdfir_car_load_kibana_import:
+        type: bool
+        required: false
+        default: false
+        description: >-
+          Also import the rendered Kibana saved objects
+          (BYAKUGAN_LOAD_KIBANA_URL set). Only ever sent when
+          dxdfir_car_load_setup is also true — the contract requires
+          BYAKUGAN_LOAD_SETUP for the Kibana import.
+      dxdfir_car_load_kibana_url:
+        type: str
+        required: false
+        default: "http://kibana:5601"
+        description: "Kibana base URL, sent only when setup and kibana_import are both on."
+      dxdfir_car_load_elastic_user:
+        type: str
+        required: false
+        default: "elastic"
+        description: "The superuser this role authenticates as on a setup run."
+      dxdfir_car_load_loader_user:
+        type: str
+        required: false
+        default: "byakugan_loader"
+        description: "The least-privilege identity this role authenticates as on a non-setup run."
+      dxdfir_car_load_certs_volume:
+        type: str
+        required: false
+        default: "byakugan_certs"
+        description: "The compose `certs` named volume, mounted read-only at /certs for the stack CA."
+      dxdfir_car_load_network:
+        type: str
+        required: false
+        default: "byakugan_default"
+        description: "The compose network the run attaches to, so it can resolve elasticsearch/kibana by service name."

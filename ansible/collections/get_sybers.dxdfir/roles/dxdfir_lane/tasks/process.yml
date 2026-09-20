@@ -118,3 +118,16 @@
           summary: {{ r.stdout | default('(no summary emitted)') | trim | truncate(600) }}
           stderr: {{ r.stderr | default('') | trim | truncate(800) }}
           {% endfor %}
+  always:
+    # Every secret env-file (tasks/argv.yml) is scratch state for exactly one
+    # run — remove it whether that run's container passed, failed, or was
+    # never reached, so a password never outlives the run it was for.
+    - name: "process | remove every secret env-file | {{ dxdfir_lane_name }}"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: >-
+        {{ dxdfir_lane_runs_built | default([]) | map(attribute='env_file')
+           | reject('equalto', '') | list }}
+      loop_control:
+        label: "{{ item | basename }}"

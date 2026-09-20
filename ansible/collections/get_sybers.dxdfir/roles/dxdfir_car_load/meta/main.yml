@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: dxdfir_car_load
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    Bulk-load a materialised MITRE CAR tree into this repo's Elastic stack
+    (logs-car.<object>-<ns> x13 + logs-car.rel-<ns> + logs-car.inferred-<ns>)
+    via the get-sybers/byakugan image's `load` sub-tool, run from its
+    contract. One role, one action (load); the playbook decides.
+  company: Get-Sybers
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [dfir, car, mitre, elastic, ingest]
+
+dependencies: []

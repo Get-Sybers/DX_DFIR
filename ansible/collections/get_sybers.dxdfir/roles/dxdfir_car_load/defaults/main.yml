@@ -1,0 +1,96 @@
+---
+# dxdfir_car_load: bulk-load a materialised CAR tree into this repo's Elastic
+# stack (logs-car.<object>-<ns> x13 + logs-car.rel-<ns> + logs-car.inferred-<ns>)
+# via the byakugan image's `load` sub-tool. One role, one action for now
+# (dxdfir_car_load_action); the playbook picks it — same shape as dxdfir_byakugan.
+
+# Which action to run: load is the only one for now.
+dxdfir_car_load_action: load
+
+# Repo root is five levels up from this role
+# (roles/dxdfir_car_load -> get_sybers.dxdfir -> collections -> ansible -> repo).
+dxdfir_car_load_repo_root: "{{ role_path }}/../../../../.."
+
+# The materialised CAR tree `byakugan build` wrote (read-only input) and where
+# this run's bundles/manifest/report land (read-write output) — a SIBLING of
+# byakugan/, not inside it, so each gets its own directory chain in
+# data_store/.gitignore and Filebeat's raw-evidence exclusion
+# (docker/elastic/config/filebeat.yml) can name each one.
+dxdfir_car_load_dir: "{{ dxdfir_car_load_repo_root }}/data_store/processed/byakugan"
+dxdfir_car_load_out_dir: "{{ dxdfir_car_load_repo_root }}/data_store/processed/byakugan-load"
+
+# The tool contract the run is driven from — same contract, single source of
+# truth, as dxdfir_byakugan (see dxdfir_byakugan_contract); this role just uses
+# a different declared sub-tool (load instead of build/verify/timeline). The
+# external Byakugan engine is cloned + built into the image at the repo-root
+# sources.yml pin.
+dxdfir_car_load_contract: "{{ dxdfir_car_load_repo_root }}/docker/GoDFIR-toolz/byakugan/contract.yml"
+# Empty = the contract's image (get-sybers/byakugan:latest); set to pin a digest.
+dxdfir_car_load_image: ""
+# PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); a
+# deployed run installs the package instead.
+dxdfir_car_load_python_path: "{{ dxdfir_car_load_repo_root }}/python"
+
+# The Elastic stack this loads into (docker/elastic) and its .env, read
+# directly for ELASTIC_PASSWORD / BYAKUGAN_LOADER_PASSWORD (never duplicated
+# into a second secret store, so .env stays the one place a credential is
+# set). A missing .env fails clearly (tasks/load.yml) instead of loading with
+# empty credentials.
+dxdfir_car_load_compose_dir: "{{ dxdfir_car_load_repo_root }}/docker/elastic"
+dxdfir_car_load_env_file: "{{ dxdfir_car_load_compose_dir }}/.env"
+
+# Push mode always (BYAKUGAN_LOAD_ES_URL set): this role's whole job is
+# delivering the CAR into the LIVE stack, never bundle-only. The compose
+# service name, resolved on the byakugan_default network
+# (dxdfir_car_load_network, below) this run attaches to.
+dxdfir_car_load_es_url: "https://elasticsearch:9200"
+# The Elastic data-stream namespace: logs-car.<object>-<namespace>,
+# logs-car.rel-<namespace>, logs-car.inferred-<namespace> (one namespace per
+# case works well — the same convention as DFIR_NAMESPACE for the raw
+# logs-dxdfir.* streams; see docker/elastic/.env.example).
+dxdfir_car_load_namespace: default
+
+# Apply the rendered logs-car.* index/component templates before loading —
+# push mode only. Default ON, first-run-friendly: a fresh stack has no
+# logs-car.* templates yet, so the first load must set them up. An operator
+# doing routine repeat loads once the templates exist passes --no-setup
+# (dxdfir_car_load_setup: false), which also drops this run to the
+# least-privilege byakugan_loader identity instead of elastic — see
+# dxdfir_car_load_elastic_user / dxdfir_car_load_loader_user below.
+dxdfir_car_load_setup: true
+# Re-render bundles and re-push even when the manifest/load report already
+# show the run complete — BYAKUGAN_LOAD_FORCE.
+dxdfir_car_load_force: false
+# Also import the rendered Kibana saved objects (BYAKUGAN_LOAD_KIBANA_URL).
+# Only ever sent when dxdfir_car_load_setup is ALSO true — the contract
+# requires BYAKUGAN_LOAD_SETUP for the Kibana import. Off by default even on a
+# setup run: it is an extra, separately-opted-into step (dashboards/data
+# views), not required to land evidence.
+dxdfir_car_load_kibana_import: false
+dxdfir_car_load_kibana_url: "http://kibana:5601"
+
+# Credentials never reach the docker run argv in cleartext — they are handed
+# to dxdfir_lane as secret_env, which writes them to a 0600 --env-file instead
+# (tasks/load.yml, dxdfir_lane's argv.yml). WHICH identity authenticates
+# depends on dxdfir_car_load_setup: setup-mode template PUTs (and, with the
+# Kibana import on, the saved-objects import) need cluster/Kibana privileges
+# the loader identity deliberately does not have
+# (docker/elastic/config/setup.sh: role logs_car_writer is create_doc /
+# create_index / read / view_index_metadata on logs-car.* ONLY — evidence
+# immutability at the credential layer), so a setup run authenticates as the
+# elastic superuser and a non-setup (steady-state, repeatable) run
+# authenticates as byakugan_loader — the counter-example to "filebeat writes
+# as elastic" (docker/elastic/README.md).
+dxdfir_car_load_elastic_user: elastic
+dxdfir_car_load_loader_user: byakugan_loader
+
+# The compose `certs` named volume (docker/elastic/docker-compose.yml), holding
+# the stack's CA — mounted read-only at /certs; BYAKUGAN_LOAD_ES_CA_FILE
+# already defaults to /certs/ca/ca.crt in the contract, matching where it
+# lands, so it is never overridden here. The compose project is named
+# `byakugan` (docker-compose.yml top-level `name:`), so the volume's actual
+# docker name is byakugan_certs and the implicit default network is
+# byakugan_default — both literal below, not derived, because the compose
+# project name is a fixed literal too.
+dxdfir_car_load_certs_volume: byakugan_certs
+dxdfir_car_load_network: byakugan_default
