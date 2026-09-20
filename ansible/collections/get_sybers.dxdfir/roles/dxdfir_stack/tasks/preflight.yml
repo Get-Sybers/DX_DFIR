@@ -71,11 +71,16 @@
       register: dxdfir_stack_local
 
     - name: "stack-preflight | the images still to pull"
+      vars:
+        # RepoTags of every stack image docker knows locally. RepoTags is null
+        # on digest-only/untagged images, so guard the pipeline the same way
+        # dxdfir_images' ensure_built does.
+        _local_tags: >-
+          {{ (dxdfir_stack_local.images | default([]))
+             | map(attribute='RepoTags') | flatten | select('string') | list }}
       ansible.builtin.set_fact:
         dxdfir_stack_missing_images: >-
-          {{ dxdfir_stack_images.stdout_lines | unique
-             | difference(dxdfir_stack_local.images
-                          | map(attribute='RepoTags') | flatten) }}
+          {{ dxdfir_stack_images.stdout_lines | unique | difference(_local_tags) }}
 
     - name: "stack-preflight | gate the stores while a pull is coming"
       when: dxdfir_stack_missing_images | length > 0
