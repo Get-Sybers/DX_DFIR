@@ -17,17 +17,35 @@ dxdfir_lane_python_path: ""
 #     image:    optional image ref overriding contract.image (e.g. a digest pin)
 #     subtool:  the dispatcher argument of a multi-tool image (plaso, signatures,
 #               byakugan); empty for a self-orchestrating tool
-#     env:      {NAME: value} overrides of the contract's env; every NAME must be
+#     env:      {NAME: value} overrides of the contract's env, rendered as
+#               `-e NAME=VALUE` on the docker run argv; every NAME must be
 #               declared in the contract; bool-typed vars are normalised to 1/0;
 #               empty string values are omitted (the image default applies)
-#     mounts:   [{host, path, mode}] host binds; `path` is a container path the
-#               contract declares as a mount (its default), or a path one of
-#               the run's env overrides names (a mounted filter file / operator
-#               ruleset the contract asks for through a variable); any other
-#               path is refused. `mode` is ro or rw. Every contract mount with
-#               required: true must be bound.
-#     network:  true keeps the docker bridge — honoured only when the contract
-#               declares network: optional; every other run gets --network none
+#     secret_env: {NAME: value} overrides exactly like env (same contract
+#               rules, same bool normalisation), for a value that must never
+#               appear on the docker run argv (a password) — written instead to
+#               a 0600 temp file passed as `--env-file` (created by tasks/argv.yml,
+#               removed again by tasks/process.yml's always: block once that
+#               run has executed; the write task is no_log: true).
+#     mounts:   [{host, path, mode}] host binds, OR [{source, volume: true, path,
+#               mode}] a docker NAMED volume instead of a host path (e.g. the
+#               elastic stack's compose `certs` volume) — every mount names
+#               exactly one of host or source, never both, never neither.
+#               `path` is a container path the contract declares as a mount
+#               (its default), or a path one of the run's env/secret_env
+#               overrides names (a mounted filter file / operator ruleset the
+#               contract asks for through a variable); any other path is
+#               refused. `mode` is ro or rw. Every contract mount with
+#               required: true must be bound. A read-only HOST mount must exist
+#               on disk (its owning group is granted via --group-add); a
+#               read-only VOLUME mount is not stat-checked — docker resolves it.
+#     network:  true keeps the docker bridge (e.g. the memory lane's outbound
+#               symbol fetch); a non-empty STRING instead attaches to that
+#               named docker network (e.g. byakugan_default, so the container
+#               can resolve the elastic stack's compose services by name) —
+#               `--network NAME` replaces `--network none`. Either form is
+#               honoured only when the contract declares network: optional;
+#               every other run gets --network none regardless.
 #     entrypoint / args: the argv pass-through the contracts reserve for
 #               debugging. No lane in the pipeline uses it: every run names a
 #               sub-tool or runs the self-orchestrating entrypoint.

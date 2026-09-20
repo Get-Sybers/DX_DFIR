@@ -67,8 +67,13 @@ func TestRootFind(t *testing.T) {
 		{[]string{"cleanup", "processed"}, "dxdfir cleanup processed", nil, false},
 		{[]string{"cleanup", "docker", "--dangling"}, "dxdfir cleanup docker", []string{"--dangling"}, false},
 		{[]string{"stix", "export"}, "dxdfir stix", []string{"export"}, false},
+		{[]string{"stamp-detections"}, "dxdfir stamp-detections", nil, false},
+		{[]string{"stamp-detections", "--post", "--insecure"}, "dxdfir stamp-detections",
+			[]string{"--post", "--insecure"}, false},
 		{[]string{"process", "LS24", "zeek"}, "dxdfir process", []string{"LS24", "zeek"}, false},
 		{[]string{"build-car"}, "dxdfir build-car", nil, false},
+		{[]string{"load-car"}, "dxdfir load-car", nil, false},
+		{[]string{"load-car", "--no-setup"}, "dxdfir load-car", []string{"--no-setup"}, false},
 		{[]string{"build-timeline", "CAR"}, "dxdfir build-timeline", []string{"CAR"}, false},
 		{[]string{"car-timeline", "CAR"}, "dxdfir build-timeline", []string{"CAR"}, false}, // alias
 		// hidden noun-first aliases still route

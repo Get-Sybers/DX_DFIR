@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 
 	"github.com/spf13/cobra"
 
@@ -144,6 +145,66 @@ func newCarTimelineCmd(env *Env) *cobra.Command {
 	cmd.Flags().StringVar(&host, "host", "", "Only events whose source_host matches.")
 	cmd.Flags().StringVar(&after, "after", "", "Only events at/after this ISO timestamp.")
 	cmd.Flags().StringVar(&before, "before", "", "Only events at/before this ISO timestamp.")
+	return cmd
+}
+
+// newLoadCarCmd — `dxdfir load-car` → dxdfir-load-car.yml.
+func newLoadCarCmd(env *Env) *cobra.Command {
+	var (
+		namespace string
+		setup     bool
+		noSetup   bool
+		force     bool
+		kibana    bool
+	)
+	cmd := &cobra.Command{
+		Use:   "load-car",
+		Short: "Bulk-load the materialised CAR tree into the Elastic stack's logs-car.* data streams.",
+		Long: "Bulk-load the materialised CAR tree into the analysis stack, via the dxdfir_car_load\n" +
+			"Ansible role (`byakugan load` pushed into logs-car.<object>-<namespace> x13,\n" +
+			"logs-car.rel-<namespace> and logs-car.inferred-<namespace>).\n\n" +
+			"Requires the analysis stack (`deploy stack`) and a built CAR (`build-car`); brings\n" +
+			"the stack up first if it is not already running. --setup (default) applies the\n" +
+			"logs-car.* index/component templates before loading and authenticates as the\n" +
+			"elastic superuser; pass --no-setup for routine repeat loads once the templates\n" +
+			"exist, which authenticates as the least-privilege byakugan_loader identity\n" +
+			"instead. --kibana also imports the rendered Kibana saved objects (only sent when\n" +
+			"--setup is also on).",
+		GroupID: groupCAR,
+		Args:    cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			// The saved-objects import only runs in the setup pass (the role
+			// ignores it otherwise) — refuse the silently-ignored combination
+			// instead of leaving "why did no dashboards import" to forensics.
+			if kibana && (!setup || noSetup) {
+				return errors.New("--kibana requires --setup: the Kibana saved-objects import runs in the setup pass")
+			}
+			r, ap, err := env.ansibleRepo()
+			if err != nil {
+				return err
+			}
+			vars := []string{"dxdfir_car_load_action=load"}
+			vars = appendVar(vars, "dxdfir_car_load_namespace", namespace)
+			vars = append(vars, "dxdfir_car_load_setup="+boolVar(setup && !noSetup))
+			if force {
+				vars = append(vars, "dxdfir_car_load_force=true")
+			}
+			if kibana {
+				vars = append(vars, "dxdfir_car_load_kibana_import=true")
+			}
+			plan, err := ansiblePlan(r, ap, "dxdfir-load-car.yml", vars, false)
+			if err != nil {
+				return err
+			}
+			code := run.Passthrough(context.Background(), plan, true)
+			return exitCode(code)
+		},
+	}
+	cmd.Flags().StringVar(&namespace, "namespace", "", "Elastic data-stream namespace (default: default).")
+	cmd.Flags().BoolVar(&setup, "setup", true, "Apply the logs-car.* templates before loading (first run).")
+	cmd.Flags().BoolVar(&noSetup, "no-setup", false, "Skip template setup — routine repeat loads once they exist.")
+	cmd.Flags().BoolVar(&force, "force", false, "Re-render and re-push even when already loaded.")
+	cmd.Flags().BoolVar(&kibana, "kibana", false, "Also import the rendered Kibana saved objects (requires --setup).")
 	return cmd
 }
 

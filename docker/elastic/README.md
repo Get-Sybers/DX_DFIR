@@ -7,7 +7,7 @@ Filebeat as the shipper. Everything stays inside the Elastic ecosystem on a
 
 | Service | Image | Role |
 |---|---|---|
-| `setup` | `elasticsearch` (one-shot) | generates the CA + node certs, sets the `kibana_system` password, exits |
+| `setup` | `elasticsearch` (one-shot) | generates the CA + node certs, sets the `kibana_system` password, creates the `logs_car_writer` role + `byakugan_loader` user, exits |
 | `elasticsearch` | `elasticsearch` | single node, security on, TLS on HTTP + transport, Basic licence |
 | `kibana` | `kibana` | UI + Fleet; talks to Elasticsearch over TLS as `kibana_system` |
 | `fleet-server` | `elastic-agent` | Fleet Server, self-enrols into the preconfigured `fleet-server-policy` |
@@ -32,9 +32,10 @@ docker compose ps               # setup exits 0; the rest go (healthy)
 - Kibana -> http://127.0.0.1:5601 (log in as `elastic`)
 - Fleet Server -> https://127.0.0.1:8220
 
-`config/setup.sh` refuses to run while `ELASTIC_PASSWORD` / `KIBANA_SYSTEM_PASSWORD`
-still hold the `.env.example` placeholders. `.env` and `ingest/` are gitignored —
-**never commit real secrets**. To fetch the CA for host-side clients:
+`config/setup.sh` refuses to run while `ELASTIC_PASSWORD` / `KIBANA_SYSTEM_PASSWORD` /
+`BYAKUGAN_LOADER_PASSWORD` still hold the `.env.example` placeholders. `.env` and
+`ingest/` are gitignored — **never commit real secrets**. To fetch the CA for
+host-side clients:
 `docker compose cp elasticsearch:/usr/share/elasticsearch/config/certs/ca/ca.crt .`
 
 ## Security posture
@@ -50,9 +51,25 @@ still hold the `.env.example` placeholders. `.env` and `ingest/` are gitignored 
 | ports | 127.0.0.1 | 127.0.0.1 |
 
 Credentials are only ever read from the environment (`.env`): `ELASTIC_PASSWORD`,
-`KIBANA_SYSTEM_PASSWORD`, the three Kibana encryption keys, and an optional
-`FLEET_SERVER_SERVICE_TOKEN`. Kibana itself is served over plain HTTP on the
-loopback interface; the Elasticsearch API, transport and Fleet Server are TLS.
+`KIBANA_SYSTEM_PASSWORD`, `BYAKUGAN_LOADER_PASSWORD`, the three Kibana encryption
+keys, and an optional `FLEET_SERVER_SERVICE_TOKEN`. Kibana itself is served over
+plain HTTP on the loopback interface; the Elasticsearch API, transport and Fleet
+Server are TLS.
+
+### Identities
+
+| User | Role | Privileges | Used by |
+|---|---|---|---|
+| `elastic` | superuser | everything | bootstrap (`setup`), Fleet, and any `dxdfir load-car --setup` run (index/component template + Kibana saved-object creation needs cluster privileges the loader below deliberately lacks) |
+| `kibana_system` | built-in | Kibana -> Elasticsearch | Kibana |
+| `byakugan_loader` | `logs_car_writer` (created by `config/setup.sh`) | `create_doc`, `create_index`, `read`, `view_index_metadata` on `logs-car.*` only — no cluster privileges | routine (non-`--setup`) `dxdfir load-car` runs |
+
+`byakugan_loader` is scoped so it can land evidence and read it back (the
+`_search` ids-query it verifies loads with needs only `read`) but never alter,
+delete or re-template what is already indexed — least privilege enforced at
+the credential layer, not by convention. Its password never reaches a `docker
+run` argv in cleartext (the `dxdfir_lane` Ansible role writes it to a 0600
+`--env-file` instead of `-e`); see `ansible/collections/get_sybers.dxdfir/roles/dxdfir_car_load/`.
 
 ## Fleet enrolment
 
@@ -93,10 +110,22 @@ native -> ECS normalisation is Elastic-native too (ingest pipelines on those
 streams) and lands in a later phase, together with the CAR-driven detection
 rules that tag these evidence lines.
 
+`processed/byakugan/` (the materialised CAR) and `processed/byakugan-load/`
+(a load run's own bundles/manifest/report) are excluded from this input
+(`prospector.scanner.exclude_files`) even though they sit under the same
+ingest tree: the CAR already lands ECS-projected in `logs-car.*` via
+`dxdfir load-car`, and raw `car_<object>.jsonl` double-ingesting here too
+would duplicate it into `logs-dxdfir.byakugan-*` and compete with the ECS
+projection instead of complementing it.
+
 ## Notes
 
 - Elasticsearch needs `vm.max_map_count=262144` on the host.
 - Filebeat writes as `elastic` for now; a least-privilege writer role is a follow-up.
+  `byakugan_loader` / `logs_car_writer` ([Identities](#identities) above) is that
+  pattern's first instance — scoped to `create_doc`/`create_index`/`read`/
+  `view_index_metadata` on `logs-car.*` only — so Filebeat's own follow-up now has
+  a working counter-example to copy rather than a design to invent.
 - An **Ansible deploy role is intentionally deferred** to a follow-up; when it is
   added it must conform to the bits-n-bobs Ansible standard (like the existing
   `get_sybers.dxdfir` roles). Until then this compose file is the deployment.

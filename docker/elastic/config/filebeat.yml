@@ -13,6 +13,18 @@ filebeat.inputs:
     paths:
       - /ingest/*/**/*.json
       - /ingest/*/**/*.jsonl
+    # CAR lands ECS-projected in logs-car.* via `byakugan load` (the
+    # dxdfir_car_load role / `dxdfir load-car`); raw car_<object>.jsonl /
+    # car_relationships.jsonl under processed/byakugan/ double-ingesting HERE
+    # too would duplicate it into logs-dxdfir.byakugan-* and compete with the
+    # ECS projection instead of complementing it. The loader's own output
+    # (bundles/manifest/report under processed/byakugan-load/) is working
+    # state, not evidence, and is excluded for the same reason: neither tree
+    # is raw evidence for this input to re-ingest. (filestream's scanner
+    # option, not the removed `log`-input top-level `exclude_files`.)
+    prospector.scanner.exclude_files:
+      - '^/ingest/byakugan/.*'
+      - '^/ingest/byakugan-load/.*'
     parsers:
       - ndjson:
           target: ""

@@ -17,7 +17,8 @@ JAR=/usr/share/elasticsearch/jdk/bin/jar
 
 : "${ELASTIC_PASSWORD:?ELASTIC_PASSWORD must be set (docker/elastic/.env)}"
 : "${KIBANA_SYSTEM_PASSWORD:?KIBANA_SYSTEM_PASSWORD must be set (docker/elastic/.env)}"
-for v in ELASTIC_PASSWORD KIBANA_SYSTEM_PASSWORD; do
+: "${BYAKUGAN_LOADER_PASSWORD:?BYAKUGAN_LOADER_PASSWORD must be set (docker/elastic/.env)}"
+for v in ELASTIC_PASSWORD KIBANA_SYSTEM_PASSWORD BYAKUGAN_LOADER_PASSWORD; do
   case "${!v}" in
     *change-me*)
       echo "setup | ${v} still holds the .env.example placeholder — set a real value in docker/elastic/.env" >&2
@@ -67,6 +68,35 @@ until curl -s -X POST --cacert "${CERTS}/ca/ca.crt" \
       -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" \
       "${ES_URL}/_security/user/kibana_system/_password" \
       -d "{\"password\":\"${KIBANA_SYSTEM_PASSWORD}\"}" | grep -q "^{}"; do
+  sleep 5
+done
+
+# The CAR loader's identity: least-privilege by construction, not by
+# discipline. logs_car_writer can only create_doc/create_index/read/
+# view_index_metadata on logs-car.* — no cluster privileges, so it cannot
+# alter or drop what it writes (evidence immutability at the credential
+# layer) and cannot manage index/component templates either; `dxdfir
+# load-car --setup` authenticates as elastic for that (see
+# ansible/.../dxdfir_car_load). byakugan_loader is everyday, repeatable
+# loads' identity — the counter-example to "filebeat writes as elastic"
+# below. Both calls are idempotent: a PUT role always replaces the
+# definition in place, and re-creating an existing user updates it (same
+# password, same role) rather than failing.
+echo "setup | creating the logs_car_writer role (least-privilege CAR loader)"
+until curl -s -X PUT --cacert "${CERTS}/ca/ca.crt" \
+      -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" \
+      "${ES_URL}/_security/role/logs_car_writer" \
+      -d '{"indices":[{"names":["logs-car.*"],"privileges":["create_doc","create_index","read","view_index_metadata"]}]}' \
+      | grep -q '"role"'; do
+  sleep 5
+done
+
+echo "setup | creating the byakugan_loader user"
+until curl -s -X PUT --cacert "${CERTS}/ca/ca.crt" \
+      -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" \
+      "${ES_URL}/_security/user/byakugan_loader" \
+      -d "{\"password\":\"${BYAKUGAN_LOADER_PASSWORD}\",\"roles\":[\"logs_car_writer\"],\"full_name\":\"byakugan load (CAR to logs-car.*)\"}" \
+      | grep -q '"created"'; do
   sleep 5
 done
 

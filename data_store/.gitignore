@@ -57,6 +57,8 @@
 !/processed/.gitkeep
 !/processed/byakugan/
 !/processed/byakugan/.gitkeep
+!/processed/byakugan-load/
+!/processed/byakugan-load/.gitkeep
 !/processed/detections/
 !/processed/detections/.gitkeep
 !/processed/detections/byakugan/

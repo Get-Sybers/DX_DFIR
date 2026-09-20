@@ -11,19 +11,38 @@
 # container (an item with valid output is skipped unless <TOOL>_FORCE), not in a
 # task's `when:`.
 
-- name: "build | the confined docker run per declared run | {{ dxdfir_lane_name }}"
-  ansible.builtin.include_tasks:
-    file: build.yml
-    apply:
+# build -> preflight -> process as one guarded unit, so scratch secrets are
+# cleaned up on EVERY exit path: a secret env-file is written in build
+# (tasks/argv.yml), and the always: below removes it whether process ran the
+# container, the container failed, or the lane never got that far (a docker
+# daemon/image-guard preflight failure, a later run's build refusal) — a
+# password never outlives the lane invocation that wrote it.
+- name: "lane | build -> preflight -> process | {{ dxdfir_lane_name }}"
+  block:
+    - name: "build | the confined docker run per declared run | {{ dxdfir_lane_name }}"
+      ansible.builtin.include_tasks:
+        file: build.yml
+        apply:
+          tags: [always]
       tags: [always]
-  tags: [always]
 
-- name: "run preflight | {{ dxdfir_lane_name }}"
-  ansible.builtin.include_tasks:
-    file: preflight.yml
-    apply:
+    - name: "run preflight | {{ dxdfir_lane_name }}"
+      ansible.builtin.include_tasks:
+        file: preflight.yml
+        apply:
+          tags: [always]
       tags: [always]
-  tags: [always]
 
-- name: "run process | {{ dxdfir_lane_name }}"
-  ansible.builtin.include_tasks: process.yml
+    - name: "run process | {{ dxdfir_lane_name }}"
+      ansible.builtin.include_tasks: process.yml
+  always:
+    - name: "lane | remove every secret env-file | {{ dxdfir_lane_name }}"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: >-
+        {{ dxdfir_lane_runs_built | default([]) | map(attribute='env_file')
+           | reject('equalto', '') | list }}
+      loop_control:
+        label: "{{ item | basename }}"
+      tags: [always]
