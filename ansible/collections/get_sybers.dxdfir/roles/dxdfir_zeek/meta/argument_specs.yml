@@ -4,9 +4,11 @@ argument_specs:
     short_description: "PCAPs -> Zeek JSON logs."
     description:
       - >-
-        Discovers captures under dxdfir_zeek_pcap_dir, runs the zeek container per
-        capture (JSON, ISO-8601 timestamps), and writes one folder of *.json per
-        capture. Idempotent: a capture whose output already exists is skipped.
+        Runs the self-orchestrating get-sybers/zeek image over dxdfir_zeek_pcap_dir
+        from its contract (ZEEK_* env vars, /input + /output mounts): every capture
+        is parsed by one zeek invocation into its own folder of *.json (ISO-8601
+        timestamps) plus a zeek.jsonl index. Idempotent: a capture whose output
+        already exists is skipped unless dxdfir_zeek_force.
     options:
       dxdfir_zeek_pcap_dir:
         type: str
@@ -16,17 +18,26 @@ argument_specs:
         type: str
         required: false
         description: "Output dir (default data_store/processed/zeek); override to send output to a custom location."
+      dxdfir_zeek_contract:
+        type: str
+        required: false
+        description: "The zeek contract.yml the lane is driven from (default docker/GoDFIR-toolz/zeek/contract.yml)."
       dxdfir_zeek_image:
         type: str
         required: false
-        default: "get-sybers/zeek:latest"
-        description: "Zeek container image."
+        default: ""
+        description: "Image ref overriding the contract's (get-sybers/zeek:latest); e.g. a digest pin."
+      dxdfir_zeek_scripts:
+        type: str
+        required: false
+        default: ""
+        description: "Extra zeek argv after -C -r <capture> (ZEEK_SCRIPTS); empty = zeek's default script set."
       dxdfir_zeek_python_path:
         type: str
         required: false
-        description: "PYTHONPATH to the get_sybers_dxdfir package (in-repo/dev runs)."
+        description: "PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); in-repo runs."
       dxdfir_zeek_force:
         type: bool
         required: false
         default: false
-        description: "Reprocess captures that already have output."
+        description: "Reprocess captures that already have output (ZEEK_FORCE)."

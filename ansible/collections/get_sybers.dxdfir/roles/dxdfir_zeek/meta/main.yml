@@ -4,8 +4,8 @@ galaxy_info:
   namespace: get_sybers
   author: Get-Sybers
   description: >-
-    Process PCAPs into Zeek JSON logs. Invokes the
-    get_sybers_dxdfir.zeek Python processor; one folder of *.json per capture.
+    Process PCAPs into Zeek JSON logs. Runs the self-orchestrating
+    get-sybers/zeek image from its contract; one folder of *.json per capture.
   company: Get-Sybers
   license: MIT
   min_ansible_version: "2.15"
