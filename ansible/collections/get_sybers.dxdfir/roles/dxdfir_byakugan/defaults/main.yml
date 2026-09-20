@@ -16,8 +16,9 @@ dxdfir_byakugan_dir: "{{ dxdfir_byakugan_repo_root }}/data_store/processed/byaku
 
 # The tool contract the actions are driven from — the single source of truth
 # for the byakugan image's per-sub-tool env vars (BYAKUGAN_BUILD_*,
-# BYAKUGAN_TIMELINE_*) and mounts (/input ro, /output). The external Byakugan
-# engine is cloned + built into the image at the repo-root sources.yml pin.
+# BYAKUGAN_TIMELINE_*, BYAKUGAN_VERIFY_*) and mounts (/input ro, /output). The
+# external Byakugan engine is cloned + built into the image at the repo-root
+# sources.yml pin.
 dxdfir_byakugan_contract: "{{ dxdfir_byakugan_repo_root }}/docker/GoDFIR-toolz/byakugan/contract.yml"
 # Empty = the contract's image (get-sybers/byakugan:latest); set to pin a digest.
 dxdfir_byakugan_image: ""
@@ -40,3 +41,7 @@ dxdfir_byakugan_timeline_force: false
 dxdfir_byakugan_timeline_host: ""
 dxdfir_byakugan_timeline_after: ""
 dxdfir_byakugan_timeline_before: ""
+
+# verify: where the gate report verify.txt lands (empty = beside the stores, in
+# the CAR dir itself). The run is judged on the summary's status == ok.
+dxdfir_byakugan_verify_out_dir: ""

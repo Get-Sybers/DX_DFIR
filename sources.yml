@@ -21,7 +21,7 @@
 # attack-datasources submodules at build time (recursive clone required).
 byakugan:
   url: https://github.com/Get-Sybers/Byakugan
-  ref: c7c332b0afdfe7a4d84ee2a2b0450b218e3610fc  # Get-Sybers/Byakugan main (PRs #91-93 merged)
+  ref: f7626cdfdcffb227583723104450f32ce0c03435  # Get-Sybers/Byakugan main: byakugan.cli (build|timeline|verify|car-vocab) + framework-layout discovery
   consumed: "docker/GoDFIR-toolz/byakugan/Dockerfile (BYAKUGAN_REF build-arg)"
 
 # anamnesis (pure-Go memory forensics on MemProcFS — no Volatility, no Python) —

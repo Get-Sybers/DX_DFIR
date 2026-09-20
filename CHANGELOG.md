@@ -15,8 +15,16 @@ is `0`, anything may change without notice.
   and skip their own inputs. Output layouts follow the contracts
   (`windows_logs/<log>/goevtx.jsonl`, `log2timeline/{storage,jsonl}/<source>/`,
   `godfir-toolz/<tool>/<item>/`, `detections/<subtool>/<item>/`). The CAR
-  `verify` action runs the engine's `byakugan.verify` through the contracts'
-  argv pass-through until the byakugan contract declares a `verify` sub-tool.
+  `verify` action runs the engine's `verify` sub-tool through the same env
+  contract (`BYAKUGAN_VERIFY_INPUT_DIR` / `BYAKUGAN_VERIFY_OUT_DIR`), is judged
+  on the summary's `status: ok`, and leaves its report as `verify.txt` beside
+  the stores.
+- **The Byakugan engine pin moves to the main that ships the engine's own
+  `byakugan.cli` dispatcher** (`build` / `timeline` / `verify` / `car-vocab`)
+  and the framework-layout discovery — `build-car` finds
+  `windows_logs/<item>/goevtx.jsonl`, `jsonl/<source>/timeline.jsonl` and
+  `godfir-toolz/<tool>/<item>/` sources; the `get-sybers/byakugan` image
+  ENTRYPOINT delegates to that dispatcher.
 - `dxdfir build-car` drops the single-source `--in/--host/--artefacts` mode (the
   contract has no env for it) and gains `--derive` / `--stix`; `--out` names the
   CAR tree. `dxdfir build-timeline --out-dir DIR` replaces `--out PATH`
