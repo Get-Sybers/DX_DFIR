@@ -32,15 +32,37 @@ cd DX_DFIR
 ./scripts/setup-environment.sh      # Docker + dxdfir CLI (log out/in once for the docker group)
 ```
 
-Run the pipeline:
+Build the hardened tool images — first run, and again after every pull (images
+whose pinned sources moved are rebuilt and the stale ones removed):
 
 ```bash
-dxdfir build-docker                 # build the hardened tool images (once per host, before first process)
-# drop evidence under data_store/raw/<type>/ (see data_store/README.md), then per source:
-dxdfir process evtx                 # zeek | evtx | memory | plaso | godfir-toolz | signatures
+dxdfir build-docker
+```
+
+**Work a case** — evidence arrives, becomes a registered collection, gets
+processed into CAR:
+
+```bash
+mkdir -p data_store/raw/sort/ACME-24            # the case's dropzone folder
+cp /mnt/evidence/* data_store/raw/sort/ACME-24/
+dxdfir register ACME-24             # promote the dropzone: lane-sort by content, SHA-1 hash, registry row
+dxdfir select ACME-24               # the active collection subsequent commands target
+dxdfir list collections             # the active one is starred, per-lane counts shown
+dxdfir process ACME-24              # every lane with staged evidence — or one: dxdfir process ACME-24 memory
 dxdfir build-car                    # normalise every source into per-source CAR stores (car_<object>.jsonl)
 dxdfir verify-car                   # the CAR correctness gate over what was written
-dxdfir build-timeline data_store/processed/byakugan # one property-rich, time-ordered timeline JSONL
+dxdfir build-timeline data_store/processed/byakugan   # one property-rich, time-ordered timeline JSONL
+```
+
+Evidence that arrives mid-case goes back through the dropzone: copy it into
+`data_store/raw/sort/ACME-24/`, then `dxdfir sort ACME-24`.
+
+**Quick look at loose evidence** — no collection, one artefact, one lane:
+
+```bash
+dxdfir unselect                     # with no active collection, lanes read data_store/raw/<type>/ directly
+cp memdump.mem data_store/raw/memory/
+dxdfir process memory               # zeek | evtx | memory | plaso | godfir-toolz | signatures
 ```
 
 Bring up the backend:
