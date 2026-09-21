@@ -24,3 +24,16 @@
       of every tool-image build context) is not checked out. Run:
       git submodule update --init --recursive docker/GoDFIR-toolz
     quiet: true
+
+# The pinned source identity every image is stamped with (com.get-sybers.src):
+# the GoDFIR-toolz commit the build contexts come from. A pin bump changes it,
+# and images-build then replaces any image whose stamp no longer matches.
+- name: "images-preflight | resolve the GoDFIR-toolz pin"
+  # noqa: command-instead-of-module — read-only rev-parse; the git module clones.
+  ansible.builtin.command: git -C {{ dxdfir_images_context | quote }} rev-parse HEAD
+  register: dxdfir_images_src
+  changed_when: false
+
+- name: "images-preflight | keep the pin as a fact"
+  ansible.builtin.set_fact:
+    dxdfir_images_src_sha: "{{ dxdfir_images_src.stdout | trim }}"
