@@ -252,3 +252,28 @@ def test_no_car_entity_is_skipped_not_invented(tmp_path):
     objs, report = behaviour.behaviour_objects([orphan], idx, case_id="c")
     assert not [x for x in objs.values() if x["type"] == "sighting"]
     assert report["skipped"].get("no_car_entity") == 1
+
+
+def test_car_source_dirs_fails_fast_on_user_mistakes(tmp_path):
+    """A mistyped --car never yields an empty index and a 'successful'
+    zero-join run: a missing path, a stray file, and a directory with no
+    materialised CAR are hard errors; the marker file itself resolves to
+    its own source directory."""
+    import pytest
+    from get_sybers_dxdfir.stix import behaviour as b
+    with pytest.raises(SystemExit, match="no such directory"):
+        b._car_source_dirs([str(tmp_path / "nope")])
+    stray = tmp_path / "stray.txt"
+    stray.write_text("x")
+    with pytest.raises(SystemExit, match="is a file"):
+        b._car_source_dirs([str(stray)])
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    with pytest.raises(SystemExit, match="no materialised CAR"):
+        b._car_source_dirs([str(empty)])
+    src = tmp_path / "host-a"
+    src.mkdir()
+    marker = src / "car_relationships.jsonl"
+    marker.write_text("")
+    assert b._car_source_dirs([str(marker)]) == [str(src)]
+    assert b._car_source_dirs([str(src)]) == [str(src)]

@@ -473,17 +473,32 @@ def _car_source_dirs(paths: Iterable[str]) -> list[str]:
     """Resolve each path to the materialised CAR source directories under it: a
     directory carrying ``car_relationships.jsonl`` is a finished source and is
     taken as-is; a directory that does not is walked for every such directory
-    beneath it."""
+    beneath it; the marker file itself resolves to its own source directory.
+    A path that exists but is neither, a path that does not exist, and a walk
+    that finds nothing are all hard errors — a mistyped ``--car`` must never
+    produce an empty index and a "successful" zero-join bundle."""
     found: list[str] = []
     for p in paths:
+        if os.path.isfile(p):
+            if os.path.basename(p) == _SOURCE_MARKER:
+                found.append(os.path.dirname(os.path.abspath(p)) or ".")
+                continue
+            raise SystemExit(
+                f"--car: {p!r} is a file, not a materialised CAR source "
+                f"directory (pass the directory, or its {_SOURCE_MARKER})")
         if not os.path.isdir(p):
-            continue
+            raise SystemExit(f"--car: no such directory: {p!r}")
         if os.path.isfile(os.path.join(p, _SOURCE_MARKER)):
             found.append(p)
         else:
+            before = len(found)
             for cur, _dirs, files in os.walk(p):
                 if _SOURCE_MARKER in files:
                     found.append(cur)
+            if len(found) == before:
+                raise SystemExit(
+                    f"--car: no materialised CAR under {p!r} "
+                    f"(no {_SOURCE_MARKER} anywhere beneath it)")
     return sorted(dict.fromkeys(found))
 
 
