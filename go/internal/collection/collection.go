@@ -28,8 +28,11 @@ type Lane struct {
 	InputVars []string
 }
 
-// LANES mirrors the Python LANES tuple exactly (order = `process all` order).
-// Detection is the processors' job; this only says where a lane reads.
+// LANES is the lane -> sorted-subdir -> Ansible input-var map (order =
+// `process all` order). Detection is the processors' job; this only says where
+// a lane reads. Every input dir a lane role declares must be listed here, or a
+// collection-scoped run falls back to that input's LOOSE default and reads
+// evidence from outside the collection.
 var LANES = []Lane{
 	{"zeek", []string{"pcaps"}, []string{"dxdfir_zeek_pcap_dir"}},
 	{"evtx", []string{"logs/winevt"}, []string{"dxdfir_evtx_evtx_dir"}},
@@ -38,9 +41,10 @@ var LANES = []Lane{
 		[]string{"dxdfir_plaso_input_dir", "dxdfir_plaso_vm_dir"}},
 	{"godfir-toolz", []string{"disk_images", "VM_files"},
 		[]string{"dxdfir_godfir_toolz_input_dir", "dxdfir_godfir_toolz_vm_dir"}},
-	{"signatures", []string{"pcaps", "disk_images", "memory"},
+	{"signatures", []string{"pcaps", "disk_images", "memory", "logs/winevt", "other_raw_data"},
 		[]string{"dxdfir_signatures_pcap_dir", "dxdfir_signatures_disk_dir",
-			"dxdfir_signatures_memory_dir"}},
+			"dxdfir_signatures_memory_dir", "dxdfir_signatures_evtx_dir",
+			"dxdfir_signatures_files_dir"}},
 }
 
 // evidenceSubdirs returns the canonical lane subdirs a collection materialises,
