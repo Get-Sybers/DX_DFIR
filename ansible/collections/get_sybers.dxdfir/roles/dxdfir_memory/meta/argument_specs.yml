@@ -14,7 +14,7 @@ argument_specs:
       dxdfir_memory_memory_dir:
         type: str
         required: false
-        description: "Directory tree of memory images to process (recursed)."
+        description: "Directory tree of memory images to process (recursed); mounted read-only at /input inside the container."
       dxdfir_memory_out_dir:
         type: str
         required: false

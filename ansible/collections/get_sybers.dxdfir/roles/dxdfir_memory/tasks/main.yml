@@ -28,7 +28,7 @@
     dxdfir_memory_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
   tags: [always]
 
-# One run: the anamnesis contract's env (ANAMNESIS_*) and mounts (/mem ro,
+# One run: the anamnesis contract's env (ANAMNESIS_*) and mounts (/input ro,
 # /out, /symbols) — dxdfir_lane builds the confined `docker run` from them.
 # The container network stays off unless symbols-online (the contract's one
 # `network: optional` case).
@@ -43,11 +43,12 @@
         contract: "{{ dxdfir_memory_contract }}"
         image: "{{ dxdfir_memory_image }}"
         env:
+          ANAMNESIS_INPUT_DIR: /input
           ANAMNESIS_FORCE: "{{ dxdfir_memory_force }}"
           ANAMNESIS_SYMBOLS_ONLINE: "{{ dxdfir_memory_symbols_online }}"
           ANAMNESIS_PLUGINS: "{{ dxdfir_memory_plugins }}"
         mounts:
-          - {host: "{{ dxdfir_memory_memory_dir }}", path: /mem, mode: ro}
+          - {host: "{{ dxdfir_memory_memory_dir }}", path: /input, mode: ro}
           - {host: "{{ dxdfir_memory_out_dir }}", path: /out, mode: rw}
           - {host: "{{ dxdfir_memory_symbols_dir }}", path: /symbols, mode: rw}
         network: "{{ dxdfir_memory_symbols_online }}"
