@@ -7,7 +7,7 @@ has had a contract (``join-keys.yml``, ``car-detections.index-template.json``)
 but no rows. This module gives it a first, working writer: it reads what
 Byakugan's own ``--stix`` export already computed OFFLINE — the behaviour
 layer (``analytics.py``'s runnable MITRE CAR analytics run back over the
-finished ``car.db``, STIX ``sighting`` objects in each source's
+finished CAR, STIX ``sighting`` objects in each source's
 ``stix_bundle.json``, see ``byakugan/stix.py`` "the behaviour layer") — and
 projects each hit into one ``car-detections`` document, so
 ``FROM logs-car.*-* | LOOKUP JOIN car-detections ON event.id`` has something
@@ -18,8 +18,9 @@ still future work, phase 2) lands.
 INPUT. A byakugan output tree (default ``data_store/processed/byakugan``,
 matching ``dxdfir build-car``'s own default): every ``<source>/stix_bundle.json``
 under it, found the same way :mod:`..stix.behaviour` walks a tree for
-``car.db`` files. Nothing here imports Byakugan or re-derives what it already
-computed (D4) — this module only reads the bundle Byakugan wrote.
+materialised CAR source directories. Nothing here imports Byakugan or
+re-derives what it already computed (D4) — this module only reads the bundle
+Byakugan wrote.
 
 MAPPING. A STIX ``sighting`` (``byakugan/stix.py``'s ``_sighting()``) already
 carries the CAR guid as ``x_car_event_id`` and the analytic's ATT&CK coverage
@@ -164,9 +165,10 @@ class EsError(Exception):
 # --------------------------------------------------------------------- reading
 def iter_bundles(tree: str) -> list[tuple[str, str]]:
     """Every ``stix_bundle.json`` under ``tree`` (any depth — the same walk
-    :func:`..stix.behaviour._car_dbs` uses for ``car.db``), as ``(source,
-    path)`` sorted by path. ``source`` is the bundle's parent directory name —
-    the same value Byakugan's own ``stix.export()`` defaults its ``case`` to
+    :func:`..stix.behaviour._car_source_dirs` uses for materialised CAR source
+    directories), as ``(source, path)`` sorted by path. ``source`` is the
+    bundle's parent directory name — the same value Byakugan's own
+    ``stix.export()`` defaults its ``case`` to
     (``os.path.basename(car_dir)``), so :func:`stamp_doc`'s ``detection.run_id``
     names the run this writer stamped from without inventing an identifier
     Byakugan did not already use."""

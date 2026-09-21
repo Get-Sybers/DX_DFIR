@@ -23,15 +23,16 @@ func newBuildCarCmd(env *Env) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "build-car [PROCESSED_DIR]",
-		Short: "Build the per-source CAR stores (car.db + car_<object>.jsonl) from processed evidence.",
+		Short: "Build the per-source CAR stores (car_<object>.jsonl + car_relationships.jsonl) from processed evidence.",
 		Long: "Build the per-source CAR stores from processed evidence, via the dxdfir_byakugan\n" +
 			"Ansible role (`byakugan build` over the processed tree).\n\n" +
 			"Discovers every source under the processed tree (PROCESSED_DIR, or\n" +
-			"<repo>/data_store/processed) and builds each one's car.db + car_<object>.jsonl\n" +
+			"<repo>/data_store/processed) and builds each one's car_<object>.jsonl (per\n" +
+			"populated object) plus car_relationships.jsonl (always written, even empty)\n" +
 			"under the CAR tree (--out, or <repo>/data_store/processed/byakugan). A source whose\n" +
-			"car.db already exists is left as-is; pass --rebuild to re-derive it from the current\n" +
-			"maps. --derive adds the derived relationship pass (superset.db); --stix also\n" +
-			"derives the STIX 2.1 bundle.",
+			"car_relationships.jsonl already exists is left as-is; pass --rebuild to re-derive it\n" +
+			"from the current maps. --derive adds the derived relationship pass\n" +
+			"(car_inferred.jsonl); --stix also derives the STIX 2.1 bundle.",
 		GroupID: groupCAR,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -63,7 +64,7 @@ func newBuildCarCmd(env *Env) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&out, "out", "", "The CAR tree to write (default: <repo>/data_store/processed/byakugan).")
 	cmd.Flags().BoolVar(&rebuild, "rebuild", false, "Rebuild CAR stores that already exist (e.g. after a map/coverage change).")
-	cmd.Flags().BoolVar(&derive, "derive", false, "Also run the derived relationship pass into superset.db.")
+	cmd.Flags().BoolVar(&derive, "derive", false, "Also run the derived relationship pass into car_inferred.jsonl.")
 	cmd.Flags().BoolVar(&stix, "stix", false, "Also derive the STIX 2.1 bundle from the finished stores.")
 	return cmd
 }
@@ -111,7 +112,7 @@ func newCarTimelineCmd(env *Env) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "build-timeline CAR_DIR",
 		Aliases: []string{"car-timeline"},
-		Short:   "Build one property-rich, time-ordered CAR timeline from car.db + superset.db.",
+		Short:   "Build one property-rich, time-ordered CAR timeline from car_<object>.jsonl + car_relationships.jsonl.",
 		Long: "Build one property-rich, time-ordered CAR timeline (dxdfir_byakugan role, timeline\n" +
 			"action — `byakugan timeline`). Unions the object events and relationship edges\n" +
 			"from a source's CAR stores into timeline.jsonl beside them (or under --out-dir).\n" +

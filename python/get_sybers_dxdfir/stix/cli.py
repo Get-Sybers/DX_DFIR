@@ -219,8 +219,9 @@ def build_parser() -> argparse.ArgumentParser:
              "STIX 2.1 Sighting over the matched CAR row's observed-data.",
         description=_cmd_behaviour_sightings.__doc__)
     p.add_argument("--car", action="append", type=Path, required=True, metavar="<path>",
-                   help="A source's car.db, or a tree to walk for every car.db (repeatable). The "
-                        "finished CAR stores the detections are joined to. [required]")
+                   help="A source's materialised CAR directory (car_<object>.jsonl + "
+                        "car_relationships.jsonl), or a tree to walk for every source (repeatable). "
+                        "The finished CAR the detections are joined to. [required]")
     p.add_argument("--detections", type=Path, required=True, metavar="<path>",
                    help="The detection-lane output dir (its suricata/ hayabusa/ yara/ subdirs), "
                         "e.g. data_store/processed/detections. [required]")

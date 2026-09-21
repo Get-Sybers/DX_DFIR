@@ -86,7 +86,7 @@ per-item processing).
             │   └── yara/ suricata/ hayabusa/         # detection JSONL (YARA matches / Suricata EVE / Hayabusa Sigma)
             │
             └── car/
-                └── <source>/                         # the materialised CAR: car.db + superset.db + car_<object>.jsonl (+ car_relationships.jsonl)
+                └── <source>/                         # the materialised CAR: car_<object>.jsonl (+ car_relationships.jsonl)
 ```
 
 The CAR engine lives **outside** this tree entirely: the Byakugan engine is

@@ -66,8 +66,9 @@ dxdfir build-car               # processed evidence → per-source MITRE CAR sto
 ```
 
 This drives the external [Byakugan engine](https://github.com/Get-Sybers/byakugan) to
-turn every processed source into its own CAR store — `car.db` plus one
-`car_<object>.jsonl` per object — under `data_store/processed/byakugan/<source>/`. Changed a
+turn every processed source into its own CAR store — one `car_<object>.jsonl` per
+populated object plus `car_relationships.jsonl` (always written) — under
+`data_store/processed/byakugan/<source>/`. Changed a
 map or coverage? Re-derive with `--rebuild`. See the
 [CAR pipeline](../architecture/car-pipeline.md).
 

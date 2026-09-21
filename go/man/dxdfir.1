@@ -147,9 +147,13 @@ Idempotent: inputs that already have output are skipped (use
 to reprocess).
 .TP
 .BI "build-car " [PROCESSED_DIR]
-Build the per-source CAR stores (car.db + one
+Build the per-source CAR stores (one
 .IR car_<object>.jsonl
-per object; superset.db with
+per populated object, plus
+.IR car_relationships.jsonl
+always written \(em the done/skip marker; also
+.IR car_inferred.jsonl
+with
 .BR --derive )
 from every source under the processed tree. A source whose store already
 exists is left alone unless
@@ -169,7 +173,8 @@ relationship edges naming real endpoints. Run the pipeline first
 .TP
 .BI "build-timeline " CAR_DIR
 Build one property-rich, time-ordered CAR timeline JSONL from a source's
-car.db + superset.db (or aggregate a whole tree), beside the stores unless
+.IR car_<object>.jsonl " + " car_relationships.jsonl
+(or aggregate a whole tree), beside the stores unless
 .BR --out-dir .
 Alias:
 .BR car-timeline .
@@ -330,7 +335,7 @@ The CAR tree to write. Default:
 Rebuild CAR stores that already exist (after a map/coverage change).
 .TP
 .B --derive
-Also run the derived relationship pass into superset.db.
+Also run the derived relationship pass into car_inferred.jsonl.
 .TP
 .B --stix
 Also derive the STIX 2.1 bundle from the finished stores.

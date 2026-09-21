@@ -90,7 +90,7 @@ them; the sightings still tell it what fired and where.
 
 ## Pass-through (`--bundle`, repeatable)
 
-Byakugan projects its CAR stores (car.db + superset.db + native) to STIX itself —
+Byakugan projects its CAR stores (its materialised CAR JSONL + native) to STIX itself —
 SCOs, observed-data, and SROs for both relationship classes, labelled
 `declared` / `derived`. A Byakugan bundle is merged object-for-object with ids
 untouched; a duplicate id keeps the newest `modified`. The summary counts

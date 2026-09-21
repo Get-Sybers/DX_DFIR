@@ -13,8 +13,8 @@ The engine stays Elastic; this package is the EXCHANGE interface of Byakugan
    Engine alert, a query-stamped evidence line, a ``car-detections`` lookup
    row, or a whole ``_search`` response (:mod:`.hits`).
 2. **Byakugan bundles pass through.** Byakugan projects its CAR stores to STIX itself
-   (SCOs / observed-data / SROs derived from car.db + superset.db + native, both
-   relationship classes labelled ``declared`` / ``derived``). DX never re-derives
+   (SCOs / observed-data / SROs derived from its materialised CAR JSONL + native,
+   both relationship classes labelled ``declared`` / ``derived``). DX never re-derives
    them and never imports Byakugan: a Byakugan bundle is merged object-for-object,
    ids untouched, into the same output bundle (:mod:`.export`).
 

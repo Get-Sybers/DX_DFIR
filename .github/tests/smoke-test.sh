@@ -211,8 +211,8 @@ assert_has file     -             file_path             -                       
 
 assert_has registry -             key                   -                       "car_registry (EID12/13): key populated"
 
-# The superset relationship edges must surface too.
-assert_has relationships -        source_guid,target_guid -                     "car_relationships (superset edges) populated"
+# The relationship edges must surface too.
+assert_has relationships -        source_guid,target_guid -                     "car_relationships (relationship edges) populated"
 
 # =============================================================================
 # The same tree through the promotion gate: populated, value-sane, traceable,

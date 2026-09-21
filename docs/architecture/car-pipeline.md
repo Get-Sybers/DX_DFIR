@@ -16,7 +16,7 @@ driven by their `BYAKUGAN_<SUBTOOL>_*` variables, the processed evidence mounted
 read-only and the `byakugan/` output read-write. DX_DFIR holds **no CAR logic itself**.
 
 ```
-processed/ ──build──▶ byakugan/<source>/car.db + car_<object>.jsonl ──timeline──▶ timeline.jsonl
+processed/ ──build──▶ byakugan/<source>/car_<object>.jsonl ──timeline──▶ timeline.jsonl
                              │
                           verify  (the correctness gate)
 ```
@@ -28,11 +28,12 @@ dxdfir build-car [--rebuild]
 ```
 
 Turns each processed **source** into its **own** CAR store (the isolation rule: one
-source, one database). Per source: input → artefact map → normalise → its own `car.db`
-(SQLite, one table per CAR object) + `superset.db` (the CAR + ATT&CK superset model and
-the relationship-instance edges linking the `car.db` rows) → enrich (within the source
-only) → export. `store.export_jsonl()` writes one `car_<object>.jsonl` per populated
-object plus `car_relationships.jsonl` under `data_store/processed/byakugan/<source>/`.
+source, one materialised tree). Per source: input → artefact map → normalise → enrich
+(within the source only) → export as JSONL: one `car_<object>.jsonl` per populated
+object plus `car_relationships.jsonl` — ALWAYS written, even empty; the build's own
+done/skip marker — under `data_store/processed/byakugan/<source>/` (plus
+`car_inferred.jsonl` with `--derive`, `stix_bundle.json` with `--stix`). No `car.db`,
+no `superset.db` — the JSONL tree is the only per-source output the engine keeps.
 
 By default it batches every source under `data_store/processed/`; a source whose store
 already exists is left alone unless you pass `--rebuild`.
@@ -74,10 +75,11 @@ gate checks the materialised output. **Run it before you trust the CAR.**
 dxdfir build-timeline data_store/processed/byakugan [--out-dir DIR] [--after ISO] [--before ISO]
 ```
 
-Unions the **object events** (`car.db` — every populated field plus the `native`
-evidence) and the **relationship instances** (`superset.db` — source→verb→target with
-confidence/method) into a single timestamp-ordered stream, `timeline.jsonl` — the
-behaviour timeline, written beside the stores (or under `--out-dir`). Point it at one
+Unions the **object events** (`car_<object>.jsonl` — every populated field plus the
+`native` evidence) and the **relationship instances** (`car_relationships.jsonl` —
+source→verb→target with confidence/method) into a single timestamp-ordered stream,
+`timeline.jsonl` — the behaviour timeline, written beside the stores (or under
+`--out-dir`). Point it at one
 source's car dir, or a parent tree to aggregate every source beneath it. An existing
 `timeline.jsonl` is kept unless `--force`. You can also read it live in the
 [Timeline tab](../getting-started/the-interface.md#timeline).

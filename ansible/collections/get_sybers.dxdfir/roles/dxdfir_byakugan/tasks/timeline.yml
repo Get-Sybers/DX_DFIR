@@ -1,10 +1,10 @@
 ---
-# Union a source's car.db + superset.db (object events + relationship edges) into
-# one property-rich, time-ordered CAR timeline: `byakugan timeline` reads
-# BYAKUGAN_TIMELINE_INPUT_DIR (one source's car dir, or a tree to aggregate,
-# read-only) and writes timeline.jsonl into BYAKUGAN_TIMELINE_OUT_DIR — by
-# default the car dir itself, so the timeline lands beside the stores. An
-# existing timeline.jsonl is kept unless FORCE.
+# Union a source's car_<object>.jsonl + car_relationships.jsonl (object events +
+# relationship edges) into one property-rich, time-ordered CAR timeline:
+# `byakugan timeline` reads BYAKUGAN_TIMELINE_INPUT_DIR (one source's car dir,
+# or a tree to aggregate, read-only) and writes timeline.jsonl into
+# BYAKUGAN_TIMELINE_OUT_DIR — by default the car dir itself, so the timeline
+# lands beside the stores. An existing timeline.jsonl is kept unless FORCE.
 - name: "car-timeline | resolve where timeline.jsonl lands"
   ansible.builtin.set_fact:
     dxdfir_byakugan_timeline_out_resolved: >-
