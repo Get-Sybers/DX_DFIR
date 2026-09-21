@@ -20,7 +20,7 @@ the raw `<dest>/plugins/<plugin>.jsonl` to the mounted `/out`.
 ## Role variables
 | Variable | Default | Description |
 |---|---|---|
-| `dxdfir_memory_memory_dir` | `<repo>/data_store/raw/memory` | Memory-image tree to process (recursed). |
+| `dxdfir_memory_memory_dir` | `<repo>/data_store/raw/memory` | Memory-image tree to process (recursed); mounted read-only at `/input` inside the container. |
 | `dxdfir_memory_out_dir` | `<repo>/data_store/processed/memory` | Output base (override to redirect). |
 | `dxdfir_memory_symbols_dir` | `<repo>/data_store/dependencies/memprocfs-symbols` | PDB/symbol cache (mounted at `/symbols`). |
 | `dxdfir_memory_image` | `get-sybers/anamnesis:latest` | The hardened, env-driven anamnesis (MemProcFS) image the lane docker-runs (built by `playbooks/dxdfir-build-images.yml`). |
