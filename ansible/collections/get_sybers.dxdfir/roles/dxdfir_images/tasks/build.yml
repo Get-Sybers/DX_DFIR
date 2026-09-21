@@ -17,6 +17,13 @@
       single source of truth), or correct the requested --image name.
     quiet: true
 
+# The image present before the build (if any) — its source stamp decides
+# whether it is fresh, and its ID is what the replaced-image removal targets.
+- name: "images-build | inspect the present {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"
+  community.docker.docker_image_info:
+    name: "{{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}:latest"
+  register: dxdfir_images_present
+
 - name: "images-build | build the hardened image {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"
   vars:
     # This image's entry in the images.yml manifest (guaranteed present by the
@@ -24,20 +31,30 @@
     # as the <NAME>_REF build-arg — named from the IMAGE (byakugan -> BYAKUGAN_REF,
     # anamnesis -> ANAMNESIS_REF), the arg name the Dockerfile expects.
     _img: "{{ (dxdfir_images_manifest.images | default([])) | selectattr('name', 'equalto', dxdfir_images_name) | first }}"
+    _ref_sha: "{{ ((dxdfir_images_sources[_img.ref] | default({})).ref | default('main')) if (_img.ref is defined) else '' }}"
     _ref_args: >-
-      {{ {(dxdfir_images_name | upper | replace('-', '_')) ~ '_REF':
-           ((dxdfir_images_sources[_img.ref] | default({})).ref | default('main'))}
+      {{ {(dxdfir_images_name | upper | replace('-', '_')) ~ '_REF': _ref_sha}
          if (_img.ref is defined) else {} }}
+    # The source stamp: the GoDFIR-toolz pin (+ the engine pin when the image
+    # clones one). The present image is stale when its stamp differs — the
+    # build then replaces it, so a pin bump lands without --force.
+    _want_labels: >-
+      {{ {'com.get-sybers.src': dxdfir_images_src_sha}
+         | combine({'com.get-sybers.ref': _ref_sha} if _ref_sha else {}) }}
+    _have_labels: "{{ (dxdfir_images_present.images | first | default({})).Config.Labels | default({}, true) }}"
+    _stale: >-
+      {{ dxdfir_images_present.images | length == 0
+         or (_have_labels | combine(_want_labels)) != _have_labels }}
   # BuildKit (docker buildx), NOT the legacy builder: every tool Dockerfile uses
   # heredoc COPY and the `# syntax=` frontend directive, both BuildKit-only —
   # the legacy builder fails them with "COPY failed: no source files were
-  # specified". rebuild=never keeps it idempotent (build only when the image is
-  # absent, so a re-run or a self-heal is a no-op); dxdfir_images_force flips it
-  # to always.
+  # specified". rebuild=always only when the image is absent, its source stamp
+  # is stale, or dxdfir_images_force — a re-run at unchanged pins is a no-op.
   community.docker.docker_image_build:
     name: "{{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"
     tag: latest
-    rebuild: "{{ 'always' if dxdfir_images_force | bool else 'never' }}"
+    rebuild: "{{ 'always' if (dxdfir_images_force | bool or _stale) else 'never' }}"
+    labels: "{{ _want_labels }}"
     # context is repo-root-relative in the manifest; absent, the role default
     # dxdfir_images_context (the GoDFIR-toolz submodule root) applies.
     # dockerfile is relative to the context (default: <name>/Dockerfile).
@@ -52,6 +69,17 @@
   community.docker.docker_image_info:
     name: "{{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}:latest"
   register: dxdfir_images_inspect
+
+# A rebuild re-tags :latest and leaves the image it replaced untagged — remove
+# that replaced image so stale builds never accumulate.
+- name: "images-build | remove the replaced image behind {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"
+  ansible.builtin.command:
+    argv: [docker, rmi, -f, "{{ dxdfir_images_present.images[0].Id }}"]
+  changed_when: true
+  when:
+    - dxdfir_images_present.images | length > 0
+    - dxdfir_images_inspect.images | length > 0
+    - dxdfir_images_present.images[0].Id != dxdfir_images_inspect.images[0].Id
 
 - name: "images-build | assert the static contract on {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"
   ansible.builtin.assert:

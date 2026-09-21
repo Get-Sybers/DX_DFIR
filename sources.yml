@@ -21,16 +21,15 @@
 # attack-datasources submodules at build time (recursive clone required).
 byakugan:
   url: https://github.com/Get-Sybers/Byakugan
-  ref: 4ecb8c0c0c7d4f2d84542a6866587e6d07e63d11  # Byakugan main (PR #101): the elastic engine — standalone stack, byakugan.elastic, SQLite purged
+  ref: 4ecb8c0c0c7d4f2d84542a6866587e6d07e63d11  # Get-Sybers/Byakugan main
   consumed: "docker/GoDFIR-toolz/byakugan/Dockerfile (BYAKUGAN_REF build-arg)"
 
 # anamnesis (pure-Go memory forensics on MemProcFS — no Volatility, no Python) —
 # built into get-sybers/anamnesis in the GoDFIR-toolz submodule, cloned + built at
 # this pin (-tags memprocfs), confined by the hardened image.
-# PR #9: ANAMNESIS_INPUT_DIR / /input (ANAMNESIS_MEMORY_DIR fallback), summary key input_dir.
 anamnesis:
   url: https://github.com/Get-Sybers/Anamnesis
-  ref: 41388c474a2ea56117fb93144890868e1e8fc2c2  # Get-Sybers/Anamnesis main
+  ref: acf6d22257d29ea6195dd40f88c59cf132a678a0  # Get-Sybers/Anamnesis main
   consumed: "docker/GoDFIR-toolz/anamnesis/Dockerfile (ANAMNESIS_REF build-arg)"
 
 # Git submodules: pinned by their gitlink (.gitmodules). Inventory only.

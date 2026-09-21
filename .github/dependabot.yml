@@ -1,0 +1,10 @@
+# The GoDFIR-toolz gitlink tracks its upstream through Dependabot: native,
+# secretless PRs that checks (test_contract_fit) and smoke validate. The
+# clone-at-build engine refs in sources.yml are bumped deliberately
+# (scripts/sync-pins.sh moves every pin together).
+version: 2
+updates:
+  - package-ecosystem: gitsubmodule
+    directory: /
+    schedule:
+      interval: daily
