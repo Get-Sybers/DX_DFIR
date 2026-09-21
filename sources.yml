@@ -27,9 +27,10 @@ byakugan:
 # anamnesis (pure-Go memory forensics on MemProcFS — no Volatility, no Python) —
 # built into get-sybers/anamnesis in the GoDFIR-toolz submodule, cloned + built at
 # this pin (-tags memprocfs), confined by the hardened image.
+# PR #9: ANAMNESIS_INPUT_DIR / /input (ANAMNESIS_MEMORY_DIR fallback), summary key input_dir.
 anamnesis:
   url: https://github.com/Get-Sybers/Anamnesis
-  ref: afb06ae7a97d6acb18da88f5b0b7ef52bc6c0d88  # Get-Sybers/Anamnesis main (PR #8 merged): windows.anamnesis.* plugin ids
+  ref: 41388c474a2ea56117fb93144890868e1e8fc2c2  # Get-Sybers/Anamnesis main
   consumed: "docker/GoDFIR-toolz/anamnesis/Dockerfile (ANAMNESIS_REF build-arg)"
 
 # Git submodules: pinned by their gitlink (.gitmodules). Inventory only.
