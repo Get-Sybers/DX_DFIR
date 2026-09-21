@@ -29,7 +29,7 @@ byakugan:
 # this pin (-tags memprocfs), confined by the hardened image.
 anamnesis:
   url: https://github.com/Get-Sybers/Anamnesis
-  ref: afb06ae7a97d6acb18da88f5b0b7ef52bc6c0d88  # Get-Sybers/Anamnesis main (PR #8 merged): windows.anamnesis.* plugin ids
+  ref: 41388c474a2ea56117fb93144890868e1e8fc2c2  # Get-Sybers/Anamnesis main (PR #9 merged): ANAMNESIS_INPUT_DIR / /input (ANAMNESIS_MEMORY_DIR fallback), summary key input_dir
   consumed: "docker/GoDFIR-toolz/anamnesis/Dockerfile (ANAMNESIS_REF build-arg)"
 
 # Git submodules: pinned by their gitlink (.gitmodules). Inventory only.
