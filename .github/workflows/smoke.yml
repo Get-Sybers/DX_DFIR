@@ -5,7 +5,7 @@ name: smoke
 # .evtx through the real evtx lane (the dxdfir_evtx role running goevtx from
 # its contract), normalises the output into materialised CAR with the external
 # Byakugan engine (the dxdfir_byakugan role running the get-sybers/byakugan
-# image built below at the commit sources.yml pins), asserts every
+# image built below at the BYAKUGAN_REF pin its Dockerfile carries), asserts every
 # Sysmon-sourced CAR object has rows with its EvtxPayload-derived fields
 # correctly populated, and runs the verify-car gate over the same tree.
 # The EvtxPayload XML→JSON break that zeroed those fields passes `checks` but
@@ -41,9 +41,9 @@ on:
       - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_images/**"
       - "docker/GoDFIR-toolz"
       - "images.yml"
-      # an engine bump is a pipeline change: sources.yml pins the external
-      # Byakugan engine the CAR lane runs, so it must re-run this workflow.
-      - "sources.yml"
+      # an engine bump is a pipeline change: the engine pins are ARG defaults
+      # in the submodule's Dockerfiles, so it arrives as a gitlink change —
+      # covered by the docker/GoDFIR-toolz path above.
       - ".gitmodules"
       - ".github/tests/smoke-test.sh"
       - "dev-scripts/fetch-samples.sh"
@@ -89,18 +89,16 @@ jobs:
 
       # The CAR lane (dxdfir_byakugan) drives the external Byakugan engine
       # inside the get-sybers/byakugan image: the docker build clones the
-      # engine at the byakugan pin in sources.yml and, in its own
+      # engine at the BYAKUGAN_REF pin its Dockerfile defaults and, in its own
       # stages, checks out the engine's nested model submodules (third_party/car +
       # attack-datasources) and builds the Go parse binary — so nothing about the
-      # engine is provisioned on the runner. sources.yml is in the PR path filters
-      # above: bumping the pin re-runs this whole pipeline against the new engine.
-      - name: Build the Byakugan engine image (at the sources.yml pin)
+      # engine is provisioned on the runner. An engine bump is a gitlink change,
+      # which the PR path filters above re-run this whole pipeline against.
+      - name: Build the Byakugan engine image (at its Dockerfile pin)
         run: |
-          ref="$(awk '/^byakugan:/{b=1;next} b&&/^[^[:space:]]/{b=0} b&&$1=="ref:"{print $2;exit}' sources.yml)"
-          [[ "$ref" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::sources.yml byakugan ref is not a 40-hex sha: '$ref'"; exit 1; }
           # The submodule root is the build context, so the Dockerfile COPYs the
           # canonical hardening/harden.yml straight from it — nothing to sync.
-          docker build -t get-sybers/byakugan:latest --build-arg BYAKUGAN_REF="$ref" -f docker/GoDFIR-toolz/byakugan/Dockerfile docker/GoDFIR-toolz
+          docker build -t get-sybers/byakugan:latest -f docker/GoDFIR-toolz/byakugan/Dockerfile docker/GoDFIR-toolz
 
       - name: Run the pipeline smoke test
         run: ./.github/tests/smoke-test.sh

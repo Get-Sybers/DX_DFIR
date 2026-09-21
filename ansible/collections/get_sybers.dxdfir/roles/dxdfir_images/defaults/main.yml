@@ -28,15 +28,14 @@ dxdfir_images_context: "{{ dxdfir_images_repo_root }}/docker/GoDFIR-toolz"
 
 # The tool-image inventory — the ONE source of truth (repo-root images.yml),
 # shared with the Python runtime guard (get_sybers_dxdfir.images). Each entry:
-# name (+ optional context / dockerfile / args / ref). Add or change an image in
-# images.yml, in ONE place. sources.yml carries the clone-at-build pins a `ref`
-# points at.
+# name (+ optional context / dockerfile / args). Add or change an image in
+# images.yml, in ONE place. Clone-at-build engine pins live in the tool
+# Dockerfiles inside the GoDFIR-toolz submodule (ARG *_REF defaults), so the
+# gitlink is the only external pin.
 dxdfir_images_manifest: >-
   {{ (lookup('file', dxdfir_images_repo_root ~ '/images.yml', errors='ignore') | default('', true) | from_yaml) or {} }}
-dxdfir_images_sources: >-
-  {{ (lookup('file', dxdfir_images_repo_root ~ '/sources.yml', errors='ignore') | default('', true) | from_yaml) or {} }}
 # Names to build, in manifest order; build.yml resolves each one's build context,
-# dockerfile and args (incl. a sources.yml `ref` -> <NAME>_REF) from its entry.
+# dockerfile and args from its entry.
 dxdfir_images_set: "{{ (dxdfir_images_manifest.images | default([])) | map(attribute='name') | list }}"
 
 # Rebuild even when an image already exists (docker build cache still applies).
@@ -49,6 +48,6 @@ dxdfir_images_force: false
 dxdfir_images_required: []
 
 # Per-image build context / dockerfile / args now live in images.yml (one entry
-# per image); tasks/build.yml resolves them from the manifest entry, including a
-# `ref` -> <NAME>_REF build-arg whose sha comes from sources.yml (e.g. byakugan
-# -> BYAKUGAN_REF). No separate overrides map — the manifest is the single source.
+# per image); tasks/build.yml resolves them from the manifest entry. No separate
+# overrides map — the manifest is the single source; the clone-at-build engine
+# pins are ARG defaults in the tool Dockerfiles.

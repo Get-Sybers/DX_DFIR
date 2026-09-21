@@ -16,20 +16,20 @@
 #               (default: <name>/Dockerfile — right for the submodule-root context).
 #   args        extra --build-arg map (rarely needed); DFIR_UID/GID are
 #               always added by the role on top.
-#   ref         a key in sources.yml — its pinned sha is passed as the
-#               <NAME>_REF build-arg (byakugan -> BYAKUGAN_REF).
 #   tool        false = a non-tool image, exempt from the hardened-tool contract
 #               (default: true).
+#
+# Clone-at-build engine pins (BYAKUGAN_REF, ANAMNESIS_REF) live as ARG defaults
+# in the tool Dockerfiles inside the GoDFIR-toolz submodule — the gitlink is
+# this repo's only external pin.
 # ==============================================================================
 namespace: get-sybers
 
 images:
   - name: signatures        # the whole detection lane: yara + suricata + hayabusa
-  - name: byakugan          # external MITRE CAR engine, cloned + built at the sources.yml pin
-    ref: byakugan
+  - name: byakugan          # external MITRE CAR engine, cloned + built at its Dockerfile's BYAKUGAN_REF pin
   - name: zeek
-  - name: anamnesis         # pure-Go memory forensics on MemProcFS — self-orchestrating, env-driven
-    ref: anamnesis          # MemProcFS release tag/asset/sha256 are pinned in the Dockerfile
+  - name: anamnesis         # pure-Go memory forensics on MemProcFS — self-orchestrating, env-driven; ANAMNESIS_REF + MemProcFS pins in the Dockerfile
   - name: plaso
   # GoDFIR Go substitutes — each FROM scratch, from its own subdir in the submodule.
   - name: goprefetch        # prefetch         (XP->Win11 .pf, MAM-compressed)

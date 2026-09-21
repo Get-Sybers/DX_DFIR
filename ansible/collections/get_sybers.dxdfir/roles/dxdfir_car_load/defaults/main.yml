@@ -23,7 +23,7 @@ dxdfir_car_load_out_dir: "{{ dxdfir_car_load_repo_root }}/data_store/processed/b
 # truth, as dxdfir_byakugan (see dxdfir_byakugan_contract); this role just uses
 # a different declared sub-tool (load instead of build/verify/timeline). The
 # external Byakugan engine is cloned + built into the image at the repo-root
-# sources.yml pin.
+# pin in its Dockerfile.
 dxdfir_car_load_contract: "{{ dxdfir_car_load_repo_root }}/docker/GoDFIR-toolz/byakugan/contract.yml"
 # Empty = the contract's image (get-sybers/byakugan:latest); set to pin a digest.
 dxdfir_car_load_image: ""

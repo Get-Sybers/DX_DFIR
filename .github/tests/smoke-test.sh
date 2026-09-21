@@ -14,7 +14,7 @@
 #   role: ansible builds the confined `docker run` of get-sybers/goevtx from its
 #   contract) -> normalise the output into materialised CAR (the dxdfir_byakugan
 #   role, build action: `byakugan build` inside the hardened get-sybers/byakugan
-#   image at the sources.yml pin, over the processed tree) -> assert each
+#   image at its Dockerfile pin, over the processed tree) -> assert each
 #   Sysmon-sourced CAR object has rows AND its EvtxPayload-derived fields are
 #   populated with the expected values -> run the verify-car gate (the role's
 #   verify action: the engine's own `byakugan verify` sub-tool, env-driven from
@@ -141,10 +141,10 @@ command -v ansible-playbook >/dev/null 2>&1 || die "ansible-playbook not found �
 docker image inspect get-sybers/goevtx:latest >/dev/null 2>&1 \
     || die "image get-sybers/goevtx:latest missing — build it: docker build -t get-sybers/goevtx:latest -f docker/GoDFIR-toolz/goevtx/Dockerfile docker/GoDFIR-toolz/goevtx"
 # The CAR lane drives the external Byakugan engine inside the hardened
-# get-sybers/byakugan image (cloned + built at the sources.yml pin); the engine
+# get-sybers/byakugan image (cloned + built at its Dockerfile pin); the engine
 # reconstructs its model from its OWN nested submodules, all baked into the image.
 docker image inspect get-sybers/byakugan:latest >/dev/null 2>&1 \
-    || die "image get-sybers/byakugan:latest missing — build it: dxdfir build-docker (it clones Byakugan at the sources.yml pin and builds the hardened engine image)."
+    || die "image get-sybers/byakugan:latest missing — build it: dxdfir build-docker (it clones Byakugan at its Dockerfile's BYAKUGAN_REF pin and builds the hardened engine image)."
 pass "docker, python3, ansible-playbook, get-sybers/goevtx:latest and the Byakugan engine image present"
 
 # =============================================================================

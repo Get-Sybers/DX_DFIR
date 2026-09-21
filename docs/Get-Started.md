@@ -84,7 +84,7 @@ dxdfir build-timeline data_store/processed/byakugan # one time-ordered timeline 
 ```
 - `build-car` drives the external [Byakugan](https://github.com/Get-Sybers/byakugan)
   engine, run inside the hardened `get-sybers/byakugan` image — cloned + built at
-  the commit pinned in `sources.yml` by `dxdfir build-docker`: each processed
+  the `BYAKUGAN_REF` commit pinned in its Dockerfile by `dxdfir build-docker`: each processed
   source becomes its own `car_<object>.jsonl` per populated CAR object plus
   `car_relationships.jsonl` (always written, even empty — the build's done/skip
   marker) under `data_store/processed/byakugan/<source>/`. A source whose

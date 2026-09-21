@@ -93,7 +93,7 @@ Environment / flags:
 - `$DXDFIR_PYTHON` — the Python interpreter to use (else `python3`/`python`).
 
 The external Byakugan CAR engine is no longer a host checkout: it is cloned +
-built into the hardened `get-sybers/byakugan` image at the `sources.yml` pin by
+built into the hardened `get-sybers/byakugan` image at its Dockerfile's `BYAKUGAN_REF` pin by
 `dxdfir build-docker`, and the CAR lane just shells that image.
 
 Keys in the dashboard: `q` / `Ctrl-C` abort · `Ctrl-L` redraw.

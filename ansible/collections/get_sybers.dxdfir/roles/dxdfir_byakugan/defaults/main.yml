@@ -18,7 +18,7 @@ dxdfir_byakugan_dir: "{{ dxdfir_byakugan_repo_root }}/data_store/processed/byaku
 # for the byakugan image's per-sub-tool env vars (BYAKUGAN_BUILD_*,
 # BYAKUGAN_TIMELINE_*, BYAKUGAN_VERIFY_*) and mounts (/input ro, /output). The
 # external Byakugan engine is cloned + built into the image at the repo-root
-# sources.yml pin.
+# pin in its Dockerfile.
 dxdfir_byakugan_contract: "{{ dxdfir_byakugan_repo_root }}/docker/GoDFIR-toolz/byakugan/contract.yml"
 # Empty = the contract's image (get-sybers/byakugan:latest); set to pin a digest.
 dxdfir_byakugan_image: ""

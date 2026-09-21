@@ -113,7 +113,7 @@ engine normalises each processed source into finished
 CAR events — one `car_<object>.jsonl` per object (13 objects) plus
 `car_relationships.jsonl` — under `processed/byakugan/<source>/`. The engine runs
 entirely inside the hardened `get-sybers/byakugan` image, cloned + built at the
-commit pinned in `sources.yml` by `dxdfir build-docker` — never a host checkout.
+`BYAKUGAN_REF` commit pinned in its Dockerfile by `dxdfir build-docker` — never a host checkout.
 Extraction happens once, in the engine, so that JSON is the contract every sink
 reads and cannot drift from what the engine emits.
 
