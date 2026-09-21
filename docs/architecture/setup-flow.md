@@ -34,7 +34,7 @@ knowing:
   already root and carry no `sudo`; hardcoding it died on line one.
 - **`--editable` install is required, not a preference.** The Python package resolves
   paths relative to its own files (the `docker/GoDFIR-toolz` submodule, `data_store/`,
-  `sources.yml`). A copying install would put it under `site-packages` where none of
+  `images.yml`). A copying install would put it under `site-packages` where none of
   those resolve.
 - **Capital-`X` permissions.** `u=rwX,g=rX` applies `+x` to directories and to files that
   already carry it — so the `docker` group can traverse the tree and the `.sh` files stay

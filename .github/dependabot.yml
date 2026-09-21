@@ -1,7 +1,7 @@
 # The GoDFIR-toolz gitlink tracks its upstream through Dependabot: native,
 # secretless PRs that checks (test_contract_fit) and smoke validate. The
-# clone-at-build engine refs in sources.yml are bumped deliberately
-# (scripts/sync-pins.sh moves every pin together).
+# clone-at-build engine pins are ARG defaults in the submodule's tool
+# Dockerfiles, so the gitlink is the only pin there is.
 version: 2
 updates:
   - package-ecosystem: gitsubmodule

@@ -74,4 +74,4 @@ fresh or half-provisioned host self-heals in place instead of failing the run.
 ## The one external seam
 
 The `dxdfir_byakugan` role drives the external [Byakugan engine](https://github.com/Get-Sybers/byakugan),
-pinned by `sources.yml` — not vendored. See the [CAR pipeline](../architecture/car-pipeline.md).
+pinned by its Dockerfile's `BYAKUGAN_REF` — not vendored. See the [CAR pipeline](../architecture/car-pipeline.md).

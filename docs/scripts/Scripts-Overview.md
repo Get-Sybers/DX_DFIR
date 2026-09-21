@@ -55,7 +55,7 @@ image, with operator rulesets mounted in their place — see
 No shell scripts here either:
 
 - **`dxdfir build-car`** runs the external Byakugan engine inside the hardened
-  `get-sybers/byakugan` image (cloned + built at the `sources.yml` pin by
+  `get-sybers/byakugan` image (cloned + built at its Dockerfile pin by
   `dxdfir build-docker`), driven from the image's contract (`byakugan build`),
   over the processed tree: one `car_<object>.jsonl` per populated object plus
   `car_relationships.jsonl` (always written, even empty) per source, under

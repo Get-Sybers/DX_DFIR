@@ -30,7 +30,7 @@ tree. The CAR engine (Byakugan, MIT, Get-Sybers) is an external public project
 that reconstructs its model from the `car` repo its own pinned submodules carry.
 The distribution
 vector is the hardened **`get-sybers/byakugan` image**: `docker/GoDFIR-toolz/byakugan/Dockerfile`
-clones Byakugan at the `sources.yml` pin and bakes in its `car` and
+clones Byakugan at its Dockerfile's `BYAKUGAN_REF` pin and bakes in its `car` and
 `attack-datasources` submodules (both MITRE, Apache-2.0), so the built image —
 and the offline bundle's saved copy of it (`scripts/save-docker-images.sh`) —
 redistributes those model sources with their upstream `LICENSE`/`NOTICE` files

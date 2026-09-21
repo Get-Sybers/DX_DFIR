@@ -9,7 +9,7 @@ submodule. One `<plugin>.jsonl` per plugin per image.
 ## How it works
 [anamnesis](https://github.com/Get-Sybers/Anamnesis) (MemProcFS) is fused into
 the **self-orchestrating `get-sybers/anamnesis` image** (cloned + built at the
-`sources.yml` pin). It discovers the images, runs the CAR plugin set over each
+Dockerfile's `ANAMNESIS_REF` pin). It discovers the images, runs the CAR plugin set over each
 **in-process** (native MemProcFS, confined by the image — no nested docker),
 is idempotent per plugin, and emits the JSON summary Ansible gates on. The role
 just builds the confined `docker run` (cap-drop ALL, no-new-privileges, read-only

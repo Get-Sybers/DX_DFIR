@@ -27,20 +27,14 @@
 - name: "images-build | build the hardened image {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"
   vars:
     # This image's entry in the images.yml manifest (guaranteed present by the
-    # assert above). A `ref` (if present) is a sources.yml key whose sha is passed
-    # as the <NAME>_REF build-arg — named from the IMAGE (byakugan -> BYAKUGAN_REF,
-    # anamnesis -> ANAMNESIS_REF), the arg name the Dockerfile expects.
+    # assert above). Clone-at-build engine pins are ARG defaults in the tool
+    # Dockerfiles, so no *_REF build-arg is passed — an engine bump arrives as
+    # a submodule (gitlink) change.
     _img: "{{ (dxdfir_images_manifest.images | default([])) | selectattr('name', 'equalto', dxdfir_images_name) | first }}"
-    _ref_sha: "{{ ((dxdfir_images_sources[_img.ref] | default({})).ref | default('main')) if (_img.ref is defined) else '' }}"
-    _ref_args: >-
-      {{ {(dxdfir_images_name | upper | replace('-', '_')) ~ '_REF': _ref_sha}
-         if (_img.ref is defined) else {} }}
-    # The source stamp: the GoDFIR-toolz pin (+ the engine pin when the image
-    # clones one). The present image is stale when its stamp differs — the
-    # build then replaces it, so a pin bump lands without --force.
-    _want_labels: >-
-      {{ {'com.get-sybers.src': dxdfir_images_src_sha}
-         | combine({'com.get-sybers.ref': _ref_sha} if _ref_sha else {}) }}
+    # The source stamp: the GoDFIR-toolz pin the build contexts (and the engine
+    # pins inside them) come from. The present image is stale when its stamp
+    # differs — the build then replaces it, so a pin bump lands without --force.
+    _want_labels: "{{ {'com.get-sybers.src': dxdfir_images_src_sha} }}"
     _have_labels: "{{ (dxdfir_images_present.images | first | default({})).Config.Labels | default({}, true) }}"
     _stale: >-
       {{ dxdfir_images_present.images | length == 0
@@ -60,9 +54,9 @@
     # dockerfile is relative to the context (default: <name>/Dockerfile).
     path: "{{ (dxdfir_images_repo_root ~ '/' ~ _img.context) if _img.context is defined else dxdfir_images_context }}"
     dockerfile: "{{ _img.dockerfile | default(dxdfir_images_name ~ '/Dockerfile') }}"
-    # The single-source run-as uid/gid are combined ON TOP of the manifest args
-    # (and any ref arg), so they always WIN over a per-image build arg.
-    args: "{{ (_img.args | default({})) | combine(_ref_args)
+    # The single-source run-as uid/gid are combined ON TOP of the manifest args,
+    # so they always WIN over a per-image build arg.
+    args: "{{ (_img.args | default({}))
               | combine({'DFIR_UID': dxdfir_images_uid | string, 'DFIR_GID': dxdfir_images_gid | string}) }}"
 
 - name: "images-build | inspect {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"

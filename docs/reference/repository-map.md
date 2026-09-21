@@ -13,7 +13,7 @@ flowchart TD
     MEM["anamnesis<br/>MemProcFS (get-sybers/anamnesis)"]
     DX -->|"drives (get-sybers/byakugan image)"| BYA
     DX -->|"submodule docker/GoDFIR-toolz"| TOOLZ
-    DX -->|"clone-at-build (sources.yml -> get-sybers/anamnesis)"| MEM
+    DX -->|"clone-at-build (Dockerfile ANAMNESIS_REF -> get-sybers/anamnesis)"| MEM
 ```
 
 | Repository | Link | How DX_DFIR uses it |
@@ -35,5 +35,4 @@ The full directory map is [Dir-Structure.md](../Dir-Structure.md). The pieces th
 | `data_store/` | Evidence lifecycle: `raw/ → processed/ → processed/byakugan/` (git-ignored). |
 | `scripts/` | Host provisioning + offline packaging ([overview](../scripts/Scripts-Overview.md)). |
 | `.github/tests/` | The [check + smoke harnesses](build-and-test.md). |
-| `sources.yml` | External source pins — the Byakugan engine sha (clone-at-build) + a submodule inventory. |
-| `images.yml` | The `get-sybers/*` tool-image inventory (names + build context/dockerfile/args + `ref`→`sources.yml` pin) — the single source of truth both the Python guard (`get_sybers_dxdfir.images`) and the `dxdfir_images` role read. |
+| `images.yml` | The `get-sybers/*` tool-image inventory (names + build context/dockerfile/args) — the single source of truth both the Python guard (`get_sybers_dxdfir.images`) and the `dxdfir_images` role read. |

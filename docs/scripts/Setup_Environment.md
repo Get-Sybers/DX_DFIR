@@ -44,7 +44,7 @@ processing scripts pull their images on first use.
      Docker group and the `.sh` files stay executable
 
 > The Byakugan CAR engine is no longer provisioned on the host: it is cloned +
-> built into the hardened `get-sybers/byakugan` image at the `sources.yml` pin by
+> built into the hardened `get-sybers/byakugan` image at its Dockerfile's `BYAKUGAN_REF` pin by
 > `dxdfir build-docker`, alongside the other tool images.
 
 ### Options

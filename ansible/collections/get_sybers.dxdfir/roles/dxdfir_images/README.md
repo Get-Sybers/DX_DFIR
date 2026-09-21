@@ -7,8 +7,8 @@ No third-party tool image is pulled at runtime. Every image builds from the
 
 - **The pipeline images** (`<name>/Dockerfile` against the submodule-root
   context): byakugan, plaso, signatures, zeek — plus **anamnesis** (memory,
-  cloned from [anamnesis](https://github.com/Get-Sybers/Anamnesis) at the
-  `sources.yml` pin).
+  cloned from [anamnesis](https://github.com/Get-Sybers/Anamnesis) at its
+  Dockerfile's `ANAMNESIS_REF` pin).
 - **The Windows-artefact tool family**, almost entirely
   **static-Go `FROM scratch` substitutes** (no
   shell, no python, just the binary) — `goevtx` (.evtx), `gomft` ($MFT),
@@ -21,8 +21,7 @@ No third-party tool image is pulled at runtime. Every image builds from the
   `Current.mdb`). Each builds from its OWN subdir in the submodule. Nothing
   .NET remains in the inventory.
 
-The image inventory — names + per-image build context / dockerfile / args, and a
-`ref` linking to a `sources.yml` pin — lives in the repo-root **`images.yml`**,
+The image inventory — names + per-image build context / dockerfile / args — lives in the repo-root **`images.yml`**,
 the single source of truth this role and the Python runtime guard
 (`get_sybers_dxdfir.images`) both read. Add or change an image there, in one place.
 

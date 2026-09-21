@@ -412,7 +412,7 @@ fi
 #
 # --editable is REQUIRED, not a preference. The package still resolves paths
 # RELATIVE TO ITS OWN FILES (walking up from __file__): images.py reads the
-# repo-root images.yml + sources.yml (the tool-image inventory + external pins),
+# repo-root images.yml (the tool-image inventory),
 # and carcheck.py defaults its --car-dir under the repo's data_store. A plain
 # copying install puts the package under the venv's site-packages, whose ancestors
 # hold no images.yml or data_store/ — the guard and lanes then fail to find them
