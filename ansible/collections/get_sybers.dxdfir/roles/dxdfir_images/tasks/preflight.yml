@@ -30,7 +30,8 @@
 # and images-build then replaces any image whose stamp no longer matches.
 - name: "images-preflight | resolve the GoDFIR-toolz pin"
   # noqa: command-instead-of-module — read-only rev-parse; the git module clones.
-  ansible.builtin.command: git -C {{ dxdfir_images_context | quote }} rev-parse HEAD
+  ansible.builtin.command:
+    argv: [git, -C, "{{ dxdfir_images_context }}", rev-parse, HEAD]
   register: dxdfir_images_src
   changed_when: false
 

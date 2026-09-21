@@ -61,6 +61,10 @@ def _lane_roles() -> list[tuple[Path, set[str]]]:
 
 
 def test_lane_roles_reference_existing_contracts():
+    assert (TOOLZ / "anamnesis" / "contract.yml").is_file(), (
+        "the GoDFIR-toolz submodule is not checked out — run "
+        "`git submodule update --init --recursive docker/GoDFIR-toolz`"
+    )
     roles = _lane_roles()
     assert roles, "no lane role references a GoDFIR-toolz contract"
 

@@ -44,7 +44,11 @@ jobs:
           git switch -C pin-sync
           git commit -am "pins: sync sources.yml + GoDFIR-toolz to upstream heads"
           git push -f origin pin-sync
-          gh pr create --base main --head pin-sync \
-            --title "pins: sync to upstream heads" \
-            --body "Automated pin sync: the sources.yml refs and the GoDFIR-toolz gitlink moved to their upstream heads together." \
-            || echo "pin-sync PR already open — updated by the push"
+          open=$(gh pr list --head pin-sync --base main --state open --json number --jq 'length')
+          if [ "$open" = "0" ]; then
+            gh pr create --base main --head pin-sync \
+              --title "pins: sync to upstream heads" \
+              --body "Automated pin sync: the sources.yml refs and the GoDFIR-toolz gitlink moved to their upstream heads together."
+          else
+            echo "pin-sync PR already open — the push updated it"
+          fi
