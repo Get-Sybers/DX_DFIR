@@ -28,23 +28,29 @@ ENV_KEY = re.compile(r"['\"]?([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)['\"]?\s*:")
 # A container mount path on a run: {host: ..., path: /x} or 'path': '/x'.
 MOUNT_PATH = re.compile(r"['\"]?path['\"]?\s*:\s*['\"]?(/[a-z0-9_]+)['\"]?")
 # A container path an env value names (an env-named mount, e.g. a filter file
-# handed to the tool via its own env var) — allowed like the runtime preflight.
-ENV_NAMED = re.compile(r"['\"]?[A-Z][A-Z0-9_]+['\"]?\s*:\s*\(?\s*['\"]?(/[a-z0-9_]+)")
+# handed to the tool via its own env var) — allowed like the runtime preflight,
+# but only when the naming env KEY is itself declared by a referenced contract,
+# so an undeclared mount cannot vouch for itself through its own env var.
+ENV_NAMED = re.compile(r"['\"]?([A-Z][A-Z0-9_]+)['\"]?\s*:\s*\(?\s*['\"]?(/[a-z0-9_]+)")
 
 
 def _contract(tool: str) -> dict:
     return yaml.safe_load((TOOLZ / tool / "contract.yml").read_text())
 
 
-def _role_contracts(role: Path) -> set[str]:
-    """Tool names whose contracts the role references (defaults + tasks)."""
-    tools: set[str] = set()
+def _role_contracts(role: Path) -> tuple[set[str], set[str]]:
+    """Tool names whose contracts the role references (defaults + tasks),
+    split into (present at the pin, missing at the pin)."""
+    present: set[str] = set()
+    missing: set[str] = set()
     for part in ("defaults", "tasks"):
         for f in (role / part).glob("*.yml"):
             for m in CONTRACT_REF.finditer(f.read_text()):
                 if (TOOLZ / m.group(1) / "contract.yml").is_file():
-                    tools.add(m.group(1))
-    return tools
+                    present.add(m.group(1))
+                else:
+                    missing.add(m.group(1))
+    return present, missing
 
 
 def _role_text(role: Path) -> str:
@@ -54,9 +60,9 @@ def _role_text(role: Path) -> str:
 def _lane_roles() -> list[tuple[Path, set[str]]]:
     out = []
     for role in sorted(ROLES.iterdir()):
-        tools = _role_contracts(role)
-        if tools:
-            out.append((role, tools))
+        present, _ = _role_contracts(role)
+        if present:
+            out.append((role, present))
     return out
 
 
@@ -67,6 +73,16 @@ def test_lane_roles_reference_existing_contracts():
     )
     roles = _lane_roles()
     assert roles, "no lane role references a GoDFIR-toolz contract"
+
+
+def test_referenced_contracts_exist_at_the_pin():
+    for role in sorted(ROLES.iterdir()):
+        _, missing = _role_contracts(role)
+        assert not missing, (
+            f"{role.name} references contract(s) {sorted(missing)} that the "
+            f"pinned GoDFIR-toolz checkout does not carry — the submodule pin "
+            f"and the role have diverged"
+        )
 
 
 def test_env_keys_are_declared_by_the_pinned_contracts():
@@ -96,8 +112,10 @@ def test_mount_paths_are_declared_by_the_pinned_contracts():
         }
         if not declared:
             continue
+        declared_env = {k for t in tools for k in (_contract(t).get("env") or {})}
         text = _role_text(role)
-        undeclared = set(MOUNT_PATH.findall(text)) - declared - set(ENV_NAMED.findall(text))
+        env_named = {p for k, p in ENV_NAMED.findall(text) if k in declared_env}
+        undeclared = set(MOUNT_PATH.findall(text)) - declared - env_named
         assert not undeclared, (
             f"{role.name} mounts {sorted(undeclared)} that no referenced "
             f"pinned contract ({sorted(tools)}) defines — the GoDFIR-toolz "
