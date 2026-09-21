@@ -22,8 +22,9 @@ dxdfir_signatures_yara_sources: [files, memory]
 # The evidence each sub-tool reads. Subdirs come from the shared evidence
 # taxonomy (evidence-taxonomy/), the one source of truth for where sort files
 # evidence AND where this role reads it; a missing taxonomy file falls back to
-# the conventional subdir. A collection scopes these to its sorted subdirs
-# (go/internal/collection: signatures -> dxdfir_signatures_{pcap,disk,memory}_dir).
+# the conventional subdir. A collection scopes ALL of these to its sorted
+# subdirs (go/internal/collection: signatures ->
+# dxdfir_signatures_{pcap,disk,memory,evtx,files}_dir).
 # A directory that does not exist is skipped (its run is not declared).
 dxdfir_signatures_files_dir: "{{ dxdfir_signatures_repo_root }}/data_store/raw/other_raw_data"
 dxdfir_signatures_memory_dir: >-
