@@ -213,12 +213,18 @@
     # unconditionally, regardless of what the spec asks.
     _network_value: "{{ dxdfir_lane_spec.network | default(false) }}"
     _network_optional: "{{ dxdfir_lane_contract.network | default('none') == 'optional' }}"
+    # A CLI extra-var arrives as a STRING ("true"), so a boolean-shaped string
+    # is the bool form, never a docker network name — only a real name string
+    # (byakugan_default) selects a named network.
+    _network_boolish: >-
+      {{ (_network_value is not string)
+         or (_network_value | lower in ['', 'true', 'false', '1', '0', 'yes', 'no', 'on', 'off']) }}
     _network_name: >-
       {{ _network_value
-         if (_network_value is string and _network_value | length > 0 and _network_optional | bool)
+         if (not _network_boolish | bool and _network_optional | bool)
          else '' }}
     _network_bridge: >-
-      {{ (_network_value is not string) and (_network_value | bool) and (_network_optional | bool) }}
+      {{ (_network_boolish | bool) and (_network_value | bool) and (_network_optional | bool) }}
     _image: "{{ dxdfir_lane_spec.image | default(dxdfir_lane_contract.image, true) }}"
     _subtool: "{{ dxdfir_lane_spec.subtool | default('') }}"
     _secret: "{{ dxdfir_lane_spec.secret_env | default({}) }}"
