@@ -39,13 +39,15 @@ dxdfir_lane_python_path: ""
 #               required: true must be bound. A read-only HOST mount must exist
 #               on disk (its owning group is granted via --group-add); a
 #               read-only VOLUME mount is not stat-checked — docker resolves it.
-#     network:  true keeps the docker bridge (e.g. the memory lane's outbound
-#               symbol fetch); a non-empty STRING instead attaches to that
-#               named docker network (e.g. byakugan_default, so the container
-#               can resolve the elastic stack's compose services by name) —
-#               `--network NAME` replaces `--network none`. Either form is
-#               honoured only when the contract declares network: optional;
-#               every other run gets --network none regardless.
+#     network:  a docker network NAME to attach to (e.g. byakugan_default, so
+#               the container can resolve the elastic stack's compose services
+#               by name) — `--network NAME` replaces `--network none`, honoured
+#               only when the contract declares network: optional. There is no
+#               bridge/boolean form: a boolean-shaped value is never a network
+#               name, and every other run gets --network none regardless. (The
+#               one boolean user was the memory lane's symbol fetch; its
+#               symbols are baked into the image now and that lane is always
+#               offline.)
 #     entrypoint / args: the argv pass-through the contracts reserve for
 #               debugging. No lane in the pipeline uses it: every run names a
 #               sub-tool or runs the self-orchestrating entrypoint.

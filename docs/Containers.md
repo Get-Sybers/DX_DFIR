@@ -56,9 +56,11 @@ Runtime confinement is what actually contains both threats (an attacker with
 code execution does not need an on-image shell), applied on every `docker run`
 the processors issue: `--cap-drop ALL --security-opt no-new-privileges
 --read-only --tmpfs /tmp --pids-limit 512 --network none`. Evidence is mounted
-read-only, output read-write, the root filesystem is immutable. The single
-network exception is the anamnesis PDB symbol fetch
-(`dxdfir_memory_symbols_online` / `--symbols-online`).
+read-only, output read-write, the root filesystem is immutable. Every evidence
+lane runs with the network off; the anamnesis PDB symbols that once justified
+a network opt-in are baked into the image at build time now, leaving
+byakugan's explicit Elastic push (`BYAKUGAN_LOAD_ES_URL`) as the one
+`network: optional` contract.
 
 Why not keep a shell out of a "belt and braces" instinct? Removing the shell
 does not stop an attacker who already has code execution (the premise of a

@@ -13,7 +13,7 @@ Dockerfile's `ANAMNESIS_REF` pin). It discovers the images, runs the CAR plugin 
 **in-process** (native MemProcFS, confined by the image — no nested docker),
 is idempotent per plugin, and emits the JSON summary Ansible gates on. The role
 just builds the confined `docker run` (cap-drop ALL, no-new-privileges, read-only
-rootfs + `/tmp` tmpfs, no network unless `--symbols-online`, `--group-add` for the
+rootfs + `/tmp` tmpfs, `--network none` always, `--group-add` for the
 read-only evidence mount) and passes config as `ANAMNESIS_*` env vars; the image writes
 the raw `<dest>/plugins/<plugin>.jsonl` to the mounted `/out`.
 
@@ -22,17 +22,19 @@ the raw `<dest>/plugins/<plugin>.jsonl` to the mounted `/out`.
 |---|---|---|
 | `dxdfir_memory_memory_dir` | `<repo>/data_store/raw/memory` | Memory-image tree to process (recursed); mounted read-only at `/input` inside the container. |
 | `dxdfir_memory_out_dir` | `<repo>/data_store/processed/memory` | Output base (override to redirect). |
-| `dxdfir_memory_symbols_dir` | `<repo>/data_store/dependencies/memprocfs-symbols` | PDB/symbol cache (mounted at `/symbols`). |
 | `dxdfir_memory_image` | `get-sybers/anamnesis:latest` | The hardened, env-driven anamnesis (MemProcFS) image the lane docker-runs (built by `playbooks/dxdfir-build-images.yml`). |
-| `dxdfir_memory_symbols_online` | `false` | Allow container network access for PDB symbol fetch — the one legitimate network need; pre-seed the symbols dir instead. |
 | `dxdfir_memory_python_path` | `<repo>/python` | PYTHONPATH for the image supply-chain guard (`get_sybers_dxdfir.images`); in-repo runs. |
 | `dxdfir_memory_force` | `false` | Rerun plugins that already have valid output. |
 
-## Symbols (network)
-Windows plugins resolve the kernel against PDB symbols anamnesis fetches from
-the symbol servers on first use — that needs **outbound network**. On an isolated
-host, pre-seed `dxdfir_memory_symbols_dir`, or the Windows plugins error with
-"symbol table requirement was not fulfilled". `banners.Banners` needs no symbols.
+## Symbols (baked into the image)
+The PDB symbols the Windows fields need (`command_line`, `sid`, `user`, …) are
+**baked into the anamnesis image at build time**: the image's seed stage runs
+the engine over pinned representative memory images with the symbol server
+enabled and ships the populated cache read-only (see the image's
+`ANAMNESIS_SEED_SOURCES` build arg to widen the covered Windows builds). The
+lane is therefore always offline — no symbols mount, no network toggle. A
+dump whose Windows build the bake does not cover still yields the whole
+kernel-derived surface, with the PDB-derived fields empty.
 
 ## Idempotence
 A plugin whose `.jsonl` output exists and whose first line parses as JSON is
@@ -50,7 +52,8 @@ ansible-playbook playbooks/dxdfir-process-memory.yml
 Python unit tests cover the pure logic (image discovery, name folding, JSONL
 validity, no-images path, the CAR plugin set, and a conformance check that shells
 `anamnesis --list-plugins`). The **Molecule** scenario needs a memory image
-(large/binary — not shipped) and, for the Windows plugins, symbols:
+(large/binary — not shipped); for populated Windows fields the built image's
+symbol bake must cover that image's Windows build:
 ```bash
 molecule test -- -e molecule_sample_memory=/path/dump.raw
 ```

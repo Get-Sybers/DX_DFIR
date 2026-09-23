@@ -157,8 +157,8 @@
 
 # Confinement + tmpfs (for /tmp and every optional read-write contract mount
 # left unbound: the tool's /work scratch, suricata's /var/run) + network (none
-# unless the contract allows it AND the spec asks — see _network_name/
-# _network_bridge below) + --group-add + the contract mounts (a host bind or a
+# unless the contract allows it AND the spec names a docker network — see
+# _network_name below) + --group-add + the contract mounts (a host bind or a
 # named docker volume, per mount) and env (plain -e, or a secret's --env-file)
 # + the image (+ sub-tool). Filter-only expressions: a jinja block would come
 # back as a string, not a list.
@@ -203,18 +203,18 @@
     _gids: >-
       {{ dxdfir_lane_ro_stats.results | map(attribute='stat.gid') | map('string')
          | reject('equalto', '0') | unique | list }}
-    # network: false/absent -> --network none (confined, the default for every
-    # tool). true -> keep the docker bridge (legacy opt-in — the memory lane's
-    # outbound symbol fetch). A non-empty STRING -> attach to that named
-    # docker network instead (e.g. byakugan_default, so the container can
-    # resolve the elastic stack's compose services by name): --network NAME
-    # replaces --network none. Either form is honoured ONLY when the contract
-    # itself declares `network: optional`; every other run is forced off,
-    # unconditionally, regardless of what the spec asks.
-    _network_value: "{{ dxdfir_lane_spec.network | default(false) }}"
+    # network: the ONE form is a docker network NAME (e.g. byakugan_default,
+    # so the container can resolve the elastic stack's compose services by
+    # name): --network NAME replaces --network none, honoured ONLY when the
+    # contract itself declares `network: optional`. Everything else — absent,
+    # false, or any boolean-shaped value — is forced to --network none,
+    # unconditionally. There is no bridge/boolean opt-in: its one user was
+    # the memory lane's outbound symbol fetch, and that lane bakes its
+    # symbols into the image now and is always offline.
+    _network_value: "{{ dxdfir_lane_spec.network | default('') }}"
     _network_optional: "{{ dxdfir_lane_contract.network | default('none') == 'optional' }}"
     # A CLI extra-var arrives as a STRING ("true"), so a boolean-shaped string
-    # is the bool form, never a docker network name — only a real name string
+    # is never a docker network name — only a real name string
     # (byakugan_default) selects a named network.
     _network_boolish: >-
       {{ (_network_value is not string)
@@ -223,8 +223,6 @@
       {{ _network_value
          if (not _network_boolish | bool and _network_optional | bool)
          else '' }}
-    _network_bridge: >-
-      {{ (_network_boolish | bool) and (_network_value | bool) and (_network_optional | bool) }}
     _image: "{{ dxdfir_lane_spec.image | default(dxdfir_lane_contract.image, true) }}"
     _subtool: "{{ dxdfir_lane_spec.subtool | default('') }}"
     _secret: "{{ dxdfir_lane_spec.secret_env | default({}) }}"
@@ -240,7 +238,6 @@
            'argv': ['docker', 'run', '--rm'] + dxdfir_lane_confinement
                    + (['--tmpfs'] | product(_tmpfs) | flatten)
                    + (['--network', _network_name] if _network_name | length > 0
-                      else [] if _network_bridge | bool
                       else ['--network', 'none'])
                    + (['--group-add'] | product(_gids) | flatten)
                    + (['--entrypoint', dxdfir_lane_spec.entrypoint] if dxdfir_lane_spec.entrypoint is defined else [])
