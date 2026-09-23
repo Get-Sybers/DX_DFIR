@@ -8,8 +8,9 @@ argument_specs:
         collector set (via the anamnesis container, a native MemProcFS engine — no
         Volatility, no Python), writing one <plugin>.jsonl per image plus car.db.
         Idempotent per collector: one whose valid .jsonl output already exists is
-        skipped. Windows plugins need PDB symbols (outbound network on first use, or
-        a pre-seeded dxdfir_memory_symbols_dir).
+        skipped. The container is always offline: the PDB symbols the Windows
+        plugins need are baked into the image at build time (dxdfir build-docker),
+        so the lane has no symbols dir and no network toggle.
     options:
       dxdfir_memory_memory_dir:
         type: str
@@ -19,10 +20,6 @@ argument_specs:
         type: str
         required: false
         description: "Output dir (default data_store/processed/memory); override to send output to a custom location."
-      dxdfir_memory_symbols_dir:
-        type: str
-        required: false
-        description: "PDB/symbol cache (mounted at /symbols); pre-seed when offline."
       dxdfir_memory_contract:
         type: str
         required: false
@@ -41,14 +38,6 @@ argument_specs:
         type: str
         required: false
         description: "PYTHONPATH to the get_sybers_dxdfir package (in-repo/dev runs)."
-      dxdfir_memory_symbols_online:
-        type: bool
-        required: false
-        default: false
-        description: >-
-          Allow the container network access for PDB symbol fetch (the one
-          legitimate network need). Default fully offline — pre-seed the
-          symbols dir instead.
       dxdfir_memory_force:
         type: bool
         required: false

@@ -1,6 +1,6 @@
 ---
-# A memory image is large/binary and Windows symbols need network, so no fixture
-# ships in-repo. Point this at a memory image to run the scenario:
+# A memory image is large/binary, so no fixture ships in-repo. Point this at a
+# memory image to run the scenario:
 #   molecule test -- -e molecule_sample_memory=/path/dump.raw
 - name: Prepare
   hosts: localhost
@@ -16,8 +16,8 @@
           - molecule_sample_memory | length > 0
         fail_msg: >-
           Provide -e molecule_sample_memory=<path/to/memory-image> (large/binary; not
-          shipped). banners.Banners runs without symbols; Windows plugins need a
-          pre-seeded symbol cache or outbound network.
+          shipped). The image is always offline: for populated Windows fields its
+          baked symbol cache must cover the sample's Windows build.
         quiet: true
 
     - name: "molecule-prepare | start from a clean output dir"
