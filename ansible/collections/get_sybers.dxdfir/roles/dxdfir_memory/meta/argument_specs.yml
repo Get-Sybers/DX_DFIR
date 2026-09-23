@@ -24,7 +24,10 @@ argument_specs:
       dxdfir_memory_symbols_dir:
         type: str
         required: false
-        description: "Persistent MemProcFS symbol cache (default data_store/dependencies/memprocfs-symbols, symsrv layout); mounted read-write at /opt/anamnesis/lib/Symbols so it accumulates across runs."
+        description: >-
+          Persistent MemProcFS symbol cache (default
+          data_store/dependencies/memprocfs-symbols, symsrv layout); mounted
+          read-write at /opt/anamnesis/lib/Symbols so it accumulates across runs.
       dxdfir_memory_contract:
         type: str
         required: false
