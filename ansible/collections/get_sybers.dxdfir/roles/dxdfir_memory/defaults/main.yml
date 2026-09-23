@@ -19,10 +19,14 @@ dxdfir_memory_out_dir: "{{ dxdfir_memory_repo_root }}/data_store/processed/memor
 # anamnesis image's env vars and mounts (the self-orchestrating, env-driven
 # pure-Go memory forensics engine on MemProcFS). Built from
 # docker/GoDFIR-toolz/anamnesis at the sources.yml pin (dxdfir build-docker).
-# The image is always offline: PDB symbols are baked into it at build time
-# (the Dockerfile's seed stage), so there is no symbols dir, no symbols-online
-# toggle and no network variable on this lane.
+# The image is always offline (no PDB download, no network variable): PDB
+# symbols live in the persistent host cache below, bind-mounted read-write at
+# /opt/anamnesis/lib/Symbols — the one directory MemProcFS uses when writable.
 dxdfir_memory_contract: "{{ dxdfir_memory_repo_root }}/docker/GoDFIR-toolz/anamnesis/contract.yml"
+# The persistent MemProcFS symbol cache (symsrv layout). The lane mounts it
+# read-write so the cache accumulates across runs; PDBs obtained by any
+# external means can be dropped straight in.
+dxdfir_memory_symbols_dir: "{{ dxdfir_memory_repo_root }}/data_store/dependencies/memprocfs-symbols"
 # Empty = the contract's image (get-sybers/anamnesis:latest); set to pin a digest.
 dxdfir_memory_image: ""
 dxdfir_memory_force: false

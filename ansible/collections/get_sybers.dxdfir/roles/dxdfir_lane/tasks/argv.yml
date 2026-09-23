@@ -209,8 +209,8 @@
     # contract itself declares `network: optional`. Everything else — absent,
     # false, or any boolean-shaped value — is forced to --network none,
     # unconditionally. There is no bridge/boolean opt-in: its one user was
-    # the memory lane's outbound symbol fetch, and that lane bakes its
-    # symbols into the image now and is always offline.
+    # the memory lane's outbound symbol fetch, and that lane is always
+    # offline now — its symbols live in a bind-mounted persistent cache.
     _network_value: "{{ dxdfir_lane_spec.network | default('') }}"
     _network_optional: "{{ dxdfir_lane_contract.network | default('none') == 'optional' }}"
     # A CLI extra-var arrives as a STRING ("true"), so a boolean-shaped string
