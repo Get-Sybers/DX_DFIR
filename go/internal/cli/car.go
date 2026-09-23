@@ -163,7 +163,7 @@ func newLoadCarCmd(env *Env) *cobra.Command {
 		Short: "Bulk-load the materialised CAR tree into the Elastic stack's logs-car.* data streams.",
 		Long: "Bulk-load the materialised CAR tree into the analysis stack, via the dxdfir_car_load\n" +
 			"Ansible role (`byakugan load` pushed into logs-car.<object>-<namespace> x13,\n" +
-			"logs-car.rel-<namespace> and logs-car.inferred-<namespace>).\n\n" +
+			"logs-car.rel-<namespace>, logs-car.inferred-<namespace> and logs-car.content-<namespace>).\n\n" +
 			"Requires the analysis stack (`deploy stack`) and a built CAR (`build-car`); brings\n" +
 			"the stack up first if it is not already running. --setup (default) applies the\n" +
 			"logs-car.* index/component templates before loading and authenticates as the\n" +

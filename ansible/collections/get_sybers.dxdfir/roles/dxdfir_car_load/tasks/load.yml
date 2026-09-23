@@ -2,8 +2,9 @@
 # Bulk-load the materialised CAR tree into the running Elastic stack:
 # `byakugan load` reads BYAKUGAN_LOAD_INPUT_DIR (the CAR tree `byakugan build`
 # wrote, read-only) and — BYAKUGAN_LOAD_ES_URL set, push mode — POSTs it into
-# logs-car.<object>-<namespace> x13, logs-car.rel-<namespace> and
-# logs-car.inferred-<namespace>, writing its bundles/manifest/report through
+# logs-car.<object>-<namespace> x13, logs-car.rel-<namespace>,
+# logs-car.inferred-<namespace> and logs-car.content-<namespace>, writing its
+# bundles/manifest/report through
 # BYAKUGAN_LOAD_OUT_DIR. The stack must be up first (its data streams need the
 # running Elasticsearch this pushes to) and reachable by service name, so this
 # runs behind the stack's ensure_running gate and on its compose network.

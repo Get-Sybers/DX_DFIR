@@ -5,8 +5,9 @@ argument_specs:
     description:
       - >-
         Loads data_store/processed/byakugan (or dxdfir_car_load_dir) into
-        logs-car.<object>-<namespace> x13, logs-car.rel-<namespace> and
-        logs-car.inferred-<namespace> via the external Byakugan engine's
+        logs-car.<object>-<namespace> x13, logs-car.rel-<namespace>,
+        logs-car.inferred-<namespace> and logs-car.content-<namespace> via
+        the external Byakugan engine's
         `load` sub-tool, run as the get-sybers/byakugan image from its
         contract by the shared dxdfir_lane skeleton — behind the dxdfir_stack
         ensure_running gate (the compose services must be running first) and

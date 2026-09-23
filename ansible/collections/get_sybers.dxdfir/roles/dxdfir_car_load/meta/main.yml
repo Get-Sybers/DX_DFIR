@@ -5,7 +5,8 @@ galaxy_info:
   author: Get-Sybers
   description: >-
     Bulk-load a materialised MITRE CAR tree into this repo's Elastic stack
-    (logs-car.<object>-<ns> x13 + logs-car.rel-<ns> + logs-car.inferred-<ns>)
+    (logs-car.<object>-<ns> x13 + logs-car.rel-<ns> + logs-car.inferred-<ns>
+    + logs-car.content-<ns>)
     via the get-sybers/byakugan image's `load` sub-tool, run from its
     contract. One role, one action (load); the playbook decides.
   company: Get-Sybers

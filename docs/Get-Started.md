@@ -120,8 +120,9 @@ docker compose ps               # setup exits 0; the rest go (healthy)
   `processed/byakugan/` and `processed/byakugan-load/` — the CAR is delivered
   ECS-projected instead (next bullet), not as raw evidence.
 - `dxdfir load-car` bulk-loads the materialised CAR (`processed/byakugan/`) into
-  the `logs-car.<object>-<namespace>` x13, `logs-car.rel-<namespace>` and
-  `logs-car.inferred-<namespace>` data streams (the `dxdfir_car_load` role,
+  the `logs-car.<object>-<namespace>` x13, `logs-car.rel-<namespace>`,
+  `logs-car.inferred-<namespace>` and `logs-car.content-<namespace>` data
+  streams (the `dxdfir_car_load` role,
   `byakugan load`, behind the stack's own bring-up gate). `--setup` (the
   default, first run) applies the index/component templates; `--no-setup` for
   routine repeat loads once they exist. `dxdfir stamp-detections` stamps the
