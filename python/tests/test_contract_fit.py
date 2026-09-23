@@ -28,6 +28,8 @@ ENV_KEY = re.compile(r"['\"]?([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)['\"]?\s*:")
 # A container mount path on a run: {host: ..., path: /x} or 'path': '/x'.
 # Multi-segment paths are real (anamnesis mounts /opt/anamnesis/lib/Symbols).
 MOUNT_PATH = re.compile(r"['\"]?path['\"]?\s*:\s*['\"]?(/[A-Za-z0-9_/.-]*[A-Za-z0-9_])['\"]?")
+# A bare container path literal (inside a fact value, a Jinja expression, …).
+PATH_LITERAL = re.compile(r"/[A-Za-z0-9_/.-]*[A-Za-z0-9_]")
 # A container path an env value names (an env-named mount, e.g. a filter file
 # handed to the tool via its own env var) — allowed like the runtime preflight,
 # but only when the naming env KEY is itself declared by a referenced contract,
@@ -118,15 +120,21 @@ def test_mount_paths_are_declared_by_the_pinned_contracts():
         env_named = {p for k, p in ENV_NAMED.findall(text) if k in declared_env}
         # One indirection hop: a declared env key whose value is a role fact
         # ('SIGNATURES_YARA_RULES': some_fact) vouches for the path literals
-        # that fact is set from.
+        # that fact is set from. The fact's value is its key's line plus any
+        # folded/multi-line continuation — the following lines indented deeper
+        # than the key (DOTALL would instead skate to unrelated paths further
+        # down the file).
         for key, var in re.findall(
             r"['\"]?([A-Z][A-Z0-9_]+)['\"]?\s*:\s*([a-z_][a-z0-9_]*)\b", text
         ):
-            if key in declared_env:
-                for m in re.finditer(
-                    rf"{var}\s*:.*?(/[A-Za-z0-9_/.-]*[A-Za-z0-9_])", text
-                ):
-                    env_named.add(m.group(1))
+            if key not in declared_env:
+                continue
+            for m in re.finditer(
+                rf"^([ \t]*)['\"]?{var}['\"]?\s*:([^\n]*(?:\n\1[ \t]+[^\n]*)*)",
+                text,
+                re.M,
+            ):
+                env_named.update(PATH_LITERAL.findall(m.group(2)))
         # A bind inside a declared mount is within contract (e.g. an operator
         # ruleset file mounted under the declared /rules directory).
         undeclared = {

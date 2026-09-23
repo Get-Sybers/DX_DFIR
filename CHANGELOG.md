@@ -7,19 +7,6 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
-### Changed
-- **The memory lane's PDB symbol cache is a persistent read-write bind
-  mount, not a build-time bake.** The anamnesis image no longer downloads a
-  seed memory image or any PDB at build time (the bake's in-build symbol
-  fetch produced nothing and failed the build); it ships an empty
-  `/opt/anamnesis/lib/Symbols` mount point and `dxdfir_memory` bind-mounts
-  `dxdfir_memory_symbols_dir` (default
-  `data_store/dependencies/memprocfs-symbols`) read-write there — the one
-  directory MemProcFS uses as its local symbol cache when writable, so the
-  cache persists and accumulates across runs (symsrv layout; externally
-  obtained PDBs can be dropped straight in). The lane stays always offline.
-  GoDFIR-toolz pin → the `symbols`-mount contract.
-
 ### Added
 - **`dxdfir deploy stack` self-heals a short image store instead of dying
   mid-pull** (containerd: "no space left on device"). The `dxdfir_stack`
@@ -32,6 +19,17 @@ is `0`, anything may change without notice.
   images are already local is never gated; stop/destroy/status stay ungated.
 
 ### Changed
+- **The memory lane's PDB symbol cache is a persistent read-write bind
+  mount, not a build-time bake.** The anamnesis image no longer downloads a
+  seed memory image or any PDB at build time (the bake's in-build symbol
+  fetch produced nothing and failed the build); it ships an empty
+  `/opt/anamnesis/lib/Symbols` mount point and `dxdfir_memory` bind-mounts
+  `dxdfir_memory_symbols_dir` (default
+  `data_store/dependencies/memprocfs-symbols`) read-write there — the one
+  directory MemProcFS uses as its local symbol cache when writable, so the
+  cache persists and accumulates across runs (symsrv layout; externally
+  obtained PDBs can be dropped straight in). The lane stays always offline.
+  GoDFIR-toolz pin → the `symbols`-mount contract.
 - The memory lane follows the Anamnesis plugin-id rename
   (`windows.piiat.*` → `windows.anamnesis.*`) and the stix docs/tests call the
   CAR engine's pass-through bundles Byakugan bundles — the last piiat-era
