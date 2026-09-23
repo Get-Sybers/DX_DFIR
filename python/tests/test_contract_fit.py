@@ -26,12 +26,15 @@ CONTRACT_REF = re.compile(r"([a-z0-9_-]+)/contract\.yml")
 # An env key set on a run: quoted (Jinja dict literal) or bare (YAML mapping).
 ENV_KEY = re.compile(r"['\"]?([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)['\"]?\s*:")
 # A container mount path on a run: {host: ..., path: /x} or 'path': '/x'.
-MOUNT_PATH = re.compile(r"['\"]?path['\"]?\s*:\s*['\"]?(/[a-z0-9_]+)['\"]?")
+# Multi-segment paths are real (anamnesis mounts /opt/anamnesis/lib/Symbols).
+MOUNT_PATH = re.compile(r"['\"]?path['\"]?\s*:\s*['\"]?(/[A-Za-z0-9_/.-]*[A-Za-z0-9_])['\"]?")
+# A bare container path literal (inside a fact value, a Jinja expression, …).
+PATH_LITERAL = re.compile(r"/[A-Za-z0-9_/.-]*[A-Za-z0-9_]")
 # A container path an env value names (an env-named mount, e.g. a filter file
 # handed to the tool via its own env var) — allowed like the runtime preflight,
 # but only when the naming env KEY is itself declared by a referenced contract,
 # so an undeclared mount cannot vouch for itself through its own env var.
-ENV_NAMED = re.compile(r"['\"]?([A-Z][A-Z0-9_]+)['\"]?\s*:\s*\(?\s*['\"]?(/[a-z0-9_]+)")
+ENV_NAMED = re.compile(r"['\"]?([A-Z][A-Z0-9_]+)['\"]?\s*:\s*\(?\s*['\"]?(/[A-Za-z0-9_/.-]*[A-Za-z0-9_])")
 
 
 def _contract(tool: str) -> dict:
@@ -115,7 +118,30 @@ def test_mount_paths_are_declared_by_the_pinned_contracts():
         declared_env = {k for t in tools for k in (_contract(t).get("env") or {})}
         text = _role_text(role)
         env_named = {p for k, p in ENV_NAMED.findall(text) if k in declared_env}
-        undeclared = set(MOUNT_PATH.findall(text)) - declared - env_named
+        # One indirection hop: a declared env key whose value is a role fact
+        # ('SIGNATURES_YARA_RULES': some_fact) vouches for the path literals
+        # that fact is set from. The fact's value is its key's line plus any
+        # folded/multi-line continuation — the following lines indented deeper
+        # than the key (DOTALL would instead skate to unrelated paths further
+        # down the file).
+        for key, var in re.findall(
+            r"['\"]?([A-Z][A-Z0-9_]+)['\"]?\s*:\s*([a-z_][a-z0-9_]*)\b", text
+        ):
+            if key not in declared_env:
+                continue
+            for m in re.finditer(
+                rf"^([ \t]*)['\"]?{var}['\"]?\s*:([^\n]*(?:\n\1[ \t]+[^\n]*)*)",
+                text,
+                re.M,
+            ):
+                env_named.update(PATH_LITERAL.findall(m.group(2)))
+        # A bind inside a declared mount is within contract (e.g. an operator
+        # ruleset file mounted under the declared /rules directory).
+        undeclared = {
+            p
+            for p in set(MOUNT_PATH.findall(text)) - env_named
+            if not any(p == d or p.startswith(d + "/") for d in declared)
+        }
         assert not undeclared, (
             f"{role.name} mounts {sorted(undeclared)} that no referenced "
             f"pinned contract ({sorted(tools)}) defines — the GoDFIR-toolz "

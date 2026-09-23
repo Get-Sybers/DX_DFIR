@@ -8,9 +8,10 @@ argument_specs:
         collector set (via the anamnesis container, a native MemProcFS engine — no
         Volatility, no Python), writing one <plugin>.jsonl per image plus car.db.
         Idempotent per collector: one whose valid .jsonl output already exists is
-        skipped. The container is always offline: the PDB symbols the Windows
-        plugins need are baked into the image at build time (dxdfir build-docker),
-        so the lane has no symbols dir and no network toggle.
+        skipped. The container is always offline (no PDB download, no network
+        toggle): the PDB symbols the Windows plugins need live in the
+        persistent host cache dxdfir_memory_symbols_dir, bind-mounted
+        read-write at /opt/anamnesis/lib/Symbols.
     options:
       dxdfir_memory_memory_dir:
         type: str
@@ -20,6 +21,13 @@ argument_specs:
         type: str
         required: false
         description: "Output dir (default data_store/processed/memory); override to send output to a custom location."
+      dxdfir_memory_symbols_dir:
+        type: str
+        required: false
+        description: >-
+          Persistent MemProcFS symbol cache (default
+          data_store/dependencies/memprocfs-symbols, symsrv layout); mounted
+          read-write at /opt/anamnesis/lib/Symbols so it accumulates across runs.
       dxdfir_memory_contract:
         type: str
         required: false

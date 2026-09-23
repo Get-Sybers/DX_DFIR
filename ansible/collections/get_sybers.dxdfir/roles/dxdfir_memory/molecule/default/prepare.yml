@@ -16,8 +16,8 @@
           - molecule_sample_memory | length > 0
         fail_msg: >-
           Provide -e molecule_sample_memory=<path/to/memory-image> (large/binary; not
-          shipped). The image is always offline: for populated Windows fields its
-          baked symbol cache must cover the sample's Windows build.
+          shipped). The image is always offline: for populated Windows fields the
+          mounted symbol cache must cover the sample's Windows build.
         quiet: true
 
     - name: "molecule-prepare | start from a clean output dir"

@@ -29,9 +29,11 @@
   tags: [always]
 
 # One run: the anamnesis contract's env (ANAMNESIS_*) and mounts (/input ro,
-# /out) — dxdfir_lane builds the confined `docker run` from them. The image
-# is always offline (contract `network: none`; PDB symbols are baked into it
-# at build time), so no network and no symbols mount appear here.
+# /out rw, the persistent symbol cache rw at /opt/anamnesis/lib/Symbols) —
+# dxdfir_lane builds the confined `docker run` from them (and creates every
+# rw mount host dir container-writable). The image is always offline
+# (contract `network: none`; the engine never downloads a PDB — symbols come
+# from the mounted cache), so no network appears here.
 - name: "memory | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
     name: dxdfir_lane
@@ -49,6 +51,7 @@
         mounts:
           - {host: "{{ dxdfir_memory_memory_dir }}", path: /input, mode: ro}
           - {host: "{{ dxdfir_memory_out_dir }}", path: /out, mode: rw}
+          - {host: "{{ dxdfir_memory_symbols_dir }}", path: /opt/anamnesis/lib/Symbols, mode: rw}
     dxdfir_lane_verify_dir: "{{ dxdfir_memory_out_dir }}"
     dxdfir_lane_verify_glob: "*.jsonl"
     dxdfir_lane_require_no_failures: false

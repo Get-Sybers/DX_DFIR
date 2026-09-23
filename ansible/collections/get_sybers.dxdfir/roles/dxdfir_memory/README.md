@@ -22,19 +22,22 @@ the raw `<dest>/plugins/<plugin>.jsonl` to the mounted `/out`.
 |---|---|---|
 | `dxdfir_memory_memory_dir` | `<repo>/data_store/raw/memory` | Memory-image tree to process (recursed); mounted read-only at `/input` inside the container. |
 | `dxdfir_memory_out_dir` | `<repo>/data_store/processed/memory` | Output base (override to redirect). |
+| `dxdfir_memory_symbols_dir` | `<repo>/data_store/dependencies/memprocfs-symbols` | Persistent MemProcFS symbol cache (symsrv layout); mounted read-write at `/opt/anamnesis/lib/Symbols`. |
 | `dxdfir_memory_image` | `get-sybers/anamnesis:latest` | The hardened, env-driven anamnesis (MemProcFS) image the lane docker-runs (built by `playbooks/dxdfir-build-images.yml`). |
 | `dxdfir_memory_python_path` | `<repo>/python` | PYTHONPATH for the image supply-chain guard (`get_sybers_dxdfir.images`); in-repo runs. |
 | `dxdfir_memory_force` | `false` | Rerun plugins that already have valid output. |
 
-## Symbols (baked into the image)
-The PDB symbols the Windows fields need (`command_line`, `sid`, `user`, …) are
-**baked into the anamnesis image at build time**: the image's seed stage runs
-the engine over pinned representative memory images with the symbol server
-enabled and ships the populated cache read-only (see the image's
-`ANAMNESIS_SEED_SOURCES` build arg to widen the covered Windows builds). The
-lane is therefore always offline — no symbols mount, no network toggle. A
-dump whose Windows build the bake does not cover still yields the whole
-kernel-derived surface, with the PDB-derived fields empty.
+## Symbols (the persistent cache mount)
+The PDB symbols the Windows fields need (`command_line`, `sid`, `user`, …)
+live in `dxdfir_memory_symbols_dir`, bind-mounted **read-write** at
+`/opt/anamnesis/lib/Symbols` — the one directory MemProcFS uses as its local
+symbol cache when it is writable. The cache persists on the host and
+accumulates across runs; it uses the symsrv layout
+(`<name>/<GUID+age>/<name>`), so PDBs obtained by any external means can be
+dropped straight in. The lane stays always offline — the engine never
+downloads a PDB, and there is no network toggle. A dump whose Windows build
+the cache does not cover still yields the whole kernel-derived surface, with
+the PDB-derived fields empty.
 
 ## Idempotence
 A plugin whose `.jsonl` output exists and whose first line parses as JSON is
@@ -52,8 +55,8 @@ ansible-playbook playbooks/dxdfir-process-memory.yml
 Python unit tests cover the pure logic (image discovery, name folding, JSONL
 validity, no-images path, the CAR plugin set, and a conformance check that shells
 `anamnesis --list-plugins`). The **Molecule** scenario needs a memory image
-(large/binary — not shipped); for populated Windows fields the built image's
-symbol bake must cover that image's Windows build:
+(large/binary — not shipped); for populated Windows fields the mounted symbol
+cache must cover that image's Windows build:
 ```bash
 molecule test -- -e molecule_sample_memory=/path/dump.raw
 ```
