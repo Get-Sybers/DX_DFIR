@@ -1,6 +1,6 @@
 ---
 # dxdfir_car_load: bulk-load a materialised CAR tree into this repo's Elastic
-# stack (logs-car.<object>-<ns> x13 + logs-car.rel-<ns> + logs-car.inferred-<ns>)
+# stack (logs-car.<object>-<ns> x13 + rel + inferred + content streams)
 # via the byakugan image's `load` sub-tool. One role, one action for now
 # (dxdfir_car_load_action); the playbook picks it — same shape as dxdfir_byakugan.
 
@@ -45,7 +45,8 @@ dxdfir_car_load_env_file: "{{ dxdfir_car_load_compose_dir }}/.env"
 # (dxdfir_car_load_network, below) this run attaches to.
 dxdfir_car_load_es_url: "https://elasticsearch:9200"
 # The Elastic data-stream namespace: logs-car.<object>-<namespace>,
-# logs-car.rel-<namespace>, logs-car.inferred-<namespace> (one namespace per
+# logs-car.rel-<namespace>, logs-car.inferred-<namespace>,
+# logs-car.content-<namespace> (one namespace per
 # case works well — the same convention as DFIR_NAMESPACE for the raw
 # logs-dxdfir.* streams; see docker/elastic/.env.example).
 dxdfir_car_load_namespace: default

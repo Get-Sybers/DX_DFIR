@@ -101,7 +101,8 @@ dxdfir load-car [--namespace NS] [--setup|--no-setup] [--force] [--kibana]
 The materialised CAR feeds the [analysis stack](the-stack.md): `dxdfir load-car`
 (the `dxdfir_car_load` role, `byakugan load` behind the stack's own bring-up gate)
 bulk-loads it, projected to ECS, into `logs-car.<object>-<namespace>` x13 +
-`logs-car.rel-<namespace>` + `logs-car.inferred-<namespace>`, where ES|QL/EQL
+`logs-car.rel-<namespace>` + `logs-car.inferred-<namespace>` +
+`logs-car.content-<namespace>`, where ES|QL/EQL
 rules-as-code flag matching evidence lines, and `dxdfir stix export` turns
 detection hits into STIX 2.1 sightings. `--setup` (default, first run) applies
 the `logs-car.*` index/component templates and authenticates as the `elastic`
