@@ -19,6 +19,16 @@ is `0`, anything may change without notice.
   images are already local is never gated; stop/destroy/status stay ungated.
 
 ### Changed
+- **The memory lane recovers the PDB-derived process fields offline.** The
+  pinned anamnesis engine (Anamnesis#18–#20) recovers `command_line`, `cwd`
+  and `env_vars` from the PEB-anchored parameter block, `create_time` from
+  the in-memory ntoskrnl's own accessor export, and `sid`/`user` from the
+  constraint-solved process token — no PDB, no network — teaching itself a
+  per-build `(GUID, age)` offset store in the symbol-cache mount
+  (`anamnesis-offsets/`) that converges and self-heals across runs. Process
+  rows also carry the restored pslist/psscan contrast as separate signals:
+  raw `Unlinked`, MemProcFS's `Terminated`, `ExitTime`, and `Hidden` as the
+  unlinked-and-still-running consensus verdict.
 - **The memory lane's PDB symbol cache is a persistent read-write bind
   mount, not a build-time bake.** The anamnesis image no longer downloads a
   seed memory image or any PDB at build time (the bake's in-build symbol
