@@ -26,10 +26,10 @@ dependencies:
   # The BUILD galaxy: dxdfir_images delegates image building to its
   # godfir_build role, which resolves IN PLACE from the SUBMODULE checkout
   # (docker/GoDFIR-toolz/roles on the repo-root roles_path; a checkout
-  # without the submodule materialises the tree from its .gitmodules source
-  # at the gitlink revision). The exact pin is the gitlink, not a version —
-  # hence no requirements.yml entry and no installed copy; this range serves
-  # galaxy-mode consumers of the packaged collection.
+  # without the submodule gets the galaxy imported by ansible-galaxy from
+  # its .gitmodules source at the gitlink revision instead). The exact pin
+  # is the gitlink, not a version — hence no requirements.yml entry; this
+  # range serves galaxy-mode consumers of the packaged collection.
   get_sybers.godfir_toolz: ">=0.1.0,<1.0.0"
 build_ignore:
   - "roles/*/molecule"

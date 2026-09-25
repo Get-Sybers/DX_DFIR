@@ -13,10 +13,11 @@ collections:
   - name: community.crypto
     version: "2.26.9"
   # NOT here: the BUILD galaxy (GoDFIR-toolz — the image inventory and the
-  # godfir_build role dxdfir_images delegates to). Its pin is the GITLINK and
-  # it is never installed as a copy: docker/GoDFIR-toolz/roles is on the
-  # repo-root ansible.cfg roles_path, so the role resolves IN PLACE from the
-  # submodule checkout. Only a checkout without the submodule materialises
-  # the tree from the source the repo root declares (.gitmodules URL at the
-  # gitlink revision — setup-environment.sh). Its dependency range is
-  # satisfied by the exact pins above.
+  # godfir_build role dxdfir_images delegates to). Its pin is the GITLINK:
+  # docker/GoDFIR-toolz/roles is on the repo-root ansible.cfg roles_path, so
+  # the role resolves IN PLACE from the submodule checkout, nothing
+  # installed. Only a checkout without the submodule has setup-environment.sh
+  # import the galaxy by ansible-galaxy from the source the repo root
+  # declares (.gitmodules URL at the gitlink revision) into the shared
+  # collections path, whose roles dir is roles_path's degraded-only last
+  # entry. Its dependency range is satisfied by the exact pins above.

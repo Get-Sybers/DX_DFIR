@@ -22,9 +22,10 @@ root [CHANGELOG.md](../../../CHANGELOG.md).
   symlink.** `docker/GoDFIR-toolz/roles` is on the repo-root `roles_path`
   (the same mechanism this collection's own roles use), so `godfir_build`
   resolves straight from the submodule checkout at the gitlink pin. CI and
-  setup no longer `ansible-galaxy install` it; a checkout without the
-  submodule has the tree materialised at `docker/GoDFIR-toolz` from the
-  `.gitmodules` source at the gitlink revision (setup-environment.sh), and
+  setup no longer install it on the primary path; a checkout without the
+  submodule has setup-environment.sh import the galaxy by `ansible-galaxy`
+  from the `.gitmodules` source at the gitlink revision, into the shared
+  path `roles_path` also covers as its degraded-only last entry, and
   run-checks asserts the roles_path wiring.
 - **Smoke CI builds everything GoDFIR-toolz supplies.** A new `images` job builds the FULL manifest through the build galaxy (hardening asserted on every image, nightly included); the pipeline smoke job keeps its fast goevtx+byakugan path. The stale repo-root `images.yml` path filter is gone — a manifest change arrives as a gitlink bump.
 

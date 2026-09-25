@@ -511,31 +511,31 @@ $SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install \
     || die "Failed to install the pinned Ansible collections (requirements.yml)."
 
 # The GoDFIR-toolz BUILD galaxy: the image inventory and the godfir_build
-# role dxdfir_images delegates to. Its pin is the GITLINK and NOTHING is ever
-# installed or copied: docker/GoDFIR-toolz/roles sits on the repo-root
+# role dxdfir_images delegates to. Its pin is the GITLINK and the PRIMARY
+# path installs NOTHING: docker/GoDFIR-toolz/roles sits on the repo-root
 # ansible.cfg roles_path, so the role resolves straight from the submodule
-# initialised above — one tree at one pin. When the submodule content is
-# absent anyway (a tarball checkout, an init that could not reach out), the
-# TREE ITSELF is materialised at its canonical path from the source the repo
-# root declares — the .gitmodules URL, checked out at the gitlink revision
-# when git metadata can name it — never a collections copy, never a
-# hardcoded location.
+# initialised above — one tree at one pin. Only when the submodule content
+# is absent anyway (a tarball checkout, an init that could not reach out) is
+# the galaxy IMPORTED by ansible-galaxy from the source the repo root
+# declares — the .gitmodules URL at the gitlink revision — into the shared
+# collections path, whose roles dir is roles_path's last (degraded-only)
+# entry. --no-deps: its dependency set is exactly the pins installed above.
 TOOLZ_PATH="docker/GoDFIR-toolz"
 if [[ -f "$REPO_ROOT_DIR/$TOOLZ_PATH/galaxy.yml" ]]; then
     ok "GoDFIR-toolz build galaxy resolves in place from the submodule (nothing installed)"
 else
     TOOLZ_URL=$(git config -f "$REPO_ROOT_DIR/.gitmodules" "submodule.$TOOLZ_PATH.url" 2>/dev/null) \
-        || die "GoDFIR-toolz is neither checked out at $TOOLZ_PATH nor declared in .gitmodules — cannot materialise the build galaxy."
-    step "Materialising $TOOLZ_PATH from $TOOLZ_URL ..."
-    git clone "$TOOLZ_URL" "$REPO_ROOT_DIR/$TOOLZ_PATH" \
-        || die "Failed to clone the GoDFIR-toolz build galaxy from $TOOLZ_URL."
+        || die "GoDFIR-toolz is neither checked out at $TOOLZ_PATH nor declared in .gitmodules — cannot import the build galaxy."
+    TOOLZ_SRC="git+${TOOLZ_URL}"
     if TOOLZ_SHA=$(git -C "$REPO_ROOT_DIR" rev-parse "HEAD:$TOOLZ_PATH" 2>/dev/null); then
-        git -C "$REPO_ROOT_DIR/$TOOLZ_PATH" checkout --quiet "$TOOLZ_SHA" \
-            || die "Failed to check out the gitlink pin $TOOLZ_SHA in $TOOLZ_PATH."
-        ok "Build galaxy materialised at the gitlink pin ${TOOLZ_SHA:0:12}"
+        TOOLZ_SRC="${TOOLZ_SRC},${TOOLZ_SHA}"
+        step "Importing the GoDFIR-toolz build galaxy from $TOOLZ_URL at the gitlink pin ${TOOLZ_SHA:0:12} ..."
     else
-        warn "No git metadata to read the gitlink pin — $TOOLZ_PATH is at the default branch."
+        warn "No git metadata to read the gitlink pin — importing the build galaxy from $TOOLZ_URL (default branch)."
     fi
+    $SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install "$TOOLZ_SRC" \
+        -p "$DXDFIR_COLLECTIONS" --force --no-deps \
+        || die "Failed to import the GoDFIR-toolz build galaxy from $TOOLZ_URL."
 fi
 ok "Collections installed: $("$DXDFIR_VENV/bin/ansible-galaxy" collection list -p "$DXDFIR_COLLECTIONS" 2>/dev/null | grep -cE '^[a-z]' || echo '?') pinned"
 

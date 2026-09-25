@@ -11,9 +11,18 @@
 #     vars:
 #       dxdfir_images_verify_images: ["get-sybers/goevtx:latest", ...]
 
+- name: "images-verify | stat the submodule inventory"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_images_context }}/images.yml"
+  register: dxdfir_images_context_stat
+
 - name: "images-verify | resolve the deploy-side values to concrete strings"
   ansible.builtin.set_fact:
-    dxdfir_images_context_resolved: "{{ dxdfir_images_context }}"
+    # empty when the submodule tree is absent: the delegation passes it EMPTY and
+    # godfir_build falls back to its own tree (the degraded-path
+    # galaxy import at the same pin).
+    dxdfir_images_context_resolved: >-
+      {{ dxdfir_images_context if dxdfir_images_context_stat.stat.exists else '' }}
     dxdfir_images_verify_resolved: "{{ dxdfir_images_verify_images }}"
 
 - name: "images-verify | gate through the GoDFIR-toolz build galaxy"

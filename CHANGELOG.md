@@ -39,8 +39,9 @@ is `0`, anything may change without notice.
   the submodule checkout at the gitlink pin — the same mechanism the deploy
   galaxy's own roles already use; no tarball-mediated install, nothing to
   drift or reinstall on a bump. The CI and setup install steps are gone; a
-  checkout without the submodule has the tree MATERIALISED at its canonical
-  path from the `.gitmodules` source at the gitlink revision, and a repo
+  checkout without the submodule has the galaxy imported by `ansible-galaxy`
+  from the `.gitmodules` source at the gitlink revision into the shared
+  collections path (`roles_path`'s degraded-only last entry), and a repo
   check asserts the roles_path wiring.
 
 ### Added (post-#293 follow-through)
