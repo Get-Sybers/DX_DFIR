@@ -7,11 +7,23 @@
 # (dxdfir_images_set), the single-source run-as uid/gid knob, the offline
 # save/load packaging and the ensure_built lane gate.
 
+# FREEZE the role_path-derived decisions into concrete facts BEFORE the
+# delegation below: include_role vars template lazily INSIDE the included
+# role, where role_path is godfir_build's (the installed collection), so
+# passing the raw defaults chain (dxdfir_images_context -> repo_root ->
+# role_path/../..) would resolve against the wrong tree. A set_fact runs in
+# THIS role's context and stores finished strings.
+- name: "images | resolve the deploy-side decisions to concrete values"
+  ansible.builtin.set_fact:
+    dxdfir_images_context_resolved: "{{ dxdfir_images_context }}"
+    dxdfir_images_set_resolved: "{{ dxdfir_images_set }}"
+  tags: [always]
+
 - name: "images | assert inputs"
   ansible.builtin.assert:
     that:
-      - dxdfir_images_set | length > 0
-      - dxdfir_images_context | length > 0
+      - dxdfir_images_set_resolved | length > 0
+      - dxdfir_images_context_resolved | length > 0
     fail_msg: >-
       dxdfir_images needs a non-empty dxdfir_images_set and the GoDFIR-toolz
       submodule root (dxdfir_images_context) — an empty set means the
@@ -29,8 +41,8 @@
   ansible.builtin.include_role:
     name: get_sybers.godfir_toolz.godfir_build
   vars:
-    godfir_build_root: "{{ dxdfir_images_context }}"
-    godfir_build_set: "{{ dxdfir_images_set }}"
+    godfir_build_root: "{{ dxdfir_images_context_resolved }}"
+    godfir_build_set: "{{ dxdfir_images_set_resolved }}"
     godfir_build_force: "{{ dxdfir_images_force }}"
     godfir_build_uid: "{{ dxdfir_images_uid }}"
     godfir_build_gid: "{{ dxdfir_images_gid }}"
