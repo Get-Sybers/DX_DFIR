@@ -29,6 +29,23 @@ is `0`, anything may change without notice.
   instead. The pull-capacity gate is likewise a playbook decision now
   (`dxdfir_stack_pull_gate`, deploy/start), leaving the role free of
   per-action branches.
+- **`dxdfir deploy stack` installs Docker when the host has none, and every
+  stack verb checks the engine first.** The `dxdfir_stack` preflight reads the
+  engine's state before anything else (`tasks/docker_ensure.yml`): no engine
+  or a stopped daemon is answered by the same playbook decision as an absent
+  stack — `status` reports it and ends cleanly, `stop`/`destroy` flag it. The
+  deploy playbook opts in to installing the engine
+  (`dxdfir_stack_install_docker`: Docker's apt repository on Debian/Ubuntu
+  families, the `scripts/setup-environment.sh` flow as idempotent state
+  modules, docker-group membership for the sudo'ing operator), and deploy and
+  start opt in to starting a stopped daemon (`dxdfir_stack_start_docker`).
+- **A default inventory, and one shared definition of the Elastic backend's
+  paths.** `ansible.cfg` now points at `ansible/inventory/` (the workstation,
+  local connection, using the interpreter that runs ansible-playbook exactly
+  as implicit localhost did). The backend's compose dir, `.env`, `.env.example`
+  and compose project name are defined once as `dxdfir_elastic_*` in
+  playbook-adjacent `group_vars/all.yml`, and `dxdfir_stack` and
+  `dxdfir_car_load` reference them instead of each deriving its own copy.
 - **`dxdfir deploy stack` self-heals a short image store instead of dying
   mid-pull** (containerd: "no space left on device"). The `dxdfir_stack`
   preflight gains a pull-capacity gate on deploy/start: while stack images are

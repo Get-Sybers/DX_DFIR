@@ -1,0 +1,303 @@
+---
+# DOCKER ENGINE GATE — facts first: the stack cannot exist without the
+# engine, so preflight learns the engine's state before anything else. An
+# absent engine means an absent stack, answered by the same playbook
+# decision the stack-presence gate uses (dxdfir_stack_when_absent): status
+# reports and ends, start/stop/destroy flag it. The deploy playbook opts in
+# to installing the engine (dxdfir_stack_install_docker) the same way
+# scripts/setup-environment.sh does — Docker's own apt repository, Debian
+# family only — as idempotent state modules. A stopped daemon is started by
+# the playbooks that bring the stack up (dxdfir_stack_start_docker);
+# status/stop/destroy never start system services.
+
+- name: "stack-docker | is the docker cli on this host"
+  ansible.builtin.command:
+    argv: [which, docker]
+  register: dxdfir_stack_docker_cli
+  changed_when: false
+  failed_when: false
+
+- name: "stack-docker | does the daemon answer"
+  ansible.builtin.command:
+    argv: [docker, version]
+  register: dxdfir_stack_docker
+  changed_when: false
+  failed_when: false
+  when: dxdfir_stack_docker_cli.rc == 0
+
+- name: "stack-docker | the engine's state as facts"
+  ansible.builtin.set_fact:
+    dxdfir_stack_docker_installed: "{{ dxdfir_stack_docker_cli.rc == 0 }}"
+    dxdfir_stack_docker_up: >-
+      {{ dxdfir_stack_docker_cli.rc == 0
+         and (dxdfir_stack_docker.rc | default(1)) == 0 }}
+
+# ---- no engine: no stack can exist here ------------------------------------
+- name: "stack-docker | report the engine-less host and end"
+  when:
+    - dxdfir_stack_when_absent == 'report'
+    - not dxdfir_stack_docker_installed | bool
+  block:
+    - name: "stack-docker | no docker engine on this host"
+      ansible.builtin.debug:
+        msg: >-
+          no docker engine on this host — no analysis stack can exist here.
+          `dxdfir deploy stack` installs the engine (Debian/Ubuntu families,
+          Docker's own apt repository) and deploys the stack.
+
+    - name: "stack-docker | end the play for this host"
+      ansible.builtin.meta: end_host
+
+- name: "stack-docker | flag the engine-less host"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_stack_docker_installed | bool
+    fail_msg: >-
+      nothing to {{ dxdfir_stack_action }}: no docker engine on this host, so
+      no analysis stack can exist here. Deploy first: dxdfir deploy stack
+      (installs the engine on Debian/Ubuntu families).
+    quiet: true
+  when: dxdfir_stack_when_absent == 'fail'
+
+# ---- deploy's opt-in: install the engine (setup-environment.sh, as state) --
+- name: "stack-docker | install the engine (deploy's opt-in)"
+  when:
+    - not dxdfir_stack_docker_installed | bool
+    - dxdfir_stack_install_docker | bool
+  block:
+    - name: "stack-docker | assert the distro family is supported"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.os_family == 'Debian'
+        fail_msg: >-
+          unsupported distro family '{{ ansible_facts.os_family }}' for the
+          automatic docker install (Docker's repo is derived for
+          Debian/Ubuntu only, matching scripts/setup-environment.sh).
+          Install Docker manually (https://docs.docker.com/engine/install/),
+          then rerun.
+        quiet: true
+
+    # The same distro/codename derivation setup-environment.sh performs:
+    # debian and ubuntu use their own repo; derivatives (Mint, Pop!_OS)
+    # carry UBUNTU_CODENAME and ride the repo of what they are LIKE —
+    # Docker publishes no repo of their own for them.
+    - name: "stack-docker | read the distro identity the docker repo derives from"
+      ansible.builtin.slurp:
+        src: /etc/os-release
+      register: dxdfir_stack_os_release
+
+    - name: "stack-docker | derive the docker repo distro and codename"
+      ansible.builtin.set_fact:
+        dxdfir_stack_docker_distro: >-
+          {{ _id if _id in ['debian', 'ubuntu']
+             else ('ubuntu' if 'ubuntu' in _like
+                   else ('debian' if 'debian' in _like else '')) }}
+        dxdfir_stack_docker_codename: "{{ _ubuntu_codename or _version_codename }}"
+      vars:
+        _osr: "{{ (dxdfir_stack_os_release.content | b64decode).splitlines() }}"
+        _id: >-
+          {{ _osr | select('match', '^ID=') | map('regex_replace', '^ID="?([^"]*)"?$', '\1')
+             | first | default('') }}
+        _like: >-
+          {{ _osr | select('match', '^ID_LIKE=') | map('regex_replace', '^ID_LIKE="?([^"]*)"?$', '\1')
+             | first | default('') }}
+        _ubuntu_codename: >-
+          {{ _osr | select('match', '^UBUNTU_CODENAME=')
+             | map('regex_replace', '^UBUNTU_CODENAME="?([^"]*)"?$', '\1')
+             | first | default('') }}
+        _version_codename: >-
+          {{ _osr | select('match', '^VERSION_CODENAME=')
+             | map('regex_replace', '^VERSION_CODENAME="?([^"]*)"?$', '\1')
+             | first | default('') }}
+
+    - name: "stack-docker | assert the repo could be derived"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_stack_docker_distro | length > 0
+          - dxdfir_stack_docker_codename | length > 0
+        fail_msg: >-
+          could not derive the docker apt repo from /etc/os-release
+          (distro '{{ dxdfir_stack_docker_distro }}', codename
+          '{{ dxdfir_stack_docker_codename }}'). Install Docker manually
+          (https://docs.docker.com/engine/install/), then rerun.
+        quiet: true
+
+    # dpkg names the architecture the repo line needs (amd64/arm64 — not
+    # uname's x86_64/aarch64).
+    - name: "stack-docker | the dpkg architecture for the repo line"
+      ansible.builtin.command:
+        argv: [dpkg, --print-architecture]
+      register: dxdfir_stack_dpkg_arch
+      changed_when: false
+
+    - name: "stack-docker | keyrings directory"
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: "stack-docker | docker's signing key"
+      ansible.builtin.get_url:
+        url: "https://download.docker.com/linux/{{ dxdfir_stack_docker_distro }}/gpg"
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: "stack-docker | docker's apt repository"
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [arch={{ dxdfir_stack_dpkg_arch.stdout | trim }}
+          signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/{{ dxdfir_stack_docker_distro }}
+          {{ dxdfir_stack_docker_codename }} stable
+        filename: docker
+        state: present
+
+    - name: "stack-docker | the engine, cli, containerd and the plugins"
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: "stack-docker | the docker group exists"
+      ansible.builtin.group:
+        name: docker
+        state: present
+
+    # The operator who sudo'd this deploy gets docker-group membership, as
+    # setup-environment.sh grants it; a plain root run has no such user.
+    - name: "stack-docker | hand the sudo'ing operator docker-group membership"
+      ansible.builtin.user:
+        name: "{{ ansible_facts.env.SUDO_USER }}"
+        groups: docker
+        append: true
+      when: (ansible_facts.env.SUDO_USER | default('')) not in ['', 'root']
+  rescue:
+    - name: "stack-docker | engine install failed — fail with the manual path"
+      ansible.builtin.fail:
+        msg: >-
+          the docker engine install failed
+          ({{ ansible_failed_result.msg | default('see the failed task above') }}).
+          Install it manually — scripts/setup-environment.sh or
+          https://docs.docker.com/engine/install/ — then rerun.
+
+# CONTINUE-path floor: past this point the engine must exist. Only a deploy
+# that opted OUT of installing on an engine-less host reaches this false —
+# report/fail hosts answered above — so say exactly that instead of letting
+# the daemon-start rescue mislabel it.
+- name: "stack-docker | assert the engine is present"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_stack_docker_installed | bool or dxdfir_stack_install_docker | bool
+    fail_msg: >-
+      no docker engine on this host and installing it was disabled
+      (dxdfir_stack_install_docker=false). Install Docker manually
+      (scripts/setup-environment.sh or
+      https://docs.docker.com/engine/install/) and rerun, or drop the
+      override so deploy installs it.
+    quiet: true
+
+# ---- daemon down: the verbs that bring the stack up start it FIRST; the ----
+# ---- rest answer with the same absence decision (status reports, others ---
+# ---- flag) — they never start system services ------------------------------
+- name: "stack-docker | re-probe the daemon after the install"
+  ansible.builtin.command:
+    argv: [docker, version]
+  register: dxdfir_stack_docker
+  changed_when: false
+  failed_when: false
+  when: not dxdfir_stack_docker_up | bool
+
+- name: "stack-docker | refresh the engine facts"
+  ansible.builtin.set_fact:
+    dxdfir_stack_docker_up: "{{ (dxdfir_stack_docker.rc | default(1)) == 0 }}"
+  when: not dxdfir_stack_docker_up | bool
+
+- name: "stack-docker | start the daemon (deploy/start's opt-in)"
+  when:
+    - dxdfir_stack_start_docker | bool
+    - not dxdfir_stack_docker_up | bool
+  block:
+    - name: "stack-docker | docker service started and enabled"
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    # A started unit can take a moment to open its socket.
+    - name: "stack-docker | wait for the started daemon to answer"
+      ansible.builtin.command:
+        argv: [docker, version]
+      register: dxdfir_stack_docker
+      changed_when: false
+      until: dxdfir_stack_docker.rc == 0
+      retries: 15
+      delay: 2
+
+    - name: "stack-docker | the daemon is up"
+      ansible.builtin.set_fact:
+        dxdfir_stack_docker_up: true
+  rescue:
+    # No service manager (a container, a broken unit): the daemon may still
+    # be startable by hand — say so instead of a bare service error.
+    - name: "stack-docker | the daemon could not be started"
+      ansible.builtin.fail:
+        msg: >-
+          the docker daemon is not running and starting the docker service
+          failed ({{ ansible_failed_result.msg | default('see above') }}).
+          Start the daemon manually (systemctl start docker, or dockerd on a
+          host without systemd) and rerun.
+
+- name: "stack-docker | report the stopped daemon and end"
+  when:
+    - dxdfir_stack_when_absent == 'report'
+    - not dxdfir_stack_docker_up | bool
+  block:
+    - name: "stack-docker | the daemon is not running"
+      ansible.builtin.debug:
+        msg: >-
+          docker is installed but its daemon is not running, so the stack's
+          state cannot be read. Start it (systemctl start docker) or run
+          `dxdfir deploy stack` / `dxdfir start stack`, which start it.
+
+    - name: "stack-docker | end the play for this host"
+      ansible.builtin.meta: end_host
+
+- name: "stack-docker | flag the stopped daemon"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_stack_docker_up | bool
+    fail_msg: >-
+      cannot {{ dxdfir_stack_action }}: docker is installed but its daemon is
+      not running. Start it (systemctl start docker) and rerun — or
+      `dxdfir deploy stack` / `dxdfir start stack`, which start it.
+    quiet: true
+  when: dxdfir_stack_when_absent == 'fail'
+
+- name: "stack-docker | the daemon answers"
+  ansible.builtin.command:
+    argv: [docker, version]
+  register: dxdfir_stack_docker
+  changed_when: false
+
+- name: "stack-docker | docker compose plugin present"
+  ansible.builtin.command:
+    argv: [docker, compose, version]
+  register: dxdfir_stack_compose_v
+  changed_when: false
+  failed_when: false
+
+- name: "stack-docker | assert the compose plugin is present"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_stack_compose_v.rc == 0
+    fail_msg: >-
+      the docker compose plugin is missing (docker compose version failed).
+      Install docker-compose-plugin from Docker's repo (or docker-compose-v2
+      from the distro), then rerun — `dxdfir deploy stack` installs it as
+      part of a fresh engine install.
+    quiet: true

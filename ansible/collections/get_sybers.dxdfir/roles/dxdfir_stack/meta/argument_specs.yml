@@ -41,9 +41,25 @@ argument_specs:
         choices: [continue, report, fail]
         description: >-
           The playbook's decision on an absent stack (no containers, no data
-          volumes): continue (deploy — absence is its starting point), report
-          (status — say "no stack" and end the host cleanly), fail
-          (start/stop/destroy — flag it, nothing to act on).
+          volumes — and likewise an engine-less or daemon-less host): continue
+          (deploy — absence is its starting point), report (status — say "no
+          stack" and end the host cleanly), fail (start/stop/destroy — flag
+          it, nothing to act on).
+      dxdfir_stack_install_docker:
+        type: bool
+        required: false
+        default: false
+        description: >-
+          Install the docker engine when the host has none (Docker's apt
+          repo, Debian/Ubuntu families — the setup-environment.sh flow as
+          state modules). Off in defaults; the deploy playbook enables it.
+      dxdfir_stack_start_docker:
+        type: bool
+        required: false
+        default: false
+        description: >-
+          Start (and enable) a stopped docker daemon. Off in defaults; the
+          playbooks that bring the stack up (deploy/start) enable it.
       dxdfir_stack_env_file:
         type: str
         required: false

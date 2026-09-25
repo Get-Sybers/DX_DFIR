@@ -37,10 +37,23 @@ files land — see [the interface](../getting-started/the-interface.md).
 
 ## The walk is dynamic; the inventory is static
 
-The inventory is a static `localhost,` (local connection). What *varies* is discovered:
-lanes find the items to process rather than hard-coding hosts. The Go front-end passes
+The default inventory is the workstation itself (`ansible/inventory/hosts.yml`,
+local connection, wired in `ansible.cfg`; the Go front-end passes the equivalent
+`-i localhost,`). What *varies* is discovered: lanes find the items to process
+rather than hard-coding hosts, and remote/fleet targets join the inventory and
+are selected per run with `-e dxdfir_hosts=<pattern>`. The Go front-end passes
 `ANSIBLE_ROLES_PATH` so roles resolve from the in-tree collection without being
 Galaxy-installed, and role defaults derive `repo_root` so `data_store/` paths resolve.
+
+**Shared identities live in the inventory layer, not per-role.** Values more than
+one role must agree on — the Elastic backend's compose dir, its `.env` file and
+example, the compose project name — are defined once as `dxdfir_elastic_*` in
+playbook-adjacent `group_vars`
+(`ansible/collections/get_sybers.dxdfir/playbooks/group_vars/all.yml`, which load
+under any inventory source) and each role's variables reference them
+(`dxdfir_stack_env_file`, `dxdfir_car_load_env_file` → `dxdfir_elastic_env_file`).
+Role defaults keep a self-contained fallback so a role still runs in isolation;
+inventory vars override defaults, `-e` overrides both.
 
 ## Pinned dependencies
 

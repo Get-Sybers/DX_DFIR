@@ -1,0 +1,40 @@
+---
+# INVENTORY-LAYER WIRING (group_vars/all): the ONE place the Elastic
+# backend's on-disk identity lives, so roles reference the same values
+# instead of each re-deriving them — dxdfir_stack (deploys it, scaffolds and
+# guards its .env) and dxdfir_car_load (reads credentials from that same
+# .env) both resolve here, and a future consumer joins by reference, not by
+# copying a path.
+#
+# WHY PLAYBOOK-ADJACENT: group_vars next to the playbooks load for every run
+# of these plays regardless of which inventory is passed — the dxdfir CLI
+# invokes ansible-playbook with `-i localhost,`, direct runs get
+# ansible/inventory/ from ansible.cfg, and a remote inventory selected via
+# dxdfir_hosts keeps working. Inventory vars override role defaults (each
+# role keeps a self-contained fallback); `-e` still overrides everything,
+# per host/group when a real fleet inventory needs to split values.
+
+# The repo root, from this file's place in the tree
+# (ansible/collections/get_sybers.dxdfir/playbooks/ is four levels down).
+# In-tree execution is the supported layout (docs/reference/
+# ansible-standards.md) — the same assumption the roles' role_path-derived
+# fallbacks make.
+dxdfir_repo_root: "{{ playbook_dir }}/../../../.."
+
+# docker/elastic — the analysis backend compose project and its env file:
+# the operator's credentials, scaffolded by deploy on a cold host, read (not
+# copied) by every consumer, never committed.
+dxdfir_elastic_compose_dir: "{{ dxdfir_repo_root }}/docker/elastic"
+dxdfir_elastic_env_file: "{{ dxdfir_elastic_compose_dir }}/.env"
+dxdfir_elastic_env_example_file: "{{ dxdfir_elastic_compose_dir }}/.env.example"
+# The compose project's name (docker-compose.yml `name:`) — the label
+# preflight reads stack presence by.
+dxdfir_elastic_project_name: byakugan
+
+# Role wiring: both roles reference the shared identity above.
+dxdfir_stack_compose_dir: "{{ dxdfir_elastic_compose_dir }}"
+dxdfir_stack_env_file: "{{ dxdfir_elastic_env_file }}"
+dxdfir_stack_env_example_file: "{{ dxdfir_elastic_env_example_file }}"
+dxdfir_stack_project_name: "{{ dxdfir_elastic_project_name }}"
+dxdfir_car_load_compose_dir: "{{ dxdfir_elastic_compose_dir }}"
+dxdfir_car_load_env_file: "{{ dxdfir_elastic_env_file }}"

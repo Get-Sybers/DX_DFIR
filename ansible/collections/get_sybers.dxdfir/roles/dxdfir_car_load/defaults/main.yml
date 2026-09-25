@@ -35,7 +35,10 @@ dxdfir_car_load_python_path: "{{ dxdfir_car_load_repo_root }}/python"
 # directly for ELASTIC_PASSWORD / BYAKUGAN_LOADER_PASSWORD (never duplicated
 # into a second secret store, so .env stays the one place a credential is
 # set). A missing .env fails clearly (tasks/load.yml) instead of loading with
-# empty credentials.
+# empty credentials. NOTE: the inventory layer (playbooks/group_vars/all.yml)
+# wires both to the shared dxdfir_elastic_* identity dxdfir_stack also uses —
+# one definition, referenced, not copied; the defaults here are the
+# self-contained fallback.
 dxdfir_car_load_compose_dir: "{{ dxdfir_car_load_repo_root }}/docker/elastic"
 dxdfir_car_load_env_file: "{{ dxdfir_car_load_compose_dir }}/.env"
 

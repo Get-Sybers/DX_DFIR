@@ -1,15 +1,11 @@
 ---
 # FIND FACTS -> check existence AND location BEFORE touching the stack.
 
-- name: "stack-preflight | docker daemon reachable"
-  ansible.builtin.command: docker version
-  register: dxdfir_stack_docker
-  changed_when: false
-
-- name: "stack-preflight | docker compose plugin present"
-  ansible.builtin.command: docker compose version
-  register: dxdfir_stack_compose_v
-  changed_when: false
+# The engine itself comes first (tasks/docker_ensure.yml): an engine-less or
+# daemon-less host is answered there by the same playbook decisions used
+# below — and the deploy playbook can opt in to installing/starting it.
+- name: "stack-preflight | ensure the docker engine"
+  ansible.builtin.include_tasks: docker_ensure.yml
 
 - name: "stack-preflight | stat the compose file"
   ansible.builtin.stat:
