@@ -113,6 +113,11 @@ dxdfir_stack_ca_file: "{{ dxdfir_elastic_ca_file | default(dxdfir_stack_certs_di
 # The compose-era operator .env, read once to import operator-set secrets
 # into the store; never required, never written.
 dxdfir_stack_legacy_env_file: "{{ dxdfir_elastic_legacy_env_file | default(dxdfir_stack_repo_root ~ '/docker/elastic/.env') }}"
+# An unprivileged deploy cannot hold the node TLS keys at root:root 0640
+# (the containers read them as gid 0 through the bind mount), so it would
+# have to write them world-readable — a weakening this role REFUSES unless
+# explicitly opted into. Deploy as root, or accept 0644 keys deliberately.
+dxdfir_stack_allow_world_readable_keys: false
 # Group handed read on the secret store when deploying as root (0750/0640),
 # so docker-group operators can read the credentials without sudo; skipped
 # when the group does not exist or the deployer is unprivileged (0700/0600).

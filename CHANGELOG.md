@@ -71,7 +71,9 @@ is `0`, anything may change without notice.
     (`community.crypto`, pinned 2.26.9): CA + es01/fleet-server pairs under
     the secret store's `certs/`, bind-mounted read-only into the containers
     — no cert scripts, no certutil container, and the CA is a plain host
-    file every client verifies against (`certs/ca/ca.crt`).
+    file every client verifies against (`certs/ca/ca.crt`). An unprivileged
+    deploy refuses to weaken node-key permissions unless explicitly opted
+    in (`dxdfir_stack_allow_world_readable_keys`).
   - **The compose `setup` service became idempotent API tasks**: the
     kibana_system password, the least-privilege `logs_car_writer` role and
     the `byakugan_loader` user are reconciled against the live

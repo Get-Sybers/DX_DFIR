@@ -90,7 +90,9 @@ fi
 RUNNER=()
 if ! docker info >/dev/null 2>&1; then
     if command -v sudo >/dev/null 2>&1 && sudo docker info >/dev/null 2>&1; then
-        RUNNER=(sudo -E env "PATH=$PATH")
+        # Only PATH crosses the privilege boundary (the venv's ansible must
+        # resolve); everything the playbooks need travels as -e extra vars.
+        RUNNER=(sudo env "PATH=$PATH")
         echo "ℹ️  Talking to the Docker daemon via sudo (group membership needs a new login session)."
     else
         die "The Docker daemon is not reachable. Start it with: sudo systemctl start docker"

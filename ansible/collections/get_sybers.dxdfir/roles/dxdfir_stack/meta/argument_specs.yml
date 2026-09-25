@@ -115,6 +115,15 @@ argument_specs:
           The stack's TLS tree (inventory: dxdfir_elastic_certs_dir),
           generated host-side by community.crypto state modules and
           bind-mounted read-only into the containers.
+      dxdfir_stack_allow_world_readable_keys:
+        type: bool
+        required: false
+        default: false
+        description: >-
+          Explicit opt-in for an unprivileged deploy to write 0644 node TLS
+          keys (it cannot hold them at root:root 0640); without it such a
+          deploy fails with the remedy instead of silently weakening key
+          permissions.
       dxdfir_stack_secrets_group:
         type: str
         required: false
