@@ -34,7 +34,6 @@ too, so an image is exported once for both.
 | `dxdfir_evtx_plaso_contract` | `<repo>/docker/GoDFIR-toolz/plaso/contract.yml` | The contract the export run is built from. |
 | `dxdfir_evtx_image` | `""` (the contract's `get-sybers/goevtx:latest`) | Image ref override, e.g. a digest pin. |
 | `dxdfir_evtx_plaso_image` | `""` (the contract's `get-sybers/plaso:latest`) | Image ref override for the export step. |
-| `dxdfir_evtx_python_path` | `<repo>/python` | PYTHONPATH for the image supply-chain guard (`get_sybers_dxdfir.images`). |
 | `dxdfir_evtx_force` | `false` | Reparse logs (and re-export images) that already have output. |
 
 ## Idempotence

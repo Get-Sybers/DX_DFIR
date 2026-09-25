@@ -58,7 +58,6 @@
     name: dxdfir_lane
   vars:
     dxdfir_lane_name: evtx
-    dxdfir_lane_python_path: "{{ dxdfir_evtx_python_path }}"
     dxdfir_lane_runs: "{{ dxdfir_evtx_runs }}"
     dxdfir_lane_verify_dir: "{{ dxdfir_evtx_out_dir }}"
     dxdfir_lane_verify_glob: "goevtx.jsonl"

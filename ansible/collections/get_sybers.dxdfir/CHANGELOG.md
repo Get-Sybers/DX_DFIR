@@ -7,6 +7,28 @@ root [CHANGELOG.md](../../../CHANGELOG.md).
 
 ### Changed
 
+- **The image inventory and the build logic are the BUILD galaxy's — GoDFIR-toolz supplies both, this collection consumes them.** The submodule's root `images.yml` (all 24 images: the pipeline five, the 12 Windows Go parsers, godaemonhunter, gomount, and the five `.NET` per-tool images as ordinary manifest entries) is the single source of truth; the repo-root copy is deleted, and `dxdfir_images` and CI read the submodule manifest at the gitlink pin (the runtime verify/audit gates below read the same file through the build galaxy). `dxdfir_images`' build path delegates to the build galaxy's `godfir_build` (resolved in place from the submodule via the repo-root `roles_path`, so the gitlink stays the only pin) run over the submodule tree; `tasks/build.yml` and `tasks/preflight.yml` moved there. The hardcoded shell/python image name-list is gone with them: every image self-declares its posture in `/etc/dfir-hardened` and the build gate holds each image to exactly what it declares.
+- **The runtime image guard is ansible; `get_sybers_dxdfir.images` is retired.**
+  The lane preflight gate and `dxdfir verify-images` run the build galaxy's
+  `verify` / `audit` entries (through `dxdfir_images` `tasks_from: verify|audit`,
+  which freeze the submodule root) instead of shelling out to
+  `python3 -m get_sybers_dxdfir.images --require/--audit`. Same semantics —
+  manifest membership on the digest/tag-normalized repo, USER + hardened-label
+  contract on the host, the namespace audit with `non_tool_repos` exemptions —
+  now from the same manifest and collection that build the images. The whole
+  `*_python_path` plumbing (nine roles + the lane skeleton) existed only to
+  find the python guard and is gone with it.
+- **The build galaxy resolves in place — no installed copy, no tarball, no
+  symlink.** `docker/GoDFIR-toolz/roles` is on the repo-root `roles_path`
+  (the same mechanism this collection's own roles use), so `godfir_build`
+  resolves straight from the submodule checkout at the gitlink pin. CI and
+  setup no longer install it on the primary path; a checkout without the
+  submodule has setup-environment.sh import the galaxy by `ansible-galaxy`
+  from the `.gitmodules` source at the gitlink revision, into the shared
+  path `roles_path` also covers as its degraded-only last entry, and
+  run-checks asserts the roles_path wiring.
+- **Smoke CI builds everything GoDFIR-toolz supplies.** A new `images` job builds the FULL manifest through the build galaxy (hardening asserted on every image, nightly included); the pipeline smoke job keeps its fast goevtx+byakugan path. The stale repo-root `images.yml` path filter is gone — a manifest change arrives as a gitlink bump.
+
 - **Every tool lane runs its container from the GoDFIR-toolz contract, in ansible.** `dxdfir_lane` gained a data-driven builder (`tasks/argv.yml`): a lane declares runs as `{contract, subtool, env, mounts}` and the skeleton turns each into the confined `docker run` (`-e` per declared variable, `-v` per mount, tmpfs for `/tmp` and every unbound optional read-write contract mount, `--network none` unless the contract allows it, `--group-add` for the evidence group), asserting the spec against the contract first. The process step runs the built containers in order, honours the contract's exit table (0/1/3 judged by the summary line, 2 fails) and gates on "output on disk, or nothing to do". `dxdfir_lane_module` / `dxdfir_lane_argv` / `dxdfir_lane_input_checks` / `dxdfir_lane_preflight_extra` are gone; `dxdfir_lane_runs`, `dxdfir_lane_confinement`, `dxdfir_lane_tmpfs_opts` and `dxdfir_lane_exit_ok` are the interface.
 - `dxdfir_zeek`, `dxdfir_evtx`, `dxdfir_plaso`, `dxdfir_godfir_toolz`, `dxdfir_signatures`, `dxdfir_memory` and `dxdfir_byakugan` declare their runs from `docker/GoDFIR-toolz/<tool>/contract.yml`; each gained a `dxdfir_<role>_contract` variable and its `_image` default is now empty (the contract's image; set it to pin a digest). Output layouts follow the contracts: `windows_logs/<log>/goevtx.jsonl`, `log2timeline/storage/<source>/<source>.plaso` + `log2timeline/jsonl/<source>/timeline.jsonl`, `godfir-toolz/<tool>/<item>/`, `detections/<subtool>/<item>/`.
 - `dxdfir_evtx`: Hayabusa is no longer bolted onto the lane (it is the signatures image's `hayabusa` sub-tool); `dxdfir_evtx_hayabusa*` are gone, `dxdfir_evtx_image_src` is a directory of images.

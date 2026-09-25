@@ -115,7 +115,6 @@
     name: dxdfir_lane
   vars:
     dxdfir_lane_name: godfir-toolz
-    dxdfir_lane_python_path: "{{ dxdfir_godfir_toolz_python_path }}"
     dxdfir_lane_runs: "{{ dxdfir_godfir_toolz_runs }}"
     dxdfir_lane_verify_dir: "{{ dxdfir_godfir_toolz_out_dir }}"
     dxdfir_lane_verify_glob: "*.jsonl"

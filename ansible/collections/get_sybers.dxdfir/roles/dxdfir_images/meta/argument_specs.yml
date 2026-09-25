@@ -1,25 +1,26 @@
 ---
 argument_specs:
   main:
-    short_description: "Build + verify the ansible-hardened get-sybers/* tool images."
+    short_description: "Build + verify the hardened get-sybers/* tool images through the GoDFIR-toolz build galaxy."
     description:
       - >-
-        Builds every runtime tool container from its Dockerfile in the
-        GoDFIR-toolz submodule (context docker/GoDFIR-toolz, one directory per
-        image), each of which runs the canonical ansible hardening playbook
-        (hardening/harden.yml at the context root) inside the build and
-        squashes the result: uid 0 renamed 'ansible' and locked, sudo/su/pkexec
-        and the account-manipulation suite removed, every setuid/setgid bit
-        stripped, package managers and pip removed (nothing installable at
-        runtime), and the tool runs as a fixed non-root user (uid 2000). A shell
-        and python remain because ansible IS the container's only execution path
-        (its local connection needs them); attack surface is closed at the
-        entry, not by deletion — the pinned ansible ENTRYPOINT runs an
-        allow-listed run role, so a shell exists but nothing can invoke it.
-        After each build the role asserts the contract statically (USER 2000:2000,
-        pinned ENTRYPOINT, hardened label) AND from inside the running container. Nothing in the pipeline pulls a
-        third-party tool image at runtime; the analysis backend (the Elastic
-        stack) is deployed separately by the dxdfir_stack role.
+        The DEPLOY galaxy's face of the tool images. Building is DELEGATED to
+        the GoDFIR-toolz collection's godfir_build role
+        (godfir_build, resolved from the submodule checkout via roles_path so
+        the gitlink is the only pin), run over the submodule tree: the
+        manifest it resolves (images.yml), the contexts it builds and the
+        revision it stamps (com.get-sybers.src) are all the pin's. Every
+        built image is hardening-verified there — the static contract (fixed
+        non-root USER, com.get-sybers.hardened label), a shell-free
+        docker-export filesystem scan for the removed surface
+        (apt/dpkg/sudo/pip/ansible), and the image's own /etc/dfir-hardened
+        posture declaration held to the actual filesystem (shell=false /
+        python=false). This role keeps the deploy-shaped decisions and
+        mechanisms: the set to build, the single-source run-as uid/gid knob,
+        the offline save/load packaging and the ensure_built lane gate.
+        Nothing in the pipeline pulls a third-party tool image at runtime; the
+        analysis backend (the Elastic stack) is deployed separately by the
+        dxdfir_stack role.
     options:
       dxdfir_images_context:
         type: str
@@ -29,7 +30,10 @@ argument_specs:
         type: list
         elements: str
         required: false
-        description: "Bare image names to build; each builds the get-sybers/<name>:latest tag. Default: every image in the repo-root images.yml manifest."
+        description:
+          - "Bare image names to build; each builds the get-sybers/<name>:latest
+            tag. Default: every image in the GoDFIR-toolz submodule's
+            images.yml manifest."
       dxdfir_images_force:
         type: bool
         required: false
@@ -83,3 +87,30 @@ argument_specs:
         type: str
         required: false
         description: "The tarball directory (default data_store/docker_images)."
+  verify:
+    short_description: "The runtime supply-chain gate (the build galaxy's verify, deploy-faced)."
+    description:
+      - >-
+        Freeze the submodule root and delegate to
+        godfir_build tasks_from=verify (the submodule role, on roles_path) - every
+        namespace ref in dxdfir_images_verify_images must be a manifest image
+        still carrying the hardened contract on this host; refs outside
+        get-sybers/* pass untouched. Lane preflights call this before any
+        container runs.
+    options:
+      dxdfir_images_verify_images:
+        type: list
+        elements: str
+        required: false
+        default: []
+        description: "The image refs the caller is about to run."
+  audit:
+    short_description: "The full namespace inventory audit (the build galaxy's audit, deploy-faced)."
+    description:
+      - >-
+        Freeze the submodule root and delegate to
+        godfir_build tasks_from=audit (the submodule role, on roles_path) - every
+        manifest image present and hardened, no unexpected get-sybers/* image
+        on the host (allow-list = the manifest + its non_tool_repos). Driven
+        by dxdfir-verify-images.yml (`dxdfir verify-images`).
+    options: {}

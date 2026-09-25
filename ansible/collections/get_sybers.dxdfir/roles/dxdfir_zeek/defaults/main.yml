@@ -23,7 +23,4 @@ dxdfir_zeek_image: ""
 # Extra zeek argv appended after -C -r <capture> (ZEEK_SCRIPTS): scripts to load
 # and option assignments; empty = zeek's default script set.
 dxdfir_zeek_scripts: ""
-# PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); a
-# deployed run installs the package instead.
-dxdfir_zeek_python_path: "{{ dxdfir_zeek_repo_root }}/python"
 dxdfir_zeek_force: false

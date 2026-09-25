@@ -6,9 +6,6 @@
 
 # Short lane token used in task names and diagnostics (e.g. "evtx").
 dxdfir_lane_name: lane
-# PYTHONPATH for the image supply-chain guard (python3 -m get_sybers_dxdfir.images);
-# a deployed install drops it.
-dxdfir_lane_python_path: ""
 
 # The runs of this lane, in order: each is ONE confined `docker run` of one
 # GoDFIR-toolz tool image, built from that tool's contract.yml (tasks/argv.yml).

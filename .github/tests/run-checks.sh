@@ -74,10 +74,27 @@ for entry in (reqs or {}).get("collections", []):
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", ver):
         problems.append(f"{name}: version '{ver}' is not an exact X.Y.Z pin")
     pinned[name] = ver
+# A galaxy.yml dependency may instead be SUPPLIED BY A SUBMODULE (the
+# GoDFIR-toolz build galaxy): the gitlink is its pin, setup-environment.sh
+# and CI import it from the checkout — so a declared submodule whose
+# galaxy.yml carries the dependency's FQCN covers it.
+import os
+gitlinked = {}
+if os.path.isfile(".gitmodules"):
+    for line in open(".gitmodules"):
+        if line.strip().startswith("path = "):
+            path = line.split("=", 1)[1].strip()
+            gpath = os.path.join(path, "galaxy.yml")
+            if os.path.isfile(gpath):
+                gy = yaml.safe_load(open(gpath)) or {}
+                gitlinked[f"{gy.get('namespace')}.{gy.get('name')}"] = path
 galaxy = yaml.safe_load(open(sys.argv[2]))
 for dep in (galaxy.get("dependencies") or {}):
-    if dep not in pinned:
-        problems.append(f"galaxy.yml dependency '{dep}' has no pinned entry in requirements.yml")
+    if dep in pinned or dep in gitlinked:
+        continue
+    problems.append(
+        f"galaxy.yml dependency '{dep}' has no pinned entry in requirements.yml "
+        "and no submodule supplies it (submodule not initialised?)")
 print("\n".join(problems))
 PY
 )
@@ -92,6 +109,16 @@ PY
         pass "setup-environment.sh installs requirements.yml"
     else
         fail "setup-environment.sh does not install requirements.yml"
+    fi
+    if grep -q "GoDFIR-toolz build galaxy" scripts/setup-environment.sh; then
+        pass "setup-environment.sh handles the build galaxy (in-place, with the materialise fallback)"
+    else
+        fail "setup-environment.sh does not handle the GoDFIR-toolz build galaxy"
+    fi
+    if grep -Eq '^roles_path *=.*docker/GoDFIR-toolz/roles' ansible.cfg; then
+        pass "build galaxy resolves in place (docker/GoDFIR-toolz/roles on roles_path, no installed copy)"
+    else
+        fail "ansible.cfg roles_path does not carry docker/GoDFIR-toolz/roles — the build galaxy would need an installed copy"
     fi
 else
     fail "missing $REQS"
@@ -225,7 +252,8 @@ fi
 # after the real count passed 160. The harness prints the number; documents
 # point at the harness.
 _counts=$(grep -rnE '[0-9]{2,4} (static )?checks' --include='*.md' . 2>/dev/null \
-          | grep -vE '^\./(\.git|data_store|docker/GoDFIR-toolz)/' || true)
+          | grep -vE '^\./(\.git|data_store|docker/GoDFIR-toolz)/' \
+          | grep -v '/\.ansible/' || true)
 if [[ -z "$_counts" ]]; then
     pass "no document hardcodes the check count"
 else

@@ -7,9 +7,9 @@
 # build role only builds what is absent), so it is safe to call at the head of
 # every container play, including once per lane in a serial `process all`.
 #
-# Presence + self-heal only; the run-time supply-chain guard
-# (get_sybers_dxdfir.images.require) still enforces the hardened contract on each
-# image before it runs. Reuse:
+# Presence + self-heal only; the run-time supply-chain gate (the sibling
+# tasks/verify.yml — the build galaxy's verify entry) still enforces the
+# hardened contract on each image before it runs. Reuse:
 #   - ansible.builtin.include_role:
 #       name: dxdfir_images
 #       tasks_from: ensure_built

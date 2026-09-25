@@ -101,8 +101,9 @@ source runs as `dxdfir process <source>` (driving the matching
 `dxdfir_<source>` role); the role builds every `docker run` purely from the
 tool's `contract.yml` (its environment variables and mounts) and the container
 discovers, batches and skips its own inputs. The `get_sybers_dxdfir` Python
-package keeps the image supply-chain guard, the detection rules-as-code and the
-STIX exchange — nothing in it runs a container.
+package keeps the detection rules-as-code and the STIX exchange — nothing in
+it runs a container, and the image supply-chain gate is ansible (the
+GoDFIR-toolz build galaxy's `verify`/`audit` entries).
 
 ## What it produces
 

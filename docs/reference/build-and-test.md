@@ -36,8 +36,9 @@ materialised CAR via the external [Byakugan engine](https://github.com/Get-Syber
 `verify-car` gate.
 
 Triggers: `workflow_dispatch`, a nightly cron, and PRs that touch the pipeline (the
-Python processors, the `dxdfir_images` role, `images.yml`,
-`.gitmodules`, `docker/GoDFIR-toolz`, or the smoke test). It checks out submodules recursively and builds the
+Python processors, the `dxdfir_images` role,
+`.gitmodules`, `docker/GoDFIR-toolz` — the manifest `images.yml` arrives inside it —
+or the smoke test). It checks out submodules recursively and builds the
 tool images with `dxdfir build-docker`, which clones + builds Byakugan into the
 `get-sybers/byakugan` image at its Dockerfile's `BYAKUGAN_REF` pin (parse binary and model sources
 baked in).

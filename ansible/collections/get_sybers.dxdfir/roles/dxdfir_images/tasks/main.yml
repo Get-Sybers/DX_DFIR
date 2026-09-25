@@ -1,29 +1,49 @@
 ---
-# dxdfir_images: build every get-sybers/* tool image from its ansible-hardened
-# Dockerfile (in docker/ or the GoDFIR-toolz submodule), then VERIFY the
-# hardening contract on each. The role GROUPS; the playbook DECIDES which set to
-# build (dxdfir_images_set).
+# dxdfir_images: the DEPLOY galaxy's face of the tool images. BUILDING is the
+# BUILD galaxy's job — the GoDFIR-toolz collection's godfir_build role — so
+# the build path DELEGATES there, pointed at the submodule checkout (the
+# gitlink pin: its manifest, its contexts, its hardening verification). This
+# role keeps only what is shaped by how DX_DFIR deploys: the set decision
+# (dxdfir_images_set), the single-source run-as uid/gid knob, the offline
+# save/load packaging and the ensure_built lane gate.
 
-- name: "images | assert inputs"
-  ansible.builtin.assert:
-    that:
-      - dxdfir_images_set | length > 0
-      - dxdfir_images_context | length > 0
-    fail_msg: >-
-      dxdfir_images needs a non-empty dxdfir_images_set and the docker/ build
-      context (dxdfir_images_context).
-    quiet: true
+# FREEZE the role_path-derived decisions into concrete facts BEFORE the
+# delegation below: include_role vars template lazily INSIDE the included
+# role, where role_path is godfir_build's, so passing the raw defaults chain
+# (dxdfir_images_context -> repo_root -> role_path/../..) would resolve
+# against the wrong tree. A set_fact runs in THIS role's context and stores
+# finished strings. The stat makes the degraded path work too: with no
+# submodule tree, the frozen root is EMPTY (the role's "own tree" signal), and
+# godfir_build falls back to ITS OWN tree — the galaxy imported from the
+# .gitmodules source at the gitlink revision, which carries the manifest and
+# every context at the same pin.
+- name: "images | stat the submodule inventory"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_images_context }}/images.yml"
+  register: dxdfir_images_context_stat
   tags: [always]
 
-- name: "images | preflight"
-  ansible.builtin.include_tasks:
-    file: preflight.yml
-    apply:
-      tags: [always]
+- name: "images | resolve the deploy-side decisions to concrete values"
+  ansible.builtin.set_fact:
+    dxdfir_images_context_resolved: >-
+      {{ dxdfir_images_context if dxdfir_images_context_stat.stat.exists else '' }}
+    dxdfir_images_set_resolved: "{{ dxdfir_images_set }}"
   tags: [always]
 
-- name: "images | build + verify each image"
-  ansible.builtin.include_tasks: build.yml
-  loop: "{{ dxdfir_images_set }}"
-  loop_control:
-    loop_var: dxdfir_images_name
+# The build galaxy runs OVER THE SUBMODULE TREE (godfir_build_root): the
+# manifest it resolves, the contexts it builds and the revision it stamps
+# (com.get-sybers.src) are all the gitlink pin's. The role itself resolves
+# from the SAME tree — docker/GoDFIR-toolz/roles is on the repo-root
+# ansible.cfg roles_path — so tasks and content are one checkout at one pin:
+# nothing installed, nothing to drift. An empty set builds EVERY manifest
+# image (the role's semantics); a missing or empty manifest is the role's
+# own crisp inventory assert, the single home of that error.
+- name: "images | build + verify through the GoDFIR-toolz build galaxy"
+  ansible.builtin.include_role:
+    name: godfir_build
+  vars:
+    godfir_build_root: "{{ dxdfir_images_context_resolved }}"
+    godfir_build_set: "{{ dxdfir_images_set_resolved }}"
+    godfir_build_force: "{{ dxdfir_images_force }}"
+    godfir_build_uid: "{{ dxdfir_images_uid }}"
+    godfir_build_gid: "{{ dxdfir_images_gid }}"

@@ -96,10 +96,6 @@ argument_specs:
         required: false
         default: ""
         description: "Image ref overriding the contract's (get-sybers/signatures:latest); e.g. a digest pin."
-      dxdfir_signatures_python_path:
-        type: str
-        required: false
-        description: "PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); in-repo runs."
       dxdfir_signatures_force:
         type: bool
         required: false

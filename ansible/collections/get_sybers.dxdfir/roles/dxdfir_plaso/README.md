@@ -35,7 +35,6 @@ input path relative to the input dir with separators folded to `_`.
 | `dxdfir_plaso_vss` | `true` | log2timeline: process every VSS store (`PLASO_LOG2TIMELINE_VSS`). |
 | `dxdfir_plaso_parsers` | `""` | log2timeline: parser preset/list (`PLASO_LOG2TIMELINE_PARSERS`). |
 | `dxdfir_plaso_output_format` | `json_line` | psort: the output module (`PLASO_PSORT_OUTPUT_FORMAT`). |
-| `dxdfir_plaso_python_path` | `<repo>/python` | PYTHONPATH for the image supply-chain guard (`get_sybers_dxdfir.images`). |
 | `dxdfir_plaso_force` | `false` | Rerun sources that already have a storage file / rendered timeline. |
 
 ## Idempotence

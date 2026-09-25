@@ -66,7 +66,6 @@
     name: dxdfir_lane
   vars:
     dxdfir_lane_name: car-load
-    dxdfir_lane_python_path: "{{ dxdfir_car_load_python_path }}"
     dxdfir_lane_runs:
       - name: load
         contract: "{{ dxdfir_car_load_contract }}"

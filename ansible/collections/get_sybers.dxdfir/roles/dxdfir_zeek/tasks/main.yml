@@ -23,7 +23,6 @@
     name: dxdfir_lane
   vars:
     dxdfir_lane_name: zeek
-    dxdfir_lane_python_path: "{{ dxdfir_zeek_python_path }}"
     dxdfir_lane_runs:
       - name: zeek
         contract: "{{ dxdfir_zeek_contract }}"

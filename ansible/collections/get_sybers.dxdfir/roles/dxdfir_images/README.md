@@ -21,12 +21,22 @@ No third-party tool image is pulled at runtime. Every image builds from the
   `Current.mdb`). Each builds from its OWN subdir in the submodule. Nothing
   .NET remains in the inventory.
 
-The image inventory — names + per-image build context / dockerfile / args — lives in the repo-root **`images.yml`**,
-the single source of truth this role and the Python runtime guard
-(`get_sybers_dxdfir.images`) both read. Add or change an image there, in one place.
+The image inventory — names + per-image build context / dockerfile / args — is SUPPLIED by
+the GoDFIR-toolz submodule: its root **`images.yml`** (read at the gitlink pin) is
+the single source of truth this role reads — and the runtime `verify`/`audit`
+gates read the same file through the build galaxy; DX_DFIR carries no image
+list of its own.
+Add or change an image there, in one place — the .NET per-tool images
+(`sqlecmd`, `bstrings`, …) are ordinary manifest entries built from the
+parameterized `godfir-tool/Dockerfile`.
 
-Every image runs as uid 2000 (the single `dxdfir_runtime_uid` knob) and is
-verified against the hardening contract by this role.
+Every image runs as uid 2000 (the single `dxdfir_runtime_uid` knob). The
+build + hardening verification themselves are the **build galaxy's**: this
+role delegates to its `godfir_build` role (resolved straight from the
+submodule checkout — `docker/GoDFIR-toolz/roles` is on the repo-root
+`roles_path` — so the gitlink stays the only pin and nothing is installed) and keeps
+the deploy-shaped parts — the set decision, the uid knob, the offline
+save/load packaging and the `ensure_built` lane gate.
 
 ## Hardening: minimal, attack-surface-reduction posture
 

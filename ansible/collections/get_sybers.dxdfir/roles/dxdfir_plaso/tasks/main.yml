@@ -91,7 +91,6 @@
     name: dxdfir_lane
   vars:
     dxdfir_lane_name: plaso
-    dxdfir_lane_python_path: "{{ dxdfir_plaso_python_path }}"
     dxdfir_lane_runs: "{{ dxdfir_plaso_runs }}"
     dxdfir_lane_verify_dir: "{{ dxdfir_plaso_jsonl_dir }}"
     dxdfir_lane_verify_glob: "timeline.jsonl"

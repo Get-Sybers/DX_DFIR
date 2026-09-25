@@ -40,7 +40,4 @@ dxdfir_evtx_plaso_contract: "{{ dxdfir_evtx_repo_root }}/docker/GoDFIR-toolz/pla
 dxdfir_evtx_image: ""
 dxdfir_evtx_plaso_image: ""
 
-# PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); a
-# deployed run installs the package instead.
-dxdfir_evtx_python_path: "{{ dxdfir_evtx_repo_root }}/python"
 dxdfir_evtx_force: false

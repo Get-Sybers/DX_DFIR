@@ -22,9 +22,6 @@ dxdfir_byakugan_dir: "{{ dxdfir_byakugan_repo_root }}/data_store/processed/byaku
 dxdfir_byakugan_contract: "{{ dxdfir_byakugan_repo_root }}/docker/GoDFIR-toolz/byakugan/contract.yml"
 # Empty = the contract's image (get-sybers/byakugan:latest); set to pin a digest.
 dxdfir_byakugan_image: ""
-# PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); a
-# deployed run installs the package instead.
-dxdfir_byakugan_python_path: "{{ dxdfir_byakugan_repo_root }}/python"
 
 # build: rebuild sources whose car_relationships.jsonl already exists (BYAKUGAN_BUILD_FORCE).
 dxdfir_byakugan_rebuild: false

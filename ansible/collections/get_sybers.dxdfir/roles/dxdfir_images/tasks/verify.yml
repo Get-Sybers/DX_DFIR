@@ -1,0 +1,36 @@
+---
+# The runtime supply-chain gate, the deploy galaxy's face of it: freeze the
+# role_path-derived submodule root to a concrete string (the lazy
+# include_role-vars trap — see tasks/main.yml) and delegate to the build
+# galaxy's verify entry, which refuses anything but the manifest's hardened
+# images (membership + USER + com.get-sybers.hardened, on THIS host).
+# Non-namespace refs pass untouched. Reuse (a lane preflight):
+#   - ansible.builtin.include_role:
+#       name: dxdfir_images
+#       tasks_from: verify
+#     vars:
+#       dxdfir_images_verify_images: ["get-sybers/goevtx:latest", ...]
+
+- name: "images-verify | stat the submodule inventory"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_images_context }}/images.yml"
+  register: dxdfir_images_context_stat
+
+- name: "images-verify | resolve the deploy-side values to concrete strings"
+  ansible.builtin.set_fact:
+    # empty when the submodule tree is absent: the delegation passes it EMPTY and
+    # godfir_build falls back to its own tree (the degraded-path
+    # galaxy import at the same pin).
+    dxdfir_images_context_resolved: >-
+      {{ dxdfir_images_context if dxdfir_images_context_stat.stat.exists else '' }}
+    dxdfir_images_verify_resolved: "{{ dxdfir_images_verify_images }}"
+
+- name: "images-verify | gate through the GoDFIR-toolz build galaxy"
+  ansible.builtin.include_role:
+    name: godfir_build
+    tasks_from: verify
+  vars:
+    godfir_build_root: "{{ dxdfir_images_context_resolved }}"
+    godfir_build_verify_images: "{{ dxdfir_images_verify_resolved }}"
+    godfir_build_uid: "{{ dxdfir_images_uid }}"
+    godfir_build_gid: "{{ dxdfir_images_gid }}"

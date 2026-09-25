@@ -26,16 +26,20 @@ dxdfir_images_gid: "{{ dxdfir_runtime_gid | default(dxdfir_runtime_uid | default
 # build from the shared context.
 dxdfir_images_context: "{{ dxdfir_images_repo_root }}/docker/GoDFIR-toolz"
 
-# The tool-image inventory — the ONE source of truth (repo-root images.yml),
-# shared with the Python runtime guard (get_sybers_dxdfir.images). Each entry:
-# name (+ optional context / dockerfile / args). Add or change an image in
-# images.yml, in ONE place. Clone-at-build engine pins live in the tool
-# Dockerfiles inside the GoDFIR-toolz submodule (ARG *_REF defaults), so the
-# gitlink is the only external pin.
+# The tool-image inventory — the ONE source of truth is the GoDFIR-toolz
+# submodule's OWN root images.yml, read at the gitlink pin (that repo is
+# plug-and-play: it supplies the manifest, this repo only consumes it — no
+# DX_DFIR-side image list to drift). The runtime verify/audit gates read the
+# same file through the build galaxy. Each entry: name (+ optional context /
+# dockerfile / args, contexts relative to the SUBMODULE root). Add or change
+# an image in the submodule's images.yml, in ONE place; clone-at-build engine
+# pins live in the tool Dockerfiles there (ARG defaults), so the gitlink is
+# the only external pin.
 dxdfir_images_manifest: >-
-  {{ (lookup('file', dxdfir_images_repo_root ~ '/images.yml', errors='ignore') | default('', true) | from_yaml) or {} }}
-# Names to build, in manifest order; build.yml resolves each one's build context,
-# dockerfile and args from its entry.
+  {{ (lookup('file', dxdfir_images_context ~ '/images.yml', errors='ignore') | default('', true) | from_yaml) or {} }}
+# Names to build, in manifest order; the build galaxy (godfir_build, run over
+# the submodule tree) resolves each one's build context, dockerfile and args
+# from its entry.
 dxdfir_images_set: "{{ (dxdfir_images_manifest.images | default([])) | map(attribute='name') | list }}"
 
 # Rebuild even when an image already exists (docker build cache still applies).
@@ -63,7 +67,15 @@ dxdfir_images_list_only: false
 # preflight) passes the images it is about to run.
 dxdfir_images_required: []
 
-# Per-image build context / dockerfile / args now live in images.yml (one entry
-# per image); tasks/build.yml resolves them from the manifest entry. No separate
-# overrides map — the manifest is the single source; the clone-at-build engine
-# pins are ARG defaults in the tool Dockerfiles.
+# The runtime supply-chain gate (tasks/verify.yml — the build galaxy's verify
+# entry behind the deploy-side freeze): the image refs a caller is about to
+# RUN. Namespace refs must be manifest images still carrying the hardened
+# contract; refs outside get-sybers/* pass untouched.
+dxdfir_images_verify_images: []
+
+# Per-image build context / dockerfile / args live in the submodule's
+# images.yml (one entry per image); the GoDFIR-toolz build galaxy
+# (godfir_build, resolved from the submodule via roles_path — tasks/main.yml delegates to it)
+# resolves them from the manifest entry. No separate overrides map — the
+# manifest is the single source; the clone-at-build engine pins are ARG
+# defaults in the tool Dockerfiles.

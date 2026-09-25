@@ -84,7 +84,7 @@ scripts/save-docker-images.sh --load
 ```
 
 The images managed are:
-- the `get-sybers/*` hardened tool images from `images.yml` — built in-repo by
+- the `get-sybers/*` hardened tool images from the GoDFIR-toolz `images.yml` — built in-repo by
   `ansible-playbook playbooks/dxdfir-build-images.yml` (see docs/Containers.md)
 - the Elastic stack's `docker.elastic.co/*` images at `ELASTIC_VERSION`
   (derived from the inventory's `dxdfir_elastic_version` + the `dxdfir_stack` role's image map) — pulled and

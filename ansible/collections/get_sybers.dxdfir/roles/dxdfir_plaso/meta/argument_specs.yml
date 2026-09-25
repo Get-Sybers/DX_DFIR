@@ -65,10 +65,6 @@ argument_specs:
         required: false
         default: json_line
         description: "psort: the output module (PLASO_PSORT_OUTPUT_FORMAT)."
-      dxdfir_plaso_python_path:
-        type: str
-        required: false
-        description: "PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); in-repo runs."
       dxdfir_plaso_force:
         type: bool
         required: false

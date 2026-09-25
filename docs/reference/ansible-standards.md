@@ -89,7 +89,8 @@ all`, once per lane, right before that lane creates its container. **`dxdfir_ima
 `ensure_built`** (`tasks_from: ensure_built`, fed `dxdfir_images_required`) builds any tool
 image not yet built on the host (a no-op when already built); the shared `dxdfir_lane`
 preflight and the `dxdfir_byakugan` preflight both call it, ahead of the run-time
-supply-chain guard that enforces the hardened contract on what is built. **`dxdfir_stack`
+supply-chain gate (`dxdfir_images` `verify` — the build galaxy's entry) that
+enforces the hardened contract on what is about to run. **`dxdfir_stack`
 `ensure_running`** (`dxdfir_stack_required_services`, default `elasticsearch` + `kibana`)
 brings the compose services up (`state: present`, a no-op when already running) and verifies
 they came up; stack `deploy` and `start` both run through it. Both are idempotent, so a

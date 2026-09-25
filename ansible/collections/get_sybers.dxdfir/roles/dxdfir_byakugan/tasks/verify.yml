@@ -23,7 +23,6 @@
     name: dxdfir_lane
   vars:
     dxdfir_lane_name: car-verify
-    dxdfir_lane_python_path: "{{ dxdfir_byakugan_python_path }}"
     dxdfir_lane_runs:
       - name: verify
         contract: "{{ dxdfir_byakugan_contract }}"

@@ -85,7 +85,7 @@ func newCleanupDockerCmd(env *Env) *cobra.Command {
 		})
 	cmd.Long = "Remove built get-sybers/* tool images (dxdfir_cleanup role, docker action).\n\n" +
 		"By default only the hardened tool set is removed (the source of truth is the\n" +
-		"Python get_sybers_dxdfir.images.HARDENED_IMAGES). --all-dxdfir removes EVERY\n" +
+		"GoDFIR-toolz submodule's images.yml manifest). --all-dxdfir removes EVERY\n" +
 		"get-sybers/* image present; --dangling also prunes dangling layers."
 	cmd.Flags().BoolVar(&dangling, "dangling", false, "Also prune dangling layers.")
 	cmd.Flags().BoolVar(&allDxdfir, "all-dxdfir", false, "Remove EVERY get-sybers/* image (default: only the hardened tool set).")

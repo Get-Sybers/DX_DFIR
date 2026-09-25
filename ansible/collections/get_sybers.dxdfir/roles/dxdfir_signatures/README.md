@@ -50,7 +50,6 @@ mounted read-only and named to the sub-tool by its `*_RULES` variable
 | `dxdfir_signatures_scan_filter` | `""` (every file) | gomount `--filter` glob for scan. |
 | `dxdfir_signatures_contract` | `<repo>/docker/GoDFIR-toolz/signatures/contract.yml` | The contract the runs are built from. |
 | `dxdfir_signatures_image` | `""` (the contract's `get-sybers/signatures:latest`) | Image ref override, e.g. a digest pin. |
-| `dxdfir_signatures_python_path` | `<repo>/python` | PYTHONPATH for the image supply-chain guard (`get_sybers_dxdfir.images`). |
 | `dxdfir_signatures_force` | `false` | Rescan items that already have output. |
 
 ## Idempotence

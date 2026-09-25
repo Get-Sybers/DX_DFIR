@@ -50,10 +50,6 @@ argument_specs:
         required: false
         default: ""
         description: "Image ref overriding the contract's (get-sybers/byakugan:latest); e.g. a digest pin."
-      dxdfir_car_load_python_path:
-        type: str
-        required: false
-        description: "PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); in-repo runs."
       dxdfir_car_load_elastic_password:
         type: str
         required: false

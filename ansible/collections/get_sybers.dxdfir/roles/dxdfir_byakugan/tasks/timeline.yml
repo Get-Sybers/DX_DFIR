@@ -15,7 +15,6 @@
     name: dxdfir_lane
   vars:
     dxdfir_lane_name: car-timeline
-    dxdfir_lane_python_path: "{{ dxdfir_byakugan_python_path }}"
     dxdfir_lane_runs:
       - name: timeline
         contract: "{{ dxdfir_byakugan_contract }}"
