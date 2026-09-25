@@ -71,28 +71,30 @@ problems = []
 pinned = {}
 for entry in (reqs or {}).get("collections", []):
     name, ver = entry.get("name"), str(entry.get("version", ""))
-    if entry.get("type") == "dir":
-        # A dir-type entry is pinned by the SUBMODULE GITLINK, not a version:
-        # the path must be a declared submodule (the pin) carrying a
-        # collection manifest, and its FQCN covers galaxy.yml dependencies.
-        import os
-        gitmodules = open(".gitmodules").read() if os.path.isfile(".gitmodules") else ""
-        if f"path = {name}" not in gitmodules:
-            problems.append(f"{name}: dir-type entry is not a declared submodule — nothing pins it")
-        gpath = os.path.join(name, "galaxy.yml")
-        if not os.path.isfile(gpath):
-            problems.append(f"{name}: dir-type entry has no galaxy.yml (submodule not initialised?)")
-        else:
-            gy = yaml.safe_load(open(gpath)) or {}
-            pinned[f"{gy.get('namespace')}.{gy.get('name')}"] = "gitlink"
-        continue
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", ver):
         problems.append(f"{name}: version '{ver}' is not an exact X.Y.Z pin")
     pinned[name] = ver
+# A galaxy.yml dependency may instead be SUPPLIED BY A SUBMODULE (the
+# GoDFIR-toolz build galaxy): the gitlink is its pin, setup-environment.sh
+# and CI import it from the checkout — so a declared submodule whose
+# galaxy.yml carries the dependency's FQCN covers it.
+import os
+gitlinked = {}
+if os.path.isfile(".gitmodules"):
+    for line in open(".gitmodules"):
+        if line.strip().startswith("path = "):
+            path = line.split("=", 1)[1].strip()
+            gpath = os.path.join(path, "galaxy.yml")
+            if os.path.isfile(gpath):
+                gy = yaml.safe_load(open(gpath)) or {}
+                gitlinked[f"{gy.get('namespace')}.{gy.get('name')}"] = path
 galaxy = yaml.safe_load(open(sys.argv[2]))
 for dep in (galaxy.get("dependencies") or {}):
-    if dep not in pinned:
-        problems.append(f"galaxy.yml dependency '{dep}' has no pinned entry in requirements.yml")
+    if dep in pinned or dep in gitlinked:
+        continue
+    problems.append(
+        f"galaxy.yml dependency '{dep}' has no pinned entry in requirements.yml "
+        "and no submodule supplies it (submodule not initialised?)")
 print("\n".join(problems))
 PY
 )
@@ -107,6 +109,11 @@ PY
         pass "setup-environment.sh installs requirements.yml"
     else
         fail "setup-environment.sh does not install requirements.yml"
+    fi
+    if grep -q "godfir_toolz" scripts/setup-environment.sh; then
+        pass "setup-environment.sh imports the GoDFIR-toolz build galaxy"
+    else
+        fail "setup-environment.sh does not import the GoDFIR-toolz build galaxy (get_sybers.godfir_toolz)"
     fi
 else
     fail "missing $REQS"

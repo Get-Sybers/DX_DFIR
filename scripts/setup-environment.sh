@@ -500,19 +500,43 @@ ok "dxdfir (Go front-end) installed: $(/usr/local/bin/dxdfir --version 2>/dev/nu
 # Install the collection's pinned Ansible dependencies (requirements.yml — never
 # :latest, never a branch). They go to a fixed shared path that the repo-root
 # ansible.cfg puts on collections_path, so every user's runs resolve the same
-# pinned versions: community.docker (the deploy roles), ansible.posix (the
-# profile_tasks audit-timing callback) and the GoDFIR-toolz BUILD galaxy
-# (get_sybers.godfir_toolz — installed FROM THE SUBMODULE checkout above, so
-# its pin is the gitlink; the dir entry resolves against the CWD, hence the
-# explicit repo-root cd).
+# pinned versions: community.docker (the deploy roles) and ansible.posix (the
+# profile_tasks audit-timing callback).
 ################################################################################
 section "Ansible collections"
 DXDFIR_COLLECTIONS="${DXDFIR_COLLECTIONS:-/opt/dxdfir/collections}"
 step "Installing pinned Ansible collections into $DXDFIR_COLLECTIONS ..."
-(cd "$REPO_ROOT_DIR" && $SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install \
+$SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install \
     -r "$REPO_ROOT_DIR/ansible/collections/get_sybers.dxdfir/requirements.yml" \
-    -p "$DXDFIR_COLLECTIONS" --force) \
+    -p "$DXDFIR_COLLECTIONS" --force \
     || die "Failed to install the pinned Ansible collections (requirements.yml)."
+
+# The GoDFIR-toolz BUILD galaxy (get_sybers.godfir_toolz): the image inventory
+# and the godfir_build role dxdfir_images delegates to. Its pin is the
+# GITLINK, so it is imported from the submodule initialised above; when the
+# submodule content is absent anyway (a tarball checkout, an init that could
+# not reach out), it is imported straight from the source the repo root
+# declares — the .gitmodules URL at the gitlink revision — never from a
+# hardcoded location. --no-deps: its dependency set is exactly the pins
+# installed above.
+TOOLZ_PATH="docker/GoDFIR-toolz"
+if [[ -f "$REPO_ROOT_DIR/$TOOLZ_PATH/galaxy.yml" ]]; then
+    TOOLZ_SRC="$REPO_ROOT_DIR/$TOOLZ_PATH"
+    step "Importing the GoDFIR-toolz build galaxy from the submodule ..."
+else
+    TOOLZ_URL=$(git config -f "$REPO_ROOT_DIR/.gitmodules" "submodule.$TOOLZ_PATH.url" 2>/dev/null) \
+        || die "GoDFIR-toolz is neither checked out at $TOOLZ_PATH nor declared in .gitmodules — cannot import the build galaxy."
+    TOOLZ_SRC="git+${TOOLZ_URL}"
+    if TOOLZ_SHA=$(git -C "$REPO_ROOT_DIR" rev-parse "HEAD:$TOOLZ_PATH" 2>/dev/null); then
+        TOOLZ_SRC="${TOOLZ_SRC},${TOOLZ_SHA}"
+        step "Importing the GoDFIR-toolz build galaxy from $TOOLZ_URL at the gitlink pin ${TOOLZ_SHA:0:12} ..."
+    else
+        warn "No git metadata to read the gitlink pin — importing the build galaxy from $TOOLZ_URL (default branch)."
+    fi
+fi
+$SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install "$TOOLZ_SRC" \
+    -p "$DXDFIR_COLLECTIONS" --force --no-deps \
+    || die "Failed to import the GoDFIR-toolz build galaxy (get_sybers.godfir_toolz)."
 ok "Collections installed: $("$DXDFIR_VENV/bin/ansible-galaxy" collection list -p "$DXDFIR_COLLECTIONS" 2>/dev/null | grep -cE '^[a-z]' || echo '?') pinned"
 
 ################################################################################
