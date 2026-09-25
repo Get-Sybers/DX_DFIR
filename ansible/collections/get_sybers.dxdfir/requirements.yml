@@ -14,8 +14,10 @@ collections:
     version: "2.26.9"
   # NOT here: the BUILD galaxy (get_sybers.godfir_toolz — the image inventory
   # and the godfir_build role dxdfir_images delegates to). Its pin is the
-  # GITLINK, not a version, so setup-environment.sh and CI import it as their
-  # own step: from the submodule checkout once it is initialised, else
-  # straight from the source the repo root declares (.gitmodules URL at the
-  # gitlink revision). Its dependency range is satisfied by the exact pins
-  # above.
+  # GITLINK and it is never installed as a copy: the committed symlink
+  # ansible/collections/ansible_collections/get_sybers/godfir_toolz resolves
+  # it IN PLACE from the submodule checkout (repo-root ansible.cfg puts that
+  # tree first on collections_path). Only a checkout without the submodule
+  # falls back to importing it from the source the repo root declares
+  # (.gitmodules URL at the gitlink revision — setup-environment.sh). Its
+  # dependency range is satisfied by the exact pins above.

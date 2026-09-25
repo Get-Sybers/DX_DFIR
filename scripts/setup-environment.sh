@@ -512,16 +512,18 @@ $SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install \
 
 # The GoDFIR-toolz BUILD galaxy (get_sybers.godfir_toolz): the image inventory
 # and the godfir_build role dxdfir_images delegates to. Its pin is the
-# GITLINK, so it is imported from the submodule initialised above; when the
-# submodule content is absent anyway (a tarball checkout, an init that could
-# not reach out), it is imported straight from the source the repo root
-# declares — the .gitmodules URL at the gitlink revision — never from a
-# hardcoded location. --no-deps: its dependency set is exactly the pins
-# installed above.
+# GITLINK, and the PRIMARY path installs NOTHING: the committed symlink
+# ansible/collections/ansible_collections/get_sybers/godfir_toolz resolves
+# the collection IN PLACE from the submodule initialised above (repo-root
+# ansible.cfg puts that tree first on collections_path) — no copy, no
+# tarball, nothing to drift on a bump. Only when the submodule content is
+# absent anyway (a tarball checkout, an init that could not reach out) is it
+# imported from the source the repo root declares — the .gitmodules URL at
+# the gitlink revision — never from a hardcoded location. --no-deps: its
+# dependency set is exactly the pins installed above.
 TOOLZ_PATH="docker/GoDFIR-toolz"
 if [[ -f "$REPO_ROOT_DIR/$TOOLZ_PATH/galaxy.yml" ]]; then
-    TOOLZ_SRC="$REPO_ROOT_DIR/$TOOLZ_PATH"
-    step "Importing the GoDFIR-toolz build galaxy from the submodule ..."
+    ok "GoDFIR-toolz build galaxy resolves in place from the submodule (no copy installed)"
 else
     TOOLZ_URL=$(git config -f "$REPO_ROOT_DIR/.gitmodules" "submodule.$TOOLZ_PATH.url" 2>/dev/null) \
         || die "GoDFIR-toolz is neither checked out at $TOOLZ_PATH nor declared in .gitmodules — cannot import the build galaxy."
@@ -532,10 +534,10 @@ else
     else
         warn "No git metadata to read the gitlink pin — importing the build galaxy from $TOOLZ_URL (default branch)."
     fi
+    $SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install "$TOOLZ_SRC" \
+        -p "$DXDFIR_COLLECTIONS" --force --no-deps \
+        || die "Failed to import the GoDFIR-toolz build galaxy (get_sybers.godfir_toolz)."
 fi
-$SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install "$TOOLZ_SRC" \
-    -p "$DXDFIR_COLLECTIONS" --force --no-deps \
-    || die "Failed to import the GoDFIR-toolz build galaxy (get_sybers.godfir_toolz)."
 ok "Collections installed: $("$DXDFIR_VENV/bin/ansible-galaxy" collection list -p "$DXDFIR_COLLECTIONS" 2>/dev/null | grep -cE '^[a-z]' || echo '?') pinned"
 
 ################################################################################

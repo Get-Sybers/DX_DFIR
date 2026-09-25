@@ -115,6 +115,12 @@ PY
     else
         fail "setup-environment.sh does not import the GoDFIR-toolz build galaxy (get_sybers.godfir_toolz)"
     fi
+    _link="ansible/collections/ansible_collections/get_sybers/godfir_toolz"
+    if [[ -L "$_link" && "$(readlink "$_link")" == "../../../../docker/GoDFIR-toolz" ]]; then
+        pass "build galaxy resolves in place (collection symlink -> submodule, no installed copy)"
+    else
+        fail "collection symlink $_link missing or mistargeted — the build galaxy would need an installed copy"
+    fi
 else
     fail "missing $REQS"
 fi

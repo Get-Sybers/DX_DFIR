@@ -18,6 +18,14 @@ root [CHANGELOG.md](../../../CHANGELOG.md).
   now from the same manifest and collection that build the images. The whole
   `*_python_path` plumbing (nine roles + the lane skeleton) existed only to
   find the python guard and is gone with it.
+- **The build galaxy resolves in place — no installed copy, no tarball.** The
+  committed collection symlink (`ansible/collections/ansible_collections/
+  get_sybers/godfir_toolz → docker/GoDFIR-toolz`, first on the repo-root
+  `collections_path`) makes `get_sybers.godfir_toolz` resolve straight from
+  the submodule checkout at the gitlink pin. CI and setup no longer
+  `ansible-galaxy install` it; the git-URL import remains only as
+  setup-environment.sh's fallback for a checkout without the submodule, and
+  run-checks asserts the symlink's integrity.
 - **Smoke CI builds everything GoDFIR-toolz supplies.** A new `images` job builds the FULL manifest through the build galaxy (hardening asserted on every image, nightly included); the pipeline smoke job keeps its fast goevtx+byakugan path. The stale repo-root `images.yml` path filter is gone — a manifest change arrives as a gitlink bump.
 
 - **Every tool lane runs its container from the GoDFIR-toolz contract, in ansible.** `dxdfir_lane` gained a data-driven builder (`tasks/argv.yml`): a lane declares runs as `{contract, subtool, env, mounts}` and the skeleton turns each into the confined `docker run` (`-e` per declared variable, `-v` per mount, tmpfs for `/tmp` and every unbound optional read-write contract mount, `--network none` unless the contract allows it, `--group-add` for the evidence group), asserting the spec against the contract first. The process step runs the built containers in order, honours the contract's exit table (0/1/3 judged by the summary line, 2 fails) and gates on "output on disk, or nothing to do". `dxdfir_lane_module` / `dxdfir_lane_argv` / `dxdfir_lane_input_checks` / `dxdfir_lane_preflight_extra` are gone; `dxdfir_lane_runs`, `dxdfir_lane_confinement`, `dxdfir_lane_tmpfs_opts` and `dxdfir_lane_exit_ok` are the interface.

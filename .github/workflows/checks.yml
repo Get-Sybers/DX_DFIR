@@ -70,11 +70,10 @@ jobs:
           ansible-galaxy collection install --force \
             -r ansible/collections/get_sybers.dxdfir/requirements.yml \
             -p ansible/collections/get_sybers.dxdfir/.ansible/collections
-          # The GoDFIR-toolz build galaxy: gitlink-pinned, imported from the
-          # submodule checkout (its deps are the pins above), so lint resolves
-          # get_sybers.godfir_toolz.godfir_build for real.
-          ansible-galaxy collection install --force --no-deps docker/GoDFIR-toolz \
-            -p ansible/collections/get_sybers.dxdfir/.ansible/collections
+          # The GoDFIR-toolz build galaxy needs NO install: the committed
+          # symlink ansible/collections/ansible_collections/get_sybers/
+          # godfir_toolz resolves it IN PLACE from the submodule checkout at
+          # the gitlink pin — no copy, no tarball, nothing to drift.
           # The package's unit tests run inside the harness: install the
           # package (PyYAML is the only declared dep the tests import;
           # ansible-core/requests/docker are runtime deps of the collection's
