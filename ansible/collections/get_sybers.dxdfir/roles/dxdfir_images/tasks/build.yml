@@ -67,9 +67,10 @@
 # A rebuild re-tags :latest and leaves the image it replaced untagged — remove
 # that replaced image so stale builds never accumulate.
 - name: "images-build | remove the replaced image behind {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"
-  ansible.builtin.command:
-    argv: [docker, rmi, -f, "{{ dxdfir_images_present.images[0].Id }}"]
-  changed_when: true
+  community.docker.docker_image:
+    name: "{{ dxdfir_images_present.images[0].Id }}"
+    state: absent
+    force_absent: true
   when:
     - dxdfir_images_present.images | length > 0
     - dxdfir_images_inspect.images | length > 0
