@@ -7,6 +7,16 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Added (post-#293 follow-through)
+- **Smoke CI builds its images through the images role** instead of raw
+  `docker build`, so the goevtx/byakugan CI builds carry the
+  `com.get-sybers.src` stamp and pass the role's post-build hardening
+  asserts — including the filesystem scan #293 brought back to life — the
+  same gate every operator build goes through. The last `docker rmi` in the
+  build flow (removing the untagged image a rebuild replaces) is
+  `docker_image state: absent` now, and the `dxdfir_stack` role carries its
+  own README.
+
 ### Removed (unreleased-branch follow-through)
 - The last compose-era vestiges: `dxdfir deploy stack`'s dead `--build` /
   `--no-build` flags (they fed the retired `dxdfir_stack_build` compose

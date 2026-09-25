@@ -82,23 +82,21 @@ jobs:
           python -m pip install --quiet --constraint python/constraints.txt ./python
           ansible-galaxy collection install -r ansible/collections/get_sybers.dxdfir/requirements.yml
 
-      # The evtx lane runs goevtx (the static-Go .evtx parser); build it once
-      # here (the smoke test asserts its presence and fails loudly if absent).
-      - name: Build the goevtx image
-        run: docker build -t get-sybers/goevtx:latest -f docker/GoDFIR-toolz/goevtx/Dockerfile docker/GoDFIR-toolz/goevtx
-
-      # The CAR lane (dxdfir_byakugan) drives the external Byakugan engine
-      # inside the get-sybers/byakugan image: the docker build clones the
-      # engine at the BYAKUGAN_REF pin its Dockerfile defaults and, in its own
-      # stages, checks out the engine's nested model submodules (third_party/car +
-      # attack-datasources) and builds the Go parse binary — so nothing about the
-      # engine is provisioned on the runner. An engine bump is a gitlink change,
-      # which the PR path filters above re-run this whole pipeline against.
-      - name: Build the Byakugan engine image (at its Dockerfile pin)
+      # The images the pipeline runs — goevtx (the evtx lane's static-Go
+      # parser) and the Byakugan engine image (cloned + built at its
+      # Dockerfile's BYAKUGAN_REF pin, nothing provisioned on the runner) —
+      # are built THROUGH the images role, exactly as `dxdfir build-docker`
+      # builds them: same manifest contexts, same source stamp
+      # (com.get-sybers.src), and the role's post-build hardening asserts
+      # (static contract + the filesystem scan) now gate the CI builds too
+      # instead of being bypassed by raw `docker build`. An engine bump is a
+      # gitlink change, which the PR path filters above re-run this whole
+      # pipeline against.
+      - name: Build the goevtx + byakugan images (the images role, hardening asserted)
         run: |
-          # The submodule root is the build context, so the Dockerfile COPYs the
-          # canonical hardening/harden.yml straight from it — nothing to sync.
-          docker build -t get-sybers/byakugan:latest -f docker/GoDFIR-toolz/byakugan/Dockerfile docker/GoDFIR-toolz
+          ansible-playbook \
+            ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml \
+            -e '{"dxdfir_images_set": ["goevtx", "byakugan"]}'
 
       - name: Run the pipeline smoke test
         run: ./.github/tests/smoke-test.sh
