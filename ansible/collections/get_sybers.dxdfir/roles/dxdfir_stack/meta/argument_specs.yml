@@ -180,6 +180,36 @@ argument_specs:
         required: false
         default: false
         description: "Reclaim may evict ALL unused images, not just dangling ones (evicts warm tool images — off by default)."
+  docker_ensure:
+    short_description: "Ensure the docker engine: installed, running, group in place."
+    description:
+      - >-
+        Reusable entry point (tasks/docker_ensure.yml), run first by the
+        stack preflight and directly by dxdfir-bootstrap.yml
+        (scripts/setup-environment.sh drives it once ansible exists): reads
+        the engine's state, answers an engine-less or daemon-less host by
+        the dxdfir_stack_when_absent decision, installs the engine on the
+        install opt-in (Docker's apt repository, Debian/Ubuntu families —
+        the flow the setup script used to carry in shell), starts a stopped
+        daemon on the start opt-in, and — on those same opt-ins, as root —
+        ensures the docker group and the sudo'ing operator's membership.
+    options:
+      dxdfir_stack_when_absent:
+        type: str
+        required: false
+        default: continue
+        choices: [continue, report, fail]
+        description: "What an engine-less/daemon-less host means (see main)."
+      dxdfir_stack_install_docker:
+        type: bool
+        required: false
+        default: false
+        description: "Install the engine when the host has none."
+      dxdfir_stack_start_docker:
+        type: bool
+        required: false
+        default: false
+        description: "Start (and enable) a stopped daemon."
   ensure_running:
     short_description: "Ensure the required stack services are running (start existing, verify healthy)."
     description:

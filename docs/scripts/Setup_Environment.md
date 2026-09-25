@@ -30,11 +30,12 @@ processing scripts pull their images on first use.
    asks for confirmation before continuing as root (the final step rewrites
    ownership across the repository). Exits with a clear message if it is
    neither root nor able to use `sudo`.
-2. **Docker Setup**:
-   - Checks if Docker is installed; installs it if not present, using the apt
-     repository matching the detected distribution
-   - Creates a Docker group if it doesn't exist
-   - Adds the current user to the Docker group
+2. **Docker Setup (via ansible, after step 4)**: runs `dxdfir-bootstrap.yml`
+   — the `dxdfir_stack` role's `docker_ensure` entry point, the same state
+   tasks `dxdfir deploy stack` uses — which installs the engine if absent
+   (Docker's apt repository for the detected Debian/Ubuntu distribution),
+   starts and enables the daemon, creates the docker group and adds the
+   sudo'ing operator to it. The script carries no shell copy of this.
 3. **Userland tools**: Installs the tools the processing scripts shell out to
    (`curl`, `python3`, `unzip`, `tar`, plus `ca-certificates`/`gnupg`), so a
    missing dependency surfaces here rather than halfway through an ingest.

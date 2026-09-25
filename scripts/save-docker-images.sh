@@ -62,8 +62,11 @@ done
 # back to the venv directly for a PATH that lacks it.
 if ! command -v ansible-playbook >/dev/null 2>&1; then
     _venv="${DXDFIR_VENV:-/opt/dxdfir/venv}"
-    [[ -x "$_venv/bin/ansible-playbook" ]] && PATH="$_venv/bin:$PATH" \
-        || die "ansible-playbook not found — run scripts/setup-environment.sh first."
+    if [[ -x "$_venv/bin/ansible-playbook" ]]; then
+        PATH="$_venv/bin:$PATH"
+    else
+        die "ansible-playbook not found — run scripts/setup-environment.sh first."
+    fi
 fi
 
 # Extra vars the playbooks take from this launcher: only the dir override.

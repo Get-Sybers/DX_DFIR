@@ -163,19 +163,6 @@
         state: present
         update_cache: true
 
-    - name: "stack-docker | the docker group exists"
-      ansible.builtin.group:
-        name: docker
-        state: present
-
-    # The operator who sudo'd this deploy gets docker-group membership, as
-    # setup-environment.sh grants it; a plain root run has no such user.
-    - name: "stack-docker | hand the sudo'ing operator docker-group membership"
-      ansible.builtin.user:
-        name: "{{ ansible_facts.env.SUDO_USER }}"
-        groups: docker
-        append: true
-      when: (ansible_facts.env.SUDO_USER | default('')) not in ['', 'root']
   rescue:
     - name: "stack-docker | engine install failed — fail with the manual path"
       ansible.builtin.fail:
@@ -200,6 +187,41 @@
       https://docs.docker.com/engine/install/) and rerun, or drop the
       override so deploy installs it.
     quiet: true
+
+# ---- docker group: owned by the verbs that bring the stack up --------------
+# The group and the operator's membership are ensured whether the engine was
+# just installed or already present (setup-environment.sh's old shell copy
+# did this unconditionally; now it is here, once). Root-only — an
+# unprivileged run cannot manage groups — and never on status/stop/destroy:
+# read-and-teardown verbs must not mutate host accounts.
+- name: "stack-docker | the docker group exists"
+  ansible.builtin.group:
+    name: docker
+    state: present
+  when:
+    - dxdfir_stack_install_docker | bool or dxdfir_stack_start_docker | bool
+    - (ansible_facts.effective_user_id | default(-1)) | int == 0
+
+- name: "stack-docker | hand the sudo'ing operator docker-group membership"
+  ansible.builtin.user:
+    name: "{{ ansible_facts.env.SUDO_USER }}"
+    groups: docker
+    append: true
+  register: dxdfir_stack_docker_member
+  when:
+    - dxdfir_stack_install_docker | bool or dxdfir_stack_start_docker | bool
+    - (ansible_facts.effective_user_id | default(-1)) | int == 0
+    - (ansible_facts.env.SUDO_USER | default('')) not in ['', 'root']
+
+- name: "stack-docker | note the fresh membership"
+  # noqa: no-handler — an operator-facing note, not a notify pattern: `changed`
+  # here means "this run granted the membership", the one moment the log-out
+  # reminder applies.
+  ansible.builtin.debug:
+    msg: >-
+      {{ ansible_facts.env.SUDO_USER }} was just added to the docker group —
+      log out and back in (or `newgrp docker`) for it to take effect.
+  when: dxdfir_stack_docker_member is changed
 
 # ---- daemon down: the verbs that bring the stack up start it FIRST; the ----
 # ---- rest answer with the same absence decision (status reports, others ---

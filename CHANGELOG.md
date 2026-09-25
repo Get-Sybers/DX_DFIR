@@ -8,6 +8,19 @@ is `0`, anything may change without notice.
 ## [Unreleased]
 
 ### Added
+- **`setup-environment.sh` no longer carries its own Docker installer**
+  (entanglement-audit refactor, the flagship duplication): the script
+  bootstraps ansible (userland tools, venv, pinned collections) and then
+  provisions the engine THROUGH it — the new `dxdfir-bootstrap.yml` drives
+  the `dxdfir_stack` role's `docker_ensure` entry point with the
+  install/start decisions on, so the engine, daemon, docker group and the
+  sudo'ing operator's membership are the same idempotent state tasks
+  `dxdfir deploy stack` runs. The two hand-mirrored implementations (both
+  carried comments promising to match the other) are one. Group/membership
+  handling moved out of the fresh-install-only path in `docker_ensure` and
+  runs on every bring-up verb as root (never on status/stop/destroy — read
+  verbs do not mutate host accounts), with a log-out note when membership
+  was just granted.
 - **The offline image mechanism is Ansible, not shell** (entanglement-audit
   refactor). `scripts/save-docker-images.sh` is a launcher now: the image
   sets, pulls, exports and loads live in the `dxdfir_images` role's save/load
