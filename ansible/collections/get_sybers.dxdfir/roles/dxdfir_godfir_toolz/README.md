@@ -4,7 +4,10 @@ Process **forensic disk images** (and **VM exports**) with the artefact set the
 **GoDFIR-toolz** parsers handle — registry (`gore`), jump lists (`gojle`), `.lnk`
 (`gole`), Amcache (`goamcache`), AppCompatCache (`goappcompat`), ShellBags
 (`gosbe`), Recycle Bin (`gorb`), `$MFT` (`gomft`), SRUM (`goese`) and Prefetch
-(`goprefetch`) — every one a Linux-native, static-Go `FROM scratch` image. The
+(`goprefetch`) — every one a Linux-native, static-Go `FROM scratch` image —
+plus **`godaemonhunter`**, the Linux daemon-parser matrix (journal, auditd,
+logins, syslog, units, cron, shells, trash, sysctl) in **one** image, run as
+its `hunt` sub-tool: every stream, the default. The
 role is structure only — it asserts its inputs and declares the runs, each
 driven purely by a tool's contract (`docker/GoDFIR-toolz/<tool>/contract.yml`):
 the shared `dxdfir_lane` skeleton builds each confined `docker run` from it. No
@@ -29,8 +32,17 @@ host-side processor.
    `<item>` is the artefact's path relative to the export (image name included)
    with separators folded to `_`. The registry-family tools replay each hive's
    `.LOG1/.LOG2` into `/work`.
+3. **The Linux matrix.** `godaemonhunter hunt` runs once over the same tree:
+   Layer 1 (gohost, gousers, gonetwork) builds the image's knowledge store
+   under `<out_dir>/godaemonhunter/knowledge/`, then every daemon parser runs
+   enriched by it (resolved names beside native ids, the `Host` block, the
+   host's timezone applied) — the layering is internal, one aggregate summary
+   line. Over a Windows-only export it finds nothing and exits 1, tolerated
+   like any other tool; it lights up when Linux content reaches the tree (the
+   native `linux-core` export is the GoDFIR-toolz plan's P2).
 
-A tool that finds no artefact of its kind (a non-Windows image) exits 1
+A tool that finds no artefact of its kind (a non-Windows image — or, for
+godaemonhunter, a non-Linux export) exits 1
 (nothing produced); a tool with a failed item exits 3 (partial). Both are
 tolerated: the gate is "some tool produced output, or no artefacts were
 exported".
@@ -47,7 +59,7 @@ exported".
 | `dxdfir_godfir_toolz_filter_file` | `files/image-export-filter.yaml` | The artefact-set filter file. |
 | `dxdfir_godfir_toolz_plaso_image` | `""` (the contract's `get-sybers/plaso:latest`) | Image ref override for the export. |
 | `dxdfir_godfir_toolz_vss` | `false` | Also export from Volume Shadow Copies. |
-| `dxdfir_godfir_toolz_tools` | the ten tools above | The Go tools to run, in order. |
+| `dxdfir_godfir_toolz_tools` | the ten Windows tools above | The Windows Go tools to run, in order. `godaemonhunter` is not in this list — it is a multi-tool image, declared as its own `hunt` run in `tasks/main.yml`. |
 | `dxdfir_godfir_toolz_python_path` | `<repo>/python` | PYTHONPATH for the image supply-chain guard (`get_sybers_dxdfir.images`). |
 | `dxdfir_godfir_toolz_force` | `false` | Re-export images and reparse items that already have output. |
 

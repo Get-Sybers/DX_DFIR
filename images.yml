@@ -68,6 +68,13 @@ images:
   - name: gowxt             # Windows Timeline (ActivitiesCache.db, modernc sqlite; built, #88)
     context: docker/GoDFIR-toolz/gowxt
     dockerfile: Dockerfile
+  # The Linux matrix — every daemon parser (journal, auditd, wtmp, syslog,
+  # units, cron, shells, trash, sysctl + the Layer-1 knowledge builders) a
+  # sub-tool of ONE binary; `hunt` is the layered all-streams run. Builds
+  # from the submodule ROOT (the image copies the sibling pinfo/ module),
+  # which is exactly the defaults: context docker/GoDFIR-toolz,
+  # dockerfile godaemonhunter/Dockerfile.
+  - name: godaemonhunter
 
 # get-sybers/* repos that legitimately exist but are NOT tool containers — exempt
 # from the hardened-tool contract, allow-listed so the inventory audit ignores them.

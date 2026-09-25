@@ -1,16 +1,21 @@
 ---
 # dxdfir_godfir_toolz: disk images -> the GoDFIR-toolz artefact parse. The role
-# GROUPS; the playbook DECIDES. Two kinds of run, each a contract-driven
+# GROUPS; the playbook DECIDES. Three kinds of run, each a contract-driven
 # container: the plaso image's image_export sub-tool pulls the godfir-toolz
 # artefact set out of every image into the export tree (a filter file mounted
 # read-only, PLASO_IMAGE_EXPORT_FILTER_FILE), then each self-orchestrating Go
 # tool image (gore, gojle, gole, goamcache, goappcompat, gosbe, gorb, gomft,
 # goese, goprefetch) content-detects its artefacts anywhere under that tree and
-# writes one folder per item under <out_dir>/<tool>/. Each tool skips items with
+# writes one folder per item under <out_dir>/<tool>/, and godaemonhunter — the
+# Linux matrix in ONE image — runs `hunt` (every stream, the default) over the
+# same tree: Layer 1 builds the image's knowledge store, the daemon parsers run
+# enriched by it, one aggregate summary line. Each tool skips items with
 # valid output unless <TOOL>_FORCE. A tool with nothing to parse (a non-Windows
-# image) exits 1 and a tool with a failed item exits 3 — both tolerated
+# image for the Go tools, a non-Linux export for godaemonhunter) exits 1 and a
+# tool with a failed item exits 3 — both tolerated
 # (dxdfir_lane_require_no_failures=false), so the gate is purely "some tool
-# produced output, or there were no artefacts". This role asserts its own input
+# produced output, or there were no artefacts". No routing logic — content
+# decides, as everywhere else. This role asserts its own input
 # rules and declares the runs, then delegates the shared build + preflight +
 # process skeleton to dxdfir_lane.
 
@@ -72,6 +77,27 @@
                       {'host': dxdfir_godfir_toolz_out_dir ~ '/' ~ item, 'path': '/output', 'mode': 'rw'}],
          }] }}
   loop: "{{ dxdfir_godfir_toolz_tools }}"
+  tags: [always]
+
+# The Linux matrix joins as ONE entry (GoDFIR-toolz docs/linux decisions
+# 15–17): godaemonhunter is a multi-tool image, so the lane names its
+# `hunt` sub-tool — every stream, the default. The layering is internal
+# (Layer 1 -> <out>/knowledge -> enriched daemon parsers), so no
+# per-parser ordering or knowledge plumbing here. Over a Windows-only
+# export it finds nothing and exits 1 — tolerated by design, exactly like
+# a Go tool over a non-Windows image; it lights up when Linux content
+# reaches the tree (the native linux-core export is the plan's P2).
+- name: "godfir-toolz | the Linux matrix in one run (godaemonhunter hunt)"
+  ansible.builtin.set_fact:
+    dxdfir_godfir_toolz_runs: >-
+      {{ dxdfir_godfir_toolz_runs + [{
+           'name': 'godaemonhunter',
+           'contract': dxdfir_godfir_toolz_toolz_dir ~ '/godaemonhunter/contract.yml',
+           'subtool': 'hunt',
+           'env': {'GODAEMONHUNTER_FORCE': dxdfir_godfir_toolz_force},
+           'mounts': [{'host': dxdfir_godfir_toolz_stage_dir, 'path': '/input', 'mode': 'ro'},
+                      {'host': dxdfir_godfir_toolz_out_dir ~ '/godaemonhunter', 'path': '/output', 'mode': 'rw'}],
+         }] }}
   tags: [always]
 
 # The export tree is every Go tool's read-only input, but it does not exist
