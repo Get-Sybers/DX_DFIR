@@ -90,19 +90,35 @@
 # tar and list the member paths. The removed binaries must be absent; ansible
 # must be gone from every image; the tool-only images must also have no shell
 # or python.
+# `__export_only__` is a never-executed command token, so `docker create`
+# also works for the images that have no ENTRYPOINT (plaso); the container is
+# only exported, never run. A literal block scalar, one command per line — a
+# comment INSIDE a folded scalar once turned this whole pipeline into a bash
+# comment, and the asserts below passed against an empty listing.
 - name: "images-build | export the filesystem listing of {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"
   ansible.builtin.shell:
-    cmd: >-
-      set -o pipefail;
-      # a never-executed command token, so `create` also works for the images
-      that have no ENTRYPOINT (plaso); the container is only exported, never run
-      cid=$(docker create {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}:latest __export_only__);
-      docker export "$cid" | tar -t;
+    cmd: |
+      set -o pipefail
+      cid=$(docker create {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}:latest __export_only__)
+      docker export "$cid" | tar -t
       docker rm -f "$cid" >/dev/null
   args:
     executable: /bin/bash
   register: dxdfir_images_fs
   changed_when: false
+
+# The guard that makes the scan un-fakeable: an empty listing can never
+# vacuously satisfy the surface asserts again.
+- name: "images-build | assert the filesystem listing is non-empty"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_images_fs.stdout_lines | length > 0
+    fail_msg: >-
+      the filesystem export of
+      {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }} produced no
+      listing — the scan did not run, so the hardening asserts below would
+      prove nothing.
+    quiet: true
 
 - name: "images-build | assert the removed surface is absent from {{ dxdfir_images_namespace ~ '/' ~ dxdfir_images_name }}"
   ansible.builtin.assert:

@@ -77,7 +77,7 @@ dxdfir_car_load_kibana_url: "http://kibana:5601"
 # depends on dxdfir_car_load_setup: setup-mode template PUTs (and, with the
 # Kibana import on, the saved-objects import) need cluster/Kibana privileges
 # the loader identity deliberately does not have
-# (docker/elastic/config/setup.sh: role logs_car_writer is create_doc /
+# (the dxdfir_stack deploy: role logs_car_writer is create_doc /
 # create_index / read / view_index_metadata on logs-car.* ONLY — evidence
 # immutability at the credential layer), so a setup run authenticates as the
 # elastic superuser and a non-setup (steady-state, repeatable) run

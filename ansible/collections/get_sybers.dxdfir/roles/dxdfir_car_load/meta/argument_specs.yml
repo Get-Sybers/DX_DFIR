@@ -20,7 +20,7 @@ argument_specs:
         template creation, and the Kibana saved-objects import when that is
         also on, need privileges the loader identity deliberately lacks) or as
         the least-privilege byakugan_loader identity otherwise (see
-        docker/elastic/config/setup.sh: role logs_car_writer, create_doc /
+        the dxdfir_stack deploy: role logs_car_writer, create_doc /
         create_index / read / view_index_metadata on logs-car.* only). Either
         way the password never reaches the docker run argv — it is passed
         through dxdfir_lane's secret_env, a 0600 --env-file.
