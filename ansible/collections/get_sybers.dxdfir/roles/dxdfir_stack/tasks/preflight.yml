@@ -24,46 +24,116 @@
       no docker-compose.yml under {{ dxdfir_stack_compose_dir }}.
     quiet: true
 
-# The compose file guards its secrets with ${VAR:?} — compose cannot even parse
-# (up, down or ps) without the operator's .env, so require it for every action.
-# COLD START (issue #290): deploy/start self-heal a missing .env by scaffolding
-# a default from .env.example with generated secrets (env_scaffold.yml — the
-# same only-when-needed posture as the reclaim below), so the out-of-the-box
-# deploy needs no manual step. An existing .env is never touched. The other
-# actions act on a stack that some deploy already gave an .env, so they keep
-# the hard requirement rather than writing secrets from a status query.
+# FACTS BEFORE ANY REQUIREMENT: does this host hold the stack at all?
+# Containers (any state) and named data volumes are read by the compose
+# project label — no .env is needed for this — so a cold host is known as
+# such BEFORE the env requirement below can fail anything.
+- name: "stack-preflight | read the stack's containers and volumes"
+  community.docker.docker_host_info:
+    containers: true
+    containers_all: true
+    containers_filters:
+      label: "com.docker.compose.project={{ dxdfir_stack_project_name }}"
+    volumes: true
+    volumes_filters:
+      label: "com.docker.compose.project={{ dxdfir_stack_project_name }}"
+  register: dxdfir_stack_host_info
+
+- name: "stack-preflight | is any of the stack present here"
+  ansible.builtin.set_fact:
+    dxdfir_stack_has_containers: "{{ _containers }}"
+    dxdfir_stack_has_volumes: "{{ _volumes }}"
+    dxdfir_stack_present: "{{ _containers or _volumes }}"
+  vars:
+    _containers: "{{ dxdfir_stack_host_info.containers | default([]) | length > 0 }}"
+    _volumes: "{{ dxdfir_stack_host_info.volumes | default([]) | length > 0 }}"
+
+# THE PLAYBOOK DECIDES what absence means (dxdfir_stack_when_absent): status
+# reports it and ends the host — "no stack" is that action's ANSWER, not a
+# failure; start/stop/destroy flag it — they have nothing to act on; deploy
+# continues — absence is its normal starting point.
+- name: "stack-preflight | report the absent stack and end"
+  when:
+    - dxdfir_stack_when_absent == 'report'
+    - not dxdfir_stack_present | bool
+  block:
+    - name: "stack-preflight | no analysis stack on this host"
+      ansible.builtin.debug:
+        msg: >-
+          no analysis stack on this host: compose project
+          '{{ dxdfir_stack_project_name }}' has no containers and no data
+          volumes — nothing has been deployed (or it was destroyed with its
+          volumes removed). Deploy with: dxdfir deploy stack.
+
+    - name: "stack-preflight | end the play for this host"
+      ansible.builtin.meta: end_host
+
+- name: "stack-preflight | flag the absent stack"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_stack_present | bool
+    fail_msg: >-
+      nothing to {{ dxdfir_stack_action }}: no analysis stack on this host —
+      compose project '{{ dxdfir_stack_project_name }}' has no containers and
+      no data volumes. Deploy first: dxdfir deploy stack.
+    quiet: true
+  when: dxdfir_stack_when_absent == 'fail'
+
+# From here every action needs the operator's .env: the compose file guards
+# its secrets with ${VAR:?}, so compose cannot even parse (up, down or ps)
+# without it. COLD START (issue #290): the deploy playbook opts in to
+# scaffolding a default .env from .env.example (dxdfir_stack_env_scaffold —
+# a playbook decision, not the role's) — and only while the host holds no
+# stack state at all: fresh secrets cannot match the credentials already
+# baked into existing data volumes, so a present stack demands its own .env
+# back instead.
 - name: "stack-preflight | stat the elastic env file"
   ansible.builtin.stat:
     path: "{{ dxdfir_stack_env_file }}"
   register: dxdfir_stack_env_stat
 
-- name: "stack-preflight | scaffold a default .env when none is detected"
+- name: "stack-preflight | scaffold a default .env (cold host, playbook opt-in)"
   ansible.builtin.include_tasks: env_scaffold.yml
   when:
-    - dxdfir_stack_action in ['deploy', 'start']
     - dxdfir_stack_env_scaffold | bool
     - not dxdfir_stack_env_stat.stat.exists
+    - not dxdfir_stack_present | bool
 
-- name: "stack-preflight | assert the elastic .env is present"
+- name: "stack-preflight | the stack is present — assert its .env survives"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_stack_env_stat.stat.exists
+    fail_msg: >-
+      the stack is present on this host (containers or data volumes exist)
+      but {{ dxdfir_stack_env_file }} is gone. Restore the operator .env — a
+      newly generated one cannot match the credentials already baked into the
+      data volumes. For a true cold start, destroy with
+      dxdfir_stack_remove_volumes=true first, then redeploy.
+    quiet: true
+  when: dxdfir_stack_present | bool
+
+- name: "stack-preflight | assert the elastic .env is present (cold host)"
   ansible.builtin.assert:
     that:
       - dxdfir_stack_env_stat.stat.exists
     fail_msg: >-
       {{ dxdfir_stack_env_file }} is missing — `dxdfir deploy stack` scaffolds
-      a default one from .env.example when none is detected (unless
-      dxdfir_stack_env_scaffold is false); or copy docker/elastic/.env.example
-      to docker/elastic/.env and set the passwords/keys yourself.
+      a default one on a cold host (its playbook sets
+      dxdfir_stack_env_scaffold), or copy docker/elastic/.env.example to
+      docker/elastic/.env and set the passwords/keys yourself.
     quiet: true
+  when: not dxdfir_stack_present | bool
 
-# PULL-CAPACITY GATE (deploy/start only — the actions that pull images). A
-# short image store fails mid-pull with containerd's "no space left on
-# device", so: images still to pull -> measure the stores -> reclaim once when
-# short (a prune is a no-op when there is nothing to reclaim) -> re-measure ->
-# assert. A doomed pull becomes one clear failure, a recoverable one
-# self-heals, and a host whose images are already local is never gated.
-# stop/destroy/status stay ungated — they are how an operator frees space.
+# PULL-CAPACITY GATE (dxdfir_stack_pull_gate — enabled by the playbooks
+# whose action pulls images: deploy/start). A short image store fails
+# mid-pull with containerd's "no space left on device", so: images still to
+# pull -> measure the stores -> reclaim once when short (a prune is a no-op
+# when there is nothing to reclaim) -> re-measure -> assert. A doomed pull
+# becomes one clear failure, a recoverable one self-heals, and a host whose
+# images are already local is never gated. stop/destroy/status leave the
+# gate off — they are how an operator frees space.
 - name: "stack-preflight | pull-capacity gate"
-  when: dxdfir_stack_action in ['deploy', 'start']
+  when: dxdfir_stack_pull_gate | bool
   block:
     - name: "stack-preflight | the images the stack runs"
       ansible.builtin.command:

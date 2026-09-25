@@ -1,13 +1,18 @@
 ---
-# COLD-START SELF-HEAL (deploy/start, issue #290): no operator .env next to the
-# compose file yet -> scaffold a working default from .env.example, so the
-# out-of-the-box `dxdfir deploy stack` succeeds with no manual step.
+# COLD-START SELF-HEAL (issue #290): no operator .env next to the compose
+# file yet -> scaffold a working default from .env.example, so the
+# out-of-the-box `dxdfir deploy stack` succeeds with no manual step. THE
+# PLAYBOOK DECIDES: the deploy playbook opts in via dxdfir_stack_env_scaffold
+# (off in defaults — no other consumer of the role ever writes secrets).
 #
 # FIND FACTS FIRST (the example, its placeholder keys, who is deploying,
 # whether the docker group exists), then ONE guarded write inside a rescue.
-# preflight only includes this file while docker/elastic/.env does NOT exist,
-# and the write itself is `force: false` — an operator's .env is NEVER
-# overwritten, so re-runs are idempotent and rotation survives redeploys.
+# preflight only includes this file while docker/elastic/.env does NOT exist
+# AND the host holds no stack state (containers or data volumes — fresh
+# secrets could never match credentials already baked into existing
+# volumes), and the write itself is `force: false` — an operator's .env is
+# NEVER overwritten, so re-runs are idempotent and rotation survives
+# redeploys.
 #
 # .env.example stays the SOURCE OF TRUTH for the key set: keys added there flow
 # straight into the scaffold; only `change-me` placeholder values are replaced

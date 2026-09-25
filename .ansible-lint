@@ -36,5 +36,6 @@ skip_list:
 mock_modules:
   - community.docker.docker_container
   - community.docker.docker_compose_v2
+  - community.docker.docker_host_info
   - community.docker.docker_image_info
   - community.docker.docker_prune

@@ -11,3 +11,8 @@
         name: dxdfir_stack
       vars:
         dxdfir_stack_action: start
+        # start's decisions: it starts an EXISTING stack, so an absent one is
+        # flagged (deploy is the verb that creates); a start may still pull,
+        # so gate capacity first.
+        dxdfir_stack_when_absent: fail
+        dxdfir_stack_pull_gate: true

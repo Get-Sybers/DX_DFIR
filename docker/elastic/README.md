@@ -21,8 +21,11 @@ published ports bind to **127.0.0.1**; data lives in named volumes (`certs`,
 ## Bring it up
 
 `dxdfir deploy stack` (the `dxdfir_stack` Ansible role) drives this compose
-file and, when no `.env` exists yet, scaffolds one from `.env.example` with
-generated secrets — an existing `.env` is never overwritten. Or directly:
+file and, on a cold host with no `.env` yet, scaffolds one from `.env.example`
+with generated secrets. An existing `.env` is never overwritten, and a host
+still carrying stack containers/volumes is never scaffolded for — fresh
+secrets cannot match the credentials in the data volumes, so restore the
+operator `.env` instead. Or directly:
 
 ```bash
 cd docker/elastic

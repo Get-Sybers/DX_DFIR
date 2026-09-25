@@ -11,17 +11,34 @@ dxdfir_stack_repo_root: "{{ role_path }}/../../../../.."
 # The stack's compose dir.
 dxdfir_stack_compose_dir: "{{ dxdfir_stack_repo_root }}/docker/elastic"
 
+# The compose project's name (docker-compose.yml `name:`). Preflight reads
+# the stack's containers and volumes by its label
+# (com.docker.compose.project) — presence comes from gathered facts, BEFORE
+# any .env is needed, so a cold host answers cleanly.
+dxdfir_stack_project_name: byakugan
+
+# THE PLAYBOOK DECIDES what an absent stack (no containers in any state, no
+# named data volumes) means for its action — the role only groups:
+#   continue — absence is the action's normal starting point (deploy);
+#   report   — say "no stack" and end the host cleanly — the answer, not a
+#              failure (status);
+#   fail     — flag it: this action has nothing to act on (start/stop/destroy).
+dxdfir_stack_when_absent: continue
+
 # Env file for compose interpolation: the operator's .env next to the compose
-# file (never committed). deploy/start scaffold it when missing (below);
-# operators can also copy .env.example by hand.
+# file (never committed). The deploy playbook scaffolds it on a cold host
+# (below); operators can also copy .env.example by hand.
 dxdfir_stack_env_file: "{{ dxdfir_stack_compose_dir }}/.env"
 
-# COLD-START SCAFFOLD (tasks/env_scaffold.yml, deploy/start only): when no
-# .env exists, generate one from .env.example — every `change-me` placeholder
-# filled with a locally generated secret — so the default `dxdfir deploy
-# stack` works out of the box. An existing .env is NEVER overwritten. false =
-# always require an operator-provided .env (the old hard failure).
-dxdfir_stack_env_scaffold: true
+# COLD-START SCAFFOLD (tasks/env_scaffold.yml): with no .env AND no stack on
+# the host at all, generate the .env from .env.example — every `change-me`
+# placeholder filled with a locally generated secret — so the out-of-the-box
+# deploy needs no manual step. THE DEPLOY PLAYBOOK ENABLES IT; off here so no
+# other consumer of the role ever writes secrets. An existing .env is NEVER
+# overwritten, and a host still carrying stack containers/volumes is never
+# scaffolded for — fresh secrets cannot match the credentials already baked
+# into the data volumes (preflight says to restore the operator .env instead).
+dxdfir_stack_env_scaffold: false
 # The key set's source of truth: keys added to the example flow into the
 # scaffold; only placeholder values are generated.
 dxdfir_stack_env_example_file: "{{ dxdfir_stack_compose_dir }}/.env.example"
@@ -48,10 +65,14 @@ dxdfir_stack_required_services:
   - elasticsearch
   - kibana
 
-# Pull-capacity gate (tasks/preflight.yml, deploy/start only): free space (GiB)
-# the image stores must offer while stack images are still to be pulled — a full
-# cold pull of the five services runs ~10 GiB unpacked plus in-flight compressed
-# layers. When short, the gate reclaims once (prune) before asserting.
+# Pull-capacity gate (tasks/preflight.yml) — ANOTHER PLAYBOOK DECISION: the
+# playbooks whose action pulls images (deploy/start) enable it; off here so
+# stop/destroy/status stay ungated — they are how an operator frees space.
+dxdfir_stack_pull_gate: false
+# Free space (GiB) the image stores must offer while stack images are still
+# to be pulled — a full cold pull of the five services runs ~10 GiB unpacked
+# plus in-flight compressed layers. When short, the gate reclaims once
+# (prune) before asserting.
 dxdfir_stack_min_free_gib: 15
 # The filesystems holding pulled image content: docker's data-root and, with the
 # containerd image store, containerd's content store. The tightest one decides.

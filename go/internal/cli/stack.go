@@ -36,9 +36,10 @@ func (env *Env) runStackAction(action string, vars []string) error {
 
 // stackLong is the shared description of the stack the verbs act on.
 const stackLong = "The Elastic analysis stack under docker/elastic, driven by the dxdfir_stack\n" +
-	"Ansible role. Uses docker/elastic/.env: deploy and start scaffold a default one\n" +
-	"from .env.example (secrets generated, an existing .env never overwritten) when\n" +
-	"none exists; the other verbs require it (copy .env.example, set the passwords)."
+	"Ansible role. Preflight reads what is on the host first: status reports a host\n" +
+	"with no stack, start/stop/destroy flag it, and deploy scaffolds\n" +
+	"docker/elastic/.env from .env.example (generated secrets; an existing .env is\n" +
+	"never overwritten) on a cold host."
 
 // stackVerb builds a verb-first stack command: `<verb>` is the parent (bare, it
 // prints its targets), `<verb> stack` the leaf that runs the action.

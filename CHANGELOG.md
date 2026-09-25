@@ -8,18 +8,27 @@ is `0`, anything may change without notice.
 ## [Unreleased]
 
 ### Added
-- **`dxdfir deploy stack` works out of the box: the `dxdfir_stack` role
-  scaffolds `docker/elastic/.env` when none is detected** (#290). On
-  deploy/start with no `.env` next to the compose file, the preflight
-  generates one from `.env.example` — the source of truth for the key set —
-  filling every `change-me` placeholder with a locally generated secret
+- **`dxdfir deploy stack` works out of the box, and every stack verb reads
+  the host before requiring credentials** (#290). The `dxdfir_stack`
+  preflight now gathers what is present first — containers in any state plus
+  named data volumes, by the compose project label, needing no `.env` — and
+  each playbook decides what absence means (`dxdfir_stack_when_absent`):
+  `status` reports "no analysis stack on this host" and ends cleanly (the
+  answer, not a failure), `start`/`stop`/`destroy` flag it (nothing to act
+  on), and `deploy` continues — on a truly cold host its playbook opts in
+  (`dxdfir_stack_env_scaffold`) to scaffolding `docker/elastic/.env` from
+  `.env.example`: the example stays the source of truth for the key set,
+  every `change-me` placeholder is filled with a locally generated secret
   (24-char passwords, 64-char `*_KEY` encryption keys, alphanumeric, never
-  logged), written `0640 root:docker` on a root deploy (`0600` unprivileged)
-  and read back to assert no placeholder survived (the same gate
-  `config/setup.sh` enforces at boot). An existing `.env` is never touched,
-  so operator-set secrets survive re-runs; `dxdfir_stack_env_scaffold: false`
-  restores the hard requirement. stop/status/destroy still require an
-  operator `.env` (their failure now points at both paths).
+  logged), the file lands `0640 root:docker` on a root deploy (`0600`
+  unprivileged) and is read back to assert no placeholder survived (the gate
+  `config/setup.sh` enforces at boot). An existing `.env` is never
+  overwritten, and a host still carrying stack containers/volumes is never
+  scaffolded for — generated secrets cannot match credentials already baked
+  into the data volumes, so preflight demands the operator `.env` back
+  instead. The pull-capacity gate is likewise a playbook decision now
+  (`dxdfir_stack_pull_gate`, deploy/start), leaving the role free of
+  per-action branches.
 - **`dxdfir deploy stack` self-heals a short image store instead of dying
   mid-pull** (containerd: "no space left on device"). The `dxdfir_stack`
   preflight gains a pull-capacity gate on deploy/start: while stack images are

@@ -11,3 +11,7 @@
         name: dxdfir_stack
       vars:
         dxdfir_stack_action: status
+        # status's decision: an absent stack is the ANSWER — report "no
+        # stack" and end cleanly, never a failure and never a reason to
+        # touch the env.
+        dxdfir_stack_when_absent: report

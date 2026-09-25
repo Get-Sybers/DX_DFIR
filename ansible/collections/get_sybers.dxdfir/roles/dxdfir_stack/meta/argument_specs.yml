@@ -6,10 +6,15 @@ argument_specs:
       - >-
         Lifecycle for the docker-compose Elastic analysis backend: deploy
         (build if needed + bring up + verify running), destroy (down,
-        optionally with volumes), start, stop and status. Localhost-only. The
-        stack uses prebuilt images and requires docker/elastic/.env —
-        deploy/start scaffold a default one from .env.example (placeholders
-        filled with generated secrets) when none is detected.
+        optionally with volumes), start, stop and status. Localhost-only.
+        Preflight reads the host first (containers + data volumes by compose
+        project label, no .env needed) and THE PLAYBOOK DECIDES the rest:
+        what absence means (dxdfir_stack_when_absent — status reports and
+        ends, start/stop/destroy flag it, deploy continues), whether a cold
+        host scaffolds docker/elastic/.env from .env.example with generated
+        secrets (dxdfir_stack_env_scaffold — the deploy playbook), and
+        whether the pull-capacity gate runs (dxdfir_stack_pull_gate —
+        deploy/start).
     options:
       dxdfir_stack_action:
         type: str
@@ -21,6 +26,24 @@ argument_specs:
         type: str
         required: false
         description: "The stack's compose dir (default docker/elastic)."
+      dxdfir_stack_project_name:
+        type: str
+        required: false
+        default: byakugan
+        description: >-
+          The compose project's name (docker-compose.yml `name:`) — preflight
+          reads the stack's containers/volumes by its
+          com.docker.compose.project label, before any .env is needed.
+      dxdfir_stack_when_absent:
+        type: str
+        required: false
+        default: continue
+        choices: [continue, report, fail]
+        description: >-
+          The playbook's decision on an absent stack (no containers, no data
+          volumes): continue (deploy — absence is its starting point), report
+          (status — say "no stack" and end the host cleanly), fail
+          (start/stop/destroy — flag it, nothing to act on).
       dxdfir_stack_env_file:
         type: str
         required: false
@@ -28,11 +51,12 @@ argument_specs:
       dxdfir_stack_env_scaffold:
         type: bool
         required: false
-        default: true
+        default: false
         description: >-
-          deploy/start: scaffold a default .env from .env.example (placeholder
-          secrets generated, never overwriting an existing .env) when none is
-          detected; false = always require an operator-provided .env.
+          Scaffold a default .env from .env.example (placeholder secrets
+          generated, never overwriting an existing .env) — only on a cold
+          host with no stack state at all. Off in defaults; the deploy
+          playbook enables it.
       dxdfir_stack_env_example_file:
         type: str
         required: false
@@ -73,14 +97,22 @@ argument_specs:
         required: false
         default: [elasticsearch, kibana]
         description: "Compose services the ensure_running gate brings up and requires for the stack to count as up."
+      dxdfir_stack_pull_gate:
+        type: bool
+        required: false
+        default: false
+        description: >-
+          Run the pull-capacity gate. Off in defaults; the playbooks whose
+          action pulls images (deploy/start) enable it — stop/destroy/status
+          stay ungated, they are how an operator frees space.
       dxdfir_stack_min_free_gib:
         type: int
         required: false
         default: 15
         description: >-
-          deploy/start: free GiB the image stores must offer while stack images
-          are still to be pulled; when short, the preflight reclaims (prune)
-          once before asserting.
+          Free GiB the image stores must offer while stack images are still
+          to be pulled (with the pull gate enabled); when short, the
+          preflight reclaims (prune) once before asserting.
       dxdfir_stack_image_store_paths:
         type: list
         elements: str
