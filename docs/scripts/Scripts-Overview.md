@@ -79,7 +79,7 @@ The analysis container images are catalogued in [Containers](/docs/Containers.md
 | Script | Description |
 |---|---|
 | `setup-environment.sh` | Installs Docker and userland deps (distro-aware) and the git submodules; the Python venv, the Go toolchain and the `dxdfir` front-end. The Byakugan CAR engine is no longer a host checkout — it is cloned + built into the `get-sybers/byakugan` image by `dxdfir build-docker`. Image seeding is split into `save-docker-images.sh`. |
-| `save-docker-images.sh` | Save the built hardened `get-sybers/*` images (+ the pulled Elastic-stack images) as tarballs; `--load` / `--verify` restore them and assert the hardened inventory. |
+| `save-docker-images.sh` | Save the built hardened `get-sybers/*` images (+ the pulled Elastic-stack images) as tarballs; `--load` / `--verify` restore them and assert the hardened inventory. A launcher only — the sets, pulls, exports and loads are the `dxdfir_images` role's save/load tasks (`dxdfir-images-save.yml` / `dxdfir-images-load.yml`). |
 
 The Splunk-era and KAPE PowerShell scripts were retired (git history and the frozen
 `deprecated` branch keep them).

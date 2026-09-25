@@ -41,6 +41,22 @@ dxdfir_images_set: "{{ (dxdfir_images_manifest.images | default([])) | map(attri
 # Rebuild even when an image already exists (docker build cache still applies).
 dxdfir_images_force: false
 
+# OFFLINE MECHANISM (tasks/save.yml, tasks/load.yml — driven by
+# dxdfir-images-save.yml / dxdfir-images-load.yml, fronted by
+# scripts/save-docker-images.sh). Two image sets, no hardcoded lists: the
+# built get-sybers/* refs from the manifest above (never pulled — build
+# first), and the Elastic stack images from the inventory layer
+# (dxdfir_elastic_images — the same set dxdfir_stack deploys).
+dxdfir_images_tar_dir: "{{ dxdfir_images_repo_root }}/data_store/docker_images"
+dxdfir_images_built_refs: >-
+  {{ dxdfir_images_set
+     | map('regex_replace', '^', dxdfir_images_namespace ~ '/')
+     | map('regex_replace', '$', ':latest') | list }}
+dxdfir_images_elastic_images: "{{ dxdfir_elastic_images | default({}) }}"
+# save: only print the two sets and the tar dir, then stop (the wrapper's
+# --list).
+dxdfir_images_list_only: false
+
 # The reusable ensure_built gate (tasks/ensure_built.yml) reads this list of full
 # image refs and builds any not yet built on the host (idempotent — already-built
 # images are a no-op). Empty by default; a calling play (a lane preflight, a CAR

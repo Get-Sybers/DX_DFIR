@@ -38,6 +38,14 @@ dxdfir_elastic_legacy_project: byakugan
 # elastic-agent, Filebeat). scripts/save-docker-images.sh and the stix
 # version-pin test read it from THIS line.
 dxdfir_elastic_version: "9.4.3"
+# The stack's service images, all riding that one pin — deployed by
+# dxdfir_stack, saved/loaded for offline hosts by the dxdfir_images
+# save/load entry points.
+dxdfir_elastic_images:
+  elasticsearch: "docker.elastic.co/elasticsearch/elasticsearch:{{ dxdfir_elastic_version }}"
+  kibana: "docker.elastic.co/kibana/kibana:{{ dxdfir_elastic_version }}"
+  fleet-server: "docker.elastic.co/elastic-agent/elastic-agent:{{ dxdfir_elastic_version }}"
+  filebeat: "docker.elastic.co/beats/filebeat:{{ dxdfir_elastic_version }}"
 dxdfir_elastic_network: byakugan_default
 # The named data volumes. byakugan_* matches what the compose-era stack
 # created, so existing deployments keep their data across the migration.

@@ -578,9 +578,10 @@ if ! curl -fsI --connect-timeout 4 --max-time 8 https://download.docker.com/ >/d
     if compgen -G "$_tars/*.tar" >/dev/null; then
         step "No internet — loading + verifying the pre-seeded image tarballs from $_tars ..."
         # --verify loads every tarball THEN runs the hardened-inventory audit
-        # with the venv just installed above, so a missing or corrupt tarball
-        # fails here, not at first pipeline use.
-        DXDFIR_PYTHON="$DXDFIR_VENV/bin/python3" "$SCRIPT_DIR/save-docker-images.sh" --verify \
+        # (both as playbooks; the venv's ansible was symlinked onto PATH
+        # above), so a missing or corrupt tarball fails here, not at first
+        # pipeline use.
+        "$SCRIPT_DIR/save-docker-images.sh" --verify \
             || die "Offline image load/verify failed (scripts/save-docker-images.sh --verify)."
         ok "Analysis images loaded and the hardened inventory verified."
     else

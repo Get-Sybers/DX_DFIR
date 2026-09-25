@@ -70,14 +70,17 @@ dxdfir_stack_es_memlock: "{{ dxdfir_elastic_es_memlock | default(true) }}"
 dxdfir_stack_namespace: "{{ dxdfir_elastic_namespace | default('default') }}"
 dxdfir_stack_ingest_dir: "{{ dxdfir_elastic_ingest_dir | default(dxdfir_stack_repo_root ~ '/data_store/processed') }}"
 
-# The service images (all pinned by dxdfir_stack_elastic_version) and the
-# container each runs as ("<stack name>-<service>"). tasks/deploy.yml brings
-# them up in bootstrap order; the pull-capacity gate reads the image set.
-dxdfir_stack_images:
-  elasticsearch: "docker.elastic.co/elasticsearch/elasticsearch:{{ dxdfir_stack_elastic_version }}"
-  kibana: "docker.elastic.co/kibana/kibana:{{ dxdfir_stack_elastic_version }}"
-  fleet-server: "docker.elastic.co/elastic-agent/elastic-agent:{{ dxdfir_stack_elastic_version }}"
-  filebeat: "docker.elastic.co/beats/filebeat:{{ dxdfir_stack_elastic_version }}"
+# The service images (inventory: dxdfir_elastic_images, all pinned by the
+# one version) and the container each runs as ("<stack name>-<service>").
+# tasks/deploy.yml brings them up in bootstrap order; the pull-capacity gate
+# reads the image set; the dxdfir_images save/load entry points carry the
+# same set to offline hosts.
+dxdfir_stack_images: >-
+  {{ dxdfir_elastic_images | default({
+       'elasticsearch': 'docker.elastic.co/elasticsearch/elasticsearch:' ~ dxdfir_stack_elastic_version,
+       'kibana': 'docker.elastic.co/kibana/kibana:' ~ dxdfir_stack_elastic_version,
+       'fleet-server': 'docker.elastic.co/elastic-agent/elastic-agent:' ~ dxdfir_stack_elastic_version,
+       'filebeat': 'docker.elastic.co/beats/filebeat:' ~ dxdfir_stack_elastic_version}) }}
 dxdfir_stack_containers:
   elasticsearch: "{{ dxdfir_stack_name }}-elasticsearch"
   kibana: "{{ dxdfir_stack_name }}-kibana"

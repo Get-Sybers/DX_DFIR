@@ -51,3 +51,35 @@ argument_specs:
         required: false
         default: []
         description: "Full image refs the calling play needs built, e.g. get-sybers/goevtx:latest."
+  save:
+    short_description: "Save the analysis images as tarballs for an offline host."
+    description:
+      - >-
+        The offline mechanism's save half (tasks/save.yml): every built
+        get-sybers/* image from the manifest (must already exist — never
+        pulled) and every Elastic stack image (inventory
+        dxdfir_elastic_images, pulled at the pin) exported one tarball each
+        into dxdfir_images_tar_dir. Idempotent: an archive already holding
+        the right image is left alone.
+    options:
+      dxdfir_images_tar_dir:
+        type: str
+        required: false
+        description: "The tarball directory (default data_store/docker_images)."
+      dxdfir_images_list_only:
+        type: bool
+        required: false
+        default: false
+        description: "Only print the two image sets and the tar dir, then stop."
+  load:
+    short_description: "Load every image tarball from the offline dir."
+    description:
+      - >-
+        The offline mechanism's load half (tasks/load.yml): every *.tar in
+        dxdfir_images_tar_dir loaded into the local daemon. Verification is
+        dxdfir-verify-images.yml, run separately.
+    options:
+      dxdfir_images_tar_dir:
+        type: str
+        required: false
+        description: "The tarball directory (default data_store/docker_images)."

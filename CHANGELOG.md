@@ -8,6 +8,23 @@ is `0`, anything may change without notice.
 ## [Unreleased]
 
 ### Added
+- **The offline image mechanism is Ansible, not shell** (entanglement-audit
+  refactor). `scripts/save-docker-images.sh` is a launcher now: the image
+  sets, pulls, exports and loads live in the `dxdfir_images` role's save/load
+  entry points (`dxdfir-images-save.yml` / `dxdfir-images-load.yml`) using
+  `docker_image` / `docker_image_export` / `docker_image_load` — the built
+  set from the `images.yml` manifest the role already reads, the Elastic set
+  from the inventory layer's new `dxdfir_elastic_images` map (which
+  `dxdfir_stack` now references too, so deploy and offline-carry share one
+  definition). The awk-parsing of Ansible's own variable files is gone, and
+  `--verify` runs the real `dxdfir-verify-images.yml` instead of
+  re-implementing it.
+- **`dxdfir cleanup docker` speaks the docker API** (entanglement-audit
+  refactor): discovery via `docker_host_info` (label-filtered), removal via
+  `docker_image state: absent`, dangling layers via `docker_prune` — the
+  `{% raw %}{% endraw %}`-shielded CLI formatting is gone, `--check` now
+  reports exactly what would be removed, and an unreachable daemon still
+  degrades to a clear skip.
 - **The elastic docker compose is retired: `dxdfir deploy stack` deploys the
   analysis stack from inventory data** (#290). `docker/elastic/`
   (docker-compose.yml, `.env`/`.env.example`, `config/setup.sh`) is gone; the
