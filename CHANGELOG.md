@@ -44,6 +44,12 @@ is `0`, anything may change without notice.
   collections path (`roles_path`'s degraded-only last entry), and a repo
   check asserts the roles_path wiring.
 
+- **No symlink shims anywhere.** setup-environment.sh stops symlinking
+  `ansible*`, `go` and `dxdfir` into `/usr/local/bin`: one managed
+  `/etc/profile.d/dxdfir.sh` puts the real tool locations on PATH (the venv
+  bin appended, so the system python/pip keep winning by order), and legacy
+  shims from previous installs are retired on the next run.
+
 ### Added (post-#293 follow-through)
 - **Smoke CI builds its images through the images role** instead of raw
   `docker build`, so the goevtx/byakugan CI builds carry the

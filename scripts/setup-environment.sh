@@ -387,14 +387,14 @@ $SUDO "$DXDFIR_VENV/bin/pip" install --quiet --editable "$REPO_ROOT_DIR/python" 
 # ansible-playbook from there itself, but a HUMAN — including the dxdfir-build-images
 # step this script prints at the end — needs them on PATH too, or `ansible-playbook
 # ...` is "command not found" on a fresh shell despite ansible being installed.
-# Expose them beside dxdfir, exactly as the Go front-end is exposed below.
+# NO SYMLINK SHIMS: the real locations join PATH through /etc/profile.d
+# (written after the Go front-end below, once every dir is final); here just
+# hold the venv to its contract.
 for _ans in ansible ansible-playbook ansible-galaxy; do
     [[ -x "$DXDFIR_VENV/bin/$_ans" ]] \
         || die "Expected $_ans in $DXDFIR_VENV/bin after installing ansible-core."
-    $SUDO ln -sf "$DXDFIR_VENV/bin/$_ans" "/usr/local/bin/$_ans" \
-        || die "Failed to expose $_ans on PATH (/usr/local/bin)."
 done
-ok "ansible on PATH: $(/usr/local/bin/ansible-playbook --version 2>/dev/null | head -1 || echo 'ansible-playbook')"
+ok "ansible in the venv: $("$DXDFIR_VENV/bin/ansible-playbook" --version 2>/dev/null | head -1 || echo 'ansible-playbook')"
 
 ################################################################################
 # Build + install the Go/termui `dxdfir` front-end (go/). It is the primary
@@ -450,7 +450,8 @@ if (( ! _go_ok )); then
     $SUDO rm -rf /usr/local/go
     $SUDO tar -C /usr/local -xzf "/tmp/${_gotar}" || die "Failed to extract the Go toolchain."
     rm -f "/tmp/${_gotar}"
-    $SUDO ln -sf /usr/local/go/bin/go /usr/local/bin/go
+    # No symlink shim: /usr/local/go/bin joins PATH for this run here and for
+    # every shell via the /etc/profile.d drop-in written below.
     export PATH="/usr/local/go/bin:$PATH"
 fi
 step "Building the dxdfir Go front-end ($(go version 2>/dev/null | awk '{print $3}')) ..."
@@ -488,12 +489,35 @@ if ! ( cd "$REPO_ROOT_DIR/go" \
     fi
 fi
 _goclean
-$SUDO ln -sf "$GO_BIN_DIR/dxdfir" /usr/local/bin/dxdfir
 # `man dxdfir` (README / Get-Started) must work on a provisioned host, so the
 # manual installs beside the binary. Best-effort: no man tree is not fatal.
 $SUDO install -Dm644 "$REPO_ROOT_DIR/go/man/dxdfir.1" /usr/local/share/man/man1/dxdfir.1 2>/dev/null \
     || warn "Could not install the man page — read it in-tree: man ./go/man/dxdfir.1"
-ok "dxdfir (Go front-end) installed: $(/usr/local/bin/dxdfir --version 2>/dev/null || echo "$GO_BIN_DIR/dxdfir")"
+
+# PATH, without symlink shims: the REAL tool locations go on PATH through one
+# managed /etc/profile.d drop-in. dxdfir's own bin and the pinned Go lead; the
+# venv bin is APPENDED, so ansible / ansible-playbook / ansible-galaxy resolve
+# on a fresh shell while the system python/pip keep winning by order. Any
+# /usr/local/bin shims a PREVIOUS install of this script created are retired.
+step "Writing the PATH drop-in (/etc/profile.d/dxdfir.sh) and retiring legacy shims ..."
+printf '%s\n' \
+    "# Managed by DX_DFIR scripts/setup-environment.sh — no symlink shims:" \
+    "# the real tool locations join PATH. The venv bin is appended so its" \
+    "# ansible* resolve while the system python/pip keep winning by order." \
+    "export PATH=\"$GO_BIN_DIR:/usr/local/go/bin:\$PATH:$DXDFIR_VENV/bin\"" \
+    | $SUDO tee /etc/profile.d/dxdfir.sh >/dev/null \
+    || die "Failed to write /etc/profile.d/dxdfir.sh."
+for _shim in dxdfir go ansible ansible-playbook ansible-galaxy; do
+    if [[ -L "/usr/local/bin/$_shim" ]]; then
+        case "$(readlink "/usr/local/bin/$_shim")" in
+            "$GO_BIN_DIR/"*|"$DXDFIR_VENV/bin/"*|/usr/local/go/bin/*)
+                $SUDO rm -f "/usr/local/bin/$_shim"
+                detail "Retired legacy shim /usr/local/bin/$_shim" ;;
+        esac
+    fi
+done
+export PATH="$GO_BIN_DIR:/usr/local/go/bin:$PATH:$DXDFIR_VENV/bin"
+ok "dxdfir (Go front-end) installed: $("$GO_BIN_DIR/dxdfir" --version 2>/dev/null || echo "$GO_BIN_DIR/dxdfir") — new shells pick PATH up from /etc/profile.d/dxdfir.sh"
 
 ################################################################################
 # Install the collection's pinned Ansible dependencies (requirements.yml — never

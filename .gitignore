@@ -63,7 +63,9 @@ err.log
 # ansible log_path target: keep the dir, ignore its contents
 logs/*
 !logs/.gitkeep
-# ansible-lint's project-local collection cache
+# Where ansible imports land in-tree: ansible-lint's project-local collection
+# cache, and checks CI's requirements install target
+# (ansible/collections/get_sybers.dxdfir/.ansible/collections) — never source.
 .ansible/
 # The stack's per-host secret store (generated credentials, TLS material,
 # the elastic.env handoff) — never committed; keep the dir via its README.
