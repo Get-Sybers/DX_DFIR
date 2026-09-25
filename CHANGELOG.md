@@ -7,7 +7,104 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Removed (unreleased-branch follow-through)
+- The last compose-era vestiges: `dxdfir deploy stack`'s dead `--build` /
+  `--no-build` flags (they fed the retired `dxdfir_stack_build` compose
+  variable; the stack runs prebuilt images and the tool images have their
+  own build verb), the `docker-compose-plugin` package from the engine
+  install (nothing invokes compose any more), and every remaining
+  `docker/elastic`/compose mention in docs, role READMEs and playbook
+  headers.
+
 ### Added
+- **`setup-environment.sh` no longer carries its own Docker installer**
+  (entanglement-audit refactor, the flagship duplication): the script
+  bootstraps ansible (userland tools, venv, pinned collections) and then
+  provisions the engine THROUGH it — the new `dxdfir-bootstrap.yml` drives
+  the `dxdfir_stack` role's `docker_ensure` entry point with the
+  install/start decisions on, so the engine, daemon, docker group and the
+  sudo'ing operator's membership are the same idempotent state tasks
+  `dxdfir deploy stack` runs. The two hand-mirrored implementations (both
+  carried comments promising to match the other) are one. Group/membership
+  handling moved out of the fresh-install-only path in `docker_ensure` and
+  runs on every bring-up verb as root (never on status/stop/destroy — read
+  verbs do not mutate host accounts), with a log-out note when membership
+  was just granted.
+- **The offline image mechanism is Ansible, not shell** (entanglement-audit
+  refactor). `scripts/save-docker-images.sh` is a launcher now: the image
+  sets, pulls, exports and loads live in the `dxdfir_images` role's save/load
+  entry points (`dxdfir-images-save.yml` / `dxdfir-images-load.yml`) using
+  `docker_image` / `docker_image_export` / `docker_image_load` — the built
+  set from the `images.yml` manifest the role already reads, the Elastic set
+  from the inventory layer's new `dxdfir_elastic_images` map (which
+  `dxdfir_stack` now references too, so deploy and offline-carry share one
+  definition). The awk-parsing of Ansible's own variable files is gone, and
+  `--verify` runs the real `dxdfir-verify-images.yml` instead of
+  re-implementing it.
+- **`dxdfir cleanup docker` speaks the docker API** (entanglement-audit
+  refactor): discovery via `docker_host_info` (label-filtered), removal via
+  `docker_image state: absent`, dangling layers via `docker_prune` — the
+  `{% raw %}{% endraw %}`-shielded CLI formatting is gone, `--check` now
+  reports exactly what would be removed, and an unreachable daemon still
+  degrades to a clear skip.
+- **The elastic docker compose is retired: `dxdfir deploy stack` deploys the
+  analysis stack from inventory data** (#290). `docker/elastic/`
+  (docker-compose.yml, `.env`/`.env.example`, `config/setup.sh`) is gone; the
+  `dxdfir_stack` role now converges the stack itself — docker network, named
+  `byakugan_*` volumes and one container per service, brought up in bootstrap
+  order with explicit waits, health checks ported, everything on `127.0.0.1`.
+  Settings live in the inventory layer (playbook-adjacent
+  `group_vars/all.yml`, `dxdfir_elastic_*`: version pin, ports, heap,
+  namespace, ingest tree, network/volume names), which every consumer
+  references instead of re-deriving — `dxdfir_car_load` authenticates with
+  the same variables and no longer parses `.env` at all.
+  - **Secrets are generated inventory data.** Each secret is a file-backed
+    `password` lookup into the gitignored per-host secret store
+    (`ansible/inventory/secrets/<host>/`, `0750 root:docker` on a root
+    deploy): generated on first deploy, reused forever, never logged;
+    overriding the variable (`host_vars`, `ansible-vault encrypt_string`,
+    `-e`) wins and materialises nothing. Deploy renders an `elastic.env`
+    handoff there for the tools outside ansible — the TUI's Kibana tab,
+    `dxdfir stamp-detections`, the riskgate — which read it (with the
+    compose-era `.env` as fallback) instead of `docker/elastic/.env`.
+  - **TLS material is generated host-side as state modules**
+    (`community.crypto`, pinned 2.26.9): CA + es01/fleet-server pairs under
+    the secret store's `certs/`, bind-mounted read-only into the containers
+    — no cert scripts, no certutil container, and the CA is a plain host
+    file every client verifies against (`certs/ca/ca.crt`). An unprivileged
+    deploy refuses to weaken node-key permissions unless explicitly opted
+    in (`dxdfir_stack_allow_world_readable_keys`).
+  - **The compose `setup` service became idempotent API tasks**: the
+    kibana_system password, the least-privilege `logs_car_writer` role and
+    the `byakugan_loader` user are reconciled against the live
+    Elasticsearch API — read first, change only what differs.
+  - **A compose-era deployment migrates in place**: presence/status/stop/
+    destroy also honour the old compose project label, deploy replaces the
+    old containers (data volumes untouched), imports operator-set secrets
+    from a surviving `.env`, and — on a root deploy — imports the CA from
+    the old certs volume so enrolled agents keep their trust.
+  - stop/destroy/status no longer need credentials at all: every query and
+    action is label-driven.
+- **`dxdfir deploy stack` installs Docker when the host has none, and every
+  stack verb checks the engine first.** The preflight reads the engine's
+  state before anything else (`tasks/docker_ensure.yml`): no engine or a
+  stopped daemon is answered by the same playbook decision as an absent
+  stack — `status` reports it and ends cleanly, `stop`/`destroy` flag it.
+  The deploy playbook opts in to installing the engine
+  (`dxdfir_stack_install_docker`: Docker's apt repository on Debian/Ubuntu
+  families, the `scripts/setup-environment.sh` flow as idempotent state
+  modules, docker-group membership for the sudo'ing operator), and deploy
+  and start opt in to starting a stopped daemon
+  (`dxdfir_stack_start_docker`).
+- **Every stack verb reads the host before requiring anything, and each
+  playbook decides what absence means** (`dxdfir_stack_when_absent`):
+  `status` reports "no analysis stack on this host" and ends cleanly (the
+  answer, not a failure), `start`/`stop`/`destroy` flag it (nothing to act
+  on), `deploy` continues — absence is its starting point. A default
+  inventory (`ansible/inventory/hosts.yml`, wired in `ansible.cfg`) makes
+  the workstation explicit; the pull-capacity gate is a playbook decision
+  too (`dxdfir_stack_pull_gate`, deploy/start), leaving the role free of
+  per-action branches.
 - **`dxdfir deploy stack` self-heals a short image store instead of dying
   mid-pull** (containerd: "no space left on device"). The `dxdfir_stack`
   preflight gains a pull-capacity gate on deploy/start: while stack images are

@@ -1,7 +1,26 @@
 ---
-# Start resumes the stack. The shared ensure_running gate is idempotent — it
-# brings up whatever is not already running and verifies the required services
-# came up — so start IS that gate: a stopped stack self-heals, an already-up one
-# is a no-op.
+# Start resumes the stack: every existing stack container — this role's and
+# compose-era ones alike (preflight found both by label) — is started as-is,
+# with no configuration change. The shared ensure_running gate then verifies
+# the required services came up. A compose-era stack starts fine, but its
+# containers predate the retirement, so the gate's per-name checks apply
+# only after a migrating deploy.
+- name: "stack-start | start every stack container"
+  community.docker.docker_container:
+    name: "{{ item }}"
+    state: started
+    container_default_behavior: no_defaults
+  loop: "{{ (dxdfir_stack_owned_containers + dxdfir_stack_legacy_containers) | unique }}"
+
 - name: "stack-start | ensure the stack is up"
   ansible.builtin.include_tasks: ensure_running.yml
+  when: dxdfir_stack_legacy_containers | length == 0
+
+- name: "stack-start | a compose-era stack was started"
+  ansible.builtin.debug:
+    msg: >-
+      compose-era containers were started as-is
+      ({{ dxdfir_stack_legacy_containers | join(', ') }}). Run `dxdfir deploy
+      stack` to migrate them to the inventory-driven deployment — the data
+      volumes carry over untouched.
+  when: dxdfir_stack_legacy_containers | length > 0

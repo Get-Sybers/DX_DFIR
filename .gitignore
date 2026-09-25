@@ -65,3 +65,7 @@ logs/*
 !logs/.gitkeep
 # ansible-lint's project-local collection cache
 .ansible/
+# The stack's per-host secret store (generated credentials, TLS material,
+# the elastic.env handoff) — never committed; keep the dir via its README.
+ansible/inventory/secrets/*
+!ansible/inventory/secrets/README.md

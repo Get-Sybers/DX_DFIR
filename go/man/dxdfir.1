@@ -121,13 +121,13 @@ while
 .B validate
 fronts the repository's check harness
 .RB ( .github/tests/run-checks.sh ).
-The analysis backend itself (the Elastic stack under
-.IR docker/elastic )
-is brought up with
+The analysis backend itself (the Elastic stack) is deployed with
 .B deploy stack
 (the
 .B dxdfir_stack
-role) or docker compose; see its README.
+role, from inventory data — secrets generated into
+.IR ansible/inventory/secrets/ ,
+vault-overridable); see docs/architecture/the-stack.md.
 .SH COMMANDS
 Commands read verb first \(em \fBregister collection\fR \fINAME\fR,
 \fBdeploy stack\fR, \fBlist collections\fR. The collection verbs also take a
@@ -255,9 +255,9 @@ shows what would move.
 .BR "deploy stack" ", " "destroy stack" ", " "start stack" ", " "stop stack" ", " "status stack"
 The analysis-stack lifecycle (the
 .B dxdfir_stack
-role over
-.IR docker/elastic ):
-build if needed and bring the stack up, then verify it; stop and remove its
+role, from inventory data):
+install docker when the host has none, generate secrets and TLS material,
+bring the stack up in order and verify it; stop and remove its
 containers and networks
 .RB ( --volumes
 also wipes the named volumes, i.e. the ingested data); start the existing
@@ -375,10 +375,6 @@ Pass an extra Ansible variable through to the
 .B dxdfir_images
 role; repeatable (e.g.\&
 .RB \(lq -e\  dxdfir_runtime_uid=3000 \(rq).
-.SS deploy stack
-.TP
-.B --no-build
-Do not build images before starting.
 .SS destroy stack
 .TP
 .B --volumes
@@ -461,8 +457,9 @@ is built from (the tool's environment variables, mounts and summary line).
 Raw evidence and processed output (gitignored); the materialised CAR lands under
 .IR data_store/processed/byakugan/ .
 .TP
-.I docker/elastic/
-The Elastic-native analysis backend (docker compose).
+.I ansible/inventory/secrets/
+The stack's per-host secret store: generated credentials, TLS material and
+the elastic.env handoff (gitignored).
 .SH SEE ALSO
 .BR ansible-playbook (1),
 .BR docker (1).

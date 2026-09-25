@@ -96,21 +96,21 @@ default, which is exactly what the [Timeline tab](the-interface.md#timeline) rea
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144        # Elasticsearch requires this, or it crash-loops
-cd docker/elastic && cp .env.example .env     # then fill in the placeholders (see below)
-docker compose up -d                           # Elasticsearch + Kibana + Fleet + Filebeat
+dxdfir deploy stack                            # Elasticsearch + Kibana + Fleet + Filebeat
 ```
 
-Or drive the same stack with `dxdfir deploy stack`. Everything binds `127.0.0.1`;
-Filebeat ships the processed evidence into `logs-dxdfir.<type>-*` data streams. See
-[the stack](../architecture/the-stack.md) and
-[docker/elastic/README.md](../../docker/elastic/README.md).
+`deploy stack` converges everything from the inventory: docker installed when
+missing (Debian/Ubuntu), secrets generated into the per-host store
+(`ansible/inventory/secrets/`, gitignored, vault-overridable), TLS material
+generated, the services brought up in order and verified. Everything binds
+`127.0.0.1`; Filebeat ships the processed evidence into `logs-dxdfir.<type>-*`
+data streams. See [the stack](../architecture/the-stack.md).
 
 > **Two things bite here on a first run:**
 > - `vm.max_map_count=262144` must be set on the host or Elasticsearch won't start
 >   (persist it in `/etc/sysctl.conf`).
-> - The `.env` values aren't optional placeholders — passwords need ≥ 6 chars and each
->   encryption key must be `openssl rand -hex 32`. The comments in `.env.example` say
->   which is which. The file holds credentials and is git-ignored — never commit it.
+> - The secret store (`ansible/inventory/secrets/`) holds real credentials and is
+>   git-ignored — never commit it. Its README says how to override or rotate a value.
 
 ## 7. Explore
 

@@ -1,11 +1,31 @@
 ---
-- name: "stack-status | read container status"
-  ansible.builtin.command:
-    argv: ["docker", "compose", "-f", "docker-compose.yml", "ps"]
-    chdir: "{{ dxdfir_stack_compose_dir }}"
-  register: dxdfir_stack_ps
-  changed_when: false
-
-- name: "stack-status | show container status"
+# Show what preflight already read: every stack container (any state, either
+# label family) and the stack's volumes — no config file, no credentials
+# needed to answer.
+- name: "stack-status | container status"
   ansible.builtin.debug:
-    var: dxdfir_stack_ps.stdout_lines
+    msg: >-
+      {{ (dxdfir_stack_host_info.containers | default([])
+          + dxdfir_stack_legacy_info.containers | default([]))
+         | map(attribute='Names') | map('first') | map('regex_replace', '^/', '')
+         | zip((dxdfir_stack_host_info.containers | default([])
+                + dxdfir_stack_legacy_info.containers | default([]))
+               | map(attribute='Status'))
+         | map('join', ' — ') | list }}
+
+- name: "stack-status | volume status"
+  ansible.builtin.debug:
+    msg: >-
+      volumes:
+      {{ (dxdfir_stack_host_info.volumes | default([])
+          + dxdfir_stack_legacy_info.volumes | default([]))
+         | map(attribute='Name') | unique | sort | join(', ') }}
+
+- name: "stack-status | compose-era containers present"
+  ansible.builtin.debug:
+    msg: >-
+      compose-era containers are running this stack
+      ({{ dxdfir_stack_legacy_containers | join(', ') }}) — `dxdfir deploy
+      stack` migrates them to the inventory-driven deployment; the data
+      volumes carry over untouched.
+  when: dxdfir_stack_legacy_containers | length > 0

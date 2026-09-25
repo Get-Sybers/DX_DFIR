@@ -251,7 +251,7 @@ history.
 
 ### Elastic Stack — the analysis backend
 
-The Elastic-native stack (`docker/elastic/`) pulls the official
+The Elastic-native stack (the `dxdfir_stack` role) pulls the official
 `docker.elastic.co` images at a pinned `ELASTIC_VERSION`; nothing of it is
 vendored, so this is a constraint on you rather than on this code. The
 default distribution ships under the

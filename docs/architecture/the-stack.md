@@ -6,7 +6,8 @@ the other.
 
 ## What's in it
 
-`docker/elastic/` is a security-on, localhost-only Elastic stack:
+A security-on, localhost-only Elastic stack, deployed by ansible (the
+`dxdfir_stack` role) from inventory data:
 
 | Service | Role | Port (127.0.0.1) |
 |---|---|---|
@@ -15,19 +16,85 @@ the other.
 | **Fleet Server** | Manages the agent (an elastic-agent) | `8220` |
 | **Filebeat** | Ships the processed evidence into data streams | — |
 
-Bring it up with `dxdfir deploy stack` or directly:
+Official Elastic images, all pinned to one version (`dxdfir_elastic_version`),
+each service one docker container on the `byakugan_default` network with named
+`byakugan_*` data volumes.
+
+## Bring it up
 
 ```bash
-sudo sysctl -w vm.max_map_count=262144       # Elasticsearch requires this (persist in /etc/sysctl.conf)
-cd docker/elastic && cp .env.example .env    # then fill in the placeholders
-docker compose up -d
+sudo sysctl -w vm.max_map_count=262144   # Elasticsearch requires this (persist in /etc/sysctl.conf)
+dxdfir deploy stack
 ```
 
-> **Host + credentials:** Elasticsearch won't start without `vm.max_map_count=262144`. In
-> `.env`, passwords need ≥ 6 chars and each encryption key must be `openssl rand -hex 32`
-> (the `.env.example` comments say which is which). The file holds credentials, binds
-> nothing off `127.0.0.1`, and is git-ignored — **never commit it.** Full details:
-> [docker/elastic/README.md](../../docker/elastic/README.md).
+Deploy converges the whole stack from the inventory: it installs Docker when
+the host has none (Debian/Ubuntu), generates any secret not yet set, generates
+the TLS material, then brings the services up in bootstrap order and verifies
+them. Re-running it is a no-op on a healthy stack and a repair on a broken
+one. A compose-era deployment (the retired `docker/elastic/` stack) is
+migrated in place: its containers are replaced, its data volumes and — on a
+root deploy — its CA and operator credentials carry over untouched.
+
+## Configuration and secrets
+
+Everything lives in the **inventory layer**
+([`ansible/collections/get_sybers.dxdfir/playbooks/group_vars/all.yml`](../../ansible/collections/get_sybers.dxdfir/playbooks/group_vars/all.yml),
+the `dxdfir_elastic_*` variables): the version pin, ports, heap, the ingest
+tree, network/volume names — and the secrets. Each secret is generated on
+first deploy into the per-host **secret store**
+(`ansible/inventory/secrets/<host>/`, gitignored, `0750 root:docker` on a root
+deploy) and reused on every run; override any of them as an ansible variable
+(`host_vars`, `ansible-vault encrypt_string`, or `-e`) and no file is ever
+generated for it. Deploy also writes two artifacts there for tools outside
+ansible:
+
+- `elastic.env` — the generated credential handoff the TUI's Kibana tab,
+  `dxdfir stamp-detections` and the [risk gate](../riskgate.md) read (same
+  dotenv dialect the retired `.env` used; regenerated every deploy — edit the
+  per-secret files or override the variables instead).
+- `certs/` — the stack's TLS material (CA at `certs/ca/ca.crt`), generated
+  host-side by `community.crypto` state modules and bind-mounted read-only
+  into the containers. Host-side clients verify against that CA file; nothing
+  reaches into a docker volume for it.
+
+> **Host requirement:** Elasticsearch won't start without
+> `vm.max_map_count=262144`. Deploy's failure message says so when it bites.
+
+## Identities
+
+| User | Role | Privileges | Used by |
+|---|---|---|---|
+| `elastic` | superuser | everything | bootstrap, Fleet, and any `dxdfir load-car --setup` run (template + saved-object creation needs cluster privileges the loader below deliberately lacks) |
+| `kibana_system` | built-in | Kibana -> Elasticsearch | Kibana |
+| `byakugan_loader` | `logs_car_writer` (created by deploy) | `create_doc`, `create_index`, `read`, `view_index_metadata` on `logs-car.*` only — no cluster privileges | routine (non-`--setup`) `dxdfir load-car` runs |
+
+`byakugan_loader` is scoped so it can land evidence and read it back but never
+alter, delete or re-template what is already indexed — least privilege
+enforced at the credential layer, not by convention. Deploy reconciles all
+three against the live Elasticsearch API: read first, change only what
+differs.
+
+## Fleet enrolment
+
+`fleet-server` bootstraps itself: with `KIBANA_FLEET_SETUP=1` it runs Fleet
+setup through Kibana (as `elastic`), obtains a service token unless
+`dxdfir_elastic_fleet_service_token` is set, and enrols into
+`fleet-server-policy` — the policy, the Fleet Server host
+(`https://fleet-server:8220`) and the default Elasticsearch output are
+preconfigured in the role's `kibana.yml`. Its state persists in the
+`byakugan_fleetdata` volume, so restarts keep the enrolment.
+
+To enrol another agent, create an enrolment token in Kibana (Fleet ->
+Enrollment tokens) and run an `elastic-agent` container on the
+`byakugan_default` network with the stack's certs tree mounted at `/certs`:
+
+```bash
+docker run --rm --network byakugan_default \
+  -v "$(pwd)/ansible/inventory/secrets/localhost/certs:/certs:ro" \
+  -e FLEET_ENROLL=1 -e FLEET_URL=https://fleet-server:8220 -e FLEET_CA=/certs/ca/ca.crt \
+  -e FLEET_ENROLLMENT_TOKEN=<token> \
+  docker.elastic.co/elastic-agent/elastic-agent:9.4.3
+```
 
 ## How evidence gets in
 

@@ -13,7 +13,7 @@ collected with **the hardened GoDFIR-toolz containers**
 > and the [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) tool
 > containers they run: `dxdfir process <source>` and the CAR lane
 > (`dxdfir build-car` / `dxdfir verify-car`); the analysis backend is the Elastic
-> stack under `docker/elastic/`, brought up with docker compose.
+> stack deployed by the `dxdfir_stack` role (`dxdfir deploy stack`).
 
 ---
 
@@ -63,8 +63,8 @@ No shell scripts here either:
   `car_inferred.jsonl`).
   **`dxdfir verify-car`** is the engine's own gate over what was written;
   **`dxdfir build-timeline`** unions a tree into one timeline JSONL.
-- The **Elastic-native backend** (`docker/elastic/`) is brought up with
-  `docker compose` (see its README). Filebeat tails the processed tree directly
+- The **Elastic-native backend** is deployed with `dxdfir deploy stack`
+  ([the stack](../architecture/the-stack.md)). Filebeat tails the processed tree directly
   (`ELASTIC_INGEST_DIR` is the knob) into `logs-dxdfir.<type>-*` data
   streams; **`dxdfir load-car`** bulk-loads the materialised CAR into
   `logs-car.*` instead (the `dxdfir_car_load` role, `byakugan load`), and
@@ -78,8 +78,8 @@ The analysis container images are catalogued in [Containers](/docs/Containers.md
 
 | Script | Description |
 |---|---|
-| `setup-environment.sh` | Installs Docker and userland deps (distro-aware) and the git submodules; the Python venv, the Go toolchain and the `dxdfir` front-end. The Byakugan CAR engine is no longer a host checkout — it is cloned + built into the `get-sybers/byakugan` image by `dxdfir build-docker`. Image seeding is split into `save-docker-images.sh`. |
-| `save-docker-images.sh` | Save the built hardened `get-sybers/*` images (+ the pulled Elastic-stack images) as tarballs; `--load` / `--verify` restore them and assert the hardened inventory. |
+| `setup-environment.sh` | Bootstraps ansible (userland deps, venv, pinned collections), then provisions the Docker engine THROUGH it (`dxdfir-bootstrap.yml` → the `dxdfir_stack` role's `docker_ensure`); the git submodules; the Python venv, the Go toolchain and the `dxdfir` front-end. The Byakugan CAR engine is no longer a host checkout — it is cloned + built into the `get-sybers/byakugan` image by `dxdfir build-docker`. Image seeding is split into `save-docker-images.sh`. |
+| `save-docker-images.sh` | Save the built hardened `get-sybers/*` images (+ the pulled Elastic-stack images) as tarballs; `--load` / `--verify` restore them and assert the hardened inventory. A launcher only — the sets, pulls, exports and loads are the `dxdfir_images` role's save/load tasks (`dxdfir-images-save.yml` / `dxdfir-images-load.yml`). |
 
 The Splunk-era and KAPE PowerShell scripts were retired (git history and the frozen
 `deprecated` branch keep them).

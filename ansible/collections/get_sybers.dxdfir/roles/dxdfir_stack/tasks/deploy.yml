@@ -1,16 +1,371 @@
 ---
-# Bring the stack up. The stack uses prebuilt images, so it is brought up
-# directly and verified.
-- name: "stack-deploy | bring up the elastic stack"
-  community.docker.docker_compose_v2:
-    project_src: "{{ dxdfir_stack_compose_dir }}"
-    env_files:
-      - "{{ dxdfir_stack_env_file }}"
-    build: "{{ 'always' if dxdfir_stack_build | bool else 'never' }}"
-    state: present
-  register: dxdfir_stack_up
+# Bring the stack up FROM INVENTORY DATA: secrets and TLS material first,
+# then network, volumes, images, and one container per service in bootstrap
+# order — Elasticsearch answering before its security objects are
+# reconciled, those before Kibana, Kibana before Fleet — the ordering the
+# compose file expressed with depends_on, here as explicit waits. Every step
+# is state-based, so a re-deploy converges instead of recreating, and the
+# whole bring-up sits in a rescue that surfaces the failed step with the
+# live container states as one diagnostic.
 
-# Verify (and self-heal) the bring-up through the shared container-up gate — the
-# same idempotent gate start and any live-stack consumer use.
+- name: "stack-deploy | the secret store"
+  ansible.builtin.include_tasks: secrets.yml
+
+- name: "stack-deploy | the TLS material"
+  ansible.builtin.include_tasks: certs.yml
+
+# MIGRATION: compose-era containers are replaced by this deploy — their
+# configuration (names, labels, mounts) predates the retirement, so they are
+# removed here and recreated below from inventory data. The data volumes are
+# byakugan_* on both sides and are NEVER touched: the migrated stack keeps
+# its evidence, credentials state and enrolments.
+- name: "stack-deploy | retire compose-era containers (volumes survive)"
+  community.docker.docker_container:
+    name: "{{ item }}"
+    state: absent
+  loop: "{{ dxdfir_stack_legacy_containers | default([]) }}"
+
+- name: "stack-deploy | the stack's network"
+  community.docker.docker_network:
+    name: "{{ dxdfir_stack_network }}"
+    labels: "{{ dxdfir_stack_labels }}"
+
+- name: "stack-deploy | the stack's data volumes"
+  community.docker.docker_volume:
+    name: "{{ item }}"
+    labels: "{{ dxdfir_stack_labels }}"
+  loop:
+    - "{{ dxdfir_stack_volumes.esdata }}"
+    - "{{ dxdfir_stack_volumes.kibanadata }}"
+    - "{{ dxdfir_stack_volumes.fleetdata }}"
+    - "{{ dxdfir_stack_volumes.filebeatdata }}"
+
+- name: "stack-deploy | the ingest tree filebeat tails exists"
+  ansible.builtin.file:
+    path: "{{ dxdfir_stack_ingest_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: "stack-deploy | the stack's images are local"
+  community.docker.docker_image:
+    name: "{{ item }}"
+    source: pull
+  loop: "{{ dxdfir_stack_images.values() | unique | list }}"
+  register: dxdfir_stack_pull
+  retries: 3
+  delay: 5
+  until: dxdfir_stack_pull is not failed
+
+- name: "stack-deploy | bring the services up in bootstrap order"
+  block:
+    - name: "stack-deploy | elasticsearch container"
+      community.docker.docker_container:
+        name: "{{ dxdfir_stack_containers.elasticsearch }}"
+        image: "{{ dxdfir_stack_images.elasticsearch }}"
+        state: started
+        labels: "{{ dxdfir_stack_labels }}"
+        networks:
+          - name: "{{ dxdfir_stack_network }}"
+            aliases: [elasticsearch, es01]
+        env:
+          ELASTIC_PASSWORD: "{{ dxdfir_stack_elastic_password }}"
+          ES_JAVA_OPTS: "-Xms{{ dxdfir_stack_es_heap }} -Xmx{{ dxdfir_stack_es_heap }}"
+        ulimits: "{{ ['memlock:-1:-1'] if dxdfir_stack_es_memlock | bool else omit }}"
+        volumes:
+          - "{{ role_path }}/files/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro"
+          - "{{ dxdfir_stack_certs_dir }}:/usr/share/elasticsearch/config/certs:ro"
+          - "{{ dxdfir_stack_volumes.esdata }}:/usr/share/elasticsearch/data"
+        published_ports:
+          - "{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}:9200"
+        healthcheck:
+          # TLS answers AND security rejects the unauthenticated call: the
+          # posture check.
+          test: ["CMD-SHELL", "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'"]
+          interval: 15s
+          timeout: 10s
+          retries: 30
+      no_log: true
+
+    - name: "stack-deploy | wait for elasticsearch (TLS up, security on)"
+      ansible.builtin.uri:
+        url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/"
+        ca_path: "{{ dxdfir_stack_ca_file }}"
+        status_code: [401]
+      register: dxdfir_stack_es_wait
+      until: dxdfir_stack_es_wait.status == 401
+      retries: "{{ dxdfir_stack_wait_retries }}"
+      delay: "{{ dxdfir_stack_wait_delay }}"
+      failed_when: false
+      changed_when: false
+
+    - name: "stack-deploy | assert elasticsearch answered"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_stack_es_wait.status == 401
+        fail_msg: >-
+          elasticsearch never answered on
+          https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }} with
+          security on (last status
+          {{ dxdfir_stack_es_wait.status | default('none') }}). Check
+          `docker logs {{ dxdfir_stack_containers.elasticsearch }}` — on a
+          fresh host the usual cause is vm.max_map_count < 262144.
+        quiet: true
+
+    # ---- the security objects the compose setup service used to create ----
+    # Reconciled against the live API: read first, change only what
+    # differs, report changed honestly.
+    - name: "stack-deploy | does kibana_system already hold its password"
+      ansible.builtin.uri:
+        url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_security/_authenticate"
+        ca_path: "{{ dxdfir_stack_ca_file }}"
+        url_username: kibana_system
+        url_password: "{{ dxdfir_stack_kibana_system_password }}"
+        force_basic_auth: true
+        status_code: [200, 401]
+      register: dxdfir_stack_kibana_system_auth
+      changed_when: false
+      no_log: true
+
+    - name: "stack-deploy | set the kibana_system password"
+      ansible.builtin.uri:
+        url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_security/user/kibana_system/_password"
+        method: POST
+        ca_path: "{{ dxdfir_stack_ca_file }}"
+        url_username: elastic
+        url_password: "{{ dxdfir_stack_elastic_password }}"
+        force_basic_auth: true
+        body_format: json
+        body:
+          password: "{{ dxdfir_stack_kibana_system_password }}"
+        status_code: [200]
+      register: dxdfir_stack_kibana_system_set
+      until: dxdfir_stack_kibana_system_set.status == 200
+      retries: 6
+      delay: 5
+      changed_when: true
+      when: dxdfir_stack_kibana_system_auth.status == 401
+      no_log: true
+
+    # The CAR loader's identity: least-privilege by construction —
+    # create_doc/create_index/read/view_index_metadata on logs-car.* only,
+    # no cluster privileges, so it can land evidence and read it back but
+    # never alter, delete or re-template what is already indexed.
+    - name: "stack-deploy | read the logs_car_writer role"
+      ansible.builtin.uri:
+        url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_security/role/logs_car_writer"
+        ca_path: "{{ dxdfir_stack_ca_file }}"
+        url_username: elastic
+        url_password: "{{ dxdfir_stack_elastic_password }}"
+        force_basic_auth: true
+        status_code: [200, 404]
+      register: dxdfir_stack_car_role
+      changed_when: false
+      no_log: true
+
+    - name: "stack-deploy | the logs_car_writer role (least-privilege CAR loader)"
+      ansible.builtin.uri:
+        url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_security/role/logs_car_writer"
+        method: PUT
+        ca_path: "{{ dxdfir_stack_ca_file }}"
+        url_username: elastic
+        url_password: "{{ dxdfir_stack_elastic_password }}"
+        force_basic_auth: true
+        body_format: json
+        body:
+          indices:
+            - names: ["logs-car.*"]
+              privileges: [create_doc, create_index, read, view_index_metadata]
+        status_code: [200]
+      vars:
+        _live: "{{ (dxdfir_stack_car_role.json | default({})).logs_car_writer | default({}) }}"
+        _live_first: "{{ (_live.indices | default([{}])) | first | default({}) }}"
+      when: >-
+        dxdfir_stack_car_role.status == 404
+        or (_live_first.names | default([]) | sort) != ['logs-car.*']
+        or (_live_first.privileges | default([]) | sort)
+           != ['create_doc', 'create_index', 'read', 'view_index_metadata']
+      changed_when: true
+      no_log: true
+
+    - name: "stack-deploy | does byakugan_loader already authenticate"
+      ansible.builtin.uri:
+        url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_security/_authenticate"
+        ca_path: "{{ dxdfir_stack_ca_file }}"
+        url_username: byakugan_loader
+        url_password: "{{ dxdfir_stack_byakugan_loader_password }}"
+        force_basic_auth: true
+        status_code: [200, 401]
+      register: dxdfir_stack_loader_auth
+      changed_when: false
+      no_log: true
+
+    - name: "stack-deploy | the byakugan_loader user"
+      ansible.builtin.uri:
+        url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_security/user/byakugan_loader"
+        method: PUT
+        ca_path: "{{ dxdfir_stack_ca_file }}"
+        url_username: elastic
+        url_password: "{{ dxdfir_stack_elastic_password }}"
+        force_basic_auth: true
+        body_format: json
+        body:
+          password: "{{ dxdfir_stack_byakugan_loader_password }}"
+          roles: [logs_car_writer]
+          full_name: "byakugan load (CAR to logs-car.*)"
+        status_code: [200]
+      when: dxdfir_stack_loader_auth.status == 401
+      changed_when: true
+      no_log: true
+
+    - name: "stack-deploy | kibana container"
+      community.docker.docker_container:
+        name: "{{ dxdfir_stack_containers.kibana }}"
+        image: "{{ dxdfir_stack_images.kibana }}"
+        state: started
+        labels: "{{ dxdfir_stack_labels }}"
+        networks:
+          - name: "{{ dxdfir_stack_network }}"
+            aliases: [kibana]
+        env:
+          # Consumed by files/kibana.yml via ${VAR} substitution.
+          KIBANA_SYSTEM_PASSWORD: "{{ dxdfir_stack_kibana_system_password }}"
+          KIBANA_ENCRYPTED_SAVED_OBJECTS_KEY: "{{ dxdfir_stack_kibana_saved_objects_key }}"
+          KIBANA_SECURITY_ENCRYPTION_KEY: "{{ dxdfir_stack_kibana_security_key }}"
+          KIBANA_REPORTING_ENCRYPTION_KEY: "{{ dxdfir_stack_kibana_reporting_key }}"
+        volumes:
+          - "{{ role_path }}/files/kibana.yml:/usr/share/kibana/config/kibana.yml:ro"
+          - "{{ dxdfir_stack_certs_dir }}:/usr/share/kibana/config/certs:ro"
+          - "{{ dxdfir_stack_volumes.kibanadata }}:/usr/share/kibana/data"
+        published_ports:
+          - "{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port }}:5601"
+        healthcheck:
+          # Ready once the login redirect is served (503 "not ready yet"
+          # until then).
+          test: ["CMD-SHELL", "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302'"]
+          interval: 15s
+          timeout: 10s
+          retries: 40
+      no_log: true
+
+    - name: "stack-deploy | wait for kibana's login redirect"
+      ansible.builtin.uri:
+        url: "http://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port }}/"
+        follow_redirects: none
+        status_code: [302]
+      register: dxdfir_stack_kibana_wait
+      until: dxdfir_stack_kibana_wait.status == 302
+      retries: "{{ dxdfir_stack_wait_retries }}"
+      delay: "{{ dxdfir_stack_wait_delay }}"
+      failed_when: false
+      changed_when: false
+
+    - name: "stack-deploy | assert kibana answered"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_stack_kibana_wait.status == 302
+        fail_msg: >-
+          kibana never served its login redirect on
+          http://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port }}
+          (last status
+          {{ dxdfir_stack_kibana_wait.status | default('none') }}). Check
+          `docker logs {{ dxdfir_stack_containers.kibana }}`.
+        quiet: true
+
+    # Fleet Server = an elastic-agent. Bootstraps itself through Kibana's
+    # Fleet API (KIBANA_FLEET_SETUP) into the preconfigured
+    # fleet-server-policy from files/kibana.yml; a pre-created service token
+    # (dxdfir_elastic_fleet_service_token) skips the Kibana-brokered request.
+    - name: "stack-deploy | fleet-server container"
+      community.docker.docker_container:
+        name: "{{ dxdfir_stack_containers['fleet-server'] }}"
+        image: "{{ dxdfir_stack_images['fleet-server'] }}"
+        state: started
+        labels: "{{ dxdfir_stack_labels }}"
+        networks:
+          - name: "{{ dxdfir_stack_network }}"
+            aliases: [fleet-server]
+        env:
+          FLEET_SERVER_ENABLE: "1"
+          FLEET_SERVER_POLICY_ID: fleet-server-policy
+          FLEET_SERVER_ELASTICSEARCH_HOST: https://elasticsearch:9200
+          FLEET_SERVER_ELASTICSEARCH_CA: /certs/ca/ca.crt
+          FLEET_SERVER_SERVICE_TOKEN: "{{ dxdfir_stack_fleet_service_token }}"
+          FLEET_SERVER_CERT: /certs/fleet-server/fleet-server.crt
+          FLEET_SERVER_CERT_KEY: /certs/fleet-server/fleet-server.key
+          FLEET_URL: https://fleet-server:8220
+          FLEET_CA: /certs/ca/ca.crt
+          KIBANA_FLEET_SETUP: "1"
+          KIBANA_FLEET_HOST: http://kibana:5601
+          KIBANA_FLEET_USERNAME: elastic
+          KIBANA_FLEET_PASSWORD: "{{ dxdfir_stack_elastic_password }}"
+        volumes:
+          - "{{ dxdfir_stack_certs_dir }}:/certs:ro"
+          - "{{ dxdfir_stack_volumes.fleetdata }}:/usr/share/elastic-agent/state"
+        published_ports:
+          - "{{ dxdfir_stack_bind }}:{{ dxdfir_stack_fleet_port }}:8220"
+        healthcheck:
+          test: ["CMD-SHELL", "curl -s --cacert /certs/ca/ca.crt https://localhost:8220/api/status | grep -q HEALTHY"]
+          interval: 15s
+          timeout: 10s
+          retries: 40
+      no_log: true
+
+    # The shipper: tails the processed evidence tree (<type>/**/*.json[l],
+    # the layout the processors write) and writes it straight into
+    # logs-dxdfir.<type>-<namespace> data streams over the secured
+    # Elasticsearch API. Runs as root only to read operator-delivered
+    # files; the ingest mount is read-only.
+    - name: "stack-deploy | filebeat container"
+      community.docker.docker_container:
+        name: "{{ dxdfir_stack_containers.filebeat }}"
+        image: "{{ dxdfir_stack_images.filebeat }}"
+        state: started
+        user: root
+        command: ["-e", "--strict.perms=false", "-environment", "container"]
+        labels: "{{ dxdfir_stack_labels }}"
+        networks:
+          - name: "{{ dxdfir_stack_network }}"
+            aliases: [filebeat]
+        env:
+          ELASTICSEARCH_HOSTS: https://elasticsearch:9200
+          ELASTICSEARCH_USERNAME: elastic
+          ELASTICSEARCH_PASSWORD: "{{ dxdfir_stack_elastic_password }}"
+          DFIR_NAMESPACE: "{{ dxdfir_stack_namespace }}"
+        volumes:
+          - "{{ role_path }}/files/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro"
+          - "{{ dxdfir_stack_certs_dir }}:/certs:ro"
+          - "{{ dxdfir_stack_ingest_dir }}:/ingest:ro"
+          - "{{ dxdfir_stack_volumes.filebeatdata }}:/usr/share/filebeat/data"
+        healthcheck:
+          test: ["CMD", "filebeat", "test", "output", "--strict.perms=false"]
+          interval: 60s
+          timeout: 30s
+          retries: 5
+      no_log: true
+  rescue:
+    - name: "stack-deploy | read the stack's state for the diagnostic"
+      community.docker.docker_host_info:
+        containers: true
+        containers_all: true
+        containers_filters:
+          label: "{{ dxdfir_stack_label_key }}={{ dxdfir_stack_name }}"
+      register: dxdfir_stack_failed_state
+      failed_when: false
+
+    - name: "stack-deploy | the bring-up failed — one diagnostic"
+      ansible.builtin.fail:
+        msg: >-
+          stack bring-up failed at
+          "{{ ansible_failed_task.name | default('a bring-up step') }}".
+          Container state:
+          {{ dxdfir_stack_failed_state.containers | default([])
+             | map(attribute='Names') | flatten | zip(
+               dxdfir_stack_failed_state.containers | default([])
+               | map(attribute='Status'))
+             | map('join', ': ') | list | join('; ') | default('none', true) }}.
+          Inspect the failing container's logs (docker logs <name>), fix,
+          and rerun — the deploy converges; nothing needs tearing down
+          first.
+
 - name: "stack-deploy | ensure the stack is up"
   ansible.builtin.include_tasks: ensure_running.yml

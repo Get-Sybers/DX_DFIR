@@ -99,18 +99,18 @@ dxdfir build-timeline data_store/processed/byakugan # one time-ordered timeline 
 
 ### Step 7: Bring up the Elastic-native backend
 ```bash
-cd docker/elastic
-cp .env.example .env            # then replace EVERY placeholder (see the file)
 sudo sysctl -w vm.max_map_count=262144
-docker compose up -d
-docker compose ps               # setup exits 0; the rest go (healthy)
+dxdfir deploy stack             # installs docker if missing, generates secrets + TLS, brings the stack up, verifies it
 ```
 - Elasticsearch + Kibana (security **on**, TLS on the Elasticsearch API), Fleet
   Server, and Filebeat as the shipper — official Elastic images pinned to
   `ELASTIC_VERSION`, all published on `127.0.0.1`. Kibana is at
   `http://127.0.0.1:5601` (log in as `elastic`).
-- `.env` holds every credential and is gitignored — **never commit it**.
-- Full detail (Fleet enrolment, the CA, shipping): [docker/elastic/README.md](/docker/elastic/README.md).
+- Credentials live in the gitignored per-host secret store
+  (`ansible/inventory/secrets/<host>/`) — generated on first deploy, never
+  overwritten, overridable as ansible variables (`ansible-vault
+  encrypt_string` works). **Never commit them.**
+- Full detail (Fleet enrolment, the CA, shipping): [the stack](/docs/architecture/the-stack.md).
 
 ### Step 8: Deliver evidence to the backend
 - Filebeat tails the tree mounted at `ELASTIC_INGEST_DIR` (`<type>/**/*.json[l]`)

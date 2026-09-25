@@ -1,7 +1,9 @@
 ---
-- name: "stack-stop | stop containers but keep them"
-  ansible.builtin.command:
-    argv: ["docker", "compose", "-f", "docker-compose.yml", "stop"]
-    chdir: "{{ dxdfir_stack_compose_dir }}"
-  register: dxdfir_stack_stopped
-  changed_when: dxdfir_stack_stopped.rc == 0
+# Stop every stack container — this role's and compose-era ones alike — but
+# keep them (and everything else) in place.
+- name: "stack-stop | stop every stack container"
+  community.docker.docker_container:
+    name: "{{ item }}"
+    state: stopped
+    container_default_behavior: no_defaults
+  loop: "{{ (dxdfir_stack_owned_containers + dxdfir_stack_legacy_containers) | unique }}"

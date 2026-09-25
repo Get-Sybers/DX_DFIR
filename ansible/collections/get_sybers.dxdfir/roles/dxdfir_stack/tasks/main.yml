@@ -1,6 +1,6 @@
 ---
 # dxdfir_stack: analysis-stack lifecycle. The role GROUPS; the playbook DECIDES
-# the action. Idempotence comes from compose semantics, not a `when:`.
+# the action. Idempotence comes from state modules converging, not a `when:`.
 
 - name: "stack | assert inputs"
   ansible.builtin.assert:

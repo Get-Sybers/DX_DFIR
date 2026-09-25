@@ -1,6 +1,13 @@
 ---
-# dxdfir_stack: bring the Elastic analysis stack up/down. One role, five
-# actions (dxdfir_stack_action); the playbook decides.
+# dxdfir_stack: the Elastic analysis stack, deployed by ansible from
+# inventory data — docker network + named volumes + one container per
+# service, bootstrapped in order. One role, five actions
+# (dxdfir_stack_action); the playbook decides. Compose is retired: no
+# docker-compose.yml, no operator .env — settings live in the inventory
+# (playbooks/group_vars/all.yml, dxdfir_elastic_*), secrets in the per-host
+# secret store there. Every dxdfir_elastic_* reference below carries a
+# self-contained fallback so the role still runs bare; the inventory
+# definition is the source of truth and wins whenever these plays run.
 
 # Which lifecycle action: deploy | destroy | start | stop | status.
 dxdfir_stack_action: status
@@ -8,33 +15,143 @@ dxdfir_stack_action: status
 # Repo root is five levels up from this role.
 dxdfir_stack_repo_root: "{{ role_path }}/../../../../.."
 
-# The stack's compose dir.
-dxdfir_stack_compose_dir: "{{ dxdfir_stack_repo_root }}/docker/elastic"
+# ---- identity (inventory: dxdfir_elastic_*) ---------------------------------
+dxdfir_stack_name: "{{ dxdfir_elastic_stack_name | default('byakugan') }}"
+# Ownership label on every container and volume the role creates — presence,
+# status, stop and destroy all query it.
+dxdfir_stack_label_key: "{{ dxdfir_elastic_label_key | default('com.get-sybers.stack') }}"
+# The compose-era deployment labelled its objects with this project instead;
+# the same queries honour it so an existing stack is seen, stopped,
+# destroyed — and migrated by deploy (containers replaced, volumes kept).
+dxdfir_stack_legacy_project: "{{ dxdfir_elastic_legacy_project | default('byakugan') }}"
+# The ownership labels every created object carries, as a computed dict —
+# ansible templates mapping VALUES, not keys, so the dynamic key must be
+# built in a Jinja expression, never written literally in a task.
+dxdfir_stack_labels: "{{ {dxdfir_stack_label_key: dxdfir_stack_name} }}"
 
-# Env file for compose interpolation: the operator's .env next to the compose
-# file (copied from .env.example, never committed).
-dxdfir_stack_env_file: "{{ dxdfir_stack_compose_dir }}/.env"
+# THE PLAYBOOK DECIDES what an absent stack (no containers in any state, no
+# named data volumes) means for its action — the role only groups:
+#   continue — absence is the action's normal starting point (deploy);
+#   report   — say "no stack" and end the host cleanly — the answer, not a
+#              failure (status);
+#   fail     — flag it: this action has nothing to act on (start/stop/destroy).
+# An engine-less or daemon-less host (tasks/docker_ensure.yml) is answered by
+# the same decision: no engine means no stack.
+dxdfir_stack_when_absent: continue
 
-# deploy: build images before starting (the stack uses prebuilt images, so this
-# is a no-op unless a build is forced).
-dxdfir_stack_build: true
-# destroy: also remove named volumes (WIPES ingested data).
-dxdfir_stack_remove_volumes: false
+# MORE PLAYBOOK DECISIONS (tasks/docker_ensure.yml). Install the docker
+# engine when the host has none — Docker's own apt repository, Debian/Ubuntu
+# families, the exact flow scripts/setup-environment.sh runs, as idempotent
+# state modules. Off here; the deploy playbook enables it.
+dxdfir_stack_install_docker: false
+# Start (and enable) a stopped docker daemon. Off here; the playbooks that
+# bring the stack up (deploy/start) enable it — status/stop/destroy never
+# start system services.
+dxdfir_stack_start_docker: false
 
-# The reusable ensure_running gate (tasks/ensure_running.yml) brings these compose
-# services up and requires them running — the stack is not "up" until they are.
-# deploy and start both run through it; a live-stack consumer can reuse it too.
+# ---- images and topology (inventory: dxdfir_elastic_*) ----------------------
+dxdfir_stack_elastic_version: "{{ dxdfir_elastic_version | default('9.4.3') }}"
+dxdfir_stack_network: "{{ dxdfir_elastic_network | default('byakugan_default') }}"
+dxdfir_stack_volumes:
+  certs: "{{ (dxdfir_elastic_volumes | default({})).certs | default('byakugan_certs') }}"
+  esdata: "{{ (dxdfir_elastic_volumes | default({})).esdata | default('byakugan_esdata') }}"
+  kibanadata: "{{ (dxdfir_elastic_volumes | default({})).kibanadata | default('byakugan_kibanadata') }}"
+  fleetdata: "{{ (dxdfir_elastic_volumes | default({})).fleetdata | default('byakugan_fleetdata') }}"
+  filebeatdata: "{{ (dxdfir_elastic_volumes | default({})).filebeatdata | default('byakugan_filebeatdata') }}"
+dxdfir_stack_bind: "{{ dxdfir_elastic_bind | default('127.0.0.1') }}"
+dxdfir_stack_es_port: "{{ dxdfir_elastic_es_port | default(9200) }}"
+dxdfir_stack_kibana_port: "{{ dxdfir_elastic_kibana_port | default(5601) }}"
+dxdfir_stack_fleet_port: "{{ dxdfir_elastic_fleet_port | default(8220) }}"
+dxdfir_stack_es_heap: "{{ dxdfir_elastic_es_heap | default('1g') }}"
+# Unlimited memlock on the elasticsearch container (the compose-era ulimit).
+# false for runtimes that cannot grant it (rootless docker, some sandboxes) —
+# the daemon refuses the rlimit there and the container cannot start at all.
+dxdfir_stack_es_memlock: "{{ dxdfir_elastic_es_memlock | default(true) }}"
+dxdfir_stack_namespace: "{{ dxdfir_elastic_namespace | default('default') }}"
+dxdfir_stack_ingest_dir: "{{ dxdfir_elastic_ingest_dir | default(dxdfir_stack_repo_root ~ '/data_store/processed') }}"
+
+# The service images (inventory: dxdfir_elastic_images, all pinned by the
+# one version) and the container each runs as ("<stack name>-<service>").
+# tasks/deploy.yml brings them up in bootstrap order; the pull-capacity gate
+# reads the image set; the dxdfir_images save/load entry points carry the
+# same set to offline hosts.
+dxdfir_stack_images: >-
+  {{ dxdfir_elastic_images | default({
+       'elasticsearch': 'docker.elastic.co/elasticsearch/elasticsearch:' ~ dxdfir_stack_elastic_version,
+       'kibana': 'docker.elastic.co/kibana/kibana:' ~ dxdfir_stack_elastic_version,
+       'fleet-server': 'docker.elastic.co/elastic-agent/elastic-agent:' ~ dxdfir_stack_elastic_version,
+       'filebeat': 'docker.elastic.co/beats/filebeat:' ~ dxdfir_stack_elastic_version}) }}
+dxdfir_stack_containers:
+  elasticsearch: "{{ dxdfir_stack_name }}-elasticsearch"
+  kibana: "{{ dxdfir_stack_name }}-kibana"
+  fleet-server: "{{ dxdfir_stack_name }}-fleet-server"
+  filebeat: "{{ dxdfir_stack_name }}-filebeat"
+
+# ---- secrets and deploy artifacts (inventory: dxdfir_elastic_*) --------------
+# The per-host secret store (tasks/secrets.yml): generated-once files, an
+# operator override never materialises one. Empty fallbacks make a bare role
+# run fail the non-empty assert with the pointer to the inventory layer.
+dxdfir_stack_secrets_dir: "{{ dxdfir_elastic_secrets_dir | default(dxdfir_stack_repo_root ~ '/ansible/inventory/secrets/' ~ inventory_hostname) }}"
+dxdfir_stack_elastic_password: "{{ dxdfir_elastic_password | default('') }}"
+dxdfir_stack_kibana_system_password: "{{ dxdfir_elastic_kibana_system_password | default('') }}"
+dxdfir_stack_byakugan_loader_password: "{{ dxdfir_elastic_byakugan_loader_password | default('') }}"
+dxdfir_stack_kibana_saved_objects_key: "{{ dxdfir_elastic_kibana_saved_objects_key | default('') }}"
+dxdfir_stack_kibana_security_key: "{{ dxdfir_elastic_kibana_security_key | default('') }}"
+dxdfir_stack_kibana_reporting_key: "{{ dxdfir_elastic_kibana_reporting_key | default('') }}"
+dxdfir_stack_fleet_service_token: "{{ dxdfir_elastic_fleet_service_token | default('') }}"
+# The generated dotenv handoff for tools outside ansible (go TUI, python,
+# riskgate) and the exported stack CA. false = write no handoff (vault-only
+# operators who feed those tools by environment instead).
+dxdfir_stack_env_file: "{{ dxdfir_elastic_env_file | default(dxdfir_stack_secrets_dir ~ '/elastic.env') }}"
+dxdfir_stack_write_env_file: true
+# The stack's TLS material: generated host-side (tasks/certs.yml,
+# community.crypto state modules) under the secret store and bind-mounted
+# read-only into the containers. A compose-era certs volume is imported on a
+# root deploy so a migrated stack keeps its CA.
+dxdfir_stack_certs_dir: "{{ dxdfir_elastic_certs_dir | default(dxdfir_stack_secrets_dir ~ '/certs') }}"
+dxdfir_stack_ca_file: "{{ dxdfir_elastic_ca_file | default(dxdfir_stack_certs_dir ~ '/ca/ca.crt') }}"
+# The compose-era operator .env, read once to import operator-set secrets
+# into the store; never required, never written.
+dxdfir_stack_legacy_env_file: "{{ dxdfir_elastic_legacy_env_file | default(dxdfir_stack_repo_root ~ '/docker/elastic/.env') }}"
+# An unprivileged deploy cannot hold the node TLS keys at root:root 0640
+# (the containers read them as gid 0 through the bind mount), so it would
+# have to write them world-readable — a weakening this role REFUSES unless
+# explicitly opted into. Deploy as root, or accept 0644 keys deliberately.
+dxdfir_stack_allow_world_readable_keys: false
+# Group handed read on the secret store when deploying as root (0750/0640),
+# so docker-group operators can read the credentials without sudo; skipped
+# when the group does not exist or the deployer is unprivileged (0700/0600).
+dxdfir_stack_secrets_group: docker
+
+# Bring-up waits (deploy's elasticsearch/kibana readiness, the
+# ensure_running gate): how many probes, how far apart. 60 x 5s rides out a
+# cold first boot on slow disks; a CI sandbox can shrink it.
+dxdfir_stack_wait_retries: 60
+dxdfir_stack_wait_delay: 5
+
+# The reusable ensure_running gate (tasks/ensure_running.yml) starts these
+# services' existing containers and requires them running (and healthy where
+# the container defines a healthcheck) — the stack is not "up" until they
+# are. deploy and start both run through it; a live-stack consumer reuses it.
 dxdfir_stack_required_services:
   - elasticsearch
   - kibana
 
-# Pull-capacity gate (tasks/preflight.yml, deploy/start only): free space (GiB)
-# the image stores must offer while stack images are still to be pulled — a full
-# cold pull of the five services runs ~10 GiB unpacked plus in-flight compressed
-# layers. When short, the gate reclaims once (prune) before asserting.
+# destroy: also remove named volumes (WIPES ingested data).
+dxdfir_stack_remove_volumes: false
+
+# Pull-capacity gate (tasks/preflight.yml) — ANOTHER PLAYBOOK DECISION: the
+# playbooks whose action pulls images (deploy/start) enable it; off here so
+# stop/destroy/status stay ungated — they are how an operator frees space.
+dxdfir_stack_pull_gate: false
+# Free space (GiB) the image stores must offer while stack images are still
+# to be pulled — a full cold pull of the four services runs ~10 GiB unpacked
+# plus in-flight compressed layers. When short, the gate reclaims once
+# (prune) before asserting.
 dxdfir_stack_min_free_gib: 15
-# The filesystems holding pulled image content: docker's data-root and, with the
-# containerd image store, containerd's content store. The tightest one decides.
+# The filesystems holding pulled image content: docker's data-root and, with
+# the containerd image store, containerd's content store. The tightest one
+# decides.
 dxdfir_stack_image_store_paths:
   - /var/lib/docker
   - /var/lib/containerd

@@ -22,6 +22,7 @@ dependencies:
   # requirements.yml pins the exact tested version (3.10.3) for reproducible installs.
   community.docker: ">=3.10.3,<4.0.0"
   ansible.posix: ">=2.1.0,<3.0.0"
+  community.crypto: ">=2.26.9,<3.0.0"
 build_ignore:
   - "roles/*/molecule"
   - "*.pyc"

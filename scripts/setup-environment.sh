@@ -256,51 +256,14 @@ else
 fi
 
 ################################################################################
-# Install Docker if not already installed
+# Docker presence probe — the ENGINE ITSELF is provisioned by ansible now
+# (dxdfir-bootstrap.yml -> the dxdfir_stack role's docker_ensure entry
+# point: Docker's apt repository, engine + plugins, daemon, docker group and
+# operator membership — the same idempotent state tasks `dxdfir deploy
+# stack` runs), once ansible exists below. Only the fact is read here, for
+# the plan and the final notes; the shell copy of that provisioning is gone.
 DOCKER_WAS_INSTALLED=true
-
-section "Docker engine"
-if ! command -v docker >/dev/null 2>&1; then
-    step "Docker not found — installing the Docker engine ..."
-    DOCKER_WAS_INSTALLED=false
-
-    # Derive the Docker apt repo from the running distro. Derivatives (Mint,
-    # Pop!_OS) carry UBUNTU_CODENAME; Docker publishes no repo of their own.
-    # shellcheck disable=SC1091
-    . /etc/os-release
-    case "$ID" in
-        debian|ubuntu) DOCKER_DISTRO="$ID" ;;
-        *)
-            case "$ID_LIKE" in
-                *ubuntu*) DOCKER_DISTRO="ubuntu" ;;
-                *debian*) DOCKER_DISTRO="debian" ;;
-                *) die "Unsupported distro '$ID'. Install Docker manually, then re-run." ;;
-            esac
-            ;;
-    esac
-    DOCKER_CODENAME="${UBUNTU_CODENAME:-$VERSION_CODENAME}"
-    [[ -n "$DOCKER_CODENAME" ]] || die "Could not determine the distro codename from /etc/os-release."
-    detail "Using the Docker repository for $DOCKER_DISTRO/$DOCKER_CODENAME"
-
-    $SUDO apt-get update || die "apt-get update failed."
-    $SUDO apt-get install -y "${APT_DEPS[@]}" || die "Failed to install prerequisites."
-
-    $SUDO install -m 0755 -d /etc/apt/keyrings
-    $SUDO curl -fsSL "https://download.docker.com/linux/$DOCKER_DISTRO/gpg" \
-        -o /etc/apt/keyrings/docker.asc || die "Failed to fetch the Docker signing key."
-    $SUDO chmod a+r /etc/apt/keyrings/docker.asc
-
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/$DOCKER_DISTRO $DOCKER_CODENAME stable" \
-        | $SUDO tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-    $SUDO apt-get update || die "apt-get update failed after adding the Docker repository."
-    $SUDO apt-get install -y docker-ce docker-ce-cli containerd.io \
-        docker-buildx-plugin docker-compose-plugin || die "Docker installation failed."
-
-    ok "Docker engine installed."
-else
-    ok "Docker already installed: $(docker --version)"
-fi
+command -v docker >/dev/null 2>&1 || DOCKER_WAS_INSTALLED=false
 
 ################################################################################
 # Install the userland tools the processing scripts need.
@@ -324,30 +287,13 @@ else
 fi
 
 ################################################################################
-# Docker group membership.
-#
-# $USER is empty under `sudo` and in most non-login shells, so the old
-# `usermod -aG docker "$USER"` could expand to a no-op that failed loudly or,
-# worse, quietly. id -un always answers.
-if ! getent group docker > /dev/null; then
-    $SUDO groupadd docker
-fi
-
-if id -nG "$RUN_USER" | tr ' ' '\n' | grep -qx docker; then
-    ok "$RUN_USER is already in the docker group."
-else
-    $SUDO usermod -aG docker "$RUN_USER" && \
-        ok "Added $RUN_USER to the docker group."
-fi
-
-################################################################################
 # Present user with what this script will do
 section "Setup plan"
-ok   "1. Check and install Docker"
-ok   "2. Install required userland tools"
-ok   "3. Set up Docker group permissions"
-step "4. Initialise the git submodules (recursively)"
-step "5. Set ownership and permissions on the DX_DFIR repository"
+ok   "1. Install required userland tools"
+step "2. Initialise the git submodules (recursively)"
+step "3. Set ownership and permissions on the DX_DFIR repository"
+step "4. Install the Python package + Ansible (venv) and the pinned collections"
+step "5. Ensure the Docker engine, daemon and group via ansible (dxdfir-bootstrap.yml)"
 detail "the Byakugan CAR engine is no longer a host checkout — it is built into"
 detail "the get-sybers/byakugan image by 'dxdfir build-docker'"
 echo
@@ -566,6 +512,19 @@ $SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install \
 ok "Collections installed: $("$DXDFIR_VENV/bin/ansible-galaxy" collection list -p "$DXDFIR_COLLECTIONS" 2>/dev/null | grep -cE '^[a-z]' || echo '?') pinned"
 
 ################################################################################
+# Docker engine + group — ansible, not shell: the same state tasks the deploy
+# uses (dxdfir_stack docker_ensure). This script used to carry its own shell
+# copy of exactly this provisioning; there is ONE implementation now, and
+# rerunning it on a healthy host is a no-op.
+################################################################################
+section "Docker engine (ansible)"
+step "Ensuring the Docker engine, daemon and group (dxdfir-bootstrap.yml) ..."
+( cd "$REPO_ROOT_DIR" && $SUDO ansible-playbook \
+    ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-bootstrap.yml ) \
+    || die "Docker engine bootstrap failed (dxdfir-bootstrap.yml)."
+ok "Docker engine present, daemon running, group membership ensured."
+
+################################################################################
 # Offline fallback: the analysis images are BUILT (dxdfir-build-images.yml) and
 # building needs the network (base images, apt, pinned clones). When the host
 # has no route out, fall back to the tarballs a connected host pre-seeded with
@@ -578,9 +537,10 @@ if ! curl -fsI --connect-timeout 4 --max-time 8 https://download.docker.com/ >/d
     if compgen -G "$_tars/*.tar" >/dev/null; then
         step "No internet — loading + verifying the pre-seeded image tarballs from $_tars ..."
         # --verify loads every tarball THEN runs the hardened-inventory audit
-        # with the venv just installed above, so a missing or corrupt tarball
-        # fails here, not at first pipeline use.
-        DXDFIR_PYTHON="$DXDFIR_VENV/bin/python3" "$SCRIPT_DIR/save-docker-images.sh" --verify \
+        # (both as playbooks; the venv's ansible was symlinked onto PATH
+        # above), so a missing or corrupt tarball fails here, not at first
+        # pipeline use.
+        "$SCRIPT_DIR/save-docker-images.sh" --verify \
             || die "Offline image load/verify failed (scripts/save-docker-images.sh --verify)."
         ok "Analysis images loaded and the hardened inventory verified."
     else
@@ -597,7 +557,7 @@ section "Setup complete"
 if [[ "$DOCKER_WAS_INSTALLED" == false ]]; then
     warn "Log out and back in for the Docker group change to take effect."
 else
-    ok "Docker group permissions are already active."
+    ok "Docker was already present; if the bootstrap just added you to the docker group, log out and back in once."
 fi
 echo
 
@@ -609,5 +569,5 @@ cmd "scripts/save-docker-images.sh --build" "(connected host: build + save every
 cmd "scripts/save-docker-images.sh --load" "(offline host: load tarballs — or just re-run this script)"
 echo
 step "Run DX_DFIR:"
-cmd "dxdfir --help" "(process evidence, build + verify CAR, bring up docker/elastic — see README.md)"
+cmd "dxdfir --help" "(process evidence, build + verify CAR, deploy the analysis stack — see README.md)"
 echo

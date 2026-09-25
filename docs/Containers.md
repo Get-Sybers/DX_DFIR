@@ -72,9 +72,9 @@ policing a large image from inside.
 ## Pulled images
 
 No tool image is pulled — every `get-sybers/*` image is built from source. The
-one pulled set is the analysis backend: the Elastic stack (`docker/elastic/`)
+one pulled set is the analysis backend: the Elastic stack
 is the official `docker.elastic.co/*` images, version-pinned
-(`ELASTIC_VERSION`), brought up with docker compose on `127.0.0.1` with
+(`dxdfir_elastic_version`), deployed by the `dxdfir_stack` role on `127.0.0.1` with
 security on — see its README. `scripts/save-docker-images.sh` includes them in
 the offline tarball set, so the stack deploys air-gapped with zero pulls.
 
@@ -108,7 +108,7 @@ official image) — operator-supplied: download the pinned release into
 - [Zeek](https://zeek.org/) · [Suricata](https://suricata.io/) · [YARA](https://virustotal.github.io/yara/)
 - [MemProcFS](https://github.com/ufrisk/MemProcFS) · [Plaso / GIFT PPA](https://launchpad.net/~gift)
 - [go-evtx (Velociraptor)](https://github.com/Velocidex/evtx) · [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) · [Hayabusa (Yamato Security)](https://github.com/Yamato-Security/hayabusa)
-- [Elastic Stack](https://www.elastic.co/docs) — the analysis backend (`docker/elastic/`)
+- [Elastic Stack](https://www.elastic.co/docs) — the analysis backend ([the stack](architecture/the-stack.md))
 
 The obligations the tools and the backend place on the operator are recorded in
 [THIRD_PARTY_NOTICES.md](/.github/THIRD_PARTY_NOTICES.md).

@@ -176,7 +176,7 @@ def connect_from_env() -> Es:
     ca = os.environ.get("ES_CA") or None
     insecure = os.environ.get("RISKGATE_INSECURE", "0") == "1"
     if not password:
-        raise RiskgateError("ES_PASSWORD is not set (riskgate.sh reads docker/elastic/.env; or export it)")
+        raise RiskgateError("ES_PASSWORD is not set (riskgate.sh reads the elastic.env handoff; or export it)")
     if ca and not os.path.isfile(ca):
         raise RiskgateError(f"ES_CA={ca} is not a file")
     if url.startswith("https://") and not ca and not insecure:

@@ -7,69 +7,27 @@
 # bundles/manifest/report through
 # BYAKUGAN_LOAD_OUT_DIR. The stack must be up first (its data streams need the
 # running Elasticsearch this pushes to) and reachable by service name, so this
-# runs behind the stack's ensure_running gate and on its compose network.
+# runs behind the stack's ensure_running gate and on its docker network.
 
-# 1. The compose services this pushes to/through must be running first — the
+# 1. The stack services this pushes to/through must be running first — the
 # same idempotent, self-healing gate stack deploy/start use (see
 # docs/reference/ansible-standards.md: dxdfir_stack ensure_running is for
 # "anything that ingests into / queries elasticsearch"). Reused via
 # include_role (not a bare include_tasks) so dxdfir_stack's OWN defaults
-# (compose dir, .env file, the services it requires — elasticsearch + kibana,
+# (container names, the services it requires — elasticsearch + kibana,
 # already what this role needs) resolve correctly from outside that role.
 - name: "car-load | the elastic stack is up before anything ingests"
   ansible.builtin.include_role:
     name: dxdfir_stack
     tasks_from: ensure_running
 
-# 2. Credentials come from docker/elastic/.env, never duplicated into a
-# second secret store. A missing .env fails clearly here rather than loading
-# with empty credentials — ensure_running.yml, reused directly above, does not
-# itself run dxdfir_stack's own preflight (which is where that check normally
-# lives), so this role asserts it again at its own layer.
-- name: "car-load | stat the elastic .env"
-  ansible.builtin.stat:
-    path: "{{ dxdfir_car_load_env_file }}"
-  register: dxdfir_car_load_env_stat
-
-- name: "car-load | the elastic .env is present"
-  ansible.builtin.assert:
-    that:
-      - dxdfir_car_load_env_stat.stat.exists
-    fail_msg: >-
-      {{ dxdfir_car_load_env_file }} is missing — copy docker/elastic/.env.example
-      to docker/elastic/.env and set the passwords before loading the CAR.
-    quiet: true
-
-# One password per line matching KEY= — accepting the same dotenv variants
-# the repo's other readers do (go tui readElasticEnv trims a leading
-# `export ` and surrounding whitespace; the Python readers .strip("'\"") a
-# wrapping quote pair), so the same .env resolves to the same secret on
-# every path: optional leading whitespace / `export `, optional whitespace
-# around `=`, trailing whitespace trimmed, then ONE wrapping quote pair
-# stripped. regex_replace (not regex_search's group extraction) because it
-# always returns a plain string, matched or not — no ambiguity over whether
-# the result comes back wrapped in a list.
-- name: "car-load | read the stack credentials from .env"
-  no_log: true
-  vars:
-    _env_lines: "{{ lookup('ansible.builtin.file', dxdfir_car_load_env_file).split('\n') }}"
-  ansible.builtin.set_fact:
-    dxdfir_car_load_elastic_password: >-
-      {{ (_env_lines | select('match', '^\s*(export\s+)?ELASTIC_PASSWORD\s*=') | list | first | default('', true))
-         | regex_replace('^\s*(export\s+)?ELASTIC_PASSWORD\s*=\s*', '')
-         | trim
-         | regex_replace('^"(.*)"$', '\g<1>')
-         | regex_replace("^'(.*)'$", '\g<1>') }}
-    dxdfir_car_load_byakugan_loader_password: >-
-      {{ (_env_lines | select('match', '^\s*(export\s+)?BYAKUGAN_LOADER_PASSWORD\s*=') | list | first | default('', true))
-         | regex_replace('^\s*(export\s+)?BYAKUGAN_LOADER_PASSWORD\s*=\s*', '')
-         | trim
-         | regex_replace('^"(.*)"$', '\g<1>')
-         | regex_replace("^'(.*)'$", '\g<1>') }}
+# 2. Credentials come from the inventory layer (dxdfir_elastic_*), BY
+# REFERENCE — the same variables dxdfir_stack deployed the stack with, so
+# there is no file to parse and no second secret store to drift.
 
 # Setup-mode template PUTs (and, with the Kibana import on, the saved-objects
 # import) need cluster/Kibana privileges logs_car_writer deliberately does not
-# have (docker/elastic/config/setup.sh) — so a setup run authenticates as the
+# have (dxdfir_stack's deploy creates it that way) — so a setup run authenticates as the
 # elastic superuser; a steady-state, repeatable run (setup=false, the
 # templates already exist) authenticates as byakugan_loader, scoped to
 # logs-car.* only.
@@ -87,14 +45,16 @@
     that:
       - dxdfir_car_load_es_password_resolved | length > 0
     fail_msg: >-
-      {{ 'ELASTIC_PASSWORD' if dxdfir_car_load_setup | bool else 'BYAKUGAN_LOADER_PASSWORD' }}
-      is not set in {{ dxdfir_car_load_env_file }}.
+      {{ 'dxdfir_elastic_password' if dxdfir_car_load_setup | bool
+         else 'dxdfir_elastic_byakugan_loader_password' }}
+      is empty — the inventory layer (playbooks/group_vars/all.yml) defines
+      it; run through the playbooks, or set it when using the role bare.
     quiet: true
 
 # 3. Drive the byakugan image's `load` sub-tool through the shared tool-lane
 # skeleton: /input the materialised CAR tree (ro), /output this run's bundles +
-# manifest + report (rw), /certs the stack's CA off the compose `certs` named
-# volume (ro) — BYAKUGAN_LOAD_ES_CA_FILE already defaults to /certs/ca/ca.crt,
+# manifest + report (rw), /certs the stack's CA off the host-side TLS
+# tree (ro) — BYAKUGAN_LOAD_ES_CA_FILE already defaults to /certs/ca/ca.crt,
 # matching where it lands, and BYAKUGAN_LOAD_INPUT_DIR/_OUT_DIR already
 # default to /input//output, matching the mounts, so neither is restated here.
 # Namespace/setup/force are plain env (the playbook passes them through as
@@ -127,7 +87,7 @@
         mounts:
           - {host: "{{ dxdfir_car_load_dir }}", path: /input, mode: ro}
           - {host: "{{ dxdfir_car_load_out_dir }}", path: /output, mode: rw}
-          - {path: /certs, mode: ro, volume: true, source: "{{ dxdfir_car_load_certs_volume }}"}
+          - {host: "{{ dxdfir_car_load_certs_dir }}", path: /certs, mode: ro}
         network: "{{ dxdfir_car_load_network }}"
     dxdfir_lane_verify_dir: "{{ dxdfir_car_load_out_dir }}"
     dxdfir_lane_verify_glob: "manifest.json"

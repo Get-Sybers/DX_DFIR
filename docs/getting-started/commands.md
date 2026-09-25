@@ -12,7 +12,7 @@ collection`). The collection verbs also take a bare NAME in place of the noun
 (`collection register`, `stack deploy`) still run, hidden, and print the verb-first
 form to use.
 
-Two commands sit outside `dxdfir`: the [setup script](install.md) and `docker compose`
+One command sits outside `dxdfir`: the [setup script](install.md)
 for the [stack](../architecture/the-stack.md) (which the `dxdfir … stack` verbs also drive).
 
 ## Setup
@@ -60,12 +60,12 @@ See the [collection concept](../architecture/processing-lanes.md#collections).
 
 | Command | What it does |
 |---|---|
-| `dxdfir deploy stack [--no-build]` | Build (if needed), start, and verify the analysis stack. |
+| `dxdfir deploy stack` | Bring up and verify the analysis stack from inventory data (installs docker itself when missing). |
 | `dxdfir start stack` / `stop stack` / `status stack` | Start / stop / show the stack's containers. |
 | `dxdfir destroy stack [--volumes] [-y]` | Remove the stack; `--volumes` also wipes ingested data. |
 
 See [the stack](../architecture/the-stack.md) and
-[docker/elastic/README.md](../../docker/elastic/README.md).
+[the stack](../architecture/the-stack.md).
 
 ## Housekeeping
 

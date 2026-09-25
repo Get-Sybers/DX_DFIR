@@ -1,0 +1,15 @@
+---
+# The playbook holds the decisions; the role groups, the tasks act.
+# Load every image tarball from the offline dir into the local daemon — the
+# offline host's side of dxdfir-images-save.yml. Fronted by
+# scripts/save-docker-images.sh --load; --verify then runs
+# dxdfir-verify-images.yml.
+- name: "DFIR | load the analysis images from tarballs"
+  hosts: "{{ dxdfir_hosts | default('localhost') }}"
+  connection: "{{ dxdfir_connection | default('local') }}"
+  gather_facts: true
+  tasks:
+    - name: "dxdfir-images-load | run the images role (load)"
+      ansible.builtin.include_role:
+        name: dxdfir_images
+        tasks_from: load

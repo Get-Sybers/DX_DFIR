@@ -1,7 +1,7 @@
 # Byakugan Elasticsearch — single node, security ON, Basic licence.
 # Mounted read-only over the image's elasticsearch.yml (so network.host is set
-# here explicitly). Certificates are generated into config/certs by the compose
-# `setup` service (config/setup.sh).
+# here explicitly). Certificates are generated host-side by the dxdfir_stack
+# role (tasks/certs.yml) and bind-mounted read-only at config/certs.
 cluster.name: byakugan
 node.name: es01
 network.host: 0.0.0.0
