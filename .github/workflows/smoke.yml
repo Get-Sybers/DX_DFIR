@@ -33,7 +33,6 @@ on:
       - "ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-verify-car.yml"
       - "ansible/collections/get_sybers.dxdfir/requirements.yml"
       - "ansible.cfg"
-      - "python/get_sybers_dxdfir/images.py"
       - "python/pyproject.toml"
       # Every tool image (byakugan/goevtx included) builds from the GoDFIR-toolz
       # submodule, which SUPPLIES the manifest (its root images.yml) and the

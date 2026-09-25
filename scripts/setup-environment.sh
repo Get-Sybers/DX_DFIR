@@ -357,13 +357,12 @@ fi
 # install gives a working `dxdfir process/build-car/verify-car/build-docker`.
 #
 # --editable is REQUIRED, not a preference. The package still resolves paths
-# RELATIVE TO ITS OWN FILES (walking up from __file__): images.py reads the
-# GoDFIR-toolz submodule's images.yml (the tool-image inventory, at
-# docker/GoDFIR-toolz/images.yml),
-# and carcheck.py defaults its --car-dir under the repo's data_store. A plain
-# copying install puts the package under the venv's site-packages, whose ancestors
-# hold no submodule manifest or data_store/ — the guard and lanes then fail to find them
-# even though the repo IS present (above).
+# RELATIVE TO ITS OWN FILES (walking up from __file__): carcheck.py defaults
+# its --car-dir under the repo's data_store. A plain copying install puts the
+# package under the venv's site-packages, whose ancestors hold no data_store/
+# — the lanes then fail to find it even though the repo IS present (above).
+# (The image supply-chain gate is ansible now — the build galaxy's
+# verify/audit entries — so no python module needs the manifest anymore.)
 # Editable keeps the installed module IN the repo tree, so every _REPO_ROOT-
 # relative path resolves. (The Byakugan CAR engine is no longer a host checkout —
 # it is cloned + built into the get-sybers/byakugan image, so mitrecar/carcheck

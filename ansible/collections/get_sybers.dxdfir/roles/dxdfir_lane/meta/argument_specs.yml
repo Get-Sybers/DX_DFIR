@@ -26,10 +26,6 @@ argument_specs:
         required: false
         default: lane
         description: "Short lane token used in task names and diagnostics (e.g. evtx)."
-      dxdfir_lane_python_path:
-        type: str
-        required: false
-        description: "PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images)."
       dxdfir_lane_runs:
         type: list
         elements: dict

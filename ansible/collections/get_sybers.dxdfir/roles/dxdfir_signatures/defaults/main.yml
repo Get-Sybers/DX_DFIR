@@ -69,7 +69,4 @@ dxdfir_signatures_scan_filter: ""
 dxdfir_signatures_contract: "{{ dxdfir_signatures_repo_root }}/docker/GoDFIR-toolz/signatures/contract.yml"
 # Empty = the contract's image (get-sybers/signatures:latest); set to pin a digest.
 dxdfir_signatures_image: ""
-# PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); a
-# deployed run installs the package instead.
-dxdfir_signatures_python_path: "{{ dxdfir_signatures_repo_root }}/python"
 dxdfir_signatures_force: false

@@ -8,7 +8,6 @@ the host:
 
 | Module | Role |
 |---|---|
-| `get_sybers_dxdfir.images` | the tool-image supply-chain guard (`--require IMAGE` at every lane preflight, `--audit` for `dxdfir verify-images`), fed by the GoDFIR-toolz submodule's `images.yml` inventory |
 | `get_sybers_dxdfir.signatures.detectraptor` / `.suricata_rules` | pinned, checksum-verified ruleset fetchers (DetectRaptor YARA, ET Open Suricata) that land operator rulesets for the `dxdfir_signatures` role to mount |
 | `get_sybers_dxdfir.detect` | the Elastic detection rules-as-code (`detect/rules/`, ES|QL/EQL) and their loader/validator |
 | `get_sybers_dxdfir.stix` | the STIX 2.1 / OpenCTI exchange verbs (`python -m get_sybers_dxdfir.stix`, driven by `dxdfir stix`) |

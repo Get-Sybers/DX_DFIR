@@ -1,28 +1,15 @@
 ---
-# Audit the hardened get-sybers/* tool-image inventory (get_sybers_dxdfir.images
-# --audit): fails if any expected image is missing/un-hardened, or an unexpected
-# get-sybers/* image is present. A thin audit — no role needed.
+# The playbook holds the decisions; the role groups, the tasks act.
+# Audit the hardened get-sybers/* tool-image inventory: every manifest image
+# present and still hardened, and no unexpected get-sybers/* image on the
+# host — the build galaxy's audit entry behind the dxdfir_images face
+# (ansible end to end; the python guard is retired).
 - name: "DFIR | audit the hardened get-sybers/* tool-image inventory"
   hosts: "{{ dxdfir_hosts | default('localhost') }}"
   connection: "{{ dxdfir_connection | default('local') }}"
-  gather_facts: true
-  vars:
-    dxdfir_verify_images_repo_root: "{{ playbook_dir }}/../../../.."
-    dxdfir_verify_images_python_path: "{{ dxdfir_verify_images_repo_root }}/python"
+  gather_facts: false
   tasks:
-    - name: "dxdfir-verify-images | the images module imports"
-      ansible.builtin.command:
-        argv: ["python3", "-c", "import get_sybers_dxdfir.images"]
-      environment:
-        PYTHONPATH: "{{ dxdfir_verify_images_python_path }}"
-      register: dxdfir_verify_images_import
-      changed_when: false
-
     - name: "dxdfir-verify-images | audit the inventory"
-      ansible.builtin.command:
-        argv: ["python3", "-m", "get_sybers_dxdfir.images", "--audit"]
-      environment:
-        PYTHONPATH: "{{ dxdfir_verify_images_python_path }}"
-      register: dxdfir_verify_images_audit
-      changed_when: false
-      failed_when: dxdfir_verify_images_audit.rc != 0
+      ansible.builtin.include_role:
+        name: dxdfir_images
+        tasks_from: audit

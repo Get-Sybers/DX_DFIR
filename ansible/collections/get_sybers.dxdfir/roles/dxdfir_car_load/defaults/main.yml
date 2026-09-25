@@ -27,9 +27,6 @@ dxdfir_car_load_out_dir: "{{ dxdfir_car_load_repo_root }}/data_store/processed/b
 dxdfir_car_load_contract: "{{ dxdfir_car_load_repo_root }}/docker/GoDFIR-toolz/byakugan/contract.yml"
 # Empty = the contract's image (get-sybers/byakugan:latest); set to pin a digest.
 dxdfir_car_load_image: ""
-# PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); a
-# deployed run installs the package instead.
-dxdfir_car_load_python_path: "{{ dxdfir_car_load_repo_root }}/python"
 
 # The stack credentials, BY REFERENCE from the inventory layer
 # (playbooks/group_vars/all.yml, dxdfir_elastic_*) — the same definitions

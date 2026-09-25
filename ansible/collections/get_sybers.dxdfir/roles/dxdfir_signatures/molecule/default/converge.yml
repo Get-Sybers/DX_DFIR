@@ -11,7 +11,6 @@
     dxdfir_signatures_yara_rules: /tmp/dxdfir_signatures_molecule/repo/data_store/dependencies/yara-rules/demo.yar
     # the fake repo has no contracts or python package — point both at the real repo.
     dxdfir_signatures_contract: "{{ (playbook_dir + '/../../../../../../../docker/GoDFIR-toolz/signatures/contract.yml') | realpath }}"
-    dxdfir_signatures_python_path: "{{ (playbook_dir + '/../../../../../../../python') | realpath }}"
   tasks:
     - name: "converge | run dxdfir_signatures (yara over the loose files)"
       ansible.builtin.include_role:

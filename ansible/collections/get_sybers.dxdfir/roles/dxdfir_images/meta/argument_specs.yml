@@ -87,3 +87,30 @@ argument_specs:
         type: str
         required: false
         description: "The tarball directory (default data_store/docker_images)."
+  verify:
+    short_description: "The runtime supply-chain gate (the build galaxy's verify, deploy-faced)."
+    description:
+      - >-
+        Freeze the submodule root and delegate to
+        get_sybers.godfir_toolz.godfir_build tasks_from=verify - every
+        namespace ref in dxdfir_images_verify_images must be a manifest image
+        still carrying the hardened contract on this host; refs outside
+        get-sybers/* pass untouched. Lane preflights call this before any
+        container runs.
+    options:
+      dxdfir_images_verify_images:
+        type: list
+        elements: str
+        required: false
+        default: []
+        description: "The image refs the caller is about to run."
+  audit:
+    short_description: "The full namespace inventory audit (the build galaxy's audit, deploy-faced)."
+    description:
+      - >-
+        Freeze the submodule root and delegate to
+        get_sybers.godfir_toolz.godfir_build tasks_from=audit - every
+        manifest image present and hardened, no unexpected get-sybers/* image
+        on the host (allow-list = the manifest + its non_tool_repos). Driven
+        by dxdfir-verify-images.yml (`dxdfir verify-images`).
+    options: {}

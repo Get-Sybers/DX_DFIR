@@ -28,16 +28,15 @@
     dxdfir_images_required: "{{ dxdfir_lane_images | select('match', '^get-sybers/') | list }}"
 
 # Supply-chain guard: refuse to start unless every tool image about to run is a
-# KNOWN hardened get-sybers/* image (label + uid + expected name). A substituted
-# or un-hardened image stops the lane before any evidence is touched. A
-# non-get-sybers image is out of scope and passes (require() itself no-ops on
-# it — see images.py).
+# KNOWN hardened get-sybers/* image (manifest membership + label + uid). A
+# substituted or un-hardened image stops the lane before any evidence is
+# touched; a non-get-sybers image is out of scope and passes. The gate is the
+# build galaxy's verify entry, reached through the deploy galaxy's face
+# (dxdfir_images tasks/verify.yml) — the same manifest and contract that
+# built the images, ansible end to end.
 - name: "preflight | tool images are known hardened get-sybers/* images | {{ dxdfir_lane_name }}"
-  ansible.builtin.command:
-    argv: ["python3", "-m", "get_sybers_dxdfir.images", "--require", "{{ item }}"]
-  environment:
-    PYTHONPATH: "{{ dxdfir_lane_python_path }}"
-  loop: "{{ dxdfir_lane_images }}"
-  register: dxdfir_lane_image_guard
-  changed_when: false
-  when: item is match('^get-sybers/')
+  ansible.builtin.include_role:
+    name: dxdfir_images
+    tasks_from: verify
+  vars:
+    dxdfir_images_verify_images: "{{ dxdfir_lane_images }}"

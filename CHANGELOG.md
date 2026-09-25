@@ -29,6 +29,11 @@ is `0`, anything may change without notice.
 - **Smoke CI builds the whole manifest.** A new `images` job builds every
   manifest image through the build galaxy (hardening asserted on all of
   them, nightly included) alongside the fast goevtx+byakugan pipeline job.
+- **The runtime image guard is ansible; `images.py` is retired.** Lane
+  preflights and `dxdfir verify-images` gate through the build galaxy's
+  `verify`/`audit` entries (same manifest, same contract, ansible end to
+  end); the python module, its tests and the nine-role `*_python_path`
+  plumbing that existed only to find it are deleted.
 
 ### Added (post-#293 follow-through)
 - **Smoke CI builds its images through the images role** instead of raw

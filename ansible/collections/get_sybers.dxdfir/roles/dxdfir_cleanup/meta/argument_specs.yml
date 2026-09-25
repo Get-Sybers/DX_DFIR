@@ -25,10 +25,6 @@ argument_specs:
         type: str
         required: false
         description: "CAR tree to wipe (default data_store/processed/byakugan)."
-      dxdfir_cleanup_python_path:
-        type: str
-        required: false
-        description: "PYTHONPATH to the get_sybers_dxdfir package (docker action's image-set lookup)."
       dxdfir_cleanup_dangling:
         type: bool
         required: false

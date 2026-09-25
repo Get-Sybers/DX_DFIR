@@ -237,8 +237,9 @@ func checkByakugan(_ *repo.Repo) model.Check {
 		c.Detail = "docker not on PATH - cannot check the " + image + " engine image"
 		return c
 	}
-	// Same trust anchor the python guard uses (get_sybers_dxdfir.images): the
-	// image must exist, run as uid 2000 and carry the hardened label.
+	// Same trust anchor the supply-chain gate uses (the build galaxy's verify
+	// entry): the image must exist, run as uid 2000 and carry the hardened
+	// label.
 	out, _, ok := capture("docker", "image", "inspect", "--format",
 		`{{.Config.User}} {{index .Config.Labels "com.get-sybers.hardened"}}`, image)
 	if !ok {

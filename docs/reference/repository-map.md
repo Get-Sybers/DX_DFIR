@@ -35,4 +35,4 @@ The full directory map is [Dir-Structure.md](../Dir-Structure.md). The pieces th
 | `data_store/` | Evidence lifecycle: `raw/ → processed/ → processed/byakugan/` (git-ignored). |
 | `scripts/` | Host provisioning + offline packaging ([overview](../scripts/Scripts-Overview.md)). |
 | `.github/tests/` | The [check + smoke harnesses](build-and-test.md). |
-| `docker/GoDFIR-toolz/images.yml` | The `get-sybers/*` tool-image inventory (names + build context/dockerfile/args), SUPPLIED by the GoDFIR-toolz submodule at the gitlink pin — the single source of truth both the Python guard (`get_sybers_dxdfir.images`) and the `dxdfir_images` role read; this repo carries no image list of its own. |
+| `docker/GoDFIR-toolz/images.yml` | The `get-sybers/*` tool-image inventory (names + build context/dockerfile/args), SUPPLIED by the GoDFIR-toolz submodule at the gitlink pin — the single source of truth the build galaxy (`godfir_build`: build, the runtime `verify` gate, the `audit`) and the `dxdfir_images` role read; this repo carries no image list of its own. |

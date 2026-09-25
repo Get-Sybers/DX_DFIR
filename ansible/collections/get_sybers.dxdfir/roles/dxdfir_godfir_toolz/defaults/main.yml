@@ -62,7 +62,4 @@ dxdfir_godfir_toolz_tools:
   - goese         # SRUM / SUM ESE databases
   - goprefetch    # Prefetch
 
-# PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); a
-# deployed run installs the package instead.
-dxdfir_godfir_toolz_python_path: "{{ dxdfir_godfir_toolz_repo_root }}/python"
 dxdfir_godfir_toolz_force: false

@@ -63,10 +63,6 @@ argument_specs:
         required: false
         default: ""
         description: "Image ref overriding the plaso contract's (get-sybers/plaso:latest) for the export step."
-      dxdfir_evtx_python_path:
-        type: str
-        required: false
-        description: "PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); in-repo runs."
       dxdfir_evtx_force:
         type: bool
         required: false

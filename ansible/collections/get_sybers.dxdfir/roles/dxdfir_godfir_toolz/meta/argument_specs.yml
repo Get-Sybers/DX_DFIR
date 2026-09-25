@@ -59,10 +59,6 @@ argument_specs:
         elements: str
         required: false
         description: "The Go tools to run over the export, in order (each <toolz_dir>/<tool>/contract.yml)."
-      dxdfir_godfir_toolz_python_path:
-        type: str
-        required: false
-        description: "PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); in-repo runs."
       dxdfir_godfir_toolz_force:
         type: bool
         required: false

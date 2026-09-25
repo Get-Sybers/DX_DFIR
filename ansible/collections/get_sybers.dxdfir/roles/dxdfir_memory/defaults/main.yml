@@ -32,7 +32,3 @@ dxdfir_memory_image: ""
 dxdfir_memory_force: false
 # Comma-separated collector names (ANAMNESIS_PLUGINS); empty = the default CAR set.
 dxdfir_memory_plugins: ""
-# There is no processor module, but the shared image supply-chain guard still runs
-# python3 -m get_sybers_dxdfir.images --require <image>, so the package must be on
-# PYTHONPATH. In-repo runs use this; a deployed run installs the package instead.
-dxdfir_memory_python_path: "{{ dxdfir_memory_repo_root }}/python"

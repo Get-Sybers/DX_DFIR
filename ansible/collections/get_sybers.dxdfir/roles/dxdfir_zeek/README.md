@@ -16,7 +16,6 @@ every capture under `/input` and parses each into its own folder of `*.json`
 | `dxdfir_zeek_contract` | `<repo>/docker/GoDFIR-toolz/zeek/contract.yml` | The contract the run is built from. |
 | `dxdfir_zeek_image` | `""` (the contract's `get-sybers/zeek:latest`) | Image ref override, e.g. a digest pin. |
 | `dxdfir_zeek_scripts` | `""` | Extra zeek argv after `-C -r <capture>` (`ZEEK_SCRIPTS`). |
-| `dxdfir_zeek_python_path` | `<repo>/python` | PYTHONPATH for the image supply-chain guard (`get_sybers_dxdfir.images`). |
 | `dxdfir_zeek_force` | `false` | Reprocess captures that already have output (`ZEEK_FORCE`). |
 
 ## Idempotence

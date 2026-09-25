@@ -445,8 +445,9 @@ The Ansible collection driven by
 .BR "dxdfir process" .
 .TP
 .I python/get_sybers_dxdfir/
-The host-side package: the tool-image supply-chain guard, the ruleset fetchers,
-the detection rules-as-code and the STIX exchange (nothing in it runs a container).
+The host-side package: the ruleset fetchers, the detection rules-as-code and
+the STIX exchange (nothing in it runs a container; the tool-image
+supply-chain gate is ansible — the build galaxy's verify/audit entries).
 .TP
 .I docker/GoDFIR-toolz/<tool>/contract.yml
 The contract each lane's

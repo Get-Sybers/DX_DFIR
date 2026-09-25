@@ -60,7 +60,6 @@ exported".
 | `dxdfir_godfir_toolz_plaso_image` | `""` (the contract's `get-sybers/plaso:latest`) | Image ref override for the export. |
 | `dxdfir_godfir_toolz_vss` | `false` | Also export from Volume Shadow Copies. |
 | `dxdfir_godfir_toolz_tools` | the ten Windows tools above | The Windows Go tools to run, in order. `godaemonhunter` is not in this list — it is a multi-tool image, declared as its own `hunt` run in `tasks/main.yml`. |
-| `dxdfir_godfir_toolz_python_path` | `<repo>/python` | PYTHONPATH for the image supply-chain guard (`get_sybers_dxdfir.images`). |
 | `dxdfir_godfir_toolz_force` | `false` | Re-export images and reparse items that already have output. |
 
 ## Idempotence

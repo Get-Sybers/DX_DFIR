@@ -44,7 +44,4 @@ dxdfir_plaso_parsers: ""
 # psort: the output module (PLASO_PSORT_OUTPUT_FORMAT); json_line renders one
 # event per line.
 dxdfir_plaso_output_format: json_line
-# PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); a
-# deployed run installs the package instead.
-dxdfir_plaso_python_path: "{{ dxdfir_plaso_repo_root }}/python"
 dxdfir_plaso_force: false

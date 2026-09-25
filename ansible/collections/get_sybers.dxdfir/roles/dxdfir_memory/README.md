@@ -24,7 +24,6 @@ the raw `<dest>/plugins/<plugin>.jsonl` to the mounted `/out`.
 | `dxdfir_memory_out_dir` | `<repo>/data_store/processed/memory` | Output base (override to redirect). |
 | `dxdfir_memory_symbols_dir` | `<repo>/data_store/dependencies/memprocfs-symbols` | Persistent MemProcFS symbol cache (symsrv layout); mounted read-write at `/opt/anamnesis/lib/Symbols`. |
 | `dxdfir_memory_image` | `get-sybers/anamnesis:latest` | The hardened, env-driven anamnesis (MemProcFS) image the lane docker-runs (built by `playbooks/dxdfir-build-images.yml`). |
-| `dxdfir_memory_python_path` | `<repo>/python` | PYTHONPATH for the image supply-chain guard (`get_sybers_dxdfir.images`); in-repo runs. |
 | `dxdfir_memory_force` | `false` | Rerun plugins that already have valid output. |
 
 ## Symbols (the persistent cache mount)

@@ -39,7 +39,6 @@
     name: dxdfir_lane
   vars:
     dxdfir_lane_name: memory
-    dxdfir_lane_python_path: "{{ dxdfir_memory_python_path }}"
     dxdfir_lane_runs:
       - name: anamnesis
         contract: "{{ dxdfir_memory_contract }}"

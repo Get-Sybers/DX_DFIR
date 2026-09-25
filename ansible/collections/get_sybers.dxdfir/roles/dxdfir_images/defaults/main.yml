@@ -67,6 +67,12 @@ dxdfir_images_list_only: false
 # preflight) passes the images it is about to run.
 dxdfir_images_required: []
 
+# The runtime supply-chain gate (tasks/verify.yml — the build galaxy's verify
+# entry behind the deploy-side freeze): the image refs a caller is about to
+# RUN. Namespace refs must be manifest images still carrying the hardened
+# contract; refs outside get-sybers/* pass untouched.
+dxdfir_images_verify_images: []
+
 # Per-image build context / dockerfile / args live in the submodule's
 # images.yml (one entry per image); the GoDFIR-toolz build galaxy
 # (get_sybers.godfir_toolz.godfir_build — tasks/main.yml delegates to it)
