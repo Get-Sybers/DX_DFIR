@@ -105,7 +105,7 @@ USAGE::
 
 Default output: ``<tree>/car-detections.bulk.ndjson`` plus one JSON summary
 line on stdout. ``--post`` additionally resolves an Elasticsearch connection
-(flags, then ``DXDFIR_ES_*``, then ``docker/elastic/.env``'s
+(flags, then ``DXDFIR_ES_*``, then the ``elastic.env`` handoff's
 ``ELASTIC_PASSWORD`` / ``ELASTICSEARCH_USERNAME`` — the same file
 ``go/internal/tui/kibana.go``'s ``readElasticEnv`` and
 ``.github/tests/elastic-riskgate/riskgate.sh`` already read), diffs the
@@ -154,7 +154,11 @@ ENV_URL, ENV_USER, ENV_PASSWORD = "DXDFIR_ES_URL", "DXDFIR_ES_USER", "DXDFIR_ES_
 ENV_CA, ENV_INSECURE = "DXDFIR_ES_CA", "DXDFIR_ES_INSECURE"
 DEFAULT_ES_URL = "https://localhost:9200"
 DEFAULT_ES_USER = "elastic"
-ELASTIC_ENV_FILE = os.path.join("docker", "elastic", ".env")
+# The deploy's generated credential handoff ("localhost" is the default
+# inventory's name for the workstation); the compose-era docker/elastic/.env
+# is still read as a fallback for a not-yet-migrated stack.
+ELASTIC_ENV_FILE = os.path.join("ansible", "inventory", "secrets", "localhost", "elastic.env")
+LEGACY_ELASTIC_ENV_FILE = os.path.join("docker", "elastic", ".env")
 
 
 class EsError(Exception):
@@ -503,15 +507,19 @@ def _truthy(v) -> bool:
 
 def _read_elastic_env(path: str = ELASTIC_ENV_FILE) -> dict[str, str]:
     """``ELASTICSEARCH_USERNAME`` / ``ELASTIC_PASSWORD`` (or
-    ``ELASTICSEARCH_PASSWORD``) from ``docker/elastic/.env`` — the same file,
-    read the same way, as ``go/internal/tui/kibana.go``'s ``readElasticEnv``
-    and ``.github/tests/elastic-riskgate/riskgate.sh``. A missing file or key
-    is never an error here: the environment or a flag may supply it instead."""
+    ``ELASTICSEARCH_PASSWORD``) from the deploy's generated ``elastic.env``
+    handoff — the same file, read the same way, as
+    ``go/internal/tui/kibana.go``'s ``readElasticEnv`` and
+    ``.github/tests/elastic-riskgate/riskgate.sh`` — falling back to the
+    compose-era ``docker/elastic/.env``. A missing file or key is never an
+    error here: the environment or a flag may supply it instead."""
     out: dict[str, str] = {}
     try:
         with open(path, encoding="utf-8") as fh:
             lines = fh.read().splitlines()
     except OSError:
+        if path != LEGACY_ELASTIC_ENV_FILE:
+            return _read_elastic_env(LEGACY_ELASTIC_ENV_FILE)
         return out
     for raw in lines:
         line = raw.strip()
@@ -533,7 +541,7 @@ def _read_elastic_env(path: str = ELASTIC_ENV_FILE) -> dict[str, str]:
 def resolve_es(*, url: str | None = None, user: str | None = None, password: str | None = None,
                ca: str | None = None, insecure: bool = False, env: dict | None = None,
                env_file: str = ELASTIC_ENV_FILE) -> Es:
-    """Flags, then ``DXDFIR_ES_*``, then ``docker/elastic/.env`` — "resolved
+    """Flags, then ``DXDFIR_ES_*``, then the ``elastic.env`` handoff — "resolved
     the way the repo already does it" (the module docstring). Fails loudly
     (``EsError``) rather than silently posting nowhere or unverified, mirroring
     ``riskgate.py``'s own ``connect_from_env``."""
@@ -543,14 +551,14 @@ def resolve_es(*, url: str | None = None, user: str | None = None, password: str
     user = user or env.get(ENV_USER) or dotenv.get("user") or DEFAULT_ES_USER
     password = password or env.get(ENV_PASSWORD) or dotenv.get("password")
     if not password:
-        raise EsError(f"no Elasticsearch password: pass --password, set {ENV_PASSWORD}, or bring up "
-                      f"docker/elastic first so {env_file} carries ELASTIC_PASSWORD")
+        raise EsError(f"no Elasticsearch password: pass --password, set {ENV_PASSWORD}, or run "
+                      f"`dxdfir deploy stack` first so {env_file} carries ELASTIC_PASSWORD")
     ca = ca or env.get(ENV_CA)
     insecure = insecure or _truthy(env.get(ENV_INSECURE))
     if url.startswith("https://") and not ca and not insecure:
         raise EsError(
-            f"https without a CA: pass --ca (docker compose -f docker/elastic/docker-compose.yml cp "
-            "elasticsearch:/usr/share/elasticsearch/config/certs/ca/ca.crt .), or --insecure "
+            f"https without a CA: pass --ca (the deploy writes it to "
+            "ansible/inventory/secrets/<host>/certs/ca/ca.crt), or --insecure "
             "(loopback only, last resort)")
     return Es(url, user, password, ca, insecure)
 
@@ -638,7 +646,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--url", default=None, help=f"Elasticsearch URL (default: {DEFAULT_ES_URL}, or {ENV_URL})")
     ap.add_argument("--user", default=None, help=f"basic auth user (default: elastic, or {ENV_USER})")
     ap.add_argument("--password", default=None,
-                    help=f"basic auth password (default: docker/elastic/.env, or {ENV_PASSWORD})")
+                    help=f"basic auth password (default: the elastic.env handoff, or {ENV_PASSWORD})")
     ap.add_argument("--ca", default=None, help=f"CA bundle PEM (default: {ENV_CA})")
     ap.add_argument("--insecure", action="store_true",
                     help=f"skip TLS verification (loopback only, last resort; or {ENV_INSECURE}=1)")

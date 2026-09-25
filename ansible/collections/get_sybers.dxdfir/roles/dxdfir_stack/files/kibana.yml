@@ -1,6 +1,6 @@
 # Byakugan Kibana — talks to Elasticsearch over TLS as kibana_system and hosts
-# Fleet. ${VAR} references are resolved from the container environment (set in
-# docker-compose.yml from .env).
+# Fleet. ${VAR} references are resolved from the container environment (set
+# by the dxdfir_stack role from the inventory's secret store).
 server.name: byakugan-kibana
 server.host: "0.0.0.0"
 server.publicBaseUrl: "http://127.0.0.1:5601"
@@ -18,7 +18,7 @@ xpack.security.encryptionKey: "${KIBANA_SECURITY_ENCRYPTION_KEY}"
 xpack.reporting.encryptionKey: "${KIBANA_REPORTING_ENCRYPTION_KEY}"
 
 # Fleet — preconfigured so the fleet-server container can enrol itself on first
-# boot. Agents reach Fleet Server and Elasticsearch by their compose service
+# boot. Agents reach Fleet Server and Elasticsearch by their network-alias
 # names; the CA path is on the AGENT's filesystem (the shared certs volume).
 xpack.fleet.agents.fleet_server.hosts: ["https://fleet-server:8220"]
 xpack.fleet.outputs:

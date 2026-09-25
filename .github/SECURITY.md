@@ -26,11 +26,11 @@ Expect a slow response — this is a personal project, not a maintained product.
 These are already known. You do not need to report them.
 
 - **The analysis backend holds evidence.** The Elastic stack
-  (`docker/elastic`) runs with security **on** — authentication, RBAC, TLS on
+  (the `dxdfir_stack` role) runs with security **on** — authentication, RBAC, TLS on
   the Elasticsearch API and transport — but Kibana is served over plain HTTP on
   the loopback interface, Filebeat writes as the `elastic` superuser for now
   (a least-privilege writer role is a follow-up), and every credential lives in
-  the gitignored `docker/elastic/.env`. Every published port binds
+  the gitignored per-host secret store (`ansible/inventory/secrets/`). Every published port binds
   `127.0.0.1`; that binding is a real control, the rest is best effort.
 - **`chmod -R 777`.** The setup and processing scripts widen permissions
   across `data_store/` to work around container UID mismatch. Anyone with
@@ -43,7 +43,7 @@ These are already known. You do not need to report them.
   containers run with `--network none` (the anamnesis symbol fetch is the one
   explicit opt-in). Note that Docker's published-port rules are inserted ahead
   of the host firewall, so `ufw` will not save you from a wrong bind address —
-  check `docker compose ps` / `docker port` after a change to the compose files.
+  check `dxdfir status stack` / `docker port` after a change to the stack's inventory data.
   An `--internal` network was tried once (on the Splunk-era deploy this project
   grew up on) and reverted: it blocks published ports as well, making the
   service unreachable.

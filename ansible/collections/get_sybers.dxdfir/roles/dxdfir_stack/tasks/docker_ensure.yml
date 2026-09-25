@@ -283,21 +283,3 @@
     argv: [docker, version]
   register: dxdfir_stack_docker
   changed_when: false
-
-- name: "stack-docker | docker compose plugin present"
-  ansible.builtin.command:
-    argv: [docker, compose, version]
-  register: dxdfir_stack_compose_v
-  changed_when: false
-  failed_when: false
-
-- name: "stack-docker | assert the compose plugin is present"
-  ansible.builtin.assert:
-    that:
-      - dxdfir_stack_compose_v.rc == 0
-    fail_msg: >-
-      the docker compose plugin is missing (docker compose version failed).
-      Install docker-compose-plugin from Docker's repo (or docker-compose-v2
-      from the distro), then rerun — `dxdfir deploy stack` installs it as
-      part of a fresh engine install.
-    quiet: true

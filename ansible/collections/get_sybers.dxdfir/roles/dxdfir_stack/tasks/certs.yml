@@ -1,0 +1,209 @@
+---
+# THE STACK'S TLS MATERIAL (deploy only) — generated host-side as
+# community.crypto STATE MODULES, no cert scripts, no certutil container:
+# a self-signed CA and one signed pair per TLS instance (es01 for the
+# Elasticsearch HTTP+transport layers, fleet-server for Fleet), laid out
+# exactly as the containers expect under the bind-mounted certs dir:
+#   <certs>/ca/ca.crt (+ ca.key, root-only)
+#   <certs>/es01/es01.crt + es01.key
+#   <certs>/fleet-server/fleet-server.crt + fleet-server.key
+# Idempotent by module design: valid existing material is left untouched.
+# MIGRATION: a compose-era stack kept these in the byakugan_certs volume; a
+# root deploy imports that volume's tree first (force: false), so a migrated
+# stack keeps the CA its data and any enrolled agents already trust. The CA
+# pair itself is only ever CREATED, never regenerated over an import.
+
+- name: "stack-certs | the certs tree exists"
+  ansible.builtin.file:
+    path: "{{ dxdfir_stack_certs_dir }}/{{ item }}"
+    state: directory
+    # 0755: the tree holds public certificates and 0640/0600 keys; the
+    # container-side readers (uid 1000, gid 0) traverse it via the bind
+    # mount, host-side clients read only the world-readable CA cert.
+    mode: "0755"
+  loop:
+    - ""
+    - ca
+    - es01
+    - fleet-server
+
+# ---- compose-era import (root: the volume mountpoint is readable) ----------
+- name: "stack-certs | does a compose-era certs volume exist"
+  community.docker.docker_volume_info:
+    name: "{{ dxdfir_stack_volumes.certs }}"
+  register: dxdfir_stack_certs_volume
+
+- name: "stack-certs | import the compose-era certificates"
+  when:
+    - dxdfir_stack_certs_volume.exists
+    - (ansible_facts.effective_user_id | default(-1)) | int == 0
+  block:
+    - name: "stack-certs | is the volume's CA there to import"
+      ansible.builtin.stat:
+        path: "{{ dxdfir_stack_certs_volume.volume.Mountpoint }}/ca/ca.crt"
+      register: dxdfir_stack_legacy_ca
+
+    - name: "stack-certs | find the volume's certificate files"
+      ansible.builtin.find:
+        paths: "{{ dxdfir_stack_certs_volume.volume.Mountpoint }}"
+        patterns: ["*.crt", "*.key"]
+        recurse: true
+      register: dxdfir_stack_legacy_cert_files
+      when: dxdfir_stack_legacy_ca.stat.exists
+
+    # Per file, force: false — a file already in the store always wins, and a
+    # partial volume (only the CA, say) imports whatever it has. The known
+    # ca/es01/fleet-server subdirs exist already (the tree task above).
+    - name: "stack-certs | copy the compose-era certificates into the store"
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "{{ dxdfir_stack_certs_dir }}/{{ item.path | relpath(dxdfir_stack_certs_volume.volume.Mountpoint) }}"
+        remote_src: true
+        force: false
+        mode: preserve
+      loop: "{{ (dxdfir_stack_legacy_cert_files.files | default([]))
+                | selectattr('path', 'search', '/(ca|es01|fleet-server)/') | list }}"
+      loop_control:
+        label: "{{ item.path | relpath(dxdfir_stack_certs_volume.volume.Mountpoint) }}"
+      when: dxdfir_stack_legacy_ca.stat.exists
+
+- name: "stack-certs | note the certs volume a non-root deploy cannot import"
+  ansible.builtin.debug:
+    msg: >-
+      a compose-era certs volume ({{ dxdfir_stack_volumes.certs }}) exists but
+      this deploy is unprivileged, so its CA cannot be imported — fresh
+      certificates will be generated and Fleet agents enrolled against the
+      old CA re-enrol. Run the deploy as root to keep the existing CA.
+  when:
+    - dxdfir_stack_certs_volume.exists
+    - (ansible_facts.effective_user_id | default(-1)) | int != 0
+
+# ---- the CA (created once; an imported CA is never regenerated) -------------
+- name: "stack-certs | is a CA already in the store"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_stack_certs_dir }}/ca/ca.crt"
+  register: dxdfir_stack_ca_stat
+
+- name: "stack-certs | create the CA"
+  when: not dxdfir_stack_ca_stat.stat.exists
+  block:
+    - name: "stack-certs | CA private key"
+      community.crypto.openssl_privatekey:
+        path: "{{ dxdfir_stack_certs_dir }}/ca/ca.key"
+        mode: "0600"
+
+    - name: "stack-certs | CA signing request"
+      community.crypto.openssl_csr:
+        path: "{{ dxdfir_stack_certs_dir }}/ca/ca.csr"
+        privatekey_path: "{{ dxdfir_stack_certs_dir }}/ca/ca.key"
+        common_name: "DX_DFIR {{ dxdfir_stack_name }} CA"
+        basic_constraints: ["CA:TRUE"]
+        basic_constraints_critical: true
+        key_usage: [keyCertSign, cRLSign]
+        key_usage_critical: true
+        mode: "0644"
+
+    - name: "stack-certs | self-signed CA certificate"
+      community.crypto.x509_certificate:
+        path: "{{ dxdfir_stack_certs_dir }}/ca/ca.crt"
+        csr_path: "{{ dxdfir_stack_certs_dir }}/ca/ca.csr"
+        privatekey_path: "{{ dxdfir_stack_certs_dir }}/ca/ca.key"
+        provider: selfsigned
+        selfsigned_not_after: "+3650d"
+        mode: "0644"
+
+# ---- the instance certificates (fully state-managed) ------------------------
+# The same instances and SANs the compose-era certutil run produced, so a
+# migrated stack's imported certificates verify as already-correct.
+- name: "stack-certs | instance private keys"
+  community.crypto.openssl_privatekey:
+    path: "{{ dxdfir_stack_certs_dir }}/{{ item.name }}/{{ item.name }}.key"
+    # The service containers read these as uid 1000 gid 0 through the bind
+    # mount. A root deploy hands them to root:root 0640 — gid 0 reads them
+    # in the container, host operators cannot. An unprivileged deployer
+    # cannot chown to gid 0, so the keys go 0644 there (noted below) —
+    # deploy as root for the protected posture.
+    owner: "{{ 'root' if _root | bool else omit }}"
+    group: "{{ 'root' if _root | bool else omit }}"
+    mode: "{{ '0640' if _root | bool else '0644' }}"
+  vars:
+    _root: "{{ (ansible_facts.effective_user_id | default(-1)) | int == 0 }}"
+  loop: &dxdfir_stack_tls_instances
+    - name: es01
+      dns: [elasticsearch, es01, localhost]
+    - name: fleet-server
+      dns: [fleet-server, localhost]
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: "stack-certs | instance signing requests"
+  community.crypto.openssl_csr:
+    path: "{{ dxdfir_stack_certs_dir }}/{{ item.name }}/{{ item.name }}.csr"
+    privatekey_path: "{{ dxdfir_stack_certs_dir }}/{{ item.name }}/{{ item.name }}.key"
+    common_name: "{{ item.name }}"
+    subject_alt_name: >-
+      {{ item.dns | map('regex_replace', '^', 'DNS:') | list + ['IP:127.0.0.1'] }}
+    mode: "0644"
+  loop: *dxdfir_stack_tls_instances
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: "stack-certs | instance certificates signed by the CA"
+  community.crypto.x509_certificate:
+    path: "{{ dxdfir_stack_certs_dir }}/{{ item.name }}/{{ item.name }}.crt"
+    csr_path: "{{ dxdfir_stack_certs_dir }}/{{ item.name }}/{{ item.name }}.csr"
+    provider: ownca
+    ownca_path: "{{ dxdfir_stack_certs_dir }}/ca/ca.crt"
+    ownca_privatekey_path: "{{ dxdfir_stack_certs_dir }}/ca/ca.key"
+    ownca_not_after: "+1095d"
+    mode: "0644"
+  loop: *dxdfir_stack_tls_instances
+  loop_control:
+    label: "{{ item.name }}"
+
+# Imported material arrives with the volume's container-side ownership;
+# pin the whole tree to the store's posture (public certs, protected keys).
+- name: "stack-certs | find every private key in the tree"
+  ansible.builtin.find:
+    paths: "{{ dxdfir_stack_certs_dir }}"
+    patterns: ["*.key"]
+    recurse: true
+  register: dxdfir_stack_cert_keys
+
+- name: "stack-certs | protected private keys"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: "{{ 'root' if _root | bool else omit }}"
+    group: "{{ 'root' if _root | bool else omit }}"
+    mode: >-
+      {{ '0600' if (item.path | basename) == 'ca.key'
+         else ('0640' if _root | bool else '0644') }}
+  vars:
+    _root: "{{ (ansible_facts.effective_user_id | default(-1)) | int == 0 }}"
+  loop: "{{ dxdfir_stack_cert_keys.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+
+- name: "stack-certs | note the unprivileged key posture"
+  ansible.builtin.debug:
+    msg: >-
+      unprivileged deploy: the node TLS keys under
+      {{ dxdfir_stack_certs_dir }} are world-readable (0644) so the service
+      containers (uid 1000, gid 0) can read them through the bind mount.
+      Deploy as root to hold them at root:root 0640.
+  when: (ansible_facts.effective_user_id | default(-1)) | int != 0
+
+- name: "stack-certs | find every certificate in the tree"
+  ansible.builtin.find:
+    paths: "{{ dxdfir_stack_certs_dir }}"
+    patterns: ["*.crt", "*.csr"]
+    recurse: true
+  register: dxdfir_stack_cert_certs
+
+- name: "stack-certs | world-readable certificates"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    mode: "0644"
+  loop: "{{ dxdfir_stack_cert_certs.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"

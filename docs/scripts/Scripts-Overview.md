@@ -13,7 +13,7 @@ collected with **the hardened GoDFIR-toolz containers**
 > and the [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) tool
 > containers they run: `dxdfir process <source>` and the CAR lane
 > (`dxdfir build-car` / `dxdfir verify-car`); the analysis backend is the Elastic
-> stack under `docker/elastic/`, brought up with docker compose.
+> stack deployed by the `dxdfir_stack` role (`dxdfir deploy stack`).
 
 ---
 
@@ -63,8 +63,8 @@ No shell scripts here either:
   `car_inferred.jsonl`).
   **`dxdfir verify-car`** is the engine's own gate over what was written;
   **`dxdfir build-timeline`** unions a tree into one timeline JSONL.
-- The **Elastic-native backend** (`docker/elastic/`) is brought up with
-  `docker compose` (see its README). Filebeat tails the processed tree directly
+- The **Elastic-native backend** is deployed with `dxdfir deploy stack`
+  ([the stack](../architecture/the-stack.md)). Filebeat tails the processed tree directly
   (`ELASTIC_INGEST_DIR` is the knob) into `logs-dxdfir.<type>-*` data
   streams; **`dxdfir load-car`** bulk-loads the materialised CAR into
   `logs-car.*` instead (the `dxdfir_car_load` role, `byakugan load`), and

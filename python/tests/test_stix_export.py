@@ -443,10 +443,10 @@ def test_every_shipped_ported_rule_exports_and_stubs_are_skipped():
 
 def test_stack_version_default_matches_the_deployed_stack():
     # pattern_version = the Elastic stack the rules run on (STIX 2.1 §4.7); one
-    # pin, the stack's own .env.example
-    env_example = (REPO / "docker/elastic/.env.example").read_text()
-    versions = [ln.split("=", 1)[1].strip() for ln in env_example.splitlines()
-                if ln.startswith("ELASTIC_VERSION=")]
+    # pin, the inventory layer's dxdfir_elastic_version
+    group_vars = (REPO / "ansible/collections/get_sybers.dxdfir/playbooks/group_vars/all.yml").read_text()
+    versions = [ln.split(":", 1)[1].strip().strip("'\"") for ln in group_vars.splitlines()
+                if ln.startswith("dxdfir_elastic_version:")]
     assert versions == [config.DEFAULT_STACK_VERSION]
     assert set(export.TRUST_GROUP_PATTERN_TYPES) >= {"esql", "eql", "kuery"}
     assert not set(export.TRUST_GROUP_PATTERN_TYPES) & set(export.PATTERN_TYPE_OV)

@@ -108,5 +108,5 @@ detection hits into STIX 2.1 sightings. `--setup` (default, first run) applies
 the `logs-car.*` index/component templates and authenticates as the `elastic`
 superuser; `--no-setup` is for routine repeat loads once the templates exist,
 and authenticates as the least-privilege `byakugan_loader` identity instead
-(`docker/elastic/config/setup.sh`). See
+(the `dxdfir_stack` role's deploy). See
 [the stack → detections](the-stack.md#detections-and-stix).

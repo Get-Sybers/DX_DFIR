@@ -1,5 +1,5 @@
 ---
-# FIND FACTS -> check existence AND location BEFORE touching the stack.
+# FIND FACTS -> learn the host BEFORE touching the stack.
 
 # The engine itself comes first (tasks/docker_ensure.yml): an engine-less or
 # daemon-less host is answered there by the same playbook decisions used
@@ -7,42 +7,49 @@
 - name: "stack-preflight | ensure the docker engine"
   ansible.builtin.include_tasks: docker_ensure.yml
 
-- name: "stack-preflight | stat the compose file"
-  ansible.builtin.stat:
-    path: "{{ dxdfir_stack_compose_dir }}/docker-compose.yml"
-  register: dxdfir_stack_compose_stat
-
-- name: "stack-preflight | assert the compose file is present"
-  ansible.builtin.assert:
-    that:
-      - dxdfir_stack_compose_stat.stat.exists
-    fail_msg: >-
-      no docker-compose.yml under {{ dxdfir_stack_compose_dir }}.
-    quiet: true
-
 # FACTS BEFORE ANY REQUIREMENT: does this host hold the stack at all?
-# Containers (any state) and named data volumes are read by the compose
-# project label — no .env is needed for this — so a cold host is known as
-# such BEFORE the env requirement below can fail anything.
+# Containers (any state) and named data volumes answer by label — the
+# role's own ownership label, and the compose-era project label so a stack
+# deployed before the retirement is still seen (and migrated by deploy).
 - name: "stack-preflight | read the stack's containers and volumes"
   community.docker.docker_host_info:
     containers: true
     containers_all: true
     containers_filters:
-      label: "com.docker.compose.project={{ dxdfir_stack_project_name }}"
+      label: "{{ dxdfir_stack_label_key }}={{ dxdfir_stack_name }}"
     volumes: true
     volumes_filters:
-      label: "com.docker.compose.project={{ dxdfir_stack_project_name }}"
+      label: "{{ dxdfir_stack_label_key }}={{ dxdfir_stack_name }}"
   register: dxdfir_stack_host_info
+
+- name: "stack-preflight | read the compose-era containers and volumes"
+  community.docker.docker_host_info:
+    containers: true
+    containers_all: true
+    containers_filters:
+      label: "com.docker.compose.project={{ dxdfir_stack_legacy_project }}"
+    volumes: true
+    volumes_filters:
+      label: "com.docker.compose.project={{ dxdfir_stack_legacy_project }}"
+  register: dxdfir_stack_legacy_info
 
 - name: "stack-preflight | is any of the stack present here"
   ansible.builtin.set_fact:
-    dxdfir_stack_has_containers: "{{ _containers }}"
+    dxdfir_stack_owned_containers: "{{ _owned }}"
+    dxdfir_stack_legacy_containers: "{{ _legacy }}"
+    dxdfir_stack_has_containers: "{{ (_owned + _legacy) | length > 0 }}"
     dxdfir_stack_has_volumes: "{{ _volumes }}"
-    dxdfir_stack_present: "{{ _containers or _volumes }}"
+    dxdfir_stack_present: "{{ (_owned + _legacy) | length > 0 or _volumes }}"
   vars:
-    _containers: "{{ dxdfir_stack_host_info.containers | default([]) | length > 0 }}"
-    _volumes: "{{ dxdfir_stack_host_info.volumes | default([]) | length > 0 }}"
+    _owned: >-
+      {{ dxdfir_stack_host_info.containers | default([])
+         | map(attribute='Names') | flatten | map('regex_replace', '^/', '') | list }}
+    _legacy: >-
+      {{ dxdfir_stack_legacy_info.containers | default([])
+         | map(attribute='Names') | flatten | map('regex_replace', '^/', '') | list }}
+    _volumes: >-
+      {{ (dxdfir_stack_host_info.volumes | default([])
+          + dxdfir_stack_legacy_info.volumes | default([])) | length > 0 }}
 
 # THE PLAYBOOK DECIDES what absence means (dxdfir_stack_when_absent): status
 # reports it and ends the host — "no stack" is that action's ANSWER, not a
@@ -56,10 +63,12 @@
     - name: "stack-preflight | no analysis stack on this host"
       ansible.builtin.debug:
         msg: >-
-          no analysis stack on this host: compose project
-          '{{ dxdfir_stack_project_name }}' has no containers and no data
-          volumes — nothing has been deployed (or it was destroyed with its
-          volumes removed). Deploy with: dxdfir deploy stack.
+          no analysis stack on this host: '{{ dxdfir_stack_name }}' has no
+          containers and no data volumes (neither the
+          {{ dxdfir_stack_label_key }} label nor the compose-era project
+          label matches anything) — nothing has been deployed, or it was
+          destroyed with its volumes removed. Deploy with: dxdfir deploy
+          stack.
 
     - name: "stack-preflight | end the play for this host"
       ansible.builtin.meta: end_host
@@ -70,55 +79,10 @@
       - dxdfir_stack_present | bool
     fail_msg: >-
       nothing to {{ dxdfir_stack_action }}: no analysis stack on this host —
-      compose project '{{ dxdfir_stack_project_name }}' has no containers and
-      no data volumes. Deploy first: dxdfir deploy stack.
+      '{{ dxdfir_stack_name }}' has no containers and no data volumes.
+      Deploy first: dxdfir deploy stack.
     quiet: true
   when: dxdfir_stack_when_absent == 'fail'
-
-# From here every action needs the operator's .env: the compose file guards
-# its secrets with ${VAR:?}, so compose cannot even parse (up, down or ps)
-# without it. COLD START (issue #290): the deploy playbook opts in to
-# scaffolding a default .env from .env.example (dxdfir_stack_env_scaffold —
-# a playbook decision, not the role's) — and only while the host holds no
-# stack state at all: fresh secrets cannot match the credentials already
-# baked into existing data volumes, so a present stack demands its own .env
-# back instead.
-- name: "stack-preflight | stat the elastic env file"
-  ansible.builtin.stat:
-    path: "{{ dxdfir_stack_env_file }}"
-  register: dxdfir_stack_env_stat
-
-- name: "stack-preflight | scaffold a default .env (cold host, playbook opt-in)"
-  ansible.builtin.include_tasks: env_scaffold.yml
-  when:
-    - dxdfir_stack_env_scaffold | bool
-    - not dxdfir_stack_env_stat.stat.exists
-    - not dxdfir_stack_present | bool
-
-- name: "stack-preflight | the stack is present — assert its .env survives"
-  ansible.builtin.assert:
-    that:
-      - dxdfir_stack_env_stat.stat.exists
-    fail_msg: >-
-      the stack is present on this host (containers or data volumes exist)
-      but {{ dxdfir_stack_env_file }} is gone. Restore the operator .env — a
-      newly generated one cannot match the credentials already baked into the
-      data volumes. For a true cold start, destroy with
-      dxdfir_stack_remove_volumes=true first, then redeploy.
-    quiet: true
-  when: dxdfir_stack_present | bool
-
-- name: "stack-preflight | assert the elastic .env is present (cold host)"
-  ansible.builtin.assert:
-    that:
-      - dxdfir_stack_env_stat.stat.exists
-    fail_msg: >-
-      {{ dxdfir_stack_env_file }} is missing — `dxdfir deploy stack` scaffolds
-      a default one on a cold host (its playbook sets
-      dxdfir_stack_env_scaffold), or copy docker/elastic/.env.example to
-      docker/elastic/.env and set the passwords/keys yourself.
-    quiet: true
-  when: not dxdfir_stack_present | bool
 
 # PULL-CAPACITY GATE (dxdfir_stack_pull_gate — enabled by the playbooks
 # whose action pulls images: deploy/start). A short image store fails
@@ -132,22 +96,12 @@
   when: dxdfir_stack_pull_gate | bool
   block:
     - name: "stack-preflight | the images the stack runs"
-      ansible.builtin.command:
-        argv:
-          - docker
-          - compose
-          - --project-directory
-          - "{{ dxdfir_stack_compose_dir }}"
-          - --env-file
-          - "{{ dxdfir_stack_env_file }}"
-          - config
-          - --images
-      register: dxdfir_stack_images
-      changed_when: false
+      ansible.builtin.set_fact:
+        dxdfir_stack_image_set: "{{ dxdfir_stack_images.values() | unique | list }}"
 
     - name: "stack-preflight | which of them are already local"
       community.docker.docker_image_info:
-        name: "{{ dxdfir_stack_images.stdout_lines | unique }}"
+        name: "{{ dxdfir_stack_image_set }}"
       register: dxdfir_stack_local
 
     - name: "stack-preflight | the images still to pull"
@@ -160,7 +114,7 @@
              | map(attribute='RepoTags') | flatten | select('string') | list }}
       ansible.builtin.set_fact:
         dxdfir_stack_missing_images: >-
-          {{ dxdfir_stack_images.stdout_lines | unique | difference(_local_tags) }}
+          {{ dxdfir_stack_image_set | difference(_local_tags) }}
 
     - name: "stack-preflight | gate the stores while a pull is coming"
       when: dxdfir_stack_missing_images | length > 0

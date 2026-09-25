@@ -1,11 +1,23 @@
 ---
-# Stop and remove the stack's containers/networks (optionally its named volumes).
-# Run from the compose dir so relative mounts and the stack's .env resolve.
-- name: "stack-destroy | stop and remove the stack"
-  ansible.builtin.command:
-    argv: >-
-      {{ ['docker', 'compose', '-f', 'docker-compose.yml', 'down', '--remove-orphans']
-      + (['--volumes'] if dxdfir_stack_remove_volumes | bool else []) }}
-    chdir: "{{ dxdfir_stack_compose_dir }}"
-  register: dxdfir_stack_down
-  changed_when: dxdfir_stack_down.rc == 0
+# Stop and remove the stack's containers and network — this role's and
+# compose-era ones alike — and, only when dxdfir_stack_remove_volumes says
+# so, the named data volumes (WIPES ingested data). The secret store and the
+# TLS material under the inventory are never touched: a redeploy against
+# surviving volumes must keep the credentials they already know.
+- name: "stack-destroy | remove every stack container"
+  community.docker.docker_container:
+    name: "{{ item }}"
+    state: absent
+  loop: "{{ (dxdfir_stack_owned_containers + dxdfir_stack_legacy_containers) | unique }}"
+
+- name: "stack-destroy | remove the stack's network"
+  community.docker.docker_network:
+    name: "{{ dxdfir_stack_network }}"
+    state: absent
+
+- name: "stack-destroy | remove the named data volumes (WIPES ingested data)"
+  community.docker.docker_volume:
+    name: "{{ item }}"
+    state: absent
+  loop: "{{ dxdfir_stack_volumes.values() | unique | list }}"
+  when: dxdfir_stack_remove_volumes | bool

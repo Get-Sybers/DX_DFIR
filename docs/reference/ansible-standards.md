@@ -46,14 +46,25 @@ are selected per run with `-e dxdfir_hosts=<pattern>`. The Go front-end passes
 Galaxy-installed, and role defaults derive `repo_root` so `data_store/` paths resolve.
 
 **Shared identities live in the inventory layer, not per-role.** Values more than
-one role must agree on — the Elastic backend's compose dir, its `.env` file and
-example, the compose project name — are defined once as `dxdfir_elastic_*` in
+one role must agree on — the Elastic backend's version pin, network and volume
+names, ports, paths and secrets — are defined once as `dxdfir_elastic_*` in
 playbook-adjacent `group_vars`
 (`ansible/collections/get_sybers.dxdfir/playbooks/group_vars/all.yml`, which load
 under any inventory source) and each role's variables reference them
-(`dxdfir_stack_env_file`, `dxdfir_car_load_env_file` → `dxdfir_elastic_env_file`).
-Role defaults keep a self-contained fallback so a role still runs in isolation;
-inventory vars override defaults, `-e` overrides both.
+(`dxdfir_stack_elastic_password`, `dxdfir_car_load_elastic_password` →
+`dxdfir_elastic_password`). Role defaults keep a self-contained fallback so a
+role still runs in isolation; inventory vars override defaults, `-e` overrides
+both.
+
+**Secrets are inventory data, generated once, never committed.** Each stack
+secret is a file-backed `ansible.builtin.password` lookup into the per-host
+secret store (`ansible/inventory/secrets/<host>/`, gitignored): the first
+deploy generates it, every later run reads the same value back, and an
+operator override (`host_vars`, `ansible-vault encrypt_string`, `-e`) simply
+wins — an overridden variable never materialises a file. Every task that could
+carry a value is `no_log`. Tools outside ansible read the deploy's generated
+`elastic.env` handoff in the same store rather than parsing anything of their
+own.
 
 ## Pinned dependencies
 

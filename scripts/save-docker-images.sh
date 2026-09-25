@@ -8,8 +8,8 @@
 #            manifest. BUILT by the existing playbook (dxdfir-build-images.yml,
 #            the dxdfir_images role — the same thing `dxdfir build-docker`
 #            runs), never pulled; --build invokes it before saving.
-#   pulled — the Elastic analysis stack (docker/elastic): the docker.elastic.co
-#            images at ELASTIC_VERSION, derived from the compose file +
+#   pulled — the Elastic analysis stack: the docker.elastic.co
+#            images at the inventory's dxdfir_elastic_version, derived from
 #            .env.example. The stack IS the analysis backend, so an offline
 #            host without it could process but never analyse.
 #
@@ -47,26 +47,24 @@ mapfile -t BUILT_IMAGES < <(awk -v ns="${_ns:-get-sybers}" '
     /^[^[:space:]]/{f=0}
     f && $1=="-" && $2=="name:"{print ns "/" $3 ":latest"}
 ' "$REPO_ROOT_DIR/images.yml")
-# Pulled images — the Elastic analysis stack (docker/elastic). The list and the
-# version are derived from the compose file's image: lines with ELASTIC_VERSION
-# resolved from .env.example (falling back to the compose default), so neither
-# the list nor the version has a second copy here to drift.
-_elastic_dir="$REPO_ROOT_DIR/docker/elastic"
-_ever="$(awk -F'=' '$1=="ELASTIC_VERSION"{print $2; exit}' "$_elastic_dir/.env.example" 2>/dev/null)"
-if [[ -z "$_ever" ]]; then
-    _ever="$(grep -oE '\$\{ELASTIC_VERSION:-[^}]+\}' "$_elastic_dir/docker-compose.yml" | head -1 | sed 's/.*:-//; s/}$//')"
-fi
-mapfile -t PULL_IMAGES < <(awk -F'"' '/^[[:space:]]*image:/{print $2}' "$_elastic_dir/docker-compose.yml" \
-    | sed "s/\${ELASTIC_VERSION:-[^}]*}/$_ever/" | sort -u)
+# Pulled images — the Elastic analysis stack. The version comes from the
+# inventory layer's one pin (dxdfir_elastic_version in the playbooks'
+# group_vars) and the image list from the dxdfir_stack role's image map
+# (docker.elastic.co/... lines), so neither has a second copy here to drift.
+_group_vars="$REPO_ROOT_DIR/ansible/collections/get_sybers.dxdfir/playbooks/group_vars/all.yml"
+_stack_defaults="$REPO_ROOT_DIR/ansible/collections/get_sybers.dxdfir/roles/dxdfir_stack/defaults/main.yml"
+_ever="$(awk -F': *' '$1=="dxdfir_elastic_version"{gsub(/"/, "", $2); print $2; exit}' "$_group_vars" 2>/dev/null)"
+mapfile -t PULL_IMAGES < <(grep -oE 'docker\.elastic\.co/[a-z-]+/[a-z-]+:' "$_stack_defaults" \
+    | sed "s|\$|$_ever|" | sort -u)
 
-# Fail closed: an unreadable manifest/compose or an unresolvable version must
-# not silently shrink the offline set the header promises.
+# Fail closed: an unreadable manifest/inventory or an unresolvable version
+# must not silently shrink the offline set the header promises.
 [[ ${#BUILT_IMAGES[@]} -gt 0 ]] \
     || die "No images derived from $REPO_ROOT_DIR/images.yml — manifest missing or unreadable."
 [[ -n "$_ever" ]] \
-    || die "Could not resolve ELASTIC_VERSION from $_elastic_dir/.env.example or the compose default."
+    || die "Could not resolve dxdfir_elastic_version from $_group_vars."
 [[ ${#PULL_IMAGES[@]} -gt 0 ]] \
-    || die "No image: lines found in $_elastic_dir/docker-compose.yml — cannot derive the Elastic set."
+    || die "No docker.elastic.co image lines found in $_stack_defaults — cannot derive the Elastic set."
 
 MODE="save"
 BUILD_FIRST=0
@@ -95,7 +93,7 @@ done
 if [[ "$MODE" == "list" ]]; then
     echo "Built in-repo (images.yml → dxdfir-build-images.yml; docker save):"
     printf '   • %s\n' "${BUILT_IMAGES[@]}"
-    echo "Pulled (the Elastic stack, docker/elastic @ ${_ever:-?}):"
+    echo "Pulled (the Elastic stack @ ${_ever:-?}):"
     printf '   • %s\n' "${PULL_IMAGES[@]}"
     echo "Image directory: $DOCKER_TAR_DIR"
     exit 0

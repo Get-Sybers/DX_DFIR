@@ -1,3 +1,0 @@
-# Local secrets + runtime ingest staging — never commit either.
-.env
-ingest/

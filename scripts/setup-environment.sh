@@ -609,5 +609,5 @@ cmd "scripts/save-docker-images.sh --build" "(connected host: build + save every
 cmd "scripts/save-docker-images.sh --load" "(offline host: load tarballs — or just re-run this script)"
 echo
 step "Run DX_DFIR:"
-cmd "dxdfir --help" "(process evidence, build + verify CAR, bring up docker/elastic — see README.md)"
+cmd "dxdfir --help" "(process evidence, build + verify CAR, deploy the analysis stack — see README.md)"
 echo

@@ -11,7 +11,7 @@ import (
 )
 
 // The analysis-stack lifecycle is Ansible-orchestrated (dxdfir_stack role): each
-// verb fronts a thin dxdfir-stack-<action>.yml play around docker/elastic.
+// verb fronts a thin dxdfir-stack-<action>.yml play around the dxdfir_stack role.
 //
 // The verbs read verb first — `deploy stack`, `destroy stack`, `start stack`,
 // `stop stack`, `status stack` — with `stack` the noun child of each verb. The
@@ -35,11 +35,12 @@ func (env *Env) runStackAction(action string, vars []string) error {
 }
 
 // stackLong is the shared description of the stack the verbs act on.
-const stackLong = "The Elastic analysis stack under docker/elastic, driven by the dxdfir_stack\n" +
-	"Ansible role. Preflight reads what is on the host first: status reports a host\n" +
-	"with no stack, start/stop/destroy flag it, and deploy scaffolds\n" +
-	"docker/elastic/.env from .env.example (generated secrets; an existing .env is\n" +
-	"never overwritten) on a cold host."
+const stackLong = "The Elastic analysis stack, deployed by the dxdfir_stack Ansible role from\n" +
+	"inventory data (ansible/collections/.../playbooks/group_vars/all.yml; secrets\n" +
+	"generated into ansible/inventory/secrets/<host>/, vault-overridable). Preflight\n" +
+	"reads the host first: status reports a host with no stack, start/stop/destroy\n" +
+	"flag it, and deploy installs docker when missing, then converges the stack —\n" +
+	"a compose-era deployment is migrated in place, its data volumes untouched."
 
 // stackVerb builds a verb-first stack command: `<verb>` is the parent (bare, it
 // prints its targets), `<verb> stack` the leaf that runs the action.

@@ -86,7 +86,7 @@ The images managed are:
 - the `get-sybers/*` hardened tool images from `images.yml` — built in-repo by
   `ansible-playbook playbooks/dxdfir-build-images.yml` (see docs/Containers.md)
 - the Elastic stack's `docker.elastic.co/*` images at `ELASTIC_VERSION`
-  (derived from `docker/elastic/`'s compose file + `.env.example`) — pulled and
+  (derived from the inventory's `dxdfir_elastic_version` + the `dxdfir_stack` role's image map) — pulled and
   saved so the analysis backend deploys offline with zero pulls
 
 Tarballs are written to `data_store/docker_images/`.

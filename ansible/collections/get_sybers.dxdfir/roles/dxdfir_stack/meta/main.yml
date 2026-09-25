@@ -4,9 +4,10 @@ galaxy_info:
   namespace: get_sybers
   author: Get-Sybers
   description: >-
-    Lifecycle for the docker-compose Elastic analysis backend:
-    deploy/destroy/start/stop/status. The stack uses prebuilt images and
-    docker/elastic/.env.
+    Lifecycle for the ansible-native Elastic analysis backend:
+    deploy/destroy/start/stop/status from inventory data — docker network,
+    named volumes and one container per service, secrets and TLS material
+    in the inventory's per-host secret store.
   company: Get-Sybers
   license: MIT
   min_ansible_version: "2.15"

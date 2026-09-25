@@ -30,12 +30,19 @@ exclude_paths:
 skip_list:
   - name[casing]
 
-# community.docker is a runtime dependency (pinned in requirements.yml); the
-# lint environment is ansible-core only, so its modules are mocked for
-# resolution.
+# community.docker and community.crypto are runtime dependencies (pinned in
+# requirements.yml); the lint environment is ansible-core only, so their
+# modules are mocked for resolution.
 mock_modules:
   - community.docker.docker_container
-  - community.docker.docker_compose_v2
+  - community.docker.docker_container_info
   - community.docker.docker_host_info
+  - community.docker.docker_image
   - community.docker.docker_image_info
+  - community.docker.docker_network
   - community.docker.docker_prune
+  - community.docker.docker_volume
+  - community.docker.docker_volume_info
+  - community.crypto.openssl_privatekey
+  - community.crypto.openssl_csr
+  - community.crypto.x509_certificate

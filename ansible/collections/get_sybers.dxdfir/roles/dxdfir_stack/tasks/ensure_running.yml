@@ -1,44 +1,68 @@
 ---
-# Reusable, idempotent gate: ENSURE the required compose services are running
-# BEFORE a play depends on the live stack (a bring-up verifying itself, a start,
-# or anything that ingests into / queries elasticsearch). Brings the stack up and
-# then verifies — `state: present` is idempotent (it starts only what is not
-# already running and is a no-op when everything is up), so a stopped or
-# never-started stack self-heals in place instead of failing the consumer. The
-# project is the elastic analysis stack under docker/elastic.
+# Reusable, idempotent gate: ENSURE the required services are running (and
+# healthy where their container defines a healthcheck) BEFORE a play depends
+# on the live stack — a bring-up verifying itself, a start, or anything that
+# ingests into / queries elasticsearch. A stopped container self-heals in
+# place (started as-is, no config change); a container that does not exist
+# is NOT created here — deploying the stack is `dxdfir deploy stack`'s job,
+# never a consumer's side effect.
 #
-# Reuse from within the role:
+# Reuse from within the role or another role:
 #   - ansible.builtin.include_tasks: ensure_running.yml
 # with dxdfir_stack_required_services set (defaults to elasticsearch + kibana).
 
-- name: "ensure-running | bring the stack up (idempotent — no-op if already running)"
-  community.docker.docker_compose_v2:
-    project_src: "{{ dxdfir_stack_compose_dir }}"
-    env_files:
-      - "{{ dxdfir_stack_env_file }}"
-    state: present
-  register: dxdfir_stack_ensure_up
+- name: "ensure-running | read the required services' containers"
+  community.docker.docker_container_info:
+    name: "{{ dxdfir_stack_containers[item] }}"
+  loop: "{{ dxdfir_stack_required_services }}"
+  register: dxdfir_stack_required_info
 
-- name: "ensure-running | read back the service state"
-  community.docker.docker_compose_v2:
-    project_src: "{{ dxdfir_stack_compose_dir }}"
-    env_files:
-      - "{{ dxdfir_stack_env_file }}"
-  register: dxdfir_stack_running_state
-
-- name: "ensure-running | every required service is running"
-  vars:
-    _running: >-
-      {{ dxdfir_stack_running_state.containers
-         | selectattr('State', 'equalto', 'running')
-         | map(attribute='Service') | list }}
-    _down: "{{ dxdfir_stack_required_services | reject('in', _running) | list }}"
+- name: "ensure-running | every required container exists"
   ansible.builtin.assert:
     that:
-      - _down | length == 0
+      - dxdfir_stack_required_info.results | rejectattr('exists') | list | length == 0
     fail_msg: >-
-      the elastic stack could not be brought fully up — not running:
-      {{ _down | join(', ') }}. Check docker/elastic/.env and `dxdfir status stack`.
+      required stack container(s) missing:
+      {{ dxdfir_stack_required_info.results | rejectattr('exists')
+         | map(attribute='item') | join(', ') }} — deploy first: dxdfir
+      deploy stack (a compose-era stack is migrated by the same command).
+    quiet: true
+
+- name: "ensure-running | start whatever is not running (no config change)"
+  community.docker.docker_container:
+    name: "{{ dxdfir_stack_containers[item.item] }}"
+    state: started
+    container_default_behavior: no_defaults
+  loop: "{{ dxdfir_stack_required_info.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: not (item.container.State.Running | default(false))
+
+- name: "ensure-running | wait for every required service"
+  community.docker.docker_container_info:
+    name: "{{ dxdfir_stack_containers[item] }}"
+  loop: "{{ dxdfir_stack_required_services }}"
+  register: dxdfir_stack_required_state
+  # Healthy where a healthcheck is defined; plain running where none is.
+  until: >-
+    (item_health == 'healthy')
+    or (item_health == '' and dxdfir_stack_required_state.container.State.Running | default(false))
+  vars:
+    item_health: >-
+      {{ dxdfir_stack_required_state.container.State.Health.Status | default('') }}
+  retries: "{{ dxdfir_stack_wait_retries | default(60) }}"
+  delay: "{{ dxdfir_stack_wait_delay | default(5) }}"
+
+- name: "ensure-running | the required stack services are up"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_stack_required_state.results
+        | selectattr('container.State.Running', 'defined')
+        | selectattr('container.State.Running')
+        | list | length == dxdfir_stack_required_services | length
+    fail_msg: >-
+      the elastic stack could not be brought fully up — check `dxdfir status
+      stack` and the containers' logs.
     success_msg: >-
       the required stack services are running:
       {{ dxdfir_stack_required_services | join(', ') }}.

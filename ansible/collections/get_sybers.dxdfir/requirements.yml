@@ -7,3 +7,8 @@ collections:
   # timing on every run — a runtime dependency, not a nice-to-have.
   - name: ansible.posix
     version: "2.1.0"
+  # dxdfir_stack generates the stack's CA + node certificates host-side as
+  # state modules (no cert scripts); needs the `cryptography` python lib on
+  # the target, which ansible-core itself already depends on.
+  - name: community.crypto
+    version: "2.26.9"

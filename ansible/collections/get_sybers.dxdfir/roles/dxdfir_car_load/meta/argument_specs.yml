@@ -10,8 +10,8 @@ argument_specs:
         the external Byakugan engine's
         `load` sub-tool, run as the get-sybers/byakugan image from its
         contract by the shared dxdfir_lane skeleton — behind the dxdfir_stack
-        ensure_running gate (the compose services must be running first) and
-        on the stack's compose network, so it can reach elasticsearch/kibana
+        ensure_running gate (the stack services must be running first) and
+        on the stack's docker network, so it can reach elasticsearch/kibana
         by service name. One action for now (load); the playbook decides.
       - >-
         Push mode always: BYAKUGAN_LOAD_ES_URL is always set, so this loads
@@ -54,16 +54,19 @@ argument_specs:
         type: str
         required: false
         description: "PYTHONPATH for the image supply-chain guard (get_sybers_dxdfir.images); in-repo runs."
-      dxdfir_car_load_compose_dir:
-        type: str
-        required: false
-        description: "The elastic stack's compose dir (default docker/elastic)."
-      dxdfir_car_load_env_file:
+      dxdfir_car_load_elastic_password:
         type: str
         required: false
         description: >-
-          The stack's .env, read for ELASTIC_PASSWORD / BYAKUGAN_LOADER_PASSWORD
-          (default docker/elastic/.env).
+          The elastic superuser password, by reference from the inventory
+          layer (dxdfir_elastic_password); setup runs authenticate with it.
+      dxdfir_car_load_byakugan_loader_password:
+        type: str
+        required: false
+        description: >-
+          The byakugan_loader password, by reference from the inventory layer
+          (dxdfir_elastic_byakugan_loader_password); steady-state loads
+          authenticate with it.
       dxdfir_car_load_es_url:
         type: str
         required: false
@@ -112,13 +115,15 @@ argument_specs:
         required: false
         default: "byakugan_loader"
         description: "The least-privilege identity this role authenticates as on a non-setup run."
-      dxdfir_car_load_certs_volume:
+      dxdfir_car_load_certs_dir:
         type: str
         required: false
-        default: "byakugan_certs"
-        description: "The compose `certs` named volume, mounted read-only at /certs for the stack CA."
+        description: >-
+          The stack's host-side TLS tree (dxdfir_elastic_certs_dir), mounted
+          read-only at /certs — the CA lands at /certs/ca/ca.crt, the
+          contract's default.
       dxdfir_car_load_network:
         type: str
         required: false
         default: "byakugan_default"
-        description: "The compose network the run attaches to, so it can resolve elasticsearch/kibana by service name."
+        description: "The stack's docker network, so the run resolves elasticsearch/kibana by network alias."
