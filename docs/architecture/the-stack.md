@@ -15,7 +15,8 @@ the other.
 | **Fleet Server** | Manages the agent (an elastic-agent) | `8220` |
 | **Filebeat** | Ships the processed evidence into data streams | — |
 
-Bring it up with `dxdfir deploy stack` or directly:
+Bring it up with `dxdfir deploy stack` (scaffolds `docker/elastic/.env` from
+`.env.example` with generated secrets when none exists) or directly:
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144       # Elasticsearch requires this (persist in /etc/sysctl.conf)
@@ -24,9 +25,10 @@ docker compose up -d
 ```
 
 > **Host + credentials:** Elasticsearch won't start without `vm.max_map_count=262144`. In
-> `.env`, passwords need ≥ 6 chars and each encryption key must be `openssl rand -hex 32`
-> (the `.env.example` comments say which is which). The file holds credentials, binds
-> nothing off `127.0.0.1`, and is git-ignored — **never commit it.** Full details:
+> a hand-written `.env`, passwords need ≥ 6 chars and each encryption key must be
+> `openssl rand -hex 32` (the `.env.example` comments say which is which; the scaffolded
+> `.env` already satisfies both and is never overwritten). The file holds credentials,
+> binds nothing off `127.0.0.1`, and is git-ignored — **never commit it.** Full details:
 > [docker/elastic/README.md](../../docker/elastic/README.md).
 
 ## How evidence gets in

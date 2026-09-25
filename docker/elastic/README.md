@@ -20,6 +20,10 @@ published ports bind to **127.0.0.1**; data lives in named volumes (`certs`,
 
 ## Bring it up
 
+`dxdfir deploy stack` (the `dxdfir_stack` Ansible role) drives this compose
+file and, when no `.env` exists yet, scaffolds one from `.env.example` with
+generated secrets — an existing `.env` is never overwritten. Or directly:
+
 ```bash
 cd docker/elastic
 cp .env.example .env            # then replace EVERY placeholder (see the file)
@@ -126,6 +130,6 @@ projection instead of complementing it.
   pattern's first instance — scoped to `create_doc`/`create_index`/`read`/
   `view_index_metadata` on `logs-car.*` only — so Filebeat's own follow-up now has
   a working counter-example to copy rather than a design to invent.
-- An **Ansible deploy role is intentionally deferred** to a follow-up; when it is
-  added it must conform to the bits-n-bobs Ansible standard (like the existing
-  `get_sybers.dxdfir` roles). Until then this compose file is the deployment.
+- The **`dxdfir_stack` role** (`get_sybers.dxdfir` collection) is the Ansible
+  deployment of this compose file — `dxdfir deploy|start|stop|status|destroy
+  stack` — including the cold-start `.env` scaffold above.

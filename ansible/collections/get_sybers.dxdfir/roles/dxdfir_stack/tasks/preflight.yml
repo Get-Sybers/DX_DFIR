@@ -25,20 +25,34 @@
     quiet: true
 
 # The compose file guards its secrets with ${VAR:?} — compose cannot even parse
-# (up, down or ps) without the operator's .env, so require it for every action
-# and point at the example when it is missing.
+# (up, down or ps) without the operator's .env, so require it for every action.
+# COLD START (issue #290): deploy/start self-heal a missing .env by scaffolding
+# a default from .env.example with generated secrets (env_scaffold.yml — the
+# same only-when-needed posture as the reclaim below), so the out-of-the-box
+# deploy needs no manual step. An existing .env is never touched. The other
+# actions act on a stack that some deploy already gave an .env, so they keep
+# the hard requirement rather than writing secrets from a status query.
 - name: "stack-preflight | stat the elastic env file"
   ansible.builtin.stat:
     path: "{{ dxdfir_stack_env_file }}"
   register: dxdfir_stack_env_stat
+
+- name: "stack-preflight | scaffold a default .env when none is detected"
+  ansible.builtin.include_tasks: env_scaffold.yml
+  when:
+    - dxdfir_stack_action in ['deploy', 'start']
+    - dxdfir_stack_env_scaffold | bool
+    - not dxdfir_stack_env_stat.stat.exists
 
 - name: "stack-preflight | assert the elastic .env is present"
   ansible.builtin.assert:
     that:
       - dxdfir_stack_env_stat.stat.exists
     fail_msg: >-
-      {{ dxdfir_stack_env_file }} is missing — copy docker/elastic/.env.example to
-      docker/elastic/.env and set the passwords/keys before running the stack.
+      {{ dxdfir_stack_env_file }} is missing — `dxdfir deploy stack` scaffolds
+      a default one from .env.example when none is detected (unless
+      dxdfir_stack_env_scaffold is false); or copy docker/elastic/.env.example
+      to docker/elastic/.env and set the passwords/keys yourself.
     quiet: true
 
 # PULL-CAPACITY GATE (deploy/start only — the actions that pull images). A

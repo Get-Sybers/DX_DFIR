@@ -12,8 +12,28 @@ dxdfir_stack_repo_root: "{{ role_path }}/../../../../.."
 dxdfir_stack_compose_dir: "{{ dxdfir_stack_repo_root }}/docker/elastic"
 
 # Env file for compose interpolation: the operator's .env next to the compose
-# file (copied from .env.example, never committed).
+# file (never committed). deploy/start scaffold it when missing (below);
+# operators can also copy .env.example by hand.
 dxdfir_stack_env_file: "{{ dxdfir_stack_compose_dir }}/.env"
+
+# COLD-START SCAFFOLD (tasks/env_scaffold.yml, deploy/start only): when no
+# .env exists, generate one from .env.example — every `change-me` placeholder
+# filled with a locally generated secret — so the default `dxdfir deploy
+# stack` works out of the box. An existing .env is NEVER overwritten. false =
+# always require an operator-provided .env (the old hard failure).
+dxdfir_stack_env_scaffold: true
+# The key set's source of truth: keys added to the example flow into the
+# scaffold; only placeholder values are generated.
+dxdfir_stack_env_example_file: "{{ dxdfir_stack_compose_dir }}/.env.example"
+# Generated secret lengths (alphanumeric): passwords (elastic, kibana_system,
+# byakugan_loader — Elasticsearch wants >= 6) and *_KEY Kibana encryption keys
+# (Kibana wants >= 32 chars; 64 matches the documented `openssl rand -hex 32`).
+dxdfir_stack_env_password_length: 24
+dxdfir_stack_env_key_length: 64
+# Group handed read on the scaffolded .env when deploying as root (0640), so
+# docker-group operators can read the credentials without sudo; skipped when
+# the group does not exist or the deployer is unprivileged (0600).
+dxdfir_stack_env_group: docker
 
 # deploy: build images before starting (the stack uses prebuilt images, so this
 # is a no-op unless a build is forced).

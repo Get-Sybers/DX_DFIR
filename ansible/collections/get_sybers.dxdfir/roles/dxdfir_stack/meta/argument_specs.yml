@@ -7,7 +7,9 @@ argument_specs:
         Lifecycle for the docker-compose Elastic analysis backend: deploy
         (build if needed + bring up + verify running), destroy (down,
         optionally with volumes), start, stop and status. Localhost-only. The
-        stack uses prebuilt images and requires docker/elastic/.env.
+        stack uses prebuilt images and requires docker/elastic/.env —
+        deploy/start scaffold a default one from .env.example (placeholders
+        filled with generated secrets) when none is detected.
     options:
       dxdfir_stack_action:
         type: str
@@ -23,6 +25,38 @@ argument_specs:
         type: str
         required: false
         description: "Env file for compose interpolation (default docker/elastic/.env)."
+      dxdfir_stack_env_scaffold:
+        type: bool
+        required: false
+        default: true
+        description: >-
+          deploy/start: scaffold a default .env from .env.example (placeholder
+          secrets generated, never overwriting an existing .env) when none is
+          detected; false = always require an operator-provided .env.
+      dxdfir_stack_env_example_file:
+        type: str
+        required: false
+        description: >-
+          The example env the scaffold reads as the key set's source of truth
+          (default docker/elastic/.env.example).
+      dxdfir_stack_env_password_length:
+        type: int
+        required: false
+        default: 24
+        description: "Length of generated placeholder passwords (alphanumeric; Elasticsearch wants >= 6)."
+      dxdfir_stack_env_key_length:
+        type: int
+        required: false
+        default: 64
+        description: "Length of generated *_KEY encryption keys (alphanumeric; Kibana wants >= 32)."
+      dxdfir_stack_env_group:
+        type: str
+        required: false
+        default: docker
+        description: >-
+          Group handed read on the scaffolded .env (0640) when deploying as
+          root; skipped when the group is absent or the deployer is
+          unprivileged (0600).
       dxdfir_stack_build:
         type: bool
         required: false

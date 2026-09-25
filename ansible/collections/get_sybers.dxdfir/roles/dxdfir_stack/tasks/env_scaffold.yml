@@ -1,0 +1,162 @@
+---
+# COLD-START SELF-HEAL (deploy/start, issue #290): no operator .env next to the
+# compose file yet -> scaffold a working default from .env.example, so the
+# out-of-the-box `dxdfir deploy stack` succeeds with no manual step.
+#
+# FIND FACTS FIRST (the example, its placeholder keys, who is deploying,
+# whether the docker group exists), then ONE guarded write inside a rescue.
+# preflight only includes this file while docker/elastic/.env does NOT exist,
+# and the write itself is `force: false` — an operator's .env is NEVER
+# overwritten, so re-runs are idempotent and rotation survives redeploys.
+#
+# .env.example stays the SOURCE OF TRUTH for the key set: keys added there flow
+# straight into the scaffold; only `change-me` placeholder values are replaced
+# (the marker config/setup.sh refuses to boot with), comments and concrete
+# defaults are carried verbatim.
+
+- name: "stack-env | stat the example env file"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_stack_env_example_file }}"
+  register: dxdfir_stack_env_example_stat
+
+- name: "stack-env | assert the example is present (the key set's source of truth)"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_stack_env_example_stat.stat.exists
+    fail_msg: >-
+      cannot scaffold {{ dxdfir_stack_env_file }}:
+      {{ dxdfir_stack_env_example_file }} is missing. Restore it
+      (git checkout -- docker/elastic/.env.example) or provide your own env
+      file at dxdfir_stack_env_file.
+    quiet: true
+
+- name: "stack-env | read the example"
+  ansible.builtin.slurp:
+    src: "{{ dxdfir_stack_env_example_file }}"
+  register: dxdfir_stack_env_example_slurp
+
+- name: "stack-env | find the placeholder keys that need generated secrets"
+  ansible.builtin.set_fact:
+    dxdfir_stack_env_example_lines: "{{ _lines }}"
+    dxdfir_stack_env_placeholder_keys: >-
+      {{ _lines
+         | select('match', '^[A-Za-z_][A-Za-z0-9_]*=.*change-me')
+         | map('regex_replace', '^([A-Za-z_][A-Za-z0-9_]*)=.*$', '\1')
+         | list }}
+  vars:
+    _lines: "{{ (dxdfir_stack_env_example_slurp.content | b64decode).splitlines() }}"
+
+# Zero placeholders means the `change-me` convention drifted — scaffolding
+# would write guessable example literals as live credentials. Refuse loudly.
+- name: "stack-env | assert the example still marks its secrets"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_stack_env_placeholder_keys | length > 0
+    fail_msg: >-
+      {{ dxdfir_stack_env_example_file }} holds no `change-me` placeholders to
+      fill — either the placeholder convention drifted (fix the example) or the
+      example is already concrete (then copy it to {{ dxdfir_stack_env_file }}
+      yourself, or set dxdfir_stack_env_scaffold: false).
+    quiet: true
+
+# Does this host have the docker group? A root-invoked deploy hands the file to
+# it so docker-group operators can read the credentials without sudo.
+- name: "stack-env | look up the group the env file is handed to"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ dxdfir_stack_env_group }}"
+    fail_key: false
+
+- name: "stack-env | generate and write the default env"
+  block:
+    - name: "stack-env | generate one fresh secret per placeholder"
+      ansible.builtin.set_fact:
+        dxdfir_stack_env_secrets: >-
+          {{ dxdfir_stack_env_secrets | default({})
+             | combine({item: lookup('ansible.builtin.password', '/dev/null',
+                                     length=_len | int,
+                                     chars=['ascii_letters', 'digits'])}) }}
+      vars:
+        # *_KEY (Kibana encryption keys) want >= 32 chars; passwords >= 6.
+        # Alphanumeric only: nothing compose interpolation, the .env format or
+        # Elasticsearch could choke on.
+        _len: >-
+          {{ dxdfir_stack_env_key_length if item is match('.*_KEY$')
+             else dxdfir_stack_env_password_length }}
+      loop: "{{ dxdfir_stack_env_placeholder_keys }}"
+      no_log: true
+
+    - name: "stack-env | write the generated env (tight perms, never overwrites)"
+      vars:
+        _root: "{{ (ansible_facts.effective_user_id | default(-1)) | int == 0 }}"
+        _group_found: >-
+          {{ (ansible_facts.getent_group | default({})).get(dxdfir_stack_env_group)
+             is not none }}
+      ansible.builtin.template:
+        src: env.j2
+        dest: "{{ dxdfir_stack_env_file }}"
+        # root:docker 0640 when deploying as root (docker-group operators read
+        # the credentials without sudo); 0600 for an unprivileged deployer, who
+        # owns the file and could not chown/chgrp anyway.
+        owner: "{{ 'root' if _root | bool else omit }}"
+        group: "{{ dxdfir_stack_env_group if (_root | bool and _group_found | bool) else omit }}"
+        mode: "{{ '0640' if _root | bool else '0600' }}"
+        force: false
+      register: dxdfir_stack_env_template
+      no_log: true
+
+    # The gate config/setup.sh enforces at boot, enforced here first: a
+    # leftover `change-me` means generation silently missed a secret.
+    - name: "stack-env | read back what was written"
+      ansible.builtin.slurp:
+        src: "{{ dxdfir_stack_env_file }}"
+      register: dxdfir_stack_env_written
+      no_log: true
+
+    - name: "stack-env | assert no placeholder survived into the scaffold"
+      ansible.builtin.assert:
+        that:
+          - "'change-me' not in (dxdfir_stack_env_written.content | b64decode)"
+        fail_msg: >-
+          {{ dxdfir_stack_env_file }} still holds a `change-me` placeholder
+          after scaffolding — generation missed a secret the example marks.
+          Delete the file, then either fix the drift or copy
+          {{ dxdfir_stack_env_example_file }} manually and set every value.
+        quiet: true
+  rescue:
+    # Only what THIS run wrote is dropped (the template reported changed) —
+    # a pre-existing operator .env was never touched (force: false) and never
+    # will be. Removing our own failed artifact keeps the next run a clean
+    # cold start instead of a boot-time setup.sh failure.
+    - name: "stack-env | drop the artifact this run wrote (it failed verification)"
+      # noqa: no-handler — rescue-path cleanup, not a notify pattern: `changed`
+      # here means "this failed run wrote the file", the one state it must undo.
+      ansible.builtin.file:
+        path: "{{ dxdfir_stack_env_file }}"
+        state: absent
+      when: (dxdfir_stack_env_template | default({})) is changed
+
+    - name: "stack-env | scaffolding failed — fail with the manual fallback"
+      ansible.builtin.fail:
+        msg: >-
+          could not scaffold {{ dxdfir_stack_env_file }}
+          ({{ ansible_failed_result.msg | default('see the failed task above') }}).
+          Nothing from this run is left behind. Manual fallback: copy
+          {{ dxdfir_stack_env_example_file }} to {{ dxdfir_stack_env_file }},
+          set the passwords/keys, rerun — or set
+          dxdfir_stack_env_scaffold: false to always require an operator .env.
+
+- name: "stack-env | re-stat the env file (preflight's assert reads this)"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_stack_env_file }}"
+  register: dxdfir_stack_env_stat
+
+- name: "stack-env | tell the operator secrets were auto-created"
+  ansible.builtin.debug:
+    msg: >-
+      Generated {{ dxdfir_stack_env_file }} from
+      {{ dxdfir_stack_env_example_file | basename }} with fresh secrets for:
+      {{ dxdfir_stack_env_placeholder_keys | join(', ') }}. The values were
+      generated locally and never logged. The file is operator-owned from here
+      — it is never overwritten — so review or rotate per policy (it is
+      gitignored; never commit it).

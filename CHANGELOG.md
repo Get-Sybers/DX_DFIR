@@ -8,6 +8,18 @@ is `0`, anything may change without notice.
 ## [Unreleased]
 
 ### Added
+- **`dxdfir deploy stack` works out of the box: the `dxdfir_stack` role
+  scaffolds `docker/elastic/.env` when none is detected** (#290). On
+  deploy/start with no `.env` next to the compose file, the preflight
+  generates one from `.env.example` — the source of truth for the key set —
+  filling every `change-me` placeholder with a locally generated secret
+  (24-char passwords, 64-char `*_KEY` encryption keys, alphanumeric, never
+  logged), written `0640 root:docker` on a root deploy (`0600` unprivileged)
+  and read back to assert no placeholder survived (the same gate
+  `config/setup.sh` enforces at boot). An existing `.env` is never touched,
+  so operator-set secrets survive re-runs; `dxdfir_stack_env_scaffold: false`
+  restores the hard requirement. stop/status/destroy still require an
+  operator `.env` (their failure now points at both paths).
 - **`dxdfir deploy stack` self-heals a short image store instead of dying
   mid-pull** (containerd: "no space left on device"). The `dxdfir_stack`
   preflight gains a pull-capacity gate on deploy/start: while stack images are

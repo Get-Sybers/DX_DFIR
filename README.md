@@ -69,9 +69,14 @@ Bring up the backend:
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144         # Elasticsearch needs this (persist it in /etc/sysctl.conf)
-cd docker/elastic && cp .env.example .env      # replace EVERY placeholder (keys: openssl rand -hex 32), then:
-docker compose up -d                            # Elasticsearch + Kibana + Fleet + Filebeat, localhost-only
+dxdfir deploy stack                             # Elasticsearch + Kibana + Fleet + Filebeat, localhost-only
 ```
+
+No `docker/elastic/.env` yet? `deploy stack` scaffolds one from `.env.example`
+with generated secrets (an existing `.env` is never overwritten — rotate per
+policy). To hand-manage credentials instead: `cd docker/elastic &&
+cp .env.example .env`, replace EVERY placeholder (keys: `openssl rand -hex 32`),
+then `docker compose up -d`.
 
 Kibana is at `http://127.0.0.1:5601`. Filebeat tails the processed evidence tree
 (`<type>/**/*.json[l]`, pointed at by `ELASTIC_INGEST_DIR`) into
@@ -129,7 +134,8 @@ the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
 
 - **The backend holds evidence.** The Elastic stack (`docker/elastic`) runs with
   security **on** — authentication, RBAC, TLS on the Elasticsearch API — but its
-  credentials live in `docker/elastic/.env` (gitignored; never commit it) and
+  credentials live in `docker/elastic/.env` (gitignored; never commit it —
+  `dxdfir deploy stack` scaffolds it with generated secrets when missing) and
   every port binds `127.0.0.1`. See [SECURITY.md](/.github/SECURITY.md).
 - **This handles real evidence.** `data_store/` is gitignored deny-by-default, so
   unknown/extensionless formats are covered — a safety net, not a guarantee. Check

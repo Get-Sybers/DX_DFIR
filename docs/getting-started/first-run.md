@@ -96,11 +96,13 @@ default, which is exactly what the [Timeline tab](the-interface.md#timeline) rea
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144        # Elasticsearch requires this, or it crash-loops
-cd docker/elastic && cp .env.example .env     # then fill in the placeholders (see below)
-docker compose up -d                           # Elasticsearch + Kibana + Fleet + Filebeat
+dxdfir deploy stack                            # Elasticsearch + Kibana + Fleet + Filebeat
 ```
 
-Or drive the same stack with `dxdfir deploy stack`. Everything binds `127.0.0.1`;
+`deploy stack` scaffolds `docker/elastic/.env` from `.env.example` with generated
+secrets when none exists (an existing `.env` is never overwritten). Or drive the
+same stack directly: `cd docker/elastic && cp .env.example .env`, fill in the
+placeholders (see below), `docker compose up -d`. Everything binds `127.0.0.1`;
 Filebeat ships the processed evidence into `logs-dxdfir.<type>-*` data streams. See
 [the stack](../architecture/the-stack.md) and
 [docker/elastic/README.md](../../docker/elastic/README.md).
@@ -108,9 +110,10 @@ Filebeat ships the processed evidence into `logs-dxdfir.<type>-*` data streams. 
 > **Two things bite here on a first run:**
 > - `vm.max_map_count=262144` must be set on the host or Elasticsearch won't start
 >   (persist it in `/etc/sysctl.conf`).
-> - The `.env` values aren't optional placeholders — passwords need ≥ 6 chars and each
->   encryption key must be `openssl rand -hex 32`. The comments in `.env.example` say
->   which is which. The file holds credentials and is git-ignored — never commit it.
+> - When you fill `.env` yourself, the values aren't optional placeholders — passwords
+>   need ≥ 6 chars and each encryption key must be `openssl rand -hex 32`. The comments
+>   in `.env.example` say which is which. The file holds credentials and is git-ignored
+>   — never commit it.
 
 ## 7. Explore
 
