@@ -12,7 +12,7 @@
 
 - name: "images-audit | audit through the GoDFIR-toolz build galaxy"
   ansible.builtin.include_role:
-    name: get_sybers.godfir_toolz.godfir_build
+    name: godfir_build
     tasks_from: audit
   vars:
     godfir_build_root: "{{ dxdfir_images_context_resolved }}"

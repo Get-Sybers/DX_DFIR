@@ -75,7 +75,7 @@ dxdfir_images_verify_images: []
 
 # Per-image build context / dockerfile / args live in the submodule's
 # images.yml (one entry per image); the GoDFIR-toolz build galaxy
-# (get_sybers.godfir_toolz.godfir_build — tasks/main.yml delegates to it)
+# (godfir_build, resolved from the submodule via roles_path — tasks/main.yml delegates to it)
 # resolves them from the manifest entry. No separate overrides map — the
 # manifest is the single source; the clone-at-build engine pins are ARG
 # defaults in the tool Dockerfiles.

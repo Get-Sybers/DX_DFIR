@@ -31,8 +31,9 @@ parameterized `godfir-tool/Dockerfile`.
 
 Every image runs as uid 2000 (the single `dxdfir_runtime_uid` knob). The
 build + hardening verification themselves are the **build galaxy's**: this
-role delegates to `get_sybers.godfir_toolz.godfir_build` (installed from the
-submodule by `requirements.yml`, so the gitlink stays the only pin) and keeps
+role delegates to its `godfir_build` role (resolved straight from the
+submodule checkout — `docker/GoDFIR-toolz/roles` is on the repo-root
+`roles_path` — so the gitlink stays the only pin and nothing is installed) and keeps
 the deploy-shaped parts — the set decision, the uid knob, the offline
 save/load packaging and the `ensure_built` lane gate.
 

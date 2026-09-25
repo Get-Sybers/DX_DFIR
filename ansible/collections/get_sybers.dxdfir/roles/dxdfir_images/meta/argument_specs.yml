@@ -6,7 +6,7 @@ argument_specs:
       - >-
         The DEPLOY galaxy's face of the tool images. Building is DELEGATED to
         the GoDFIR-toolz collection's godfir_build role
-        (get_sybers.godfir_toolz.godfir_build, installed from the submodule so
+        (godfir_build, resolved from the submodule checkout via roles_path so
         the gitlink is the only pin), run over the submodule tree: the
         manifest it resolves (images.yml), the contexts it builds and the
         revision it stamps (com.get-sybers.src) are all the pin's. Every
@@ -92,7 +92,7 @@ argument_specs:
     description:
       - >-
         Freeze the submodule root and delegate to
-        get_sybers.godfir_toolz.godfir_build tasks_from=verify - every
+        godfir_build tasks_from=verify (the submodule role, on roles_path) - every
         namespace ref in dxdfir_images_verify_images must be a manifest image
         still carrying the hardened contract on this host; refs outside
         get-sybers/* pass untouched. Lane preflights call this before any
@@ -109,7 +109,7 @@ argument_specs:
     description:
       - >-
         Freeze the submodule root and delegate to
-        get_sybers.godfir_toolz.godfir_build tasks_from=audit - every
+        godfir_build tasks_from=audit (the submodule role, on roles_path) - every
         manifest image present and hardened, no unexpected get-sybers/* image
         on the host (allow-list = the manifest + its non_tool_repos). Driven
         by dxdfir-verify-images.yml (`dxdfir verify-images`).

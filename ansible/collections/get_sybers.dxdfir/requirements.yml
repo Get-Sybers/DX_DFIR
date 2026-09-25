@@ -12,12 +12,11 @@ collections:
   # the target, which ansible-core itself already depends on.
   - name: community.crypto
     version: "2.26.9"
-  # NOT here: the BUILD galaxy (get_sybers.godfir_toolz — the image inventory
-  # and the godfir_build role dxdfir_images delegates to). Its pin is the
-  # GITLINK and it is never installed as a copy: the committed symlink
-  # ansible/collections/ansible_collections/get_sybers/godfir_toolz resolves
-  # it IN PLACE from the submodule checkout (repo-root ansible.cfg puts that
-  # tree first on collections_path). Only a checkout without the submodule
-  # falls back to importing it from the source the repo root declares
-  # (.gitmodules URL at the gitlink revision — setup-environment.sh). Its
-  # dependency range is satisfied by the exact pins above.
+  # NOT here: the BUILD galaxy (GoDFIR-toolz — the image inventory and the
+  # godfir_build role dxdfir_images delegates to). Its pin is the GITLINK and
+  # it is never installed as a copy: docker/GoDFIR-toolz/roles is on the
+  # repo-root ansible.cfg roles_path, so the role resolves IN PLACE from the
+  # submodule checkout. Only a checkout without the submodule materialises
+  # the tree from the source the repo root declares (.gitmodules URL at the
+  # gitlink revision — setup-environment.sh). Its dependency range is
+  # satisfied by the exact pins above.

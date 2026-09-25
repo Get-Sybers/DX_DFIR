@@ -33,13 +33,13 @@
 
 # The build galaxy runs OVER THE SUBMODULE TREE (godfir_build_root): the
 # manifest it resolves, the contexts it builds and the revision it stamps
-# (com.get-sybers.src) are all the gitlink pin's — the installed collection
-# supplies the tasks, the submodule supplies the content, and
-# setup-environment.sh installs the collection FROM the submodule so the two
-# share one pin.
+# (com.get-sybers.src) are all the gitlink pin's. The role itself resolves
+# from the SAME tree — docker/GoDFIR-toolz/roles is on the repo-root
+# ansible.cfg roles_path — so tasks and content are one checkout at one pin:
+# nothing installed, nothing to drift.
 - name: "images | build + verify through the GoDFIR-toolz build galaxy"
   ansible.builtin.include_role:
-    name: get_sybers.godfir_toolz.godfir_build
+    name: godfir_build
   vars:
     godfir_build_root: "{{ dxdfir_images_context_resolved }}"
     godfir_build_set: "{{ dxdfir_images_set_resolved }}"

@@ -110,16 +110,15 @@ PY
     else
         fail "setup-environment.sh does not install requirements.yml"
     fi
-    if grep -q "godfir_toolz" scripts/setup-environment.sh; then
-        pass "setup-environment.sh imports the GoDFIR-toolz build galaxy"
+    if grep -q "GoDFIR-toolz build galaxy" scripts/setup-environment.sh; then
+        pass "setup-environment.sh handles the build galaxy (in-place, with the materialise fallback)"
     else
-        fail "setup-environment.sh does not import the GoDFIR-toolz build galaxy (get_sybers.godfir_toolz)"
+        fail "setup-environment.sh does not handle the GoDFIR-toolz build galaxy"
     fi
-    _link="ansible/collections/ansible_collections/get_sybers/godfir_toolz"
-    if [[ -L "$_link" && "$(readlink "$_link")" == "../../../../docker/GoDFIR-toolz" ]]; then
-        pass "build galaxy resolves in place (collection symlink -> submodule, no installed copy)"
+    if grep -Eq '^roles_path *=.*docker/GoDFIR-toolz/roles' ansible.cfg; then
+        pass "build galaxy resolves in place (docker/GoDFIR-toolz/roles on roles_path, no installed copy)"
     else
-        fail "collection symlink $_link missing or mistargeted — the build galaxy would need an installed copy"
+        fail "ansible.cfg roles_path does not carry docker/GoDFIR-toolz/roles — the build galaxy would need an installed copy"
     fi
 else
     fail "missing $REQS"

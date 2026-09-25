@@ -34,14 +34,14 @@ is `0`, anything may change without notice.
   `verify`/`audit` entries (same manifest, same contract, ansible end to
   end); the python module, its tests and the nine-role `*_python_path`
   plumbing that existed only to find it are deleted.
-- **The build galaxy is never installed as a copy.** A committed collection
-  symlink (`ansible/collections/ansible_collections/get_sybers/godfir_toolz
-  → docker/GoDFIR-toolz`, first on `collections_path`) resolves
-  `get_sybers.godfir_toolz` IN PLACE from the submodule at the gitlink pin —
-  no tarball-mediated install, nothing to drift or reinstall on a bump. The
-  CI and setup install steps are gone; only a checkout without the submodule
-  falls back to importing from the `.gitmodules` source at the gitlink
-  revision, and a repo check asserts the symlink's integrity.
+- **The build galaxy is never installed as a copy.** `docker/GoDFIR-toolz/roles`
+  sits on the repo-root `roles_path`, so `godfir_build` resolves IN PLACE from
+  the submodule checkout at the gitlink pin — the same mechanism the deploy
+  galaxy's own roles already use; no tarball-mediated install, nothing to
+  drift or reinstall on a bump. The CI and setup install steps are gone; a
+  checkout without the submodule has the tree MATERIALISED at its canonical
+  path from the `.gitmodules` source at the gitlink revision, and a repo
+  check asserts the roles_path wiring.
 
 ### Added (post-#293 follow-through)
 - **Smoke CI builds its images through the images role** instead of raw

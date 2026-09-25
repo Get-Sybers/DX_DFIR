@@ -81,8 +81,9 @@ jobs:
         run: |
           python -m pip install --quiet --constraint python/constraints.txt ./python
           ansible-galaxy collection install -r ansible/collections/get_sybers.dxdfir/requirements.yml
-          # The GoDFIR-toolz build galaxy needs no install: the committed
-          # collection symlink resolves it in place from the submodule.
+          # The GoDFIR-toolz build galaxy needs no install: its roles resolve
+          # in place from the submodule (docker/GoDFIR-toolz/roles on the
+          # repo-root roles_path).
 
       # The images the pipeline runs — goevtx (the evtx lane's static-Go
       # parser) and the Byakugan engine image (cloned + built at its
@@ -132,8 +133,9 @@ jobs:
         run: |
           python -m pip install --quiet --constraint python/constraints.txt ./python
           ansible-galaxy collection install -r ansible/collections/get_sybers.dxdfir/requirements.yml
-          # The GoDFIR-toolz build galaxy needs no install: the committed
-          # collection symlink resolves it in place from the submodule.
+          # The GoDFIR-toolz build galaxy needs no install: its roles resolve
+          # in place from the submodule (docker/GoDFIR-toolz/roles on the
+          # repo-root roles_path).
 
       # No dxdfir_images_set: the default is EVERY image in the GoDFIR-toolz
       # manifest, in manifest order, each one built and hardening-verified by
