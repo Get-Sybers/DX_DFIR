@@ -23,8 +23,9 @@ No third-party tool image is pulled at runtime. Every image builds from the
 
 The image inventory — names + per-image build context / dockerfile / args — is SUPPLIED by
 the GoDFIR-toolz submodule: its root **`images.yml`** (read at the gitlink pin) is
-the single source of truth this role and the Python runtime guard
-(`get_sybers_dxdfir.images`) both read; DX_DFIR carries no image list of its own.
+the single source of truth this role reads — and the runtime `verify`/`audit`
+gates read the same file through the build galaxy; DX_DFIR carries no image
+list of its own.
 Add or change an image there, in one place — the .NET per-tool images
 (`sqlecmd`, `bstrings`, …) are ordinary manifest entries built from the
 parameterized `godfir-tool/Dockerfile`.

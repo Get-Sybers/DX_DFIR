@@ -19,11 +19,11 @@ is `0`, anything may change without notice.
   actual filesystem — no name lists in any role). GoDFIR-toolz installs as
   the `get_sybers.godfir_toolz` collection (`galaxy.yml`), and its
   `build-all.sh` is a thin launcher of the collection playbook.
-- **DX_DFIR's repo-root `images.yml` is deleted.** The `dxdfir_images` role,
-  the Python runtime guard and CI read the submodule's manifest at the
-  gitlink pin; the role's build path delegates to
-  `get_sybers.godfir_toolz.godfir_build` (installed FROM the submodule by
-  `requirements.yml`, so the gitlink stays the only pin) and keeps the
+- **DX_DFIR's repo-root `images.yml` is deleted.** The `dxdfir_images` role
+  and CI read the submodule's manifest at the gitlink pin (the runtime
+  verify/audit gates below read the same file through the build galaxy);
+  the role's build path delegates to the build galaxy's `godfir_build`
+  (resolved from the submodule, so the gitlink stays the only pin) and keeps the
   deploy-shaped parts: the set decision, the run-as uid knob, offline
   save/load and the `ensure_built` lane gate.
 - **Smoke CI builds the whole manifest.** A new `images` job builds every

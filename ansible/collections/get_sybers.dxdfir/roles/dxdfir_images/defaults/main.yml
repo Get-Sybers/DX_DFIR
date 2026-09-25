@@ -29,8 +29,8 @@ dxdfir_images_context: "{{ dxdfir_images_repo_root }}/docker/GoDFIR-toolz"
 # The tool-image inventory — the ONE source of truth is the GoDFIR-toolz
 # submodule's OWN root images.yml, read at the gitlink pin (that repo is
 # plug-and-play: it supplies the manifest, this repo only consumes it — no
-# DX_DFIR-side image list to drift). Shared with the Python runtime guard
-# (get_sybers_dxdfir.images). Each entry: name (+ optional context /
+# DX_DFIR-side image list to drift). The runtime verify/audit gates read the
+# same file through the build galaxy. Each entry: name (+ optional context /
 # dockerfile / args, contexts relative to the SUBMODULE root). Add or change
 # an image in the submodule's images.yml, in ONE place; clone-at-build engine
 # pins live in the tool Dockerfiles there (ARG defaults), so the gitlink is
