@@ -42,12 +42,14 @@ dxdfir_godfir_toolz_plaso_image: ""
 # Also export from Volume Shadow Copies (PLASO_IMAGE_EXPORT_VSS).
 dxdfir_godfir_toolz_vss: false
 
-# The Go tools run over the export, in this order — one contract-driven
+# The WINDOWS Go tools run over the export, in this order — one contract-driven
 # container each (<TOOL>_FORCE; /input ro = the export, /output = <out_dir>/<tool>).
 # Each tool content-detects its own artefacts anywhere under the tree, so all
 # run over the whole export; one finding nothing exits 1 (nothing produced),
 # which the lane tolerates. gowxt (Windows Timeline) is built but not yet run
 # (#88) — add it here once validated against a real ActivitiesCache.db.
+# The LINUX matrix is not in this list: it is ONE multi-tool image,
+# godaemonhunter, declared as its own `hunt` run in tasks/main.yml.
 dxdfir_godfir_toolz_tools:
   - gore          # registry batch (recmd_batch shape)
   - gojle         # jump lists
