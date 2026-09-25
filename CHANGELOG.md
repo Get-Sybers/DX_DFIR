@@ -7,6 +7,15 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Removed (unreleased-branch follow-through)
+- The last compose-era vestiges: `dxdfir deploy stack`'s dead `--build` /
+  `--no-build` flags (they fed the retired `dxdfir_stack_build` compose
+  variable; the stack runs prebuilt images and the tool images have their
+  own build verb), the `docker-compose-plugin` package from the engine
+  install (nothing invokes compose any more), and every remaining
+  `docker/elastic`/compose mention in docs, role READMEs and playbook
+  headers.
+
 ### Added
 - **`setup-environment.sh` no longer carries its own Docker installer**
   (entanglement-audit refactor, the flagship duplication): the script

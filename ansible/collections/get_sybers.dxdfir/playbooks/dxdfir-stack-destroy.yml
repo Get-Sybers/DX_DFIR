@@ -1,6 +1,6 @@
 ---
 # The playbook holds the decisions; the role groups, the tasks act.
-# Drives the dxdfir_stack role around docker/elastic.
+# Drives the dxdfir_stack role over the inventory-defined analysis stack.
 - name: "DFIR | stack destroy"
   hosts: "{{ dxdfir_hosts | default('localhost') }}"
   connection: "{{ dxdfir_connection | default('local') }}"

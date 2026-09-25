@@ -55,7 +55,7 @@ func stackVerb(env *Env, leaf leafFn, verb, short string) *cobra.Command {
 }
 
 func newDeployCmd(env *Env) *cobra.Command {
-	return stackVerb(env, stackDeployLeaf, "deploy", "Build (if needed) and bring the analysis stack up, then verify it (deploy stack).")
+	return stackVerb(env, stackDeployLeaf, "deploy", "Bring the analysis stack up from inventory data, then verify it (deploy stack).")
 }
 
 func newDestroyCmd(env *Env) *cobra.Command {
@@ -110,23 +110,19 @@ func newStackCmd(env *Env) *cobra.Command {
 // ---- the actions, one leaf builder each ----
 
 func stackDeployLeaf(env *Env, use string) *cobra.Command {
-	var build, noBuild bool
 	cmd := &cobra.Command{
 		Use:   use,
-		Short: "Build (if needed) and bring the stack up, then verify it is running.",
-		Long:  "Build (if needed) and bring the stack up, then verify it is running.\n\n" + stackLong,
+		Short: "Bring the stack up from inventory data, then verify it is running.",
+		Long:  "Bring the stack up from inventory data, then verify it is running.\n\n" + stackLong,
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			vars := []string{"dxdfir_stack_build=" + boolVar(build && !noBuild)}
-			if err := env.runStackAction("deploy", vars); err != nil {
+			if err := env.runStackAction("deploy", nil); err != nil {
 				return err
 			}
 			fmt.Println(style.Green(style.GlyphOK + " elastic stack deployed."))
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&build, "build", true, "Build images before starting.")
-	cmd.Flags().BoolVar(&noBuild, "no-build", false, "Do not build images before starting.")
 	return cmd
 }
 

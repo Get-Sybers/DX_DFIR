@@ -60,7 +60,7 @@ See the [collection concept](../architecture/processing-lanes.md#collections).
 
 | Command | What it does |
 |---|---|
-| `dxdfir deploy stack [--no-build]` | Build (if needed), start, and verify the analysis stack. |
+| `dxdfir deploy stack` | Bring up and verify the analysis stack from inventory data (installs docker itself when missing). |
 | `dxdfir start stack` / `stop stack` / `status stack` | Start / stop / show the stack's containers. |
 | `dxdfir destroy stack [--volumes] [-y]` | Remove the stack; `--volumes` also wipes ingested data. |
 

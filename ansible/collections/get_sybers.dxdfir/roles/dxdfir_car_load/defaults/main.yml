@@ -15,7 +15,7 @@ dxdfir_car_load_repo_root: "{{ role_path }}/../../../../.."
 # this run's bundles/manifest/report land (read-write output) — a SIBLING of
 # byakugan/, not inside it, so each gets its own directory chain in
 # data_store/.gitignore and Filebeat's raw-evidence exclusion
-# (docker/elastic/config/filebeat.yml) can name each one.
+# (the dxdfir_stack role's filebeat.yml) can name each one.
 dxdfir_car_load_dir: "{{ dxdfir_car_load_repo_root }}/data_store/processed/byakugan"
 dxdfir_car_load_out_dir: "{{ dxdfir_car_load_repo_root }}/data_store/processed/byakugan-load"
 
