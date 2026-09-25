@@ -358,10 +358,11 @@ fi
 #
 # --editable is REQUIRED, not a preference. The package still resolves paths
 # RELATIVE TO ITS OWN FILES (walking up from __file__): images.py reads the
-# repo-root images.yml (the tool-image inventory),
+# GoDFIR-toolz submodule's images.yml (the tool-image inventory, at
+# docker/GoDFIR-toolz/images.yml),
 # and carcheck.py defaults its --car-dir under the repo's data_store. A plain
 # copying install puts the package under the venv's site-packages, whose ancestors
-# hold no images.yml or data_store/ — the guard and lanes then fail to find them
+# hold no submodule manifest or data_store/ — the guard and lanes then fail to find them
 # even though the repo IS present (above).
 # Editable keeps the installed module IN the repo tree, so every _REPO_ROOT-
 # relative path resolves. (The Byakugan CAR engine is no longer a host checkout —
@@ -499,15 +500,18 @@ ok "dxdfir (Go front-end) installed: $(/usr/local/bin/dxdfir --version 2>/dev/nu
 # Install the collection's pinned Ansible dependencies (requirements.yml — never
 # :latest, never a branch). They go to a fixed shared path that the repo-root
 # ansible.cfg puts on collections_path, so every user's runs resolve the same
-# pinned versions: community.docker (the deploy roles) and ansible.posix (the
-# profile_tasks audit-timing callback).
+# pinned versions: community.docker (the deploy roles), ansible.posix (the
+# profile_tasks audit-timing callback) and the GoDFIR-toolz BUILD galaxy
+# (get_sybers.godfir_toolz — installed FROM THE SUBMODULE checkout above, so
+# its pin is the gitlink; the dir entry resolves against the CWD, hence the
+# explicit repo-root cd).
 ################################################################################
 section "Ansible collections"
 DXDFIR_COLLECTIONS="${DXDFIR_COLLECTIONS:-/opt/dxdfir/collections}"
 step "Installing pinned Ansible collections into $DXDFIR_COLLECTIONS ..."
-$SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install \
+(cd "$REPO_ROOT_DIR" && $SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install \
     -r "$REPO_ROOT_DIR/ansible/collections/get_sybers.dxdfir/requirements.yml" \
-    -p "$DXDFIR_COLLECTIONS" --force \
+    -p "$DXDFIR_COLLECTIONS" --force) \
     || die "Failed to install the pinned Ansible collections (requirements.yml)."
 ok "Collections installed: $("$DXDFIR_VENV/bin/ansible-galaxy" collection list -p "$DXDFIR_COLLECTIONS" 2>/dev/null | grep -cE '^[a-z]' || echo '?') pinned"
 

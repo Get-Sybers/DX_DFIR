@@ -31,8 +31,8 @@ The full directory map is [Dir-Structure.md](../Dir-Structure.md). The pieces th
 | `go/` | The [`dxdfir` Go front-end](go-standards.md) — CLI + TUI. |
 | `python/get_sybers_dxdfir/` | The Python processing package (one module per lane) + `detect/` + `stix/`. |
 | `ansible/collections/get_sybers.dxdfir/` | The [Ansible collection](ansible-standards.md) — roles + playbooks. |
-| `docker/` | The GoDFIR-toolz submodule (every hardened tool-image build context, [Containers.md](../Containers.md)) + the `elastic/` compose stack ([the stack](../architecture/the-stack.md)). |
+| `docker/` | The GoDFIR-toolz submodule — every hardened tool-image build context AND the image inventory it supplies ([Containers.md](../Containers.md)); the Elastic stack is deployed by the `dxdfir_stack` role ([the stack](../architecture/the-stack.md)). |
 | `data_store/` | Evidence lifecycle: `raw/ → processed/ → processed/byakugan/` (git-ignored). |
 | `scripts/` | Host provisioning + offline packaging ([overview](../scripts/Scripts-Overview.md)). |
 | `.github/tests/` | The [check + smoke harnesses](build-and-test.md). |
-| `images.yml` | The `get-sybers/*` tool-image inventory (names + build context/dockerfile/args) — the single source of truth both the Python guard (`get_sybers_dxdfir.images`) and the `dxdfir_images` role read. |
+| `docker/GoDFIR-toolz/images.yml` | The `get-sybers/*` tool-image inventory (names + build context/dockerfile/args), SUPPLIED by the GoDFIR-toolz submodule at the gitlink pin — the single source of truth both the Python guard (`get_sybers_dxdfir.images`) and the `dxdfir_images` role read; this repo carries no image list of its own. |

@@ -12,3 +12,11 @@ collections:
   # the target, which ansible-core itself already depends on.
   - name: community.crypto
     version: "2.26.9"
+  # The BUILD galaxy: GoDFIR-toolz supplies the image inventory (images.yml)
+  # and the godfir_build role dxdfir_images delegates to — installed FROM THE
+  # SUBMODULE, so the gitlink stays the only pin (no version here on purpose:
+  # the checked-out submodule IS the version). The dir path resolves against
+  # the CWD of the ansible-galaxy run: install from the repo root, as
+  # setup-environment.sh and CI do.
+  - name: docker/GoDFIR-toolz
+    type: dir

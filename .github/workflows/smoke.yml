@@ -36,11 +36,12 @@ on:
       - "python/get_sybers_dxdfir/images.py"
       - "python/pyproject.toml"
       # Every tool image (byakugan/goevtx included) builds from the GoDFIR-toolz
-      # submodule, and the build wiring lives in the images role + manifest —
-      # a submodule bump (the gitlink) or a manifest/pin change re-runs this.
+      # submodule, which SUPPLIES the manifest (its root images.yml) and the
+      # build galaxy (godfir_build) the images role delegates to — a submodule
+      # bump (the gitlink) is how a manifest, pin or build-logic change
+      # arrives, and it re-runs this.
       - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_images/**"
       - "docker/GoDFIR-toolz"
-      - "images.yml"
       # an engine bump is a pipeline change: the engine pins are ARG defaults
       # in the submodule's Dockerfiles, so it arrives as a gitlink change —
       # covered by the docker/GoDFIR-toolz path above.
@@ -85,13 +86,14 @@ jobs:
       # The images the pipeline runs — goevtx (the evtx lane's static-Go
       # parser) and the Byakugan engine image (cloned + built at its
       # Dockerfile's BYAKUGAN_REF pin, nothing provisioned on the runner) —
-      # are built THROUGH the images role, exactly as `dxdfir build-docker`
-      # builds them: same manifest contexts, same source stamp
-      # (com.get-sybers.src), and the role's post-build hardening asserts
-      # (static contract + the filesystem scan) now gate the CI builds too
-      # instead of being bypassed by raw `docker build`. An engine bump is a
-      # gitlink change, which the PR path filters above re-run this whole
-      # pipeline against.
+      # are built exactly as `dxdfir build-docker` builds them: the images
+      # role delegating to the GoDFIR-toolz build galaxy (godfir_build, from
+      # the submodule manifest), so the source stamp (com.get-sybers.src) and
+      # the post-build hardening asserts (static contract + filesystem scan +
+      # each image's /etc/dfir-hardened declaration) gate the CI builds too.
+      # The FULL manifest is built by the `images` job alongside; this job
+      # builds only the two the pipeline drives, so the pipeline signal stays
+      # fast.
       - name: Build the goevtx + byakugan images (the images role, hardening asserted)
         run: |
           ansible-playbook \
@@ -100,3 +102,40 @@ jobs:
 
       - name: Run the pipeline smoke test
         run: ./.github/tests/smoke-test.sh
+
+  # EVERYTHING GoDFIR-toolz supplies builds — the whole manifest, hardening
+  # asserted on every image, so a manifest entry, a Dockerfile or an engine
+  # pin can not rot unbuilt between releases. Runs on the same triggers as the
+  # pipeline job (nightly included) as a standing whole-inventory signal.
+  images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Two dozen images (plaso/zeek/signatures/anamnesis among them) need
+      # more scratch than a stock runner keeps free — drop the preinstalled
+      # bloat the build never touches (the in-docker .NET builds pull their
+      # own runtime; the host toolchains are irrelevant to container builds).
+      - name: Free runner disk
+        run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/hostedtoolcache/CodeQL
+
+      - name: Install the dxdfir package and the collection's dependencies
+        run: |
+          python -m pip install --quiet --constraint python/constraints.txt ./python
+          ansible-galaxy collection install -r ansible/collections/get_sybers.dxdfir/requirements.yml
+
+      # No dxdfir_images_set: the default is EVERY image in the GoDFIR-toolz
+      # manifest, in manifest order, each one built and hardening-verified by
+      # the build galaxy.
+      - name: Build the full GoDFIR-toolz manifest (every image, hardening asserted)
+        run: |
+          ansible-playbook \
+            ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml

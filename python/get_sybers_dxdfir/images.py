@@ -26,26 +26,37 @@ import sys
 from pathlib import Path
 
 
+#: The manifest's path under the repo root: the GoDFIR-toolz submodule's OWN
+#: root images.yml, read at the gitlink pin. That repo supplies the inventory
+#: (plug-and-play); this repo only consumes it, so no DX_DFIR-side image list
+#: exists to drift.
+_MANIFEST_RELPATH = Path("docker") / "GoDFIR-toolz" / "images.yml"
+
+
 def _find_manifest() -> Path:
-    """Locate images.yml — the tool-image inventory at the repo root. Honour
-    DFIR_REPO_ROOT, else walk up from this file (the pipeline runs from the
-    source tree, so the repo root is always an ancestor)."""
+    """Locate the tool-image inventory — the GoDFIR-toolz submodule's
+    images.yml. Honour DFIR_REPO_ROOT, else walk up from this file (the
+    pipeline runs from the source tree, so the repo root is always an
+    ancestor)."""
     root = os.environ.get("DFIR_REPO_ROOT")
-    if root and (Path(root) / "images.yml").is_file():
-        return Path(root) / "images.yml"
+    if root and (Path(root) / _MANIFEST_RELPATH).is_file():
+        return Path(root) / _MANIFEST_RELPATH
     for parent in Path(__file__).resolve().parents:
-        if (parent / "images.yml").is_file():
-            return parent / "images.yml"
+        if (parent / _MANIFEST_RELPATH).is_file():
+            return parent / _MANIFEST_RELPATH
     raise RuntimeError(
-        "images.yml (the tool-image inventory) not found — set DFIR_REPO_ROOT or "
-        "run from the repository tree")
+        f"{_MANIFEST_RELPATH} (the tool-image inventory the GoDFIR-toolz "
+        "submodule supplies) not found — set DFIR_REPO_ROOT to the repository "
+        "root and initialise the submodule (git submodule update --init)")
 
 
 def _load_inventory() -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """(HARDENED_IMAGES, ALLOWED_NON_TOOL_REPOS) from images.yml — the ONE source
-    of truth shared with the Ansible dxdfir_images role. Each `tool` image (the
-    default) MUST be hardened (label + uid 2000); non_tool_repos are exempt but
-    allow-listed so they don't trip the 'unexpected image' audit."""
+    """(HARDENED_IMAGES, ALLOWED_NON_TOOL_REPOS) from the GoDFIR-toolz
+    images.yml — the ONE source of truth shared with the Ansible dxdfir_images
+    role (both read the submodule's manifest at the gitlink pin). Each `tool`
+    image (the default) MUST be hardened (label + uid 2000); non_tool_repos
+    are exempt but allow-listed so they don't trip the 'unexpected image'
+    audit."""
     import yaml
     path = _find_manifest()
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}

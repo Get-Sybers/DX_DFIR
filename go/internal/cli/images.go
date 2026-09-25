@@ -22,10 +22,11 @@ func newBuildDockerCmd(env *Env) *cobra.Command {
 		Use:   "build-docker",
 		Short: "Build (and hardening-verify) the get-sybers/* tool images from the in-repo Dockerfiles.",
 		Long: "Build (and hardening-verify) the get-sybers/* tool images.\n\n" +
-			"Fronts playbooks/dxdfir-build-images.yml: builds each image from its\n" +
-			"ansible-hardened Dockerfile under docker/, then asserts the hardening contract\n" +
-			"on the result (fixed non-root USER, com.get-sybers.hardened label, no package\n" +
-			"managers or interpreters in the tool-only images).",
+			"Fronts playbooks/dxdfir-build-images.yml: the images role delegates to the\n" +
+			"GoDFIR-toolz build galaxy (godfir_build, over the submodule's images.yml\n" +
+			"manifest), which builds each image and asserts the hardening contract on the\n" +
+			"result (fixed non-root USER, com.get-sybers.hardened label, no package\n" +
+			"managers, and whatever each image's /etc/dfir-hardened declaration rules out).",
 		GroupID: groupSetup,
 		Args:    cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {

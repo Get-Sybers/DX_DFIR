@@ -23,6 +23,10 @@ dependencies:
   community.docker: ">=3.10.3,<4.0.0"
   ansible.posix: ">=2.1.0,<3.0.0"
   community.crypto: ">=2.26.9,<3.0.0"
+  # The BUILD galaxy: dxdfir_images delegates image building to its
+  # godfir_build role. requirements.yml installs it FROM THE SUBMODULE
+  # (type: dir), so the exact pin is the gitlink, not a version.
+  get_sybers.godfir_toolz: ">=0.1.0,<1.0.0"
 build_ignore:
   - "roles/*/molecule"
   - "*.pyc"

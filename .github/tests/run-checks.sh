@@ -71,6 +71,21 @@ problems = []
 pinned = {}
 for entry in (reqs or {}).get("collections", []):
     name, ver = entry.get("name"), str(entry.get("version", ""))
+    if entry.get("type") == "dir":
+        # A dir-type entry is pinned by the SUBMODULE GITLINK, not a version:
+        # the path must be a declared submodule (the pin) carrying a
+        # collection manifest, and its FQCN covers galaxy.yml dependencies.
+        import os
+        gitmodules = open(".gitmodules").read() if os.path.isfile(".gitmodules") else ""
+        if f"path = {name}" not in gitmodules:
+            problems.append(f"{name}: dir-type entry is not a declared submodule — nothing pins it")
+        gpath = os.path.join(name, "galaxy.yml")
+        if not os.path.isfile(gpath):
+            problems.append(f"{name}: dir-type entry has no galaxy.yml (submodule not initialised?)")
+        else:
+            gy = yaml.safe_load(open(gpath)) or {}
+            pinned[f"{gy.get('namespace')}.{gy.get('name')}"] = "gitlink"
+        continue
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", ver):
         problems.append(f"{name}: version '{ver}' is not an exact X.Y.Z pin")
     pinned[name] = ver
@@ -225,7 +240,8 @@ fi
 # after the real count passed 160. The harness prints the number; documents
 # point at the harness.
 _counts=$(grep -rnE '[0-9]{2,4} (static )?checks' --include='*.md' . 2>/dev/null \
-          | grep -vE '^\./(\.git|data_store|docker/GoDFIR-toolz)/' || true)
+          | grep -vE '^\./(\.git|data_store|docker/GoDFIR-toolz)/' \
+          | grep -v '/\.ansible/' || true)
 if [[ -z "$_counts" ]]; then
     pass "no document hardcodes the check count"
 else

@@ -7,6 +7,29 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Changed (the two-galaxy split: GoDFIR-toolz builds, DX_DFIR deploys)
+- **GoDFIR-toolz owns the image inventory and the build logic; DX_DFIR only
+  consumes them.** The submodule gained its canonical root `images.yml` — all
+  24 images (the pipeline five, the 12 Windows Go parsers, godaemonhunter,
+  gomount, and the five `.NET` per-tool images as ordinary manifest entries),
+  exactly where its own `conform.sh` always looked — plus the `godfir_build`
+  role and `build_images` playbook (ansible end to end: manifest/alias
+  resolution, source-stamped BuildKit builds, and the hardening verification,
+  with each image's own `/etc/dfir-hardened` posture declaration held to the
+  actual filesystem — no name lists in any role). GoDFIR-toolz installs as
+  the `get_sybers.godfir_toolz` collection (`galaxy.yml`), and its
+  `build-all.sh` is a thin launcher of the collection playbook.
+- **DX_DFIR's repo-root `images.yml` is deleted.** The `dxdfir_images` role,
+  the Python runtime guard and CI read the submodule's manifest at the
+  gitlink pin; the role's build path delegates to
+  `get_sybers.godfir_toolz.godfir_build` (installed FROM the submodule by
+  `requirements.yml`, so the gitlink stays the only pin) and keeps the
+  deploy-shaped parts: the set decision, the run-as uid knob, offline
+  save/load and the `ensure_built` lane gate.
+- **Smoke CI builds the whole manifest.** A new `images` job builds every
+  manifest image through the build galaxy (hardening asserted on all of
+  them, nightly included) alongside the fast goevtx+byakugan pipeline job.
+
 ### Added (post-#293 follow-through)
 - **Smoke CI builds its images through the images role** instead of raw
   `docker build`, so the goevtx/byakugan CI builds carry the

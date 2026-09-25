@@ -5,7 +5,7 @@
 # THE offline image mechanism — and this script is only its LAUNCHER: the
 # image sets, the pulls, the exports and the loads are Ansible tasks
 # (dxdfir-images-save.yml / dxdfir-images-load.yml, the dxdfir_images role),
-# with the sets defined in ONE place each: the repo-root images.yml manifest
+# with the sets defined in ONE place each: the GoDFIR-toolz images.yml manifest
 # for the built get-sybers/* tool images (never pulled; --build invokes
 # dxdfir-build-images.yml first) and the inventory layer's
 # dxdfir_elastic_images for the Elastic stack set.
