@@ -77,13 +77,18 @@ func countFiles(dir string) int {
 }
 
 // countFilesByExt counts files beneath dir whose lower-cased extension is in exts.
+//
+// An empty extension set is a wildcard — a lane whose evidence is "a folder
+// of anything" (godaemonhunter's staged Linux hosts) counts every regular
+// file — while dotfiles (a collection's control files, an editor's
+// droppings) never count as evidence.
 func countFilesByExt(dir string, exts map[string]bool) int {
 	n := 0
 	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
+		if err != nil || !d.Type().IsRegular() || strings.HasPrefix(d.Name(), ".") {
 			return nil
 		}
-		if !d.IsDir() && exts[strings.ToLower(filepath.Ext(path))] {
+		if len(exts) == 0 || exts[strings.ToLower(filepath.Ext(path))] {
 			n++
 		}
 		return nil

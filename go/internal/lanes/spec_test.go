@@ -137,3 +137,15 @@ func TestCountDoneReadsTheToolLeafLayout(t *testing.T) {
 		t.Errorf("anamnesis active log = %q", got)
 	}
 }
+
+func TestCountFilesMatchingCountsRegularFilesOnly(t *testing.T) {
+	root := t.TempDir()
+	touch(t, filepath.Join(root, "a", "x.jsonl"), 1)
+	touch(t, filepath.Join(root, "b", "y.jsonl"), 1)
+	if err := os.Symlink(filepath.Join(root, "a", "x.jsonl"), filepath.Join(root, "b", "link.jsonl")); err != nil {
+		t.Skip("symlinks unavailable:", err)
+	}
+	if got := countFilesMatching(root, func(n string) bool { return filepath.Ext(n) == ".jsonl" }); got != 2 {
+		t.Fatalf("got %d, want 2 (a symlink is not a done marker)", got)
+	}
+}

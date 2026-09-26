@@ -175,10 +175,6 @@ func runProcess(env *Env, source, collection string, force, noRegister bool, ext
 func laneHelp() string {
 	var b strings.Builder
 	for _, sp := range lanes.Specs {
-		name := sp.Name
-		if len(sp.Aliases) > 0 {
-			name += " (" + strings.Join(sp.Aliases, ", ") + ")"
-		}
 		fmt.Fprintf(&b, "  %-15s %s\n", sp.Name, sp.Summary)
 		if len(sp.Aliases) > 0 {
 			fmt.Fprintf(&b, "  %-15s   also: %s\n", "", strings.Join(sp.Aliases, ", "))

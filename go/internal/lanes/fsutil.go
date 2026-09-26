@@ -169,7 +169,7 @@ func countFilesMatching(root string, match func(name string) bool, opts ...walkO
 			}
 			return nil
 		}
-		if !match(d.Name()) {
+		if !d.Type().IsRegular() || !match(d.Name()) {
 			return nil
 		}
 		for _, o := range opts {
