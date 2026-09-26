@@ -16,7 +16,7 @@ import (
 // #174, phase 4): moving classified evidence into a collection's lane subdirs,
 // promoting a dropzone folder, symlinking an external tree, and the registry +
 // on-disk-shadow bookkeeping around each — all native Go, byte-compatible with
-// get_sybers_dxdfir.collection. The magic-byte classifier now lives in internal/identify;
+// the retired python registry. The magic-byte classifier now lives in internal/identify;
 // the SHA-1 manifest (the trailing hash pass) lives in hash.go.
 
 // ItemFn streams one classification decision as it happens: action is "moved",

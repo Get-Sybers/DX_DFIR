@@ -1,0 +1,43 @@
+---
+# Exported indicator-match alerts -> STIX sightings of the platform's own
+# indicators (<out>/sightings.json); PUSH delivers them back to OpenCTI over
+# the asserted wire. The alerts tree has no sane default — every file under
+# it is an alerts input, so it must be this case's export, named explicitly.
+- name: "exchange-sightings | the alerts tree is named"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_exchange_alerts_dir | length > 0
+    fail_msg: >-
+      sightings needs dxdfir_exchange_alerts_dir — the directory holding this
+      case's exported indicator-match alerts (an ES _search response over
+      .alerts-security.alerts-*, a JSON array, or JSON Lines).
+    quiet: true
+
+- name: "exchange-sightings | a push has the wire"
+  ansible.builtin.include_tasks: wire.yml
+  when: dxdfir_exchange_push | bool
+
+- name: "exchange-sightings | run the shared tool-lane skeleton"
+  ansible.builtin.include_role:
+    name: dxdfir_lane
+  vars:
+    dxdfir_lane_name: exchange-sightings
+    dxdfir_lane_runs:
+      - name: cti-sightings
+        contract: "{{ dxdfir_exchange_contract }}"
+        image: "{{ dxdfir_exchange_image }}"
+        subtool: cti-sightings
+        env:
+          BYAKUGAN_CTI_SIGHTINGS_CASE: "{{ dxdfir_exchange_case }}"
+          BYAKUGAN_CTI_SIGHTINGS_TLP: "{{ dxdfir_exchange_tlp }}"
+          BYAKUGAN_CTI_SIGHTINGS_PUSH: "{{ dxdfir_exchange_push }}"
+          BYAKUGAN_OPENCTI_URL: "{{ dxdfir_exchange_opencti_url }}"
+          BYAKUGAN_OPENCTI_CONNECTOR_ID: "{{ dxdfir_exchange_opencti_connector_id }}"
+        secret_env:
+          BYAKUGAN_OPENCTI_TOKEN: "{{ dxdfir_exchange_opencti_token }}"
+        mounts:
+          - {host: "{{ dxdfir_exchange_alerts_dir }}", path: /input, mode: ro}
+          - {host: "{{ dxdfir_exchange_out_dir }}", path: /output, mode: rw}
+        network: "{{ dxdfir_exchange_network if dxdfir_exchange_push | bool else '' }}"
+    dxdfir_lane_verify_dir: "{{ dxdfir_exchange_out_dir }}"
+    dxdfir_lane_verify_glob: "sightings.json"

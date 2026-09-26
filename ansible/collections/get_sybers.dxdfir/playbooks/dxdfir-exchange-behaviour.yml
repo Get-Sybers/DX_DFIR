@@ -1,0 +1,12 @@
+---
+# The playbook holds the decisions; the role groups, the tasks act.
+- name: "DFIR | join the detection lanes to CAR entities as STIX behaviour sightings"
+  hosts: "{{ dxdfir_hosts | default('localhost') }}"
+  connection: "{{ dxdfir_connection | default('local') }}"
+  gather_facts: true
+  tasks:
+    - name: "dxdfir-exchange-behaviour | run the exchange role (behaviour)"
+      ansible.builtin.include_role:
+        name: dxdfir_exchange
+      vars:
+        dxdfir_exchange_action: behaviour

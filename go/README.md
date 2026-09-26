@@ -8,7 +8,6 @@ the verbs and their presentation — the heavy work stays where it belongs:
 ```
 dxdfir (Go / termui)                 this directory — verbs + adaptive dashboards
   └─ get_sybers.dxdfir (Ansible)     orchestration: one role per source, preflight → process → verify
-       └─ get_sybers_dxdfir (Python) the minimal per-item processors the roles invoke
 ```
 
 The binary never re-implements processing. It shells out to what already exists:
@@ -21,8 +20,7 @@ The binary never re-implements processing. It shells out to what already exists:
 | `load-car` | `ansible-playbook … dxdfir-load-car.yml` (the `dxdfir_car_load` role — `byakugan load` into `logs-car.*`, behind the `dxdfir_stack` ensure_running gate) |
 | `verify-images` | `ansible-playbook … dxdfir-verify-images.yml` |
 | `register` / `collection …` | native Go (`internal/collection`: the SQLite registry, magic-byte classify, sort/promote/link, and the SHA-1 manifest — no subprocess) |
-| `stix …` | `python -m get_sybers_dxdfir.stix …` (data → stdout, summary → stderr) |
-| `stamp-detections` | `python -m get_sybers_dxdfir.detect.car_detections …` (the car-detections lookup-index writer — Byakugan's behaviour hits in, one summary line on stdout) |
+| `stix export/behaviour/pull/sightings` | `dxdfir-exchange-*.yml` (the `dxdfir_exchange` role — the byakugan image's own exchange sub-tools) |
 | `stack …` | `ansible-playbook … dxdfir-stack-<action>.yml` (the `dxdfir_stack` role) |
 | `cleanup …` | `ansible-playbook … dxdfir-cleanup.yml` (`--dry-run` maps to `--check`) |
 | `list` | native Go (filesystem only) |

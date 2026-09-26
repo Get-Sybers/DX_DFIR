@@ -1,0 +1,40 @@
+---
+# The refusals: each bad ask must FAIL the role's own assert layer with a
+# message naming the offender — before anything reaches the lane.
+- name: Verify
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: "verify | negative matrix — every bad ask is refused by name"
+      ansible.builtin.include_tasks: tasks/verify_negative.yml
+      loop:
+        - name: an unknown action
+          needle: dxdfir_exchange_action
+          vars: {dxdfir_exchange_action: bogus}
+        - name: behaviour without a case id
+          needle: BYAKUGAN_STIX_BEHAVIOUR_CASE
+          vars: {dxdfir_exchange_action: behaviour, dxdfir_exchange_case: ""}
+        - name: sightings without an alerts tree
+          needle: dxdfir_exchange_alerts_dir
+          vars: {dxdfir_exchange_action: sightings, dxdfir_exchange_alerts_dir: ""}
+        - name: an export push without the OpenCTI wire
+          needle: dxdfir_exchange_network
+          vars: {dxdfir_exchange_action: export, dxdfir_exchange_push: true,
+                 dxdfir_exchange_opencti_url: "", dxdfir_exchange_opencti_token: "",
+                 dxdfir_exchange_network: ""}
+        - name: a live pull without a network to cross
+          needle: dxdfir_exchange_network
+          vars: {dxdfir_exchange_action: pull, dxdfir_exchange_from_bundle: "",
+                 dxdfir_exchange_opencti_url: "https://opencti.molecule.test",
+                 dxdfir_exchange_opencti_token: molecule-secret-token,
+                 dxdfir_exchange_network: ""}
+        - name: a sightings push without a token
+          needle: DXDFIR_OPENCTI_TOKEN
+          vars: {dxdfir_exchange_action: sightings, dxdfir_exchange_push: true,
+                 dxdfir_exchange_alerts_dir: /tmp/dxdfir_exchange_molecule/alerts,
+                 dxdfir_exchange_opencti_url: "https://opencti.molecule.test",
+                 dxdfir_exchange_opencti_token: "",
+                 dxdfir_exchange_network: molecule-net}
+      loop_control:
+        loop_var: molecule_case
+        label: "{{ molecule_case.name }}"

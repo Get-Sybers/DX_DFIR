@@ -7,6 +7,48 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Removed (the host-python package — byakugan owns the engine, GoDFIR-toolz the detections)
+- **`python/` is gone entirely** (~4,000 lines: the `get_sybers_dxdfir`
+  package, its tests and packaging). The STIX/CTI exchange already lives in
+  the Byakugan engine (`byakugan.exchange`, #124); the detection
+  rules-as-code and their validator move into the Byakugan engine repo
+  itself (Byakugan #125 — the image clones it at the pin anyway) and ride
+  that clone into the image at `/rules`, gated by the engine's own
+  validator at build and by its suite, which also restores the cti-*
+  template cross-checks (GoDFIR-toolz #76 bakes from the pin); the
+  signature ruleset fetchers were already GoDFIR-toolz's own (baked into the
+  signatures image at build). The `stamp-detections` command retires with
+  its writer — the `car-detections` contract rides the baked rules, and the
+  Detection-Engine-alert sweep that fills the lookup index is engine-side
+  future work. `dxdfir health` drops its python/processors probes;
+  `requirements.txt` (the relocated lock) is the one pip surface left —
+  `pip install -r requirements.txt` replaces `pip install ./python`
+  everywhere (setup script, CI, the molecule runner).
+
+### Added (the exchange lane; the repo gates as Go tests)
+- **`dxdfir stix` drives the engine's exchange through ansible.** The python
+  passthrough becomes a command group — `export | behaviour | pull |
+  sightings` — each verb fronting a thin playbook (`dxdfir-exchange-*.yml`)
+  that runs the byakugan image's own exchange sub-tool as a confined
+  container via the new `dxdfir_exchange` role (the `dxdfir_byakugan`
+  action-dispatch model). Products land under
+  `data_store/processed/exchange` (a new deny-by-default skeleton root);
+  the OpenCTI wire rides the environment (`DXDFIR_OPENCTI_URL` /
+  `_TOKEN` / `_CONNECTOR_ID` — the token travels via the lane's secret_env
+  0600 env-file, never argv), and a push or live pull must name a docker
+  network, the confined default being `--network none`. The lane molecule
+  scenario gains the exchange shape (positive: sub-tool dispatch, the
+  env-named `/detections` mount, the secret off argv; negative: an
+  undeclared mount refused by name against the real contract at the pin).
+- **The repository gates are Go tests now** (`go/internal/repogate`, run by
+  `go test ./...` in CI): the Byakugan boundary suite (engine-owned docs
+  stay out, engine-written output never commit-able, skeleton-only
+  tracking, out-dir defaults under `data_store/processed/`, the
+  `BYAKUGAN_REF` full-sha pin) and the contract-fit suite (every env key a
+  lane role sets and every path it mounts must exist at the submodule pin;
+  required mounts must be bound) — ported from the retired pytest files,
+  plus a new gate that the host-python package stays retired.
+
 ### Changed (the multi-tool matrices: gowindowlicker + godaemonhunter; the ansible-only container rule)
 - **The Windows parsers deploy as the gowindowlicker sweep.** GoDFIR-toolz
   ships the parser dozen as one multi-tool image (gitlink bumped to the

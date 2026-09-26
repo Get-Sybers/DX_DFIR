@@ -2,7 +2,7 @@
 // the SQLite registry at data_store/raw/collections/.registry.db plus the
 // on-disk lane subdirs and .collection.hashes manifest. It reimplements the
 // READ contract the front-end previously obtained by shelling out to
-// `python -m get_sybers_dxdfir.collection {status,lanes,state}` — same JSON
+// the retired python registry's {status,lanes,state} verbs — same JSON
 // shapes, same lane scoping, same file-counting semantics — but reads the DB
 // directly and walks the lanes concurrently, which is the win over a large or
 // networked evidence store where the Python serial os.walk cost >60s.
@@ -20,7 +20,7 @@ import (
 	"github.com/get-sybers/dx_dfir/go/internal/identify"
 )
 
-// Lane mirrors get_sybers_dxdfir.collection.Lane: a processing lane, the raw/
+// Lane mirrors the retired python registry's Lane: a processing lane, the raw/
 // subdirs it reads, and the Ansible input-dir var(s) parallel to those subdirs.
 type Lane struct {
 	Name      string

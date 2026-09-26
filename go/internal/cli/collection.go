@@ -24,7 +24,7 @@ import (
 // The whole collection layer — status/lanes/state reads, select/unselect/
 // unregister/register/sort/promote/link writes, and the SHA-1 hash — is native
 // Go (internal/collection); nothing shells the retired
-// `python -m get_sybers_dxdfir.collection` module. These aliases keep the cli's
+// retired python collection module. These aliases keep the cli's
 // rendering + process-scoping code unchanged.
 
 type (

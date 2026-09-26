@@ -16,7 +16,7 @@ import (
 // This file is the native-Go registry WRITER for the ops that are pure row
 // mutations plus their on-disk shadows — select / unselect / unregister (epic
 // #174, phase 2). It stays byte-compatible with the Python writer
-// (get_sybers_dxdfir.collection): the SQLite registry is authoritative for
+// (the retired python registry): the SQLite registry is authoritative for
 // "registered"/"selected", and every mutation is mirrored to the collection's
 // .collection.log JSONL and (for select/unselect) the events table, exactly as
 // the Python does — so a collection mutated by one side is consistent for the
@@ -28,7 +28,7 @@ import (
 // ".collection" markers (+ their JSONL logs) into the registry, so a legacy
 // collection is registered — and selectable — exactly as it is under Python.
 
-// schemaDDL mirrors the columns get_sybers_dxdfir.collection._SCHEMA creates. It
+// schemaDDL mirrors the columns the retired python registry's _SCHEMA created. It
 // is applied (IF NOT EXISTS, so a no-op against a Python-created DB) before a
 // write, so a mutation never runs against a half-initialised store.
 const schemaDDL = `
@@ -238,7 +238,7 @@ func hasColumn(db *sql.DB, table, col string) bool {
 }
 
 // migrateMarkers imports pre-DB ".collection" markers (and their .collection.log
-// JSONL) into the registry, mirroring get_sybers_dxdfir.collection._migrate_
+// JSONL) into the registry, mirroring the retired python registry's _migrate_
 // markers so upgrading to the SQLite registry keeps every existing case. It only
 // touches markers not already represented by a row, so it is idempotent and a
 // no-op on an already-migrated store. Best-effort throughout.
@@ -382,7 +382,7 @@ func registeredIn(db *sql.DB, name string) bool {
 }
 
 // now is the registry timestamp format: UTC, second precision, trailing Z —
-// matching get_sybers_dxdfir.collection._now().
+// matching the retired python registry's _now().
 func now() string {
 	return time.Now().UTC().Format("2006-01-02T15:04:05Z")
 }

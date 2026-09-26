@@ -51,7 +51,7 @@ needs the matching API change or a wiped `esdata` volume. The generated
 `elastic.env` is a handoff, never an input: edit the per-secret files or
 override the variables, not that file. `dxdfir_elastic_version` in
 `playbooks/group_vars/all.yml` is the ONE Elastic pin (every stack image
-rides it, and the stix version-pin test reads that exact line);
+rides it);
 `byakugan_*` volume names match the compose-era stack so existing
 deployments keep their data.
 

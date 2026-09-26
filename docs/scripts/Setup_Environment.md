@@ -13,8 +13,9 @@ processing scripts pull their images on first use.
 
 > **For the `dxdfir` front-end** (the pipeline's entry point): this script also
 > builds and installs the Go `dxdfir` binary (`go/`, installing the Go toolchain
-> when absent) and installs the `get_sybers_dxdfir` processor package —
-> `ansible-core` included, so `ansible-playbook` lands in the same venv — see
+> when absent) and installs the pinned ansible layer (`requirements.txt`:
+> `ansible-core` + the docker SDK the collection's modules import), so
+> `ansible-playbook` lands in the managed venv — see
 > [How It Runs](/README.md#how-it-runs).
 
 ## Prerequisites
@@ -140,11 +141,9 @@ lean:
 - **Permissions are `u=rwX,g=rX`**: capital X keeps directories traversable
   by the docker group and `.sh` files runnable while evidence files stay
   non-executable (the old `chmod -R 744` locked the docker group out).
-- **The python package installs `--editable`, by requirement**: the package
-  resolves paths relative to its own files (walking up from `__file__`), so
-  a copying install under site-packages loses `data_store/`. The install is
-  pinned by `python/constraints.txt` — the lock is the single source of
-  truth, no version literals in the script.
+- **The venv holds only the pinned ansible layer** (`requirements.txt` —
+  the lock is the single source of truth, no version literals in the
+  script); there is no host python package to install any more.
 - **The Go toolchain is (re)installed when absent or under go.mod's floor**:
   the build pins `GOTOOLCHAIN=local`, which deliberately refuses
   auto-upgrades, so a host provisioned by an older release re-provisions

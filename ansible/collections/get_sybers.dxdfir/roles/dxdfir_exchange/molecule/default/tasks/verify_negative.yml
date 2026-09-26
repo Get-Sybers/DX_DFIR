@@ -1,0 +1,29 @@
+---
+- name: "verify-negative | refusal expected | {{ molecule_case.name }}"
+  block:
+    - name: "verify-negative | run the bad ask | {{ molecule_case.name }}"
+      ansible.builtin.include_role:
+        name: dxdfir_exchange
+      vars:
+        dxdfir_exchange_action: "{{ molecule_case.vars.dxdfir_exchange_action }}"
+        dxdfir_exchange_case: "{{ molecule_case.vars.dxdfir_exchange_case | default('MOL-X') }}"
+        dxdfir_exchange_alerts_dir: "{{ molecule_case.vars.dxdfir_exchange_alerts_dir | default('') }}"
+        dxdfir_exchange_push: "{{ molecule_case.vars.dxdfir_exchange_push | default(false) }}"
+        dxdfir_exchange_from_bundle: "{{ molecule_case.vars.dxdfir_exchange_from_bundle | default('') }}"
+        dxdfir_exchange_opencti_url: "{{ molecule_case.vars.dxdfir_exchange_opencti_url | default('') }}"
+        dxdfir_exchange_opencti_token: "{{ molecule_case.vars.dxdfir_exchange_opencti_token | default('') }}"
+        dxdfir_exchange_opencti_connector_id: ""
+        dxdfir_exchange_network: "{{ molecule_case.vars.dxdfir_exchange_network | default('') }}"
+
+    - name: "verify-negative | the bad ask was accepted — that is the failure"
+      ansible.builtin.fail:
+        msg: "ACCEPTED: {{ molecule_case.name }}"
+  rescue:
+    - name: "verify-negative | the refusal names the offender | {{ molecule_case.name }}"
+      ansible.builtin.assert:
+        that:
+          - molecule_case.needle in (ansible_failed_result.msg | default(''))
+        fail_msg: >-
+          expected a refusal naming {{ molecule_case.needle }}, got:
+          {{ ansible_failed_result.msg | default('(no message)') }}
+        quiet: true

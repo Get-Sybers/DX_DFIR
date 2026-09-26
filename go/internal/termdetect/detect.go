@@ -6,8 +6,7 @@
 // drawn by termbox on /dev/tty directly — never on stdout or stderr — and is
 // enabled only for an interactive session, gated on stderr being a real
 // terminal. stdout therefore stays a clean data channel regardless of the TUI
-// decision, so `dxdfir stix ... | jq` and other piped/redirected pipelines never
-// see UI bytes on it.
+// decision, so piped/redirected pipelines never see UI bytes on it.
 package termdetect
 
 import (
@@ -47,7 +46,7 @@ func isTerminal(f *os.File) bool {
 	return fi.Mode()&os.ModeCharDevice != 0
 }
 
-// StdoutIsTTY reports whether stdout specifically is a terminal — used by verbs
-// whose payload is machine-readable (stix, engine passthrough) to keep stdout
-// pristine regardless of the TUI decision.
+// StdoutIsTTY reports whether stdout specifically is a terminal — for any
+// verb whose payload is machine-readable, to keep stdout pristine regardless
+// of the TUI decision.
 func StdoutIsTTY() bool { return isTerminal(os.Stdout) }

@@ -80,37 +80,18 @@ func (r *Repo) Playbook(name string) string {
 	return r.Path(CollectionPath, "playbooks", name)
 }
 
-// Python returns the interpreter used to invoke the get_sybers_dxdfir package.
-// Honors $DXDFIR_PYTHON, else the first of python3/python on PATH.
-func Python() (string, error) {
-	if v := os.Getenv("DXDFIR_PYTHON"); v != "" {
-		return v, nil
-	}
-	for _, name := range []string{"python3", "python"} {
-		if p, err := exec.LookPath(name); err == nil {
-			return p, nil
-		}
-	}
-	return "", fmt.Errorf("no python interpreter found (set $DXDFIR_PYTHON or install python3)")
-}
-
-// AnsiblePlaybook returns the ansible-playbook to drive the collection. It
-// prefers the one installed alongside the resolved interpreter (ansible-core is
-// a declared dependency of get_sybers_dxdfir, so it ships next to it), then
-// falls back to PATH — the same preference order the retired Python CLI used.
+// AnsiblePlaybook returns the ansible-playbook that drives the collection:
+// the first on PATH (scripts/setup-environment.sh installs the pinned
+// ansible-core from requirements.txt into the managed venv and shims it onto
+// PATH). There is no host python package any more — everything the CLI
+// fronts is ansible + the tool containers.
 func AnsiblePlaybook() (string, error) {
-	if py, err := Python(); err == nil {
-		cand := filepath.Join(filepath.Dir(py), "ansible-playbook")
-		if isExecutable(cand) {
-			return cand, nil
-		}
-	}
 	if p, err := exec.LookPath("ansible-playbook"); err == nil {
 		return p, nil
 	}
 	return "", fmt.Errorf(
-		"ansible-playbook not found. Install the package with its dependencies " +
-			"(`pip install ./python` or scripts/setup-environment.sh) — ansible-core ships with it")
+		"ansible-playbook not found. Run scripts/setup-environment.sh (or " +
+			"`pip install -r requirements.txt`) — it installs the pinned ansible-core")
 }
 
 // Require returns an error if a tool is not on PATH (fail loud, as the retired
@@ -134,9 +115,4 @@ func ancestors(p string) []string {
 		cur = parent
 	}
 	return out
-}
-
-func isExecutable(p string) bool {
-	fi, err := os.Stat(p)
-	return err == nil && !fi.IsDir() && fi.Mode()&0o111 != 0
 }

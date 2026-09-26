@@ -11,10 +11,8 @@ Nothing skips a layer.
 flowchart TD
     U([You]) --> CLI["<b>dxdfir</b> — Go CLI / TUI front-end<br/>builds a plan, shells out, renders progress"]
     CLI -->|ansible-playbook| ANS["Ansible collection <b>get_sybers.dxdfir</b><br/>roles group · playbooks decide"]
-    CLI -.->|passthrough| STIX["python -m …stix"]
-    ANS -->|python3 -m …| PY["Python processors <b>get_sybers_dxdfir</b><br/>discover inputs · run one tool · emit summary"]
-    PY -->|docker run| DK["Hardened <b>get-sybers/*</b> tool containers<br/>Zeek · goevtx · anamnesis · Plaso · GoDFIR-toolz · YARA…"]
-    PY -.->|CAR seam| BYA["External <b>Byakugan</b> engine<br/>normalises → MITRE CAR"]
+    ANS -->|contract-driven docker run| DK["Hardened <b>get-sybers/*</b> tool containers<br/>Zeek · gowindowlicker · anamnesis · Plaso · signatures…"]
+    ANS -.->|CAR + exchange lanes| BYA["External <b>Byakugan</b> engine (in its image)<br/>normalises → MITRE CAR · STIX/CTI exchange"]
     DK --> FS[("data_store/<br/>raw → processed → car")]
     BYA --> FS
     FS -.->|Filebeat tails| ES["Elastic stack<br/>Elasticsearch · Kibana · Fleet"]
@@ -24,15 +22,15 @@ flowchart TD
 
 | Layer | Owns | Explicitly does **not** |
 |---|---|---|
-| **Go CLI / TUI** (`go/`) | Build a run plan, drive `ansible-playbook` / `python`, render the [live UI](../getting-started/the-interface.md) by watching output files land | No processing, no `docker run`, no CAR logic (the one native re-port is the [collection registry](processing-lanes.md#collections) reads) |
-| **Ansible** (`ansible/`) | *Roles group; playbooks decide.* Assert inputs, build the processor argv, gate on the result | No idempotence in `when:` — that lives in the processor |
-| **Python** (`python/`) | Discover inputs, run one tool, emit a `{processed, skipped, failed}` summary | No orchestration or scheduling |
-| **Containers** (`docker/`) | Run one hardened tool over one input | Nothing else — fixed non-root user, no network, read-only rootfs |
+| **Go CLI / TUI** (`go/`) | Build a run plan, drive `ansible-playbook`, render the [live UI](../getting-started/the-interface.md) by watching output files land | No processing, no `docker run`, no CAR logic (the one native re-port is the [collection registry](processing-lanes.md#collections) reads) |
+| **Ansible** (`ansible/`) | *Roles group; playbooks decide.* Assert inputs, build each confined `docker run` from the tool's contract (the `dxdfir_lane` skeleton), gate on the result | No idempotence in `when:` — that lives in the tool |
+| **Containers** (`docker/`) | Run one hardened tool over one input; discover, batch and skip inside | Nothing else — fixed non-root user, no network, read-only rootfs |
 | **[Byakugan](https://github.com/Get-Sybers/byakugan)** (external) | Normalise processed evidence into MITRE CAR | Lives outside the repo entirely — cloned + built into the hardened `get-sybers/byakugan` image at its Dockerfile's `BYAKUGAN_REF` pin, never vendored |
 | **[Elastic stack](the-stack.md)** (the `dxdfir_stack` role) | Ingest, search, detect | A separate data plane — it reads the files the pipeline writes; neither drives the other |
 
-The call chain in one line: **you → `dxdfir` → `ansible-playbook` → `python3 -m
-get_sybers_dxdfir.<lane>` → `docker run get-sybers/<tool>` → deterministic output files.**
+The call chain in one line: **you → `dxdfir` → `ansible-playbook` →
+`docker run get-sybers/<tool>` (built from its `contract.yml`) → deterministic
+output files.**
 The Go CLI reconstructs progress by *watching those files land*, because Ansible buffers
 a lane's stdout until it exits.
 

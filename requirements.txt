@@ -1,0 +1,45 @@
+# The host-side Python dependency lock: everything `dxdfir` fronts is
+# ansible + the hardened tool containers, and THIS file pins the exact,
+# tested resolution of that ansible layer — ansible-core itself, and the
+# docker SDK + requests that community.docker's modules (dxdfir_images,
+# dxdfir_stack, the lanes) import on the controller. There is no host
+# python package any more (the engine logic lives in get-sybers/byakugan,
+# the detections in GoDFIR-toolz, both inside images); this lock is the one
+# pip surface left.
+#
+# Consumed with `pip install -r requirements.txt` by
+# scripts/setup-environment.sh (online and offline runs alike), the CI
+# workflows and .github/tests/molecule-runner.Dockerfile, so every consumer
+# resolves identical versions and an unattended upstream release cannot
+# shift a dependency under the pipeline. The Ansible COLLECTIONS are pinned
+# separately in ansible/collections/get_sybers.dxdfir/requirements.yml.
+#
+# Regenerate after a deliberate dependency bump, then restore this header —
+# and run it on the OLDEST interpreter the pipeline supports (the CI
+# version), so the resolution is installable everywhere the lock is
+# consumed:
+#   python3 -m venv /tmp/lock \
+#     && /tmp/lock/bin/pip install ansible-core requests docker PyYAML \
+#     && /tmp/lock/bin/pip freeze > requirements.txt
+#
+# Generated 2026-09-03, pruned 2026-09-11, regenerated 2026-09-12 on Python
+# 3.11 (the CI interpreter): ansible-core 2.19.x installs on 3.11 through
+# 3.13 (>= 2.20 declares requires-python >= 3.12). Relocated from
+# python/constraints.txt 2026-09-26 when the host-python package retired;
+# pins unchanged.
+
+ansible-core==2.19.13
+certifi==2026.7.22
+cffi==2.1.1
+charset-normalizer==3.5.1
+cryptography==50.0.1
+docker==7.2.0
+idna==3.19
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+packaging==26.3
+pycparser==3.0
+PyYAML==6.0.3
+requests==2.34.2
+resolvelib==1.2.1
+urllib3==2.7.0

@@ -41,12 +41,14 @@ ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-process-
 is bulk Velociraptor detection content; the part this pipeline consumes is its
 **YARA** sets — a curated webshell ruleset plus per-OS file and process sets,
 YARA-Forge-derived with per-rule provenance metadata. The image bakes a merge of
-them. To refresh that set on the host (and mount it in place of the baked one),
-the provisioning module fetches a **commit-pinned, sha256-verified** set of assets
-and merges them into `yara-rules/detectraptor/detectraptor.yar` (~10,700 rules):
+them at build time — the fetcher is GoDFIR-toolz's
+[`signatures/detectraptor.py`](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/signatures/detectraptor.py), a **commit-pinned, sha256-verified**
+merge into `yara-rules/detectraptor/detectraptor.yar` (~10,700 rules). To
+build a host copy to mount in place of the baked one, run that same script
+standalone from a GoDFIR-toolz checkout:
 
 ```bash
-python3 -m get_sybers_dxdfir.signatures.detectraptor \
+python3 docker/GoDFIR-toolz/signatures/detectraptor.py \
     --rules-dir data_store/dependencies/yara-rules
 ```
 
@@ -61,13 +63,12 @@ byte-for-byte.
 - **Do not combine with YARA-Forge packages** (e.g. a downloaded YARA-Forge
   release) in one merged file — DetectRaptor's sets are largely YARA-Forge
   extracts, and duplicate identifiers fail the compile.
-- **Advancing the pin:** bump `_PIN` in
-  `python/get_sybers_dxdfir/signatures/detectraptor.py`, run
-  `python3 -m get_sybers_dxdfir.signatures.detectraptor --print-hashes`, paste the
-  digests into `ASSETS`.
+- **Advancing the pin:** bump `_PIN` in GoDFIR-toolz's
+  `signatures/detectraptor.py`, run it with `--print-hashes`, paste the
+  digests into `ASSETS` — the next image build bakes the new set.
 - **Not consumed:** DetectRaptor's VQL artifacts and CSV lookups (they need a
   Velociraptor server); it ships no Sigma or Suricata rules. Licensing and
-  attribution: [THIRD_PARTY_NOTICES.md](/.github/THIRD_PARTY_NOTICES.md).
+  attribution: [GoDFIR-toolz's THIRD_PARTY_NOTICES.md](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/THIRD_PARTY_NOTICES.md).
 
 **Verify:** each hit is one JSON object naming your rule:
 
@@ -108,9 +109,10 @@ ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-process-
     -e dxdfir_signatures_suricata_rules="$PWD/data_store/dependencies/suricata-rules/suricata.rules"
 ```
 
-To refresh ET Open on the host, the provisioning module downloads the ruleset
-tarball and writes the one `suricata.rules`
-(`python3 -m get_sybers_dxdfir.signatures.suricata_rules --rules-dir data_store/dependencies/suricata-rules`);
+To refresh ET Open on the host, run GoDFIR-toolz's
+[`signatures/suricata_rules.py`](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/signatures/suricata_rules.py) standalone — it downloads the
+version-pinned ruleset tarball and writes the one `suricata.rules`
+(`python3 docker/GoDFIR-toolz/signatures/suricata_rules.py --rules-dir data_store/dependencies/suricata-rules`);
 append your own rules to it.
 
 **Verify:** check the per-capture EVE output for alerts from your signatures:

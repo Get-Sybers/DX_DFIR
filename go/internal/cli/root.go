@@ -14,7 +14,6 @@ package cli
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 
@@ -115,24 +114,11 @@ func NewRootCmd(version string) *cobra.Command {
 			}
 			return runHome(env, version)
 		},
-		// Make the get_sybers_dxdfir package importable by every child python we
-		// shell out to, from a bare checkout as well as an installed environment:
-		// prepend <repo>/python to PYTHONPATH once, before any verb runs. Silent
-		// if the repo cannot be located here — the verb's own resolveRepo reports it.
-		PersistentPreRun: func(_ *cobra.Command, _ []string) {
-			if r, err := repo.Detect(env.RepoRoot); err == nil {
-				pp := filepath.Join(r.Root, "python")
-				if cur := os.Getenv("PYTHONPATH"); cur != "" {
-					pp += string(os.PathListSeparator) + cur
-				}
-				_ = os.Setenv("PYTHONPATH", pp)
-			}
-		},
 	}
 	// -h and --help everywhere (cobra default), a bare group prints help, and no
 	// shell-completion subcommand clutters help.
 	root.CompletionOptions.DisableDefaultCmd = true
-	root.SetVersionTemplate("dxdfir (get_sybers_dxdfir) {{.Version}}\n")
+	root.SetVersionTemplate("dxdfir {{.Version}}\n")
 
 	pf := root.PersistentFlags()
 	pf.StringVar(&env.RepoRoot, "repo-root", "", "DX_DFIR repo (auto-detected otherwise).")
@@ -169,7 +155,6 @@ func NewRootCmd(version string) *cobra.Command {
 		newLoadCarCmd(env),
 		newCarTimelineCmd(env),
 		newStixCmd(env),
-		newStampDetectionsCmd(env),
 		// Analysis stack
 		newDeployCmd(env),
 		newDestroyCmd(env),

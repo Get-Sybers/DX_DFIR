@@ -1,0 +1,36 @@
+---
+# The detection lanes joined to the CAR entities they touch, as STIX
+# sightings over spindle-keyed observed-data (<out>/behaviour-sightings.json).
+# Fully offline: no wire, no network — the run stays --network none. The
+# case id is REQUIRED (the contract says so: it scopes every sighting id).
+- name: "exchange-behaviour | the case id scopes the sighting ids"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_exchange_case | length > 0
+    fail_msg: >-
+      behaviour needs dxdfir_exchange_case — the case id scoping the
+      sighting/observation ids (BYAKUGAN_STIX_BEHAVIOUR_CASE is required by
+      the contract).
+    quiet: true
+
+- name: "exchange-behaviour | run the shared tool-lane skeleton"
+  ansible.builtin.include_role:
+    name: dxdfir_lane
+  vars:
+    dxdfir_lane_name: exchange-behaviour
+    dxdfir_lane_runs:
+      - name: stix-behaviour
+        contract: "{{ dxdfir_exchange_contract }}"
+        image: "{{ dxdfir_exchange_image }}"
+        subtool: stix-behaviour
+        env:
+          BYAKUGAN_STIX_BEHAVIOUR_DETECTIONS_DIR: /detections
+          BYAKUGAN_STIX_BEHAVIOUR_CASE: "{{ dxdfir_exchange_case }}"
+          BYAKUGAN_STIX_BEHAVIOUR_TLP: "{{ dxdfir_exchange_tlp }}"
+          BYAKUGAN_STIX_BEHAVIOUR_PRODUCER: "{{ dxdfir_exchange_producer }}"
+        mounts:
+          - {host: "{{ dxdfir_exchange_car_dir }}", path: /input, mode: ro}
+          - {host: "{{ dxdfir_exchange_out_dir }}", path: /output, mode: rw}
+          - {host: "{{ dxdfir_exchange_detections_dir }}", path: /detections, mode: ro}
+    dxdfir_lane_verify_dir: "{{ dxdfir_exchange_out_dir }}"
+    dxdfir_lane_verify_glob: "behaviour-sightings.json"

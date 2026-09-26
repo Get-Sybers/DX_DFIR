@@ -1,7 +1,7 @@
 // Byakugan risk gate — proof 2, check 2.4: the DIRECT join. Every logs-car.*
 // row whose event.id (the CAR guid) has a row in the car-detections lookup
 // index comes back stamped with detection.* / rule.* / threat.* — the
-// tagged-evidence-line model of python/get_sybers_dxdfir/detect/rules/
+// tagged-evidence-line model of the baked rules-as-code (GoDFIR-toolz byakugan/rules/)
 // car-detections/join-keys.yml, applied to the riskgate namespace.
 //
 // Stash / restore: LOOKUP JOIN replaces every source field that the lookup

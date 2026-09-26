@@ -9,7 +9,7 @@ authors:
   - Get-Sybers
 description: >-
   DX_DFIR forensic processing pipeline as Ansible roles. Each role invokes the
-  get_sybers_dxdfir Python package as a single action; the playbook decides
+  hardened tool containers from their contracts as single actions; the playbook decides
   which roles run.
 license:
   - MIT

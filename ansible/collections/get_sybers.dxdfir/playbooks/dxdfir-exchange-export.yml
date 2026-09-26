@@ -1,0 +1,12 @@
+---
+# The playbook holds the decisions; the role groups, the tasks act.
+- name: "DFIR | export detection hits as a STIX 2.1 bundle (hits -> sightings + indicators)"
+  hosts: "{{ dxdfir_hosts | default('localhost') }}"
+  connection: "{{ dxdfir_connection | default('local') }}"
+  gather_facts: true
+  tasks:
+    - name: "dxdfir-exchange-export | run the exchange role (export)"
+      ansible.builtin.include_role:
+        name: dxdfir_exchange
+      vars:
+        dxdfir_exchange_action: export
