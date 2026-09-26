@@ -55,7 +55,7 @@ func (e *Env) ansibleRepo() (*repo.Repo, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	ap, err := repo.AnsiblePlaybook()
+	ap, err := r.AnsiblePlaybook()
 	if err != nil {
 		return nil, "", Fail(127, "%v", err)
 	}

@@ -80,18 +80,46 @@ func (r *Repo) Playbook(name string) string {
 	return r.Path(CollectionPath, "playbooks", name)
 }
 
-// AnsiblePlaybook returns the ansible-playbook that drives the collection:
-// the first on PATH (scripts/setup-environment.sh installs the pinned
-// ansible-core from requirements.txt into the managed venv and shims it onto
-// PATH). There is no host python package any more — everything the CLI
-// fronts is ansible + the tool containers.
-func AnsiblePlaybook() (string, error) {
+// VenvDir is the repo-relative virtualenv scripts/setup-environment.sh
+// installs the pinned ansible layer (requirements.txt) into. It lives INSIDE
+// the checkout so the front-end can find it by relation to the repo it just
+// resolved — no PATH edit, profile drop-in or re-login stands between a fresh
+// setup and a working `dxdfir`. $DXDFIR_VENV overrides it (the same knob the
+// setup script honours).
+const VenvDir = ".venv"
+
+// Venv returns the ansible virtualenv for this checkout: $DXDFIR_VENV when
+// set, else <root>/.venv.
+func (r *Repo) Venv() string {
+	if v := os.Getenv("DXDFIR_VENV"); v != "" {
+		return v
+	}
+	return r.Path(VenvDir)
+}
+
+// AnsiblePlaybook returns the ansible-playbook that drives the collection.
+// Order: the checkout's own venv (Venv), then the first on PATH — so a
+// provisioned host works from any shell, login or not, while a dev host that
+// installed requirements.txt elsewhere (CI, a user venv already activated)
+// keeps working unchanged. There is no host python package any more —
+// everything the CLI fronts is ansible + the tool containers.
+func (r *Repo) AnsiblePlaybook() (string, error) {
+	if p := filepath.Join(r.Venv(), "bin", "ansible-playbook"); isExecutable(p) {
+		return p, nil
+	}
 	if p, err := exec.LookPath("ansible-playbook"); err == nil {
 		return p, nil
 	}
 	return "", fmt.Errorf(
-		"ansible-playbook not found. Run scripts/setup-environment.sh (or " +
-			"`pip install -r requirements.txt`) — it installs the pinned ansible-core")
+		"ansible-playbook not found (looked in %s, then PATH). Run "+
+			"scripts/setup-environment.sh — it installs the pinned ansible-core "+
+			"from requirements.txt into the repo's .venv", r.Venv())
+}
+
+// isExecutable reports whether p is a regular file with an execute bit set.
+func isExecutable(p string) bool {
+	st, err := os.Stat(p)
+	return err == nil && st.Mode().IsRegular() && st.Mode()&0o111 != 0
 }
 
 // Require returns an error if a tool is not on PATH (fail loud, as the retired

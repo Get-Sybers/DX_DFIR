@@ -15,8 +15,8 @@ processing scripts pull their images on first use.
 > builds and installs the Go `dxdfir` binary (`go/`, installing the Go toolchain
 > when absent) and installs the pinned ansible layer (`requirements.txt`:
 > `ansible-core` + the docker SDK the collection's modules import), so
-> `ansible-playbook` lands in the managed venv — see
-> [How It Runs](/README.md#how-it-runs).
+> `ansible-playbook` lands in the repo's own `.venv` (gitignored), which
+> `dxdfir` resolves by itself — see [How It Runs](/README.md#how-it-runs).
 
 ## Prerequisites
 - A Debian- or Ubuntu-based Linux distribution (the Docker apt repository is
@@ -96,8 +96,17 @@ Tarballs are written to `data_store/docker_images/`.
 ## Post-Installation
 After running the script:
 
-1. **Log out and log back in** to apply the Docker group membership changes
-2. If you are seeding an offline host, carry the tarballs from
+1. `dxdfir` works in the shell you ran the script from and in every other
+   one (login or not): it is a real file in `/usr/local/bin`, and it finds
+   the ansible venv at `<repo>/.venv` by itself. Nothing to source, no
+   re-login.
+2. The **docker group** is the one thing a new shell is genuinely needed for,
+   and only when the bootstrap just added you: the script says so when that
+   is the case — `newgrp docker` in place, or log out and back in once.
+3. To drive ansible by hand, `. .venv/bin/activate` (login shells also get
+   the venv's `ansible*` and the pinned Go on PATH from
+   `/etc/profile.d/dxdfir.sh`, a convenience the front-end never depends on).
+4. If you are seeding an offline host, carry the tarballs from
    `data_store/docker_images/` across and run `scripts/save-docker-images.sh --load`
    (equivalent to loading each one manually with `docker load -i`)
 
@@ -144,6 +153,15 @@ lean:
 - **The venv holds only the pinned ansible layer** (`requirements.txt` —
   the lock is the single source of truth, no version literals in the
   script); there is no host python package to install any more.
+- **The venv lives inside the checkout** (`<repo>/.venv`, gitignored,
+  `$DXDFIR_VENV` overrides) and is created by the invoking user, not root.
+  It is a per-checkout dependency layer like `go/vendor/`, so it belongs
+  with the checkout; the front-end resolves it by relation to the repo it
+  just located, which is what makes `dxdfir` work from any shell with no
+  PATH edit in between; `. .venv/bin/activate` is the convention every
+  python user already knows; and a system-prefix venv brought root-owned
+  pip caches and a second install prefix to keep in step with the checkout.
+  An earlier release's `/opt/dxdfir/venv` is retired on the next run.
 - **The Go toolchain is (re)installed when absent or under go.mod's floor**:
   the build pins `GOTOOLCHAIN=local`, which deliberately refuses
   auto-upgrades, so a host provisioned by an older release re-provisions
@@ -152,11 +170,24 @@ lean:
   every run resolves dependencies from a source of truth (the in-tree
   `go/vendor/` if pre-vendored, else the proxy), nothing is cached under
   the install prefix, and a rebuild never silently rides stale modules.
-- **PATH without symlink shims**: one managed `/etc/profile.d/dxdfir.sh`
-  puts the real locations on PATH — dxdfir's bin and the pinned Go lead,
-  the venv bin is **appended** so ansible resolves on a fresh shell while
-  the system python/pip keep winning; legacy `/usr/local/bin` shims from
-  earlier releases are retired on the next run.
+- **`dxdfir` depends on no PATH edit**: the binary is installed as a real
+  file in `/usr/local/bin`, a directory every default PATH — and sudo's
+  `secure_path` — already carries, and it resolves the venv's ansible on
+  its own. An earlier release put it under `/opt/dxdfir/bin`, reachable
+  only through the profile.d drop-in, which login shells read and nothing
+  else does (`su user`, a desktop terminal, tmux, sudo, the shell the
+  script ran in): the closing `dxdfir --help` was command-not-found until
+  a full re-login, and after one too when the drop-in had landed
+  unreadable under a strict umask. The script now **proves** the result
+  from a fresh non-login shell (`env -i bash -c 'command -v dxdfir'`, then
+  the dashboard's ansible readiness line) before it reports success.
+- **One managed `/etc/profile.d/dxdfir.sh` remains, as a convenience**: the
+  pinned Go toolchain (rebuilds) and the venv bin — **appended**, so the
+  system python/pip keep winning — for hand-driven `ansible-playbook` in
+  login shells. It is written with an explicit `0644` mode (`/etc/profile`
+  skips a drop-in it cannot read). Legacy `/usr/local/bin` symlink shims
+  from earlier releases are retired on the next run; the binary there now
+  is a file, not a shim.
 - **The build galaxy's primary path installs nothing** — the gitlink is the
   pin and `roles_path` resolves the submodule in place; only a checkout
   without submodule content has the galaxy imported from the `.gitmodules`
