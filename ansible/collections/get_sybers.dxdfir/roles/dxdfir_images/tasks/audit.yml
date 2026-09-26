@@ -1,10 +1,6 @@
 ---
-# The full namespace inventory audit, the deploy galaxy's face of it: freeze
-# the submodule root (the lazy include_role-vars trap — see tasks/main.yml)
-# and delegate to the build galaxy's audit entry — every manifest image
-# present and hardened, no unexpected get-sybers/* image on the host
-# (allow-list = the manifest + its non_tool_repos). Driven by
-# dxdfir-verify-images.yml (the `dxdfir verify-images` verb).
+# The namespace audit: freeze the submodule root (the lazy include_role-vars
+# trap — tasks/main.yml), delegate to the build galaxy's audit entry.
 
 - name: "images-audit | stat the submodule inventory"
   ansible.builtin.stat:
@@ -13,9 +9,7 @@
 
 - name: "images-audit | resolve the deploy-side values to concrete strings"
   ansible.builtin.set_fact:
-    # empty when the submodule tree is absent: the delegation passes it EMPTY and
-    # godfir_build falls back to its own tree (the degraded-path
-    # galaxy import at the same pin).
+    # empty when the submodule is absent — godfir_build then falls back to its own (imported) tree
     dxdfir_images_context_resolved: >-
       {{ dxdfir_images_context if dxdfir_images_context_stat.stat.exists else '' }}
 

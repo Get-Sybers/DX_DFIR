@@ -35,8 +35,7 @@ CLAUDE.md
 __pycache__/
 *.py[cod]
 
-# Tool caches (pytest writes a self-ignoring .gitignore into .pytest_cache, but
-# don't depend on that courtesy file)
+# Tool caches (never depend on pytest's courtesy self-ignore)
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -63,11 +62,8 @@ err.log
 # ansible log_path target: keep the dir, ignore its contents
 logs/*
 !logs/.gitkeep
-# Where ansible imports land in-tree: ansible-lint's project-local collection
-# cache, and checks CI's requirements install target
-# (ansible/collections/get_sybers.dxdfir/.ansible/collections) — never source.
+# in-tree ansible import targets (lint cache + CI requirements install) — never source
 .ansible/
-# The stack's per-host secret store (generated credentials, TLS material,
-# the elastic.env handoff) — never committed; keep the dir via its README.
+# the per-host secret store — never committed; the dir stays via its README
 ansible/inventory/secrets/*
 !ansible/inventory/secrets/README.md

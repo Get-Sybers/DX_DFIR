@@ -1,81 +1,39 @@
 ---
-# Repo root is five levels up from this role
-# (roles/dxdfir_images -> get_sybers.dxdfir -> collections -> ansible -> repo).
+
 dxdfir_images_repo_root: "{{ role_path }}/../../../../.."
 
-# The get_sybers image namespace: every built tool image is tagged
-# <namespace>/<name>:latest (e.g. get-sybers/plaso:latest). One knob renames
-# the whole family; the build contract asserts against it too.
+# one knob renames the whole image family
 dxdfir_images_namespace: get-sybers
 
-# Run-as uid/gid baked into every built image's USER. dxdfir_runtime_uid/gid is the
-# single override knob — set it via extra-var or inventory (e.g.
-# -e dxdfir_runtime_uid=3000) to move all images + their runs off 2000; unset, it
-# defaults to 2000 here. Passed as build args to each Dockerfile and asserted in
-# the build contract, so the build and the runtime share one uid. (get-sybers/anamnesis
-# is built from docker/GoDFIR-toolz/anamnesis at the sources.yml pin.)
+# dxdfir_runtime_uid/gid is the single run-as knob: build args + contract asserts share it
 dxdfir_images_uid: "{{ dxdfir_runtime_uid | default(2000) }}"
-# gid follows the uid unless explicitly set, so setting only dxdfir_runtime_uid
-# still yields a matched USER <uid>:<uid>, never <uid>:2000.
+# gid follows the uid unless set, so a lone uid override still yields a matched USER
 dxdfir_images_gid: "{{ dxdfir_runtime_gid | default(dxdfir_runtime_uid | default(2000)) }}"
 
-# The GoDFIR-toolz submodule root — the default build context for EVERY tool
-# image (the pipeline images byakugan/plaso/signatures/zeek, anamnesis, the EZ
-# tool family and the GoDFIR Go tools alike). The submodule carries the
-# canonical hardening/harden.yml at its root, COPYd by the Dockerfiles that
-# build from the shared context.
+# the GoDFIR-toolz submodule root: the build tree for every tool image
 dxdfir_images_context: "{{ dxdfir_images_repo_root }}/docker/GoDFIR-toolz"
 
-# The tool-image inventory — the ONE source of truth is the GoDFIR-toolz
-# submodule's OWN root images.yml, read at the gitlink pin (that repo is
-# plug-and-play: it supplies the manifest, this repo only consumes it — no
-# DX_DFIR-side image list to drift). The runtime verify/audit gates read the
-# same file through the build galaxy. Each entry: name (+ optional context /
-# dockerfile / args, contexts relative to the SUBMODULE root). Add or change
-# an image in the submodule's images.yml, in ONE place; clone-at-build engine
-# pins live in the tool Dockerfiles there (ARG defaults), so the gitlink is
-# the only external pin.
+# the ONE inventory is the submodule's own root images.yml at the gitlink pin (see README)
 dxdfir_images_manifest: >-
   {{ (lookup('file', dxdfir_images_context ~ '/images.yml', errors='ignore') | default('', true) | from_yaml) or {} }}
-# Names to build, in manifest order; the build galaxy (godfir_build, run over
-# the submodule tree) resolves each one's build context, dockerfile and args
-# from its entry.
+# names to build; empty = every manifest image, in manifest order
 dxdfir_images_set: "{{ (dxdfir_images_manifest.images | default([])) | map(attribute='name') | list }}"
 
-# Rebuild even when an image already exists (docker build cache still applies).
+# rebuild even when present (docker build cache still applies)
 dxdfir_images_force: false
 
-# OFFLINE MECHANISM (tasks/save.yml, tasks/load.yml — driven by
-# dxdfir-images-save.yml / dxdfir-images-load.yml, fronted by
-# scripts/save-docker-images.sh). Two image sets, no hardcoded lists: the
-# built get-sybers/* refs from the manifest above (never pulled — build
-# first), and the Elastic stack images from the inventory layer
-# (dxdfir_elastic_images — the same set dxdfir_stack deploys).
+# offline save/load: the manifest's built refs + the inventory layer's stack images, no hardcoded lists
 dxdfir_images_tar_dir: "{{ dxdfir_images_repo_root }}/data_store/docker_images"
 dxdfir_images_built_refs: >-
   {{ dxdfir_images_set
      | map('regex_replace', '^', dxdfir_images_namespace ~ '/')
      | map('regex_replace', '$', ':latest') | list }}
 dxdfir_images_elastic_images: "{{ dxdfir_elastic_images | default({}) }}"
-# save: only print the two sets and the tar dir, then stop (the wrapper's
-# --list).
+# save: only print the two sets and the tar dir, then stop (--list)
 dxdfir_images_list_only: false
 
-# The reusable ensure_built gate (tasks/ensure_built.yml) reads this list of full
-# image refs and builds any not yet built on the host (idempotent — already-built
-# images are a no-op). Empty by default; a calling play (a lane preflight, a CAR
-# preflight) passes the images it is about to run.
+# ensure_built: full refs a calling play is about to run; missing ones get built
 dxdfir_images_required: []
 
-# The runtime supply-chain gate (tasks/verify.yml — the build galaxy's verify
-# entry behind the deploy-side freeze): the image refs a caller is about to
-# RUN. Namespace refs must be manifest images still carrying the hardened
-# contract; refs outside get-sybers/* pass untouched.
+# verify: refs about to RUN — the build galaxy's gate behind the deploy-side freeze
 dxdfir_images_verify_images: []
-
-# Per-image build context / dockerfile / args live in the submodule's
-# images.yml (one entry per image); the GoDFIR-toolz build galaxy
-# (godfir_build, resolved from the submodule via roles_path — tasks/main.yml delegates to it)
-# resolves them from the manifest entry. No separate overrides map — the
-# manifest is the single source; the clone-at-build engine pins are ARG
-# defaults in the tool Dockerfiles.

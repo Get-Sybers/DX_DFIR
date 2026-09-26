@@ -105,3 +105,58 @@ After running the script:
 - If you encounter permission issues, ensure you are root or have `sudo` privileges
 - Docker installation may require additional configuration on some systems
 - Network issues might prevent installing Docker; check your connectivity
+
+## Design decisions
+
+The script's non-obvious choices, recorded here so the script itself stays
+lean:
+
+- **Colour and markers are ASCII-only**, applied only on a real terminal
+  (`NO_COLOR`, a dumb TERM, piped output and `--no-color` all fall back to
+  plain): logs stay greppable, and braille/unicode spinner frames break
+  `${#var}` substring math under the C/POSIX locale a clean machine runs.
+- **Git trust is invocation-scoped, never `--global`**: recursive submodule
+  operations walk into nested repos whose paths cannot be pre-enumerated, so
+  git ≥ 2.46 gets a trailing `/*` leading-path `safe.directory` match scoped
+  to the checkout root; older gits fall back to the invocation-scoped
+  wildcard — per-command either way, nothing persisted in the operator's
+  config.
+- **Long steps run behind a heartbeat** (a redrawn spinner on a TTY, a line
+  every 10s piped) with sudo credentials refreshed up front, so a
+  backgrounded privileged command never blocks on a password prompt it
+  cannot display.
+- **Root is confirmed once on a workstation** (normal in a container): the
+  closing chown rewrites ownership across the whole repository.
+- **The docker engine is provisioned by ansible, not shell**
+  (`dxdfir-bootstrap.yml` → `dxdfir_stack`'s `docker_ensure`): one
+  implementation, shared with `dxdfir deploy stack`; the script only probes
+  the fact for its plan and closing notes.
+- **`--recursive` submodule init is kept on principle** — a nesting
+  submodule checks out complete instead of silently empty, the failure mode
+  that bit the vendored CAR engine.
+- **Permissions are `u=rwX,g=rX`**: capital X keeps directories traversable
+  by the docker group and `.sh` files runnable while evidence files stay
+  non-executable (the old `chmod -R 744` locked the docker group out).
+- **The python package installs `--editable`, by requirement**: the package
+  resolves paths relative to its own files (walking up from `__file__`), so
+  a copying install under site-packages loses `data_store/`. The install is
+  pinned by `python/constraints.txt` — the lock is the single source of
+  truth, no version literals in the script.
+- **The Go toolchain is (re)installed when absent or under go.mod's floor**:
+  the build pins `GOTOOLCHAIN=local`, which deliberately refuses
+  auto-upgrades, so a host provisioned by an older release re-provisions
+  here instead of failing the build. The build itself runs from a **clean,
+  ephemeral cache** (module + build cache + HOME in a throwaway dir):
+  every run resolves dependencies from a source of truth (the in-tree
+  `go/vendor/` if pre-vendored, else the proxy), nothing is cached under
+  the install prefix, and a rebuild never silently rides stale modules.
+- **PATH without symlink shims**: one managed `/etc/profile.d/dxdfir.sh`
+  puts the real locations on PATH — dxdfir's bin and the pinned Go lead,
+  the venv bin is **appended** so ansible resolves on a fresh shell while
+  the system python/pip keep winning; legacy `/usr/local/bin` shims from
+  earlier releases are retired on the next run.
+- **The build galaxy's primary path installs nothing** — the gitlink is the
+  pin and `roles_path` resolves the submodule in place; only a checkout
+  without submodule content has the galaxy imported from the `.gitmodules`
+  source at the gitlink revision (`--no-deps`: its dependency set is exactly
+  the pins already installed).

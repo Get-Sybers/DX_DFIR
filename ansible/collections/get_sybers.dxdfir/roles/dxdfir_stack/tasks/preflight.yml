@@ -1,16 +1,9 @@
 ---
-# FIND FACTS -> learn the host BEFORE touching the stack.
-
-# The engine itself comes first (tasks/docker_ensure.yml): an engine-less or
-# daemon-less host is answered there by the same playbook decisions used
-# below — and the deploy playbook can opt in to installing/starting it.
+# facts before touching the stack; the engine gate comes first
 - name: "stack-preflight | ensure the docker engine"
   ansible.builtin.include_tasks: docker_ensure.yml
 
-# FACTS BEFORE ANY REQUIREMENT: does this host hold the stack at all?
-# Containers (any state) and named data volumes answer by label — the
-# role's own ownership label, and the compose-era project label so a stack
-# deployed before the retirement is still seen (and migrated by deploy).
+# presence answers by label — the role's own AND the compose-era project label
 - name: "stack-preflight | read the stack's containers and volumes"
   community.docker.docker_host_info:
     containers: true
@@ -51,10 +44,7 @@
       {{ (dxdfir_stack_host_info.volumes | default([])
           + dxdfir_stack_legacy_info.volumes | default([])) | length > 0 }}
 
-# THE PLAYBOOK DECIDES what absence means (dxdfir_stack_when_absent): status
-# reports it and ends the host — "no stack" is that action's ANSWER, not a
-# failure; start/stop/destroy flag it — they have nothing to act on; deploy
-# continues — absence is its normal starting point.
+# the playbook decides what absence means (README "Actions and their playbook decisions")
 - name: "stack-preflight | report the absent stack and end"
   when:
     - dxdfir_stack_when_absent == 'report'
@@ -84,14 +74,8 @@
     quiet: true
   when: dxdfir_stack_when_absent == 'fail'
 
-# PULL-CAPACITY GATE (dxdfir_stack_pull_gate — enabled by the playbooks
-# whose action pulls images: deploy/start). A short image store fails
-# mid-pull with containerd's "no space left on device", so: images still to
-# pull -> measure the stores -> reclaim once when short (a prune is a no-op
-# when there is nothing to reclaim) -> re-measure -> assert. A doomed pull
-# becomes one clear failure, a recoverable one self-heals, and a host whose
-# images are already local is never gated. stop/destroy/status leave the
-# gate off — they are how an operator frees space.
+# pull-capacity gate: images still to pull -> measure -> reclaim once when
+# short -> re-measure -> assert; a doomed pull becomes one clear failure
 - name: "stack-preflight | pull-capacity gate"
   when: dxdfir_stack_pull_gate | bool
   block:
@@ -106,9 +90,7 @@
 
     - name: "stack-preflight | the images still to pull"
       vars:
-        # RepoTags of every stack image docker knows locally. RepoTags is null
-        # on digest-only/untagged images, so guard the pipeline the same way
-        # dxdfir_images' ensure_built does.
+        # RepoTags is null on digest-only/untagged images — guard the pipeline
         _local_tags: >-
           {{ (dxdfir_stack_local.images | default([]))
              | map(attribute='RepoTags') | flatten | select('string') | list }}

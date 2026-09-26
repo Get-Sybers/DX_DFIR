@@ -1,22 +1,9 @@
 #!/bin/bash
 # ==============================================================================
-# Byakugan Phase-0 RISK GATE — the proof harness for the two load-bearing
-# assumptions of the Elastic-native detection design (docs/riskgate.md):
-#
-#   1. a detection can be run ON DEMAND over an EVIDENCE-TIME window — dead-box
-#      evidence whose @timestamps lie years in the past — with no silent drop,
-#      re-stamp or age-out of old data;
-#   2. ES|QL LOOKUP JOIN against the car-detections lookup index (the wave-1
-#      contract under python/get_sybers_dxdfir/detect/rules/) flags logs-car.*
-#      rows in place — the tagged-evidence-line model — on Elasticsearch 9.4.3.
-#
-# Stands up NOTHING: the Byakugan stack (security on, TLS, Basic licence —
-# `dxdfir deploy stack`) must already be up. This wrapper only discovers how
-# to reach it — the password from the deploy's elastic.env handoff (the
-# compose-era docker/elastic/.env as fallback) and the CA from the deploy's
-# host-side certs tree — and hands over to riskgate.py, which loads a small
-# synthetic fixture into a `riskgate` namespace, runs the proofs and removes
-# the fixture again.
+# Byakugan Phase-0 RISK GATE — the proof harness for the detection design's
+# two load-bearing assumptions (docs/riskgate.md has both, in full). Stands up
+# NOTHING: the stack must already be up; this wrapper only discovers how to
+# reach it and hands over to riskgate.py (synthetic fixture in, proofs, out).
 #
 #   ./.github/tests/elastic-riskgate/riskgate.sh               # load, proof 1, proof 2, probe, clean
 #   ./.github/tests/elastic-riskgate/riskgate.sh --keep        # ... leave the fixture for inspection

@@ -1,28 +1,10 @@
 #!/bin/bash
 # ==============================================================================
-# DX_DFIR — molecule scenarios, containerised
-#
-# Runs the collection's molecule scenarios inside a purpose-built container
-# (python + molecule + a STATIC docker CLI), so molecule never has to be
-# installed on the host. The scenarios use the delegated driver: the role under
-# test runs its tool containers (the hardened get-sybers/* images — build them first
-# with playbooks/dxdfir-build-images.yml,
-# ...) against the HOST docker daemon through the mounted socket. For that to
-# work, the repo and /tmp are mounted at IDENTICAL paths inside the molecule
-# container — every bind path the role hands the daemon must be valid on the
-# host.
-#
-#   ./.github/tests/run-molecule.sh                  run the default scenario set
-#   ./.github/tests/run-molecule.sh dxdfir_zeek ...    run specific roles only
-#
-# Operator-supplied fixtures (large/binary; not shipped) come from env vars —
-# a scenario whose fixture is absent is SKIPPED with a note, not failed:
-#   MOLECULE_SAMPLE_EVTX      .evtx log            (dxdfir_evtx)
-#   MOLECULE_SAMPLE_IMAGE     raw/E01 disk image   (dxdfir_plaso)
-#   MOLECULE_SAMPLE_MEMORY    memory image         (dxdfir_memory)
-#
-# Exit code is non-zero if any executed scenario fails, so this can gate CI
-# (on a runner with the docker socket and the tool images available).
+# The collection's molecule scenarios, containerised (delegated driver against
+# the HOST daemon — repo and /tmp mounted at IDENTICAL paths so every bind the
+# role hands the daemon is valid on the host). Args pick roles; fixtures come
+# from MOLECULE_SAMPLE_EVTX / _IMAGE / _MEMORY env vars — an absent fixture
+# SKIPS its scenario with a note, never fails it.
 # ==============================================================================
 set -o pipefail
 
@@ -31,7 +13,7 @@ REPO_ROOT="$(realpath "$SCRIPT_DIR/../..")"
 ROLES_DIR="$REPO_ROOT/ansible/collections/get_sybers.dxdfir/roles"
 IMAGE="${MOLECULE_IMAGE:-get-sybers/molecule:latest}"
 
-# Roles whose scenarios validate real behaviour.
+# roles whose scenarios validate real behaviour
 DEFAULT_ROLES=(dxdfir_signatures dxdfir_zeek dxdfir_evtx dxdfir_plaso dxdfir_memory)
 ROLES=("${@:-${DEFAULT_ROLES[@]}}")
 
@@ -42,12 +24,11 @@ if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
     echo "⬇️  building $IMAGE ..."
     docker build -t "$IMAGE" -f - "$REPO_ROOT" <<'DOCKERFILE' || exit 1
 FROM python:3.12-slim
-# static docker CLI only — the daemon is the host's, via the mounted socket
+# static docker CLI only — the daemon is the host's
 ADD https://download.docker.com/linux/static/stable/x86_64/docker-27.5.1.tgz /tmp/docker.tgz
 RUN tar -xzf /tmp/docker.tgz -C /tmp && mv /tmp/docker/docker /usr/local/bin/docker \
     && rm -rf /tmp/docker /tmp/docker.tgz
-# requests + docker SDK: community.docker's modules import them (the
-# dxdfir_images scenario builds images through that collection)
+# requests + docker SDK: community.docker's modules import them
 RUN pip install --no-cache-dir molecule ansible-core requests docker
 DOCKERFILE
 fi

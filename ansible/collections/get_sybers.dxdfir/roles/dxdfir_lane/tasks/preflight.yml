@@ -1,9 +1,4 @@
 ---
-# Shared preflight for every hardened tool lane: fact-find + preconditions BEFORE
-# any container runs or files are written. The evidence mounts were already
-# checked while the runs were built (tasks/argv.yml); this checks the daemon and
-# the images the built runs name.
-
 - name: "preflight | docker daemon reachable | {{ dxdfir_lane_name }}"
   ansible.builtin.command: docker version
   register: dxdfir_lane_docker
@@ -13,13 +8,6 @@
   ansible.builtin.set_fact:
     dxdfir_lane_images: "{{ dxdfir_lane_runs_built | map(attribute='image') | unique | list }}"
 
-# Built gate: the precondition for running this lane's containers — every
-# get-sybers/* tool image it runs must be built on the host. Idempotent and
-# self-healing: a missing image is BUILT here (a no-op when already built), so a
-# fresh host or one whose images predate a new tool provisions itself at the
-# head of the lane rather than failing a run hours in. Reused from the
-# dxdfir_images role; the hardened-contract guard below then enforces label +
-# uid on what runs.
 - name: "preflight | ensure this lane's tool images are built | {{ dxdfir_lane_name }}"
   ansible.builtin.include_role:
     name: dxdfir_images
@@ -27,13 +15,6 @@
   vars:
     dxdfir_images_required: "{{ dxdfir_lane_images | select('match', '^get-sybers/') | list }}"
 
-# Supply-chain guard: refuse to start unless every tool image about to run is a
-# KNOWN hardened get-sybers/* image (manifest membership + label + uid). A
-# substituted or un-hardened image stops the lane before any evidence is
-# touched; a non-get-sybers image is out of scope and passes. The gate is the
-# build galaxy's verify entry, reached through the deploy galaxy's face
-# (dxdfir_images tasks/verify.yml) — the same manifest and contract that
-# built the images, ansible end to end.
 - name: "preflight | tool images are known hardened get-sybers/* images | {{ dxdfir_lane_name }}"
   ansible.builtin.include_role:
     name: dxdfir_images

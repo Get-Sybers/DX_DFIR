@@ -1,14 +1,7 @@
 ---
-# dxdfir_plaso: disk images / VM exports / loose trees -> Plaso JSON Lines. The
-# role GROUPS; the playbook DECIDES. The lane drives the multi-tool
-# get-sybers/plaso image from its contract (docker/GoDFIR-toolz/plaso/contract.yml)
-# — `plaso-entry log2timeline` over each source tree into storage/, then
-# `plaso-entry psort` over storage/ into jsonl/ — each sub-tool discovering,
-# batching and skipping its own items (PLASO_<SUBTOOL>_FORCE reruns). Per-image
-# failures are tolerated (dxdfir_lane_require_no_failures=false), so the gate is
-# purely "some timeline was produced, or there were no sources". This role
-# asserts its own input rules and declares the runs, then delegates the shared
-# build + preflight + process skeleton to dxdfir_lane.
+# Disk images / VM exports / loose trees -> Plaso JSON Lines, delegated to
+# dxdfir_lane (semantics: README.md). Per-image failures tolerated — the gate
+# is "some timeline was produced, or there were no sources".
 
 - name: "plaso | assert inputs"
   ansible.builtin.assert:
@@ -20,8 +13,7 @@
     quiet: true
   tags: [always]
 
-# The VM-export and loose-artefact trees are optional: a log2timeline run is
-# declared for each that exists.
+# optional trees: a run is declared for each that exists
 - name: "plaso | stat the optional source trees"
   ansible.builtin.stat:
     path: "{{ item }}"
@@ -32,8 +24,7 @@
   register: dxdfir_plaso_optional
   tags: [always]
 
-# Facts persist for the whole play (a serial "process all"), so the run list is
-# reset before it is accumulated.
+# facts persist for the whole play, so the run list is reset before accumulating
 - name: "plaso | start from an empty run list"
   ansible.builtin.set_fact:
     dxdfir_plaso_runs: []
@@ -60,7 +51,7 @@
           | selectattr('stat.isdir') | map(attribute='item') | list) }}
   tags: [always]
 
-# psort renders every storage file log2timeline produced; it runs last.
+# psort renders every storage file; it runs last
 - name: "plaso | the psort run over the storage tree"
   ansible.builtin.set_fact:
     dxdfir_plaso_runs: >-
@@ -76,9 +67,7 @@
          }] }}
   tags: [always]
 
-# The storage tree is psort's read-only input, but it does not exist before the
-# first log2timeline run — create it (container-writable) ahead of the build so
-# the read-only-mount check passes on a fresh host.
+# the storage tree pre-exists (container-writable) so the ro-mount check passes on a fresh host
 - name: "plaso | ensure the storage tree exists"
   ansible.builtin.file:
     path: "{{ dxdfir_plaso_storage_dir }}"

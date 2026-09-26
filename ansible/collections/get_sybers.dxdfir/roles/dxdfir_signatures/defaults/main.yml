@@ -1,31 +1,17 @@
 ---
 
-# Repo root is five levels up from this role
-# (roles/dxdfir_signatures -> get_sybers.dxdfir -> collections -> ansible -> repo).
 dxdfir_signatures_repo_root: "{{ role_path }}/../../../../.."
 
 dxdfir_signatures_out_dir: "{{ dxdfir_signatures_repo_root }}/data_store/processed/detections"
-# Output base: one folder per sub-tool (yara/<source>/, suricata/, hayabusa/,
-# scan/), each holding one folder per item. Override directly to send output to
-# a custom location.
+# one folder per sub-tool, one per item under it
 
-# Which sub-tools of the signatures image to run; empty = all four.
-#   yara      the baked (or a mounted) YARA ruleset over loose files and memory images
-#   suricata  offline replay of every capture with the baked (or a mounted) ruleset
-#   hayabusa  Sigma over every .evtx tree (loose logs + the evtx lane's image export)
-#   scan      gomount -> goyara over every disk image, in userspace (no /dev/fuse)
+# empty = all four sub-tools (yara / suricata / hayabusa / scan — README.md)
 dxdfir_signatures_lanes: []
-# The yara sub-tool's sources: files (loose files) and/or memory (raw memory
-# images, scanned directly); disk images are the scan sub-tool.
+# yara sources: files and/or memory (disk images are the scan sub-tool)
 dxdfir_signatures_yara_sources: [files, memory]
 
-# The evidence each sub-tool reads. Subdirs come from the shared evidence
-# taxonomy (evidence-taxonomy/), the one source of truth for where sort files
-# evidence AND where this role reads it; a missing taxonomy file falls back to
-# the conventional subdir. A collection scopes ALL of these to its sorted
-# subdirs (go/internal/collection: signatures ->
-# dxdfir_signatures_{pcap,disk,memory,evtx,files}_dir).
-# A directory that does not exist is skipped (its run is not declared).
+# subdirs come from the shared evidence taxonomy (evidence-taxonomy/);
+# a directory that does not exist is skipped — its run is not declared
 dxdfir_signatures_files_dir: "{{ dxdfir_signatures_repo_root }}/data_store/raw/other_raw_data"
 dxdfir_signatures_memory_dir: >-
   {{ dxdfir_signatures_repo_root }}/data_store/raw/{{
@@ -43,30 +29,22 @@ dxdfir_signatures_evtx_dir: >-
   {{ dxdfir_signatures_repo_root }}/data_store/raw/{{
   ((lookup('file', dxdfir_signatures_repo_root ~ '/evidence-taxonomy/logs_winevt.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('logs/winevt', true) }}
-# The evtx lane's disk-image export (one canonical stage, shared): hayabusa
-# runs over it too when it exists, so an image is exported once for both lanes.
+# the evtx lane's image export, shared: exported once for both lanes
 dxdfir_signatures_evtx_stage_dir: "{{ dxdfir_signatures_repo_root }}/data_store/processed/windows_logs/_extracted_evtx"
 
-# Operator rulesets, mounted read-only into the image and named by the
-# sub-tool's *_RULES variable. Empty = the ruleset baked into the image (the
-# DetectRaptor merge for yara/scan, the ET Open merge for suricata, hayabusa's
-# default Sigma set). See docs/Signature-Rules.md.
+# operator rulesets, mounted ro; empty = the baked set (docs/Signature-Rules.md)
 dxdfir_signatures_yara_rules: ""        # a rules file or compiled index (yara + scan)
 dxdfir_signatures_suricata_rules: ""    # a suricata.rules file
 dxdfir_signatures_hayabusa_rules: ""    # a Sigma rules directory
-# Suricata tuning: comma- or space-separated key=value --set entries
-# (SIGNATURES_SURICATA_SET), e.g. "vars.address-groups.HOME_NET=[10.0.0.0/8]".
+# --set entries, e.g. "vars.address-groups.HOME_NET=[10.0.0.0/8]"
 dxdfir_signatures_suricata_set: ""
-# hayabusa output profile (SIGNATURES_HAYABUSA_PROFILE); empty = the contract's
-# default (verbose, which carries the MITRE columns).
+# empty = the contract's default profile (verbose carries the MITRE columns)
 dxdfir_signatures_hayabusa_profile: ""
-# scan: gomount --filter glob over the volume paths to stream
-# (SIGNATURES_SCAN_FILTER); empty = every file.
+# gomount --filter glob; empty = every file
 dxdfir_signatures_scan_filter: ""
 
-# The tool contract the lane is driven from — the single source of truth for the
-# signatures image's per-sub-tool env vars (SIGNATURES_<SUBTOOL>_*) and mounts.
+# the contract the lane is driven from
 dxdfir_signatures_contract: "{{ dxdfir_signatures_repo_root }}/docker/GoDFIR-toolz/signatures/contract.yml"
-# Empty = the contract's image (get-sybers/signatures:latest); set to pin a digest.
+# empty = the contract's image; set to pin a digest
 dxdfir_signatures_image: ""
 dxdfir_signatures_force: false

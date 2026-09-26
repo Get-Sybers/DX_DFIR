@@ -1,26 +1,13 @@
 #!/bin/bash
 #
-# Set the project version in the few places that genuinely carry it.
+# Set the project version in the few places that genuinely carry it (the tag
+# and the badge carry maturity; CHANGELOG.md is the versioned record).
 #
 #   ./dev-scripts/set-version.sh 0.3.0-alpha.1
 #
-# Why this exists: promoting alpha -> beta once meant hand-editing a dozen
-# documents, and a stale string in any of them would have made the release
-# contradict itself. Maturity now lives in the git tag and the GitHub Release,
-# surfaced by a badge that reads them directly — so prose never needs touching.
-#
-# What still carries a literal version, and why:
-#   CHANGELOG.md    the versioned record; that is its whole job
-#
-# Everything else reads the release from the badge or the CHANGELOG.
-#
-# This does NOT tag. Releasing is:
-#   ./dev-scripts/set-version.sh X.Y.Z-pre.N
-#   git commit -am "Release vX.Y.Z-pre.N"
-#   git tag -a vX.Y.Z-pre.N -m "vX.Y.Z-pre.N"
-#   git push origin main --follow-tags
-# then create the GitHub Release from the tag, ticking "pre-release" for any
-# -alpha / -beta / -rc.
+# This does NOT tag. Releasing: run this, commit "Release vX.Y.Z-pre.N",
+# `git tag -a vX.Y.Z-pre.N` and push --follow-tags, then create the GitHub
+# Release (tick "pre-release" for -alpha/-beta/-rc).
 
 set -euo pipefail
 
@@ -58,8 +45,7 @@ TODAY="$(date -u +%Y-%m-%d)"
 echo "Setting version to $VERSION"
 echo ""
 
-# CHANGELOG: retitle the topmost release heading, or open a new section under
-# Unreleased if the top one is already tagged.
+# CHANGELOG: retitle the top heading, or open a new section if it is already tagged
 CURRENT=$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+[^]]*\]' CHANGELOG.md | tr -d '#[] ' || true)
 if [[ -z "$CURRENT" ]]; then
     echo "❌ No release heading found in CHANGELOG.md."
@@ -67,9 +53,7 @@ if [[ -z "$CURRENT" ]]; then
 fi
 
 if git rev-parse -q --verify "refs/tags/v$CURRENT" >/dev/null 2>&1; then
-    # v$CURRENT is already released, so its notes are a historical record and
-    # are never retitled. Open an empty section for the new version above it.
-    #
+    # a released version's notes are history, never retitled.
     # Deliberately does NOT move anything out of Unreleased: this project keeps
     # a standing "To be resolved before X" roadmap there, which is not release
     # notes. Writing the notes is a human job; this only does the mechanics.

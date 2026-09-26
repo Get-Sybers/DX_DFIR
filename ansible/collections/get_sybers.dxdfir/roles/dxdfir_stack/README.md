@@ -45,6 +45,16 @@ API bootstrap is idempotent `uri` tasks: the `kibana_system` password, the
 least-privilege `logs_car_writer` role and the `byakugan_loader` user are
 read first and changed only when they differ.
 
+To rotate a generated secret, edit or remove its file under the secret
+store and redeploy — rotating a password Elasticsearch already knows also
+needs the matching API change or a wiped `esdata` volume. The generated
+`elastic.env` is a handoff, never an input: edit the per-secret files or
+override the variables, not that file. `dxdfir_elastic_version` in
+`playbooks/group_vars/all.yml` is the ONE Elastic pin (every stack image
+rides it, and the stix version-pin test reads that exact line);
+`byakugan_*` volume names match the compose-era stack so existing
+deployments keep their data.
+
 ## Migration from the compose era
 
 A host still running the retired `docker/elastic` compose stack migrates on

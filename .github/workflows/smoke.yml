@@ -1,30 +1,16 @@
 name: smoke
 
-# Runs the pipeline for real and asserts CORRECTNESS — the coverage `checks`
-# deliberately does not provide (issue #10). It processes sha256-pinned Sysmon
-# .evtx through the real evtx lane (the dxdfir_evtx role running goevtx from
-# its contract), normalises the output into materialised CAR with the external
-# Byakugan engine (the dxdfir_byakugan role running the get-sybers/byakugan
-# image built below at the BYAKUGAN_REF pin its Dockerfile carries), asserts every
-# Sysmon-sourced CAR object has rows with its EvtxPayload-derived fields
-# correctly populated, and runs the verify-car gate over the same tree.
-# The EvtxPayload XML→JSON break that zeroed those fields passes `checks` but
-# fails this.
-#
-# Kept OUT of the every-push `checks` job because it builds an image and runs
-# real tools (minutes, not seconds). It runs:
-#   - on PRs that touch the pipeline itself (the changes that can break it)
-#   - nightly, as a standing regression signal
-#   - on demand (workflow_dispatch)
+# The real pipeline, asserted for CORRECTNESS (what `checks` deliberately
+# does not cover) — docs/reference/build-and-test.md "Smoke".
 
 on:
   workflow_dispatch:
   schedule:
-    # 06:00 UTC nightly — a daily regression signal independent of pushes.
+    # nightly regression signal
     - cron: "0 6 * * *"
   pull_request:
     paths:
-      # The lanes the smoke test drives, and the shared skeleton they run through.
+      # the lanes the smoke test drives, and the shared skeleton
       - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_lane/**"
       - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_evtx/**"
       - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_byakugan/**"
@@ -34,16 +20,10 @@ on:
       - "ansible/collections/get_sybers.dxdfir/requirements.yml"
       - "ansible.cfg"
       - "python/pyproject.toml"
-      # Every tool image (byakugan/goevtx included) builds from the GoDFIR-toolz
-      # submodule, which SUPPLIES the manifest (its root images.yml) and the
-      # build galaxy (godfir_build) the images role delegates to — a submodule
-      # bump (the gitlink) is how a manifest, pin or build-logic change
-      # arrives, and it re-runs this.
+      # the submodule supplies the manifest + build galaxy: a gitlink bump re-runs this
       - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_images/**"
       - "docker/GoDFIR-toolz"
-      # an engine bump is a pipeline change: the engine pins are ARG defaults
-      # in the submodule's Dockerfiles, so it arrives as a gitlink change —
-      # covered by the docker/GoDFIR-toolz path above.
+      # engine pins are ARG defaults in the submodule, so an engine bump rides the gitlink path above
       - ".gitmodules"
       - ".github/tests/smoke-test.sh"
       - "dev-scripts/fetch-samples.sh"
@@ -60,10 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Submodule: docker/GoDFIR-toolz (every tool-image build context, the
-          # canonical hardening playbook and every tool's contract.yml the roles
-          # are driven from). The goevtx image built below comes from it, so
-          # this MUST be recursive.
+          # recursive: every build context and contract comes from the submodule
           submodules: recursive
 
       - name: Set up Python
@@ -71,31 +48,15 @@ jobs:
         with:
           python-version: "3.11"
 
-      # The smoke test drives the lanes with ansible-playbook. Installing the
-      # package brings ansible-core (and the docker SDK community.docker's
-      # modules import) under the python/constraints.txt lock; the collection's
-      # pinned dependencies (community.docker for the image self-heal,
-      # ansible.posix for the profile_tasks callback ansible.cfg enables) come
-      # from requirements.yml.
+      # the package install brings ansible-core + the docker SDK under the constraints lock
       - name: Install the dxdfir package and the collection's dependencies
         run: |
           python -m pip install --quiet --constraint python/constraints.txt ./python
           ansible-galaxy collection install -r ansible/collections/get_sybers.dxdfir/requirements.yml
-          # The GoDFIR-toolz build galaxy needs no install: its roles resolve
-          # in place from the submodule (docker/GoDFIR-toolz/roles on the
-          # repo-root roles_path).
+          # the build galaxy resolves in place from the submodule (roles_path)
 
-      # The images the pipeline runs — goevtx (the evtx lane's static-Go
-      # parser) and the Byakugan engine image (cloned + built at its
-      # Dockerfile's BYAKUGAN_REF pin, nothing provisioned on the runner) —
-      # are built exactly as `dxdfir build-docker` builds them: the images
-      # role delegating to the GoDFIR-toolz build galaxy (godfir_build, from
-      # the submodule manifest), so the source stamp (com.get-sybers.src) and
-      # the post-build hardening asserts (static contract + filesystem scan +
-      # each image's /etc/dfir-hardened declaration) gate the CI builds too.
-      # The FULL manifest is built by the `images` job alongside; this job
-      # builds only the two the pipeline drives, so the pipeline signal stays
-      # fast.
+      # built exactly as `dxdfir build-docker` builds them (stamps + hardening asserts);
+      # only the two pipeline images here — the `images` job builds the full manifest
       - name: Build the goevtx + byakugan images (the images role, hardening asserted)
         run: |
           ansible-playbook \
@@ -105,10 +66,7 @@ jobs:
       - name: Run the pipeline smoke test
         run: ./.github/tests/smoke-test.sh
 
-  # EVERYTHING GoDFIR-toolz supplies builds — the whole manifest, hardening
-  # asserted on every image, so a manifest entry, a Dockerfile or an engine
-  # pin can not rot unbuilt between releases. Runs on the same triggers as the
-  # pipeline job (nightly included) as a standing whole-inventory signal.
+  # the whole manifest builds, hardening asserted — nothing rots unbuilt between releases
   images:
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -122,10 +80,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      # Two dozen images (plaso/zeek/signatures/anamnesis among them) need
-      # more scratch than a stock runner keeps free — drop the preinstalled
-      # bloat the build never touches (the in-docker .NET builds pull their
-      # own runtime; the host toolchains are irrelevant to container builds).
+      # two dozen images need more scratch than a stock runner keeps free
       - name: Free runner disk
         run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/hostedtoolcache/CodeQL
 
@@ -133,13 +88,9 @@ jobs:
         run: |
           python -m pip install --quiet --constraint python/constraints.txt ./python
           ansible-galaxy collection install -r ansible/collections/get_sybers.dxdfir/requirements.yml
-          # The GoDFIR-toolz build galaxy needs no install: its roles resolve
-          # in place from the submodule (docker/GoDFIR-toolz/roles on the
-          # repo-root roles_path).
+          # the build galaxy resolves in place from the submodule (roles_path)
 
-      # No dxdfir_images_set: the default is EVERY image in the GoDFIR-toolz
-      # manifest, in manifest order, each one built and hardening-verified by
-      # the build galaxy.
+      # no dxdfir_images_set: the default is EVERY manifest image
       - name: Build the full GoDFIR-toolz manifest (every image, hardening asserted)
         run: |
           ansible-playbook \

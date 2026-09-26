@@ -1,8 +1,4 @@
 ---
-# Build the confined `docker run` argv of every declared run (dxdfir_lane_runs)
-# from its tool's contract.yml. Facts persist for the whole play, so the built
-# list is reset first: a serial "process all" runs several lanes in one play.
-
 - name: "build | assert runs are declared | {{ dxdfir_lane_name }}"
   ansible.builtin.assert:
     that:
@@ -12,6 +8,7 @@
       dxdfir_lane_runs.
     quiet: true
 
+# facts persist for the whole play — a serial "process all" runs several lanes in one play
 - name: "build | start from an empty run list | {{ dxdfir_lane_name }}"
   ansible.builtin.set_fact:
     dxdfir_lane_runs_built: []

@@ -1,19 +1,10 @@
 ---
-# Remove the hardened dxdfir tool images so the next build is clean. Default: the
-# hardened tool set, found by the `com.get-sybers.hardened=true` label the build
-# stamps on every tool image — so the set is whatever was actually built, with no
-# static list (and no `python -c`) to drift. `--all-dxdfir`
-# (dxdfir_cleanup_all_dxdfir) removes every get-sybers/* image present instead.
-# Only touches images actually on the host. Discovery is native docker API
-# (docker_host_info) and runs even under --check; the destructive
-# docker_image/docker_prune tasks report there without acting.
-#
-# The whole action is wrapped in block/rescue: a docker daemon that is unreachable
-# or errors degrades to a clear skip, never a hard play failure.
+# Remove the hardened tool images (found by label, no static list to drift;
+# --all-dxdfir takes every get-sybers/* instead). An unreachable daemon
+# degrades to a clear skip, never a hard failure.
 - name: "cleanup-docker | remove the hardened tool images"
   block:
-    # The hardened tool images carry com.get-sybers.hardened=true; select by
-    # that label so the target set is exactly what the build produced.
+    # select by the hardened label: the target set is exactly what the build produced
     - name: "cleanup-docker | resolve the hardened tool images present"
       community.docker.docker_host_info:
         images: true
@@ -28,10 +19,7 @@
       register: dxdfir_cleanup_present
       when: dxdfir_cleanup_all_dxdfir | bool
 
-    # RepoTags is null/empty on dangling or re-tag leftovers (`<none>:<none>`
-    # in the CLI) — select('string') plus the '<none>' reject keep those out,
-    # since removing them by that pseudo-name errors; the prune below is how
-    # dangling layers go.
+    # RepoTags is null/'<none>' on dangling leftovers — removing by that pseudo-name errors; the prune handles them
     - name: "cleanup-docker | choose the images to remove"
       ansible.builtin.set_fact:
         dxdfir_cleanup_targets: >-

@@ -1,19 +1,11 @@
 ---
-# dxdfir_evtx: .evtx -> goevtx JSON Lines. The role GROUPS; the playbook DECIDES.
-# The lane runs the self-orchestrating get-sybers/goevtx image directly from its
-# contract (docker/GoDFIR-toolz/goevtx/contract.yml): goevtx finds every event log
-# under /input (by .evtx extension or ElfFile signature), writes one folder of
-# goevtx.jsonl per log under /output and skips a log that already has valid
-# output unless GOEVTX_FORCE. With dxdfir_evtx_image_src set, the plaso image's
-# image_export sub-tool first exports WindowsEventLogs from every disk image
-# into the stage dir, and goevtx parses that stage too. This role asserts its
-# own input rules and declares the runs, then delegates the shared build +
-# preflight + process skeleton to dxdfir_lane.
+# .evtx -> goevtx JSON Lines, delegated to dxdfir_lane (semantics: README.md);
+# with image_src set, plaso's image_export stages the logs out of disk images first.
 
 - name: "evtx | assert inputs"
   ansible.builtin.assert:
     that:
-      # At least one input source: loose .evtx (evtx_dir) or disk images (image_src).
+      # at least one input source: loose .evtx or disk images
       - (dxdfir_evtx_evtx_dir | length > 0) or (dxdfir_evtx_image_src | length > 0)
     fail_msg: >-
       dxdfir_evtx needs an input source
@@ -21,9 +13,7 @@
     quiet: true
   tags: [always]
 
-# The runs, in order: the optional image export (plaso image_export, a filtered
-# WindowsEventLogs pull), then goevtx over the loose logs, then goevtx over the
-# staged export. Each is one contract-driven container.
+# in order: the optional image export, goevtx over the loose logs, goevtx over the stage
 - name: "evtx | declare the runs"
   ansible.builtin.set_fact:
     dxdfir_evtx_runs: >-

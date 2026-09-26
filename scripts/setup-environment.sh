@@ -53,23 +53,13 @@ set -o pipefail
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 REPO_ROOT_DIR="$(realpath "$SCRIPT_DIR/..")"
 
-# Userland tools the pipeline shells out to. python3 runs the get_sybers_dxdfir
-# package, unzip backs dev-scripts/fetch-samples.sh, tar backs the image
-# tarballs written by save-docker-images.sh, curl fetches sample fixtures.
-# ca-certificates and gnupg are needed to add the Docker repo itself.
+# userland tools the pipeline shells out to
 APT_DEPS=(ca-certificates curl git gnupg unzip python3 python3-venv tar)
 REQUIRED_CMDS=(curl git python3 unzip tar realpath readlink)
 
 ASSUME_YES=false
 
-# ------------------------------------------------------------------------------
-# Output styling — the DX_DFIR "Sunset" palette in ANSI, matching the dxdfir TUI.
-# Colour is applied ONLY on a real terminal; piped/logged output, NO_COLOR, a
-# dumb TERM, or --no-color all fall back to plain ASCII, so the script stays bare
-# bones and its logs stay greppable. Status markers are ASCII (no emoji, no
-# Unicode) for the same reason the progress spinner is: they must survive a
-# C/POSIX locale on a clean machine.
-# ------------------------------------------------------------------------------
+# Output styling — the Sunset palette; ASCII-only, TTY-only (docs: Design decisions).
 USE_COLOR=true
 setup_colors() {
     if [[ "$USE_COLOR" == true && -t 1 && -z "${NO_COLOR:-}" && "${TERM:-dumb}" != dumb ]]; then
@@ -88,8 +78,7 @@ setup_colors() {
 }
 setup_colors
 
-# _status COLOUR TAG MESSAGE… — an aligned "[ tag ]" (bronze brackets, coloured
-# 4-char tag) then the message. ok/step/info → stdout; warn/fail → stderr.
+# _status COLOUR TAG MESSAGE… — ok/step/info → stdout; warn/fail → stderr
 _status() { local c="$1" t="$2"; shift 2; printf '%s[%s%s%s]%s %s\n' "$C_FRAME" "$c" "$t" "$C_FRAME" "$C_RESET" "$*"; }
 ok()   { _status "$C_OK"     " ok " "$@"; }
 step() { _status "$C_ACCENT" " >> " "$@"; }
@@ -97,18 +86,17 @@ info() { _status "$C_DIM"    " .. " "$@"; }
 warn() { _status "$C_WARN"   "warn" "$@" >&2; }
 fail() { _status "$C_FAIL"   "fail" "$@" >&2; }
 
-# detail — a dimmed continuation line, indented under the [tag].
+# detail — a dimmed continuation line
 detail() { printf '       %s%s%s\n' "$C_DIM" "$*" "$C_RESET"; }
 
-# section — a cream heading over a bronze rule.
+# section — a heading over a rule
 section() {
     printf '\n%s%s%s%s\n%s%s%s\n\n' \
         "$C_BOLD" "$C_TITLE" "$1" "$C_RESET" \
         "$C_FRAME" "----------------------------------------------------" "$C_RESET"
 }
 
-# banner — the GE-SYBERS wordmark as a warm sunset gradient (marigold → crimson),
-# echoing the TUI; plain when colour is off.
+# banner — the wordmark; plain when colour is off
 banner() {
     _band() { if [[ -n "$C_RESET" ]]; then printf '\033[38;5;%sm%s\033[0m\n' "$1" "$2"; else printf '%s\n' "$2"; fi; }
     printf '\n'
@@ -140,8 +128,7 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-# A non-interactive run cannot answer a prompt, so it takes the documented
-# defaults rather than failing every `read` and pretending that was a choice.
+# non-interactive runs take the documented defaults
 if [[ ! -t 0 ]] && [[ "$ASSUME_YES" != true ]]; then
     info "stdin is not a TTY — running non-interactively (implies --yes)."
     ASSUME_YES=true
@@ -149,15 +136,8 @@ fi
 
 die() { fail "$*"; exit 1; }
 
-# Build invocation-scoped safe.directory flags (into GIT_SAFE_FLAGS) trusting
-# ONE checkout root — never `git config --global`, which would be a persistent,
-# accumulating change to the operator's own git config. Recursive submodule
-# operations walk into nested submodule repos whose paths cannot be
-# pre-enumerated, so the root entry alone is not enough: git >= 2.46
-# understands a trailing "/*" leading-path match that scopes trust to the root
-# and everything under it; older gits only match exact paths or the global
-# "*", so there the invocation-scoped wildcard remains the fallback (still
-# per-command, never persisted).
+# invocation-scoped safe.directory flags, never --global; >=2.46 gets the
+# root/* leading-path match, older gits the scoped wildcard (docs: Design decisions)
 git_safe_flags() {
     local root="$1" major minor
     IFS=. read -r major minor _ <<< "$(git --version 2>/dev/null | awk '{print $3}')"
@@ -182,15 +162,8 @@ confirm() {
     [[ "$reply" =~ ^[Yy]$ ]]
 }
 
-# Run a long command while keeping the terminal informed, so a multi-minute step
-# is not a dead prompt. The command runs in the background; this prints a live
-# elapsed-time heartbeat — a redrawn spinner on a TTY, a line every 10s when
-# output is piped to a log. Returns the command's exit code, so callers keep
-# their `|| echo ...` fallbacks. Sudo credentials are refreshed up front (a
-# no-op when $SUDO is empty or already primed) so the backgrounded privileged
-# command never blocks on a password prompt it cannot display. The spinner is
-# deliberately ASCII: braille/unicode frames break ${#var}/substring math under
-# a C/POSIX locale, exactly the clean-machine case this script targets.
+# run a long command behind a live heartbeat; sudo refreshed up front so the
+# backgrounded command never blocks on a hidden prompt (docs: Design decisions)
 run_with_progress() {
     local label="$1"; shift
     [[ -n "$SUDO" ]] && $SUDO -v 2>/dev/null
@@ -224,11 +197,8 @@ banner
 info "Repository: $REPO_ROOT_DIR"
 
 ################################################################################
-# Resolve the privilege prefix ONCE.
-#
-# Running as root is normal in a container and is not, by itself, a mistake —
-# but it is worth one confirmation on a workstation, because the chown at the
-# end rewrites ownership across the whole repository.
+# Resolve the privilege prefix once; root gets one confirmation on a workstation
+# (the closing chown rewrites ownership across the repo).
 RUN_USER="$(id -un)"
 
 if [[ "$EUID" -eq 0 ]]; then
@@ -256,21 +226,14 @@ else
 fi
 
 ################################################################################
-# Docker presence probe — the ENGINE ITSELF is provisioned by ansible now
-# (dxdfir-bootstrap.yml -> the dxdfir_stack role's docker_ensure entry
-# point: Docker's apt repository, engine + plugins, daemon, docker group and
-# operator membership — the same idempotent state tasks `dxdfir deploy
-# stack` runs), once ansible exists below. Only the fact is read here, for
-# the plan and the final notes; the shell copy of that provisioning is gone.
+# Docker presence probe — the engine itself is provisioned by ansible
+# (dxdfir-bootstrap.yml -> docker_ensure); only the fact is read here.
 DOCKER_WAS_INSTALLED=true
 command -v docker >/dev/null 2>&1 || DOCKER_WAS_INSTALLED=false
 
 ################################################################################
-# Install the userland tools the processing scripts need.
-#
-# The old script installed none of these. Nothing in the pipeline runs without
-# python3, and the sample fetcher exits on a missing unzip — each one an error
-# the analyst hit halfway through an ingest instead of here.
+# Install the userland tools the processing scripts need — here, not halfway
+# through an ingest.
 MISSING_DEPS=()
 for cmd in "${REQUIRED_CMDS[@]}"; do
     command -v "$cmd" >/dev/null 2>&1 || MISSING_DEPS+=("$cmd")
@@ -301,16 +264,9 @@ echo
 confirm "Do you wish to proceed?" || { info "Setup cancelled."; exit 1; }
 
 ################################################################################
-# Pull the git submodules — RECURSIVELY.
-#
-# The remaining submodule is docker/GoDFIR-toolz: the Go tool family, goevtx
-# and the anamnesis memory image build. --recursive is kept on principle: it
-# means any submodule that DOES nest content checks out complete instead of
-# silently empty — the failure mode that bit the CAR engine while it was vendored
-# here. (The Byakugan engine is no longer a submodule; it is provisioned as an
-# external checkout in the next step, and anamnesis is fused into the
-# get-sybers/anamnesis image.) Runs before the chown/chmod below so the freshly
-# checked-out files inherit them too.
+# Pull the git submodules — recursively, on principle (a nesting submodule
+# checks out complete instead of silently empty); before the chown/chmod so
+# fresh files inherit them.
 section "Git submodules"
 if [[ -f "$REPO_ROOT_DIR/.gitmodules" ]]; then
     step "Initialising git submodules (recursive) ..."
@@ -328,13 +284,8 @@ else
 fi
 
 ################################################################################
-# Set ownership and permissions for DX_DFIR.
-#
-# u=rwX,g=rX — capital X applies the execute bit to directories and to files
-# that already carry one, so directories stay traversable by the docker group
-# and the .sh files stay runnable, while evidence files are left non-executable.
-# The old `chmod -R 744` cleared group execute on directories and locked the
-# docker group out of the tree the script had just handed it.
+# Ownership and permissions: u=rwX,g=rX — capital X keeps dirs traversable
+# and scripts runnable while evidence files stay non-executable.
 section "Repository ownership + permissions"
 step "Setting ownership to $RUN_USER:docker and permissions on the repository ..."
 detail "Recursive over the whole checkout; a populated data_store/ makes this a"
@@ -349,46 +300,22 @@ if [[ -d "$REPO_ROOT_DIR" ]]; then
 fi
 
 ################################################################################
-# Install the get_sybers_dxdfir processor package. A dedicated venv keeps it off
-# the system Python (PEP 668) and — this is the point — delivers ansible-playbook
-# right next to the processors the roles invoke, which is exactly where the Go
-# `dxdfir` front-end (built below) resolves it (the front-end drives the Ansible
-# collection). ansible-core is a declared dependency of the package, so this one
-# install gives a working `dxdfir process/build-car/verify-car/build-docker`.
-#
-# --editable is REQUIRED, not a preference. The package still resolves paths
-# RELATIVE TO ITS OWN FILES (walking up from __file__): carcheck.py defaults
-# its --car-dir under the repo's data_store. A plain copying install puts the
-# package under the venv's site-packages, whose ancestors hold no data_store/
-# — the lanes then fail to find it even though the repo IS present (above).
-# (The image supply-chain gate is ansible now — the build galaxy's
-# verify/audit entries — so no python module needs the manifest anymore.)
-# Editable keeps the installed module IN the repo tree, so every _REPO_ROOT-
-# relative path resolves. (The Byakugan CAR engine is no longer a host checkout —
-# it is cloned + built into the get-sybers/byakugan image, so mitrecar/carcheck
-# only shell that image.)
+# Install the processor package into a dedicated venv (PEP 668), --editable
+# by REQUIREMENT: the package resolves paths relative to its own files, and a
+# copying install loses data_store/ (docs: Design decisions).
 ################################################################################
 section "Python package + Ansible"
 DXDFIR_VENV="${DXDFIR_VENV:-/opt/dxdfir/venv}"
 step "Installing the get_sybers_dxdfir package (+ ansible) into $DXDFIR_VENV ..."
 $SUDO python3 -m venv "$DXDFIR_VENV" || die "Failed to create the venv (need python3-venv)."
 $SUDO "$DXDFIR_VENV/bin/pip" install --quiet --upgrade pip || die "pip upgrade in the venv failed."
-# --constraint pins the exact, tested dependency versions from python/constraints.txt
-# (pyproject carries the ">=" floors; the lock is the single source of truth this
-# installer consumes). Without it a fresh install pulls
-# whatever ansible-core / docker-SDK / PyYAML is newest and can shift the pipeline
-# under itself; with it there are no version literals to drift in this script.
+# --constraint pins the tested versions (the lock is the single source of truth)
 $SUDO "$DXDFIR_VENV/bin/pip" install --quiet --editable "$REPO_ROOT_DIR/python" \
     --constraint "$REPO_ROOT_DIR/python/constraints.txt" \
     || die "Failed to install the get_sybers_dxdfir package (and its pinned dependencies)."
 
-# ansible-core (a declared dependency, installed with the package above) puts
-# ansible-playbook / ansible / ansible-galaxy in the SAME venv bin. dxdfir resolves
-# ansible-playbook from there itself, but a HUMAN — including the dxdfir-build-images
-# step this script prints at the end — needs them on PATH too, or `ansible-playbook
-# ...` is "command not found" on a fresh shell despite ansible being installed.
-# NO SYMLINK SHIMS: the real locations join PATH through /etc/profile.d
-# (written after the Go front-end below, once every dir is final); here just
+# ansible lands in the same venv bin; PATH picks it up via /etc/profile.d
+# below (no symlink shims) — here just
 # hold the venv to its contract.
 for _ans in ansible ansible-playbook ansible-galaxy; do
     [[ -x "$DXDFIR_VENV/bin/$_ans" ]] \
@@ -397,14 +324,9 @@ done
 ok "ansible in the venv: $("$DXDFIR_VENV/bin/ansible-playbook" --version 2>/dev/null | head -1 || echo 'ansible-playbook')"
 
 ################################################################################
-# Build + install the Go/termui `dxdfir` front-end (go/). It is the primary
-# `dxdfir` on PATH; it re-implements no processing — it drives the Ansible
-# collection and the get_sybers_dxdfir processors by shelling out. Go is not in
-# APT_DEPS (not all distros carry a new enough toolchain), so install the pinned
-# upstream toolchain when absent OR older than go.mod's floor (Go >= 1.24): the
-# build below pins GOTOOLCHAIN=local, which deliberately refuses toolchain
-# auto-upgrades, so a host provisioned by an earlier release of this script
-# (which pinned 1.22.x) must be re-provisioned here rather than fail the build.
+# Build + install the Go/termui front-end; the pinned toolchain is
+# (re)installed when absent or under go.mod's floor — GOTOOLCHAIN=local
+# refuses auto-upgrades (docs: Design decisions).
 ################################################################################
 section "Go toolchain + dxdfir front-end"
 GO_VERSION="${GO_VERSION:-1.24.7}"
@@ -457,17 +379,8 @@ fi
 step "Building the dxdfir Go front-end ($(go version 2>/dev/null | awk '{print $3}')) ..."
 $SUDO mkdir -p "$GO_BIN_DIR"
 
-# Build from a CLEAN, EPHEMERAL cache — a throwaway dir (module cache, build
-# cache and HOME all inside it) removed as soon as the build finishes. Every run
-# therefore resolves the dependency set from a SOURCE OF TRUTH — the in-tree
-# go/vendor/ if present (an air-gapped host can pre-vendor with
-# 'cd go && go mod vendor' on a connected one), else the module proxy —
-# instead of trusting whatever a previous run left on disk.
-# A rebuild is honest (it never silently depends on stale cached modules) and
-# nothing is cached under the install prefix or the invoking user's ~/go; the
-# cost is a cold module fetch each run, which is the intent. GOTOOLCHAIN=local
-# keeps the pinned Go from auto-upgrading (go.mod's deps are held at the go 1.24
-# floor on purpose — e.g. modernc.org/sqlite is pinned to its last 1.24 tag).
+# build from a clean, ephemeral cache: deps resolve from go/vendor/ or the
+# proxy every run, never a previous run's leftovers (docs: Design decisions)
 _gotmp="$(mktemp -d)"
 _goclean() { [[ -n "$_gotmp" ]] && { $SUDO chmod -R u+w "$_gotmp" 2>/dev/null; $SUDO rm -rf "$_gotmp"; }; }
 _goenv=( PATH="$PATH" HOME="$_gotmp" GOTOOLCHAIN=local
@@ -489,16 +402,12 @@ if ! ( cd "$REPO_ROOT_DIR/go" \
     fi
 fi
 _goclean
-# `man dxdfir` (README / Get-Started) must work on a provisioned host, so the
-# manual installs beside the binary. Best-effort: no man tree is not fatal.
+# the manual installs beside the binary; best-effort
 $SUDO install -Dm644 "$REPO_ROOT_DIR/go/man/dxdfir.1" /usr/local/share/man/man1/dxdfir.1 2>/dev/null \
     || warn "Could not install the man page — read it in-tree: man ./go/man/dxdfir.1"
 
-# PATH, without symlink shims: the REAL tool locations go on PATH through one
-# managed /etc/profile.d drop-in. dxdfir's own bin and the pinned Go lead; the
-# venv bin is APPENDED, so ansible / ansible-playbook / ansible-galaxy resolve
-# on a fresh shell while the system python/pip keep winning by order. Any
-# /usr/local/bin shims a PREVIOUS install of this script created are retired.
+# PATH via one managed /etc/profile.d drop-in — venv bin APPENDED so the
+# system python/pip keep winning; legacy shims retired (docs: Design decisions)
 step "Writing the PATH drop-in (/etc/profile.d/dxdfir.sh) and retiring legacy shims ..."
 printf '%s\n' \
     "# Managed by DX_DFIR scripts/setup-environment.sh — no symlink shims:" \
@@ -520,11 +429,8 @@ export PATH="$GO_BIN_DIR:/usr/local/go/bin:$PATH:$DXDFIR_VENV/bin"
 ok "dxdfir (Go front-end) installed: $("$GO_BIN_DIR/dxdfir" --version 2>/dev/null || echo "$GO_BIN_DIR/dxdfir") — new shells pick PATH up from /etc/profile.d/dxdfir.sh"
 
 ################################################################################
-# Install the collection's pinned Ansible dependencies (requirements.yml — never
-# :latest, never a branch). They go to a fixed shared path that the repo-root
-# ansible.cfg puts on collections_path, so every user's runs resolve the same
-# pinned versions: community.docker (the deploy roles) and ansible.posix (the
-# profile_tasks audit-timing callback).
+# Install the pinned Ansible dependencies (requirements.yml) to the fixed
+# shared path ansible.cfg puts on collections_path.
 ################################################################################
 section "Ansible collections"
 DXDFIR_COLLECTIONS="${DXDFIR_COLLECTIONS:-/opt/dxdfir/collections}"
@@ -534,16 +440,9 @@ $SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install \
     -p "$DXDFIR_COLLECTIONS" --force \
     || die "Failed to install the pinned Ansible collections (requirements.yml)."
 
-# The GoDFIR-toolz BUILD galaxy: the image inventory and the godfir_build
-# role dxdfir_images delegates to. Its pin is the GITLINK and the PRIMARY
-# path installs NOTHING: docker/GoDFIR-toolz/roles sits on the repo-root
-# ansible.cfg roles_path, so the role resolves straight from the submodule
-# initialised above — one tree at one pin. Only when the submodule content
-# is absent anyway (a tarball checkout, an init that could not reach out) is
-# the galaxy IMPORTED by ansible-galaxy from the source the repo root
-# declares — the .gitmodules URL at the gitlink revision — into the shared
-# collections path, whose roles dir is roles_path's last (degraded-only)
-# entry. --no-deps: its dependency set is exactly the pins installed above.
+# The build galaxy: the gitlink is the pin, the primary path installs
+# NOTHING (roles_path resolves the submodule); only an absent submodule gets
+# the galaxy imported from the .gitmodules source (docs: Design decisions).
 TOOLZ_PATH="docker/GoDFIR-toolz"
 if [[ -f "$REPO_ROOT_DIR/$TOOLZ_PATH/galaxy.yml" ]]; then
     ok "GoDFIR-toolz build galaxy resolves in place from the submodule (nothing installed)"
@@ -564,10 +463,8 @@ fi
 ok "Collections installed: $("$DXDFIR_VENV/bin/ansible-galaxy" collection list -p "$DXDFIR_COLLECTIONS" 2>/dev/null | grep -cE '^[a-z]' || echo '?') pinned"
 
 ################################################################################
-# Docker engine + group — ansible, not shell: the same state tasks the deploy
-# uses (dxdfir_stack docker_ensure). This script used to carry its own shell
-# copy of exactly this provisioning; there is ONE implementation now, and
-# rerunning it on a healthy host is a no-op.
+# Docker engine + group — ansible, not shell (one implementation, shared with
+# the deploy); a healthy host is a no-op.
 ################################################################################
 section "Docker engine (ansible)"
 step "Ensuring the Docker engine, daemon and group (dxdfir-bootstrap.yml) ..."
@@ -577,11 +474,8 @@ step "Ensuring the Docker engine, daemon and group (dxdfir-bootstrap.yml) ..."
 ok "Docker engine present, daemon running, group membership ensured."
 
 ################################################################################
-# Offline fallback: the analysis images are BUILT (dxdfir-build-images.yml) and
-# building needs the network (base images, apt, pinned clones). When the host
-# has no route out, fall back to the tarballs a connected host pre-seeded with
-# scripts/save-docker-images.sh --build. With internet this section stays
-# silent and the images are built normally (the commands printed below).
+# Offline fallback: no route out -> load the pre-seeded tarballs; online
+# hosts build normally and this section stays silent.
 ################################################################################
 if ! curl -fsI --connect-timeout 4 --max-time 8 https://download.docker.com/ >/dev/null 2>&1; then
     section "Analysis images (offline fallback)"
@@ -602,7 +496,7 @@ if ! curl -fsI --connect-timeout 4 --max-time 8 https://download.docker.com/ >/d
 fi
 
 ################################################################################
-# cmd — a marigold command line, indented under a step, with a dim aside.
+# cmd — a command line with a dim aside
 cmd() { printf '       %s%s%s  %s%s%s\n' "$C_ACCENT" "$1" "$C_RESET" "$C_DIM" "${2:-}" "$C_RESET"; }
 
 section "Setup complete"
