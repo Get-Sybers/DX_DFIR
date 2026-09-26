@@ -341,6 +341,15 @@ fi
 # save-docker-images.sh honour the same variable).
 ################################################################################
 section "Ansible (pinned)"
+# /opt/dxdfir is the RETIRED prefix: an override still naming it (a stale
+# export from an earlier release's shell, a forgotten ~/.bashrc line) would
+# recreate exactly the layout this script retires — ignore it, loudly.
+for _legacy in DXDFIR_VENV DXDFIR_COLLECTIONS DXDFIR_BIN_DIR; do
+    if [[ "${!_legacy:-}" == /opt/dxdfir || "${!_legacy:-}" == /opt/dxdfir/* ]]; then
+        warn "Ignoring $_legacy=${!_legacy} — /opt/dxdfir is the retired prefix; everything lives in the checkout now."
+        unset "$_legacy"
+    fi
+done
 DXDFIR_VENV="${DXDFIR_VENV:-$REPO_ROOT_DIR/.venv}"
 step "Installing the pinned ansible layer into $DXDFIR_VENV ..."
 python3 -m venv "$DXDFIR_VENV" || die "Failed to create the venv (need python3-venv)."
@@ -359,7 +368,7 @@ ok "ansible in the venv: $("$DXDFIR_VENV/bin/ansible-playbook" --version 2>/dev/
 # The legacy system-prefix venv of earlier releases: nothing reads it any more
 # (dxdfir resolves the repo venv, the profile.d drop-in below is rewritten
 # without it), so retire it rather than leave a stale ansible around.
-if [[ -d /opt/dxdfir/venv && "$DXDFIR_VENV" != /opt/dxdfir/venv ]]; then
+if [[ -d /opt/dxdfir/venv ]]; then
     $SUDO rm -rf /opt/dxdfir/venv && detail "Retired legacy venv /opt/dxdfir/venv"
 fi
 # The rest of THIS script run sees the venv directly (child launchers
@@ -454,7 +463,7 @@ $SUDO install -Dm755 "$_gotmp/dxdfir" "$DXDFIR_BIN_DIR/dxdfir" \
 _goclean
 # the legacy prefix binary of earlier releases (reachable only via the old
 # drop-in): retire it so two dxdfir versions never coexist on a host
-if [[ -f /opt/dxdfir/bin/dxdfir && "$DXDFIR_BIN_DIR" != /opt/dxdfir/bin ]]; then
+if [[ -f /opt/dxdfir/bin/dxdfir ]]; then
     $SUDO rm -f /opt/dxdfir/bin/dxdfir && $SUDO rmdir /opt/dxdfir/bin 2>/dev/null
     detail "Retired legacy binary /opt/dxdfir/bin/dxdfir"
 fi
@@ -492,13 +501,15 @@ export PATH="/usr/local/go/bin:$PATH:$DXDFIR_VENV/bin"
 ok "dxdfir (Go front-end) installed: $("$DXDFIR_BIN_DIR/dxdfir" --version 2>/dev/null || echo "$DXDFIR_BIN_DIR/dxdfir") -> $DXDFIR_BIN_DIR/dxdfir"
 
 ################################################################################
-# Install the pinned Ansible dependencies (requirements.yml) to the fixed
-# shared path ansible.cfg puts on collections_path.
+# Install the pinned Ansible dependencies (requirements.yml) into the
+# checkout's own collection tree — .ansible/collections, gitignored, the
+# first entry of ansible.cfg's collections_path — as the invoking user, like
+# the venv: nothing of the pipeline lives under a system prefix any more.
 ################################################################################
 section "Ansible collections"
-DXDFIR_COLLECTIONS="${DXDFIR_COLLECTIONS:-/opt/dxdfir/collections}"
+DXDFIR_COLLECTIONS="${DXDFIR_COLLECTIONS:-$REPO_ROOT_DIR/.ansible/collections}"
 step "Installing pinned Ansible collections into $DXDFIR_COLLECTIONS ..."
-$SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install \
+"$DXDFIR_VENV/bin/ansible-galaxy" collection install \
     -r "$REPO_ROOT_DIR/ansible/collections/get_sybers.dxdfir/requirements.yml" \
     -p "$DXDFIR_COLLECTIONS" --force \
     || die "Failed to install the pinned Ansible collections (requirements.yml)."
@@ -519,11 +530,15 @@ else
     else
         warn "No git metadata to read the gitlink pin — importing the build galaxy from $TOOLZ_URL (default branch)."
     fi
-    $SUDO "$DXDFIR_VENV/bin/ansible-galaxy" collection install "$TOOLZ_SRC" \
+    "$DXDFIR_VENV/bin/ansible-galaxy" collection install "$TOOLZ_SRC" \
         -p "$DXDFIR_COLLECTIONS" --force --no-deps \
         || die "Failed to import the GoDFIR-toolz build galaxy from $TOOLZ_URL."
 fi
 ok "Collections installed: $("$DXDFIR_VENV/bin/ansible-galaxy" collection list -p "$DXDFIR_COLLECTIONS" 2>/dev/null | grep -cE '^[a-z]' || echo '?') pinned"
+# the retired prefix, once its last tenant (the collections) has moved in-tree
+if [[ -d /opt/dxdfir ]]; then
+    $SUDO rm -rf /opt/dxdfir && detail "Retired legacy prefix /opt/dxdfir (nothing of the pipeline lives there any more)"
+fi
 
 ################################################################################
 # Docker engine + group — ansible, not shell (one implementation, shared with

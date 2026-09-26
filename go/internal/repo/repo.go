@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/get-sybers/dx_dfir/go/internal/fsx"
 )
@@ -88,10 +89,24 @@ func (r *Repo) Playbook(name string) string {
 // setup script honours).
 const VenvDir = ".venv"
 
+// legacyPrefix is the retired system prefix an earlier release installed
+// under; an override still naming it (a stale export from that release's
+// shell) is ignored, never honoured — the same rule setup-environment.sh
+// applies.
+const legacyPrefix = "/opt/dxdfir"
+
+// underLegacyPrefix reports whether p is the retired prefix itself or a path
+// beneath it — on a path boundary, so a sibling such as /opt/dxdfir-old is
+// an ordinary override.
+func underLegacyPrefix(p string) bool {
+	p = filepath.Clean(p)
+	return p == legacyPrefix || strings.HasPrefix(p, legacyPrefix+string(filepath.Separator))
+}
+
 // Venv returns the ansible virtualenv for this checkout: $DXDFIR_VENV when
-// set, else <root>/.venv.
+// set (and not under the retired /opt/dxdfir prefix), else <root>/.venv.
 func (r *Repo) Venv() string {
-	if v := os.Getenv("DXDFIR_VENV"); v != "" {
+	if v := os.Getenv("DXDFIR_VENV"); v != "" && !underLegacyPrefix(v) {
 		return v
 	}
 	return r.Path(VenvDir)

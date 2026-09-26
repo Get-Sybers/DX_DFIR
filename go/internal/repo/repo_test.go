@@ -85,6 +85,27 @@ func TestAnsiblePlaybookHonoursDXDFIRVenv(t *testing.T) {
 	}
 }
 
+func TestAnsiblePlaybookIgnoresALegacyPrefixOverride(t *testing.T) {
+	// a stale DXDFIR_VENV from an earlier release's shell must not resurrect
+	// /opt/dxdfir — the prefix itself or anything beneath it, on a path boundary
+	for _, legacy := range []string{"/opt/dxdfir/venv", "/opt/dxdfir", "/opt/dxdfir/", "/opt/dxdfir//venv/"} {
+		t.Setenv("DXDFIR_VENV", legacy)
+		t.Setenv("PATH", t.TempDir())
+		r := fakeRepo(t, true)
+		got, err := r.AnsiblePlaybook()
+		if err != nil {
+			t.Fatal(legacy, err)
+		}
+		if want := filepath.Join(r.Root, VenvDir, "bin", "ansible-playbook"); got != want {
+			t.Fatalf("%s: got %q, want the repo venv %q", legacy, got, want)
+		}
+	}
+	// a sibling path is an ordinary override
+	if underLegacyPrefix("/opt/dxdfir-old/venv") {
+		t.Fatal("/opt/dxdfir-old is not the retired prefix")
+	}
+}
+
 func TestAnsiblePlaybookMissingNamesTheVenv(t *testing.T) {
 	t.Setenv("DXDFIR_VENV", "")
 	t.Setenv("PATH", t.TempDir())
