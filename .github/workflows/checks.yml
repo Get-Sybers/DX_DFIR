@@ -44,11 +44,19 @@ jobs:
             sudo apt-get install -y -qq shellcheck
           fi
           python -m pip install --quiet --upgrade pip
-          # lint resolution needs the pinned deps in the project-local cache (gitignored)
+          # lint resolution needs the pinned deps on the configured collections
+          # path — the checkout's own .ansible/collections (gitignored), the first
+          # entry of ansible.cfg's collections_path, where setup-environment.sh
+          # installs them too. galaxy.ansible.com resets connections now and then:
+          # three attempts before the step is allowed to fail.
           python -m pip install --quiet ansible-lint
-          ansible-galaxy collection install --force \
-            -r ansible/collections/get_sybers.dxdfir/requirements.yml \
-            -p ansible/collections/get_sybers.dxdfir/.ansible/collections
+          for attempt in 1 2 3; do
+            ansible-galaxy collection install --force \
+              -r ansible/collections/get_sybers.dxdfir/requirements.yml \
+              -p .ansible/collections && break
+            [ "$attempt" -lt 3 ] || exit 1
+            echo "galaxy install failed (attempt $attempt) — retrying in 15s"; sleep 15
+          done
           # the build galaxy resolves in place from the submodule (roles_path);
           # the pinned ansible layer installs from the repo lock
           python -m pip install --quiet -r requirements.txt
