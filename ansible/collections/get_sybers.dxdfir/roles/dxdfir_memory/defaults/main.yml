@@ -1,34 +1,21 @@
 ---
 
-# Repo root is five levels up from this role
-# (roles/dxdfir_memory -> get_sybers.dxdfir -> collections -> ansible -> repo).
 dxdfir_memory_repo_root: "{{ role_path }}/../../../../.."
 
-# The memory subdir comes from the shared evidence taxonomy (evidence-taxonomy/),
-# the one source of truth for where sort files evidence AND where this role reads
-# it — the two can't drift. A missing taxonomy file falls back to the conventional subdir.
+# subdir from the shared evidence taxonomy (evidence-taxonomy/)
 dxdfir_memory_memory_lane: >-
   {{ ((lookup('file', dxdfir_memory_repo_root ~ '/evidence-taxonomy/memory.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir
   | default('memory', true) }}
 dxdfir_memory_memory_dir: "{{ dxdfir_memory_repo_root }}/data_store/raw/{{ dxdfir_memory_memory_lane }}"
 dxdfir_memory_out_dir: "{{ dxdfir_memory_repo_root }}/data_store/processed/memory"
-# Resolved output base for the selected pipeline. Override directly to send output
-# to a custom location.
-# The tool contract the lane is driven from — the single source of truth for the
-# anamnesis image's env vars and mounts (the self-orchestrating, env-driven
-# pure-Go memory forensics engine on MemProcFS). Built from
-# docker/GoDFIR-toolz/anamnesis at the sources.yml pin (dxdfir build-docker).
-# The image is always offline (no PDB download, no network variable): PDB
-# symbols live in the persistent host cache below, bind-mounted read-write at
-# /opt/anamnesis/lib/Symbols — the one directory MemProcFS uses when writable.
+# the contract the lane is driven from; the image is always offline — symbols
+# live in the persistent host cache below
 dxdfir_memory_contract: "{{ dxdfir_memory_repo_root }}/docker/GoDFIR-toolz/anamnesis/contract.yml"
-# The persistent MemProcFS symbol cache (symsrv layout). The lane mounts it
-# read-write so the cache accumulates across runs; PDBs obtained by any
-# external means can be dropped straight in.
+# the persistent symbol cache (symsrv layout): accumulates across runs; drop PDBs straight in
 dxdfir_memory_symbols_dir: "{{ dxdfir_memory_repo_root }}/data_store/dependencies/memprocfs-symbols"
-# Empty = the contract's image (get-sybers/anamnesis:latest); set to pin a digest.
+# empty = the contract's image; set to pin a digest
 dxdfir_memory_image: ""
 dxdfir_memory_force: false
-# Comma-separated collector names (ANAMNESIS_PLUGINS); empty = the default CAR set.
+# comma-separated collector names; empty = the default CAR set
 dxdfir_memory_plugins: ""

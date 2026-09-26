@@ -1,36 +1,13 @@
 ---
-# Bulk-load the materialised CAR tree into the running Elastic stack:
-# `byakugan load` reads BYAKUGAN_LOAD_INPUT_DIR (the CAR tree `byakugan build`
-# wrote, read-only) and — BYAKUGAN_LOAD_ES_URL set, push mode — POSTs it into
-# logs-car.<object>-<namespace> x13, logs-car.rel-<namespace>,
-# logs-car.inferred-<namespace> and logs-car.content-<namespace>, writing its
-# bundles/manifest/report through
-# BYAKUGAN_LOAD_OUT_DIR. The stack must be up first (its data streams need the
-# running Elasticsearch this pushes to) and reachable by service name, so this
-# runs behind the stack's ensure_running gate and on its docker network.
+# the load flow, step by step: README.md "How a load runs"
 
-# 1. The stack services this pushes to/through must be running first — the
-# same idempotent, self-healing gate stack deploy/start use (see
-# docs/reference/ansible-standards.md: dxdfir_stack ensure_running is for
-# "anything that ingests into / queries elasticsearch"). Reused via
-# include_role (not a bare include_tasks) so dxdfir_stack's OWN defaults
-# (container names, the services it requires — elasticsearch + kibana,
-# already what this role needs) resolve correctly from outside that role.
+# 1. the stack must be running first (ensure_running via include_role, so its own defaults resolve)
 - name: "car-load | the elastic stack is up before anything ingests"
   ansible.builtin.include_role:
     name: dxdfir_stack
     tasks_from: ensure_running
 
-# 2. Credentials come from the inventory layer (dxdfir_elastic_*), BY
-# REFERENCE — the same variables dxdfir_stack deployed the stack with, so
-# there is no file to parse and no second secret store to drift.
-
-# Setup-mode template PUTs (and, with the Kibana import on, the saved-objects
-# import) need cluster/Kibana privileges logs_car_writer deliberately does not
-# have (dxdfir_stack's deploy creates it that way) — so a setup run authenticates as the
-# elastic superuser; a steady-state, repeatable run (setup=false, the
-# templates already exist) authenticates as byakugan_loader, scoped to
-# logs-car.* only.
+# 2. credentials by reference; setup runs as elastic, steady-state as the scoped loader (README)
 - name: "car-load | resolve the identity this run authenticates as"
   no_log: true
   ansible.builtin.set_fact:
@@ -51,16 +28,7 @@
       it; run through the playbooks, or set it when using the role bare.
     quiet: true
 
-# 3. Drive the byakugan image's `load` sub-tool through the shared tool-lane
-# skeleton: /input the materialised CAR tree (ro), /output this run's bundles +
-# manifest + report (rw), /certs the stack's CA off the host-side TLS
-# tree (ro) — BYAKUGAN_LOAD_ES_CA_FILE already defaults to /certs/ca/ca.crt,
-# matching where it lands, and BYAKUGAN_LOAD_INPUT_DIR/_OUT_DIR already
-# default to /input//output, matching the mounts, so neither is restated here.
-# Namespace/setup/force are plain env (the playbook passes them through as
-# -e); the password goes through secret_env — never the docker run argv — and
-# BYAKUGAN_LOAD_KIBANA_URL is sent only when setup AND the kibana-import var
-# are both on (the contract requires setup for the import).
+# 3. the lane skeleton drives `load`; the password rides secret_env, the contract defaults match the mounts
 - name: "car-load | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
     name: dxdfir_lane

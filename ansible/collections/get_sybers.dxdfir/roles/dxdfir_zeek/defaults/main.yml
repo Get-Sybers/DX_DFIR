@@ -1,26 +1,18 @@
 ---
 
-# Repo root is five levels up from this role
-# (roles/dxdfir_zeek -> get_sybers.dxdfir -> collections -> ansible -> repo).
 dxdfir_zeek_repo_root: "{{ role_path }}/../../../../.."
 
-# The pcaps subdir comes from the shared evidence taxonomy (evidence-taxonomy/),
-# the one source of truth for where sort files evidence AND where this role reads
-# it — the two can't drift. A missing taxonomy file falls back to the conventional subdir.
+# subdir from the shared evidence taxonomy (evidence-taxonomy/)
 dxdfir_zeek_pcap_lane: >-
   {{ ((lookup('file', dxdfir_zeek_repo_root ~ '/evidence-taxonomy/pcaps.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir
   | default('pcaps', true) }}
 dxdfir_zeek_pcap_dir: "{{ dxdfir_zeek_repo_root }}/data_store/raw/{{ dxdfir_zeek_pcap_lane }}"
 dxdfir_zeek_out_dir: "{{ dxdfir_zeek_repo_root }}/data_store/processed/zeek"
-# Output base — one folder per capture. Override directly to send output to a
-# custom location.
-# The tool contract the lane is driven from — the single source of truth for the
-# zeek image's env vars (ZEEK_*) and mounts (/input ro, /output).
+# one folder per capture; the contract the lane is driven from
 dxdfir_zeek_contract: "{{ dxdfir_zeek_repo_root }}/docker/GoDFIR-toolz/zeek/contract.yml"
-# Empty = the contract's image (get-sybers/zeek:latest); set to pin a digest.
+# empty = the contract's image; set to pin a digest
 dxdfir_zeek_image: ""
-# Extra zeek argv appended after -C -r <capture> (ZEEK_SCRIPTS): scripts to load
-# and option assignments; empty = zeek's default script set.
+# extra argv after -C -r <capture>; empty = zeek's default script set
 dxdfir_zeek_scripts: ""
 dxdfir_zeek_force: false

@@ -140,13 +140,8 @@ rows_for() { # group, where "all" matches everything; honours $EXCLUDE (group re
 }
 
 # ------------------------------------------------------------------------------
-# Routing: (group, name) -> directory under data_store/raw where the artifact
-# must land so the matching processor's depth-1 glob finds it.
-#
-# Order matters. Memory markers are checked before the disk rule because a bare
-# ".raw" is globbed by BOTH memory and log2timeline; a memory-image name
-# (*.dmp.gz, *dramimage, *.mem, *.lime) must win. Everything with no processor
-# falls through to other_raw_data.
+# Routing: (group, name) -> the raw/ directory the processor globs. Order
+# matters: memory markers before the disk rule (a bare .raw is globbed by both).
 classify_dir() { # group name  ->  path under $RAW
     local group="$1" ln; ln="$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')"
 
@@ -181,25 +176,16 @@ classify_dir() { # group name  ->  path under $RAW
     echo "$RAW/other_raw_data"
 }
 
-# ".dmp" is ambiguous: tcpdump writes packet captures as .dmp (the nps-2009
-# net-*.dmp.gz files), Windows writes crash dumps. The name-based rule above
-# routes .dmp to memory/; once the BYTES exist, a capture magic wins and the
-# file is re-routed to pcaps/ so zeek/suricata find it (memory can't parse
-# a capture anyway). Same magics the zeek image's zeek-run discovery uses.
+# .dmp is ambiguous (tcpdump vs crash dump): the name routes to memory/, but
+# once the bytes exist a capture magic wins and re-routes to pcaps/
 is_pcap_magic() { # path
     local h; h="$(head -c4 "$1" 2>/dev/null | od -An -tx1 | tr -d ' \n')"
     case "$h" in a1b2c3d4|d4c3b2a1|a1b23c4d|4d3cb2a1|0a0d0d0a) return 0 ;; esac
     return 1
 }
 
-# Destination directory for a file: its type directory, then a per-group folder.
-#
-# Every download lands in its own group folder — data_store/raw/<type>/<group>/
-# — so files from different corpora that happen to share a basename can never
-# overwrite or silently deduplicate each other. (172 basenames collide across
-# the manifest, at least one with genuinely different content: see the audit of
-# terry-2009-12-11-001.E01.) A multi-segment set stays intact because all its
-# segments belong to the same group and therefore the same folder.
+# Destination: <type>/<group>/ — per-group folders keep colliding basenames
+# (172 across the manifest) from overwriting each other; segment sets stay intact.
 group_dir() { # group name -> path under $RAW
     echo "$(classify_dir "$1" "$2")/$1"
 }

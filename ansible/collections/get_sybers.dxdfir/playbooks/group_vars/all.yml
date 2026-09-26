@@ -1,83 +1,42 @@
 ---
-# INVENTORY-LAYER WIRING (group_vars/all): the ONE definition of the Elastic
-# analysis backend — identity, images, ports, paths and secrets — so every
-# role references the same values instead of re-deriving them. dxdfir_stack
-# deploys exactly this data; dxdfir_car_load authenticates with the same
-# secrets by reference, not by parsing a file; a future consumer joins the
-# same way. Role defaults carry a self-contained fallback
-# (`dxdfir_elastic_x | default(...)`) so a role still runs bare.
-#
-# WHY PLAYBOOK-ADJACENT: group_vars next to the playbooks load for every run
-# of these plays regardless of which inventory is passed — the dxdfir CLI
-# invokes ansible-playbook with `-i localhost,`, direct runs get
-# ansible/inventory/ from ansible.cfg, and a remote inventory selected via
-# dxdfir_hosts keeps working. Inventory vars override role defaults; a
-# host_vars/vault override beats this file; `-e` beats everything.
+# The inventory-layer wiring of the Elastic analysis backend — the one
+# definition every role references (roles keep bare-run fallbacks; inventory
+# wins; host_vars/vault beat this file; -e beats everything). Playbook-adjacent
+# so it loads for every run whatever inventory is passed (the CLI's
+# `-i localhost,` included). Semantics: roles/dxdfir_stack/README.md.
 
-# The repo root, from this file's place in the tree
-# (ansible/collections/get_sybers.dxdfir/playbooks/ is four levels down).
-# In-tree execution is the supported layout (docs/reference/
-# ansible-standards.md) — the same assumption the roles' role_path-derived
-# fallbacks make.
+# in-tree execution is the supported layout (docs/reference/ansible-standards.md)
 dxdfir_repo_root: "{{ playbook_dir }}/../../../.."
 
-# ---- identity ---------------------------------------------------------------
-# The stack's name: container-name prefix, docker network/volume family, and
-# the value of the ownership label every stack object carries.
+# ---- identity
 dxdfir_elastic_stack_name: byakugan
-# The label the stack's containers and volumes are found by (presence,
-# status, stop, destroy all query it — no config file needed).
 dxdfir_elastic_label_key: com.get-sybers.stack
-# The compose-era deployment carried this project label instead; presence
-# detection and destroy still honour it, and deploy migrates such containers
-# (their volumes carry the data and are kept).
 dxdfir_elastic_legacy_project: byakugan
 
-# ---- images and topology ----------------------------------------------------
-# One pinned Elastic version for every stack image (Elasticsearch, Kibana,
-# elastic-agent, Filebeat). scripts/save-docker-images.sh and the stix
-# version-pin test read it from THIS line.
+# ---- images and topology
+# the ONE Elastic pin; the stix version-pin test reads this exact line
 dxdfir_elastic_version: "9.4.3"
-# The stack's service images, all riding that one pin — deployed by
-# dxdfir_stack, saved/loaded for offline hosts by the dxdfir_images
-# save/load entry points.
 dxdfir_elastic_images:
   elasticsearch: "docker.elastic.co/elasticsearch/elasticsearch:{{ dxdfir_elastic_version }}"
   kibana: "docker.elastic.co/kibana/kibana:{{ dxdfir_elastic_version }}"
   fleet-server: "docker.elastic.co/elastic-agent/elastic-agent:{{ dxdfir_elastic_version }}"
   filebeat: "docker.elastic.co/beats/filebeat:{{ dxdfir_elastic_version }}"
 dxdfir_elastic_network: byakugan_default
-# The named data volumes. byakugan_* matches what the compose-era stack
-# created, so existing deployments keep their data across the migration.
 dxdfir_elastic_volumes:
   certs: byakugan_certs
   esdata: byakugan_esdata
   kibanadata: byakugan_kibanadata
   fleetdata: byakugan_fleetdata
   filebeatdata: byakugan_filebeatdata
-# Everything publishes on loopback only.
 dxdfir_elastic_bind: 127.0.0.1
 dxdfir_elastic_es_port: 9200
 dxdfir_elastic_kibana_port: 5601
 dxdfir_elastic_fleet_port: 8220
-# Elasticsearch JVM heap (both -Xms and -Xmx).
 dxdfir_elastic_es_heap: 1g
-# Data-stream namespace: evidence lands in logs-dxdfir.<type>-<namespace>.
 dxdfir_elastic_namespace: default
-# The processed-evidence tree Filebeat tails (mounted read-only).
 dxdfir_elastic_ingest_dir: "{{ dxdfir_repo_root }}/data_store/processed"
 
-# ---- secrets (generated once, operator-overridable) --------------------------
-# Per-host secret store: ansible/inventory/secrets/<host>/ (gitignored,
-# 0750 root:docker on a root deploy, 0700 otherwise). Each secret below is a
-# file-backed password lookup — the FIRST reference generates the file, every
-# later run reads the same value back, so re-deploys are stable and nothing
-# is ever logged (deploy's secret tasks are no_log). To set your own value:
-# override the variable (host_vars — ansible-vault encrypt_string works — or
-# -e); an overridden variable never evaluates its lookup, so no generated
-# file appears for it. To rotate a generated secret, edit or remove its file
-# under the secret store, then redeploy (rotating a password Elasticsearch
-# already knows also needs the matching API change or a wiped esdata volume).
+# ---- secrets: file-backed, generated once, operator-overridable (rotation: stack README)
 dxdfir_elastic_secrets_dir: "{{ dxdfir_repo_root }}/ansible/inventory/secrets/{{ inventory_hostname }}"
 dxdfir_elastic_password: >-
   {{ lookup('ansible.builtin.password',
@@ -88,7 +47,7 @@ dxdfir_elastic_kibana_system_password: >-
 dxdfir_elastic_byakugan_loader_password: >-
   {{ lookup('ansible.builtin.password',
             dxdfir_elastic_secrets_dir ~ '/byakugan_loader_password length=24 chars=ascii_letters,digits') }}
-# Kibana encryption keys (>= 32 chars; Fleet needs the saved-objects one).
+# Kibana encryption keys (>= 32 chars; Fleet needs the saved-objects one)
 dxdfir_elastic_kibana_saved_objects_key: >-
   {{ lookup('ansible.builtin.password',
             dxdfir_elastic_secrets_dir ~ '/kibana_saved_objects_key length=64 chars=ascii_letters,digits') }}
@@ -98,23 +57,12 @@ dxdfir_elastic_kibana_security_key: >-
 dxdfir_elastic_kibana_reporting_key: >-
   {{ lookup('ansible.builtin.password',
             dxdfir_elastic_secrets_dir ~ '/kibana_reporting_key length=64 chars=ascii_letters,digits') }}
-# Optional pre-created Fleet service token; empty = fleet-server requests one
-# from Kibana with the elastic credentials on first boot.
+# empty = fleet-server requests one from Kibana with the elastic credentials on first boot
 dxdfir_elastic_fleet_service_token: ""
 
-# ---- deploy artifacts (the contract for tools outside ansible) ---------------
-# elastic.env is the GENERATED dotenv handoff the non-ansible consumers read
-# (go TUI, python detect/stix, riskgate) — same dialect the retired
-# docker/elastic/.env used; edit the per-secret files or override the vars,
-# never this file.
+# ---- deploy artifacts (the contract for tools outside ansible)
 dxdfir_elastic_env_file: "{{ dxdfir_elastic_secrets_dir }}/elastic.env"
-# The stack's TLS material, generated host-side by deploy (community.crypto
-# state modules, no cert scripts) and bind-mounted read-only into the
-# containers: <certs>/ca/ca.crt, <certs>/es01/*, <certs>/fleet-server/*.
-# Private keys are root:root; the CA certificate is world-readable — it is
-# what every host-side client (riskgate, python, curl) verifies against.
 dxdfir_elastic_certs_dir: "{{ dxdfir_elastic_secrets_dir }}/certs"
 dxdfir_elastic_ca_file: "{{ dxdfir_elastic_certs_dir }}/ca/ca.crt"
-# The compose-era operator .env: read ONCE by deploy to import operator-set
-# secrets into the store (never written, never required).
+# the compose-era operator .env: read once by deploy to import secrets, never written, never required
 dxdfir_elastic_legacy_env_file: "{{ dxdfir_repo_root }}/docker/elastic/.env"

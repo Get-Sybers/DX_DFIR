@@ -1,15 +1,6 @@
 ---
-# Reusable, idempotent gate: ENSURE the required services are running (and
-# healthy where their container defines a healthcheck) BEFORE a play depends
-# on the live stack — a bring-up verifying itself, a start, or anything that
-# ingests into / queries elasticsearch. A stopped container self-heals in
-# place (started as-is, no config change); a container that does not exist
-# is NOT created here — deploying the stack is `dxdfir deploy stack`'s job,
-# never a consumer's side effect.
-#
-# Reuse from within the role or another role:
-#   - ansible.builtin.include_tasks: ensure_running.yml
-# with dxdfir_stack_required_services set (defaults to elasticsearch + kibana).
+# The reusable live-stack gate (README "Reusable entry points"): a stopped
+# container self-heals in place; a missing one is NEVER created here.
 
 - name: "ensure-running | read the required services' containers"
   community.docker.docker_container_info:
@@ -43,7 +34,7 @@
     name: "{{ dxdfir_stack_containers[item] }}"
   loop: "{{ dxdfir_stack_required_services }}"
   register: dxdfir_stack_required_state
-  # Healthy where a healthcheck is defined; plain running where none is.
+  # healthy where a healthcheck is defined; plain running where none is
   until: >-
     (item_health == 'healthy')
     or (item_health == '' and dxdfir_stack_required_state.container.State.Running | default(false))

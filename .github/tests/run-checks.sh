@@ -1,19 +1,8 @@
 #!/bin/bash
 # ==============================================================================
-# DX_DFIR — repository checks
-#
-# The project had no automated verification of any kind, which meant every "✅"
-# on the task board was a claim rather than a result. This script codifies the
-# checks that can be run without Docker or evidence.
-#
-# It does NOT test the pipeline. It catches the class of defect that has
-# actually bitten this repo: path-resolution bugs, literal-string config
-# values, stale documentation links, and evidence-gitignore gaps.
-#
-#   ./.github/tests/run-checks.sh          run everything
-#   ./.github/tests/run-checks.sh -v       show each passing check too
-#
-# Exit code is non-zero if any check fails, so this can gate CI.
+# DX_DFIR repository checks — everything verifiable without Docker or
+# evidence (docs/reference/build-and-test.md "Checks"). -v shows passing
+# checks too; non-zero on any failure.
 # ==============================================================================
 set -uo pipefail
 
@@ -52,11 +41,7 @@ fi
 # ------------------------------------------------------------------------------
 group "Collection requirements"
 # ------------------------------------------------------------------------------
-# requirements.yml is the single source of pinned Ansible dependencies. This
-# gate (which runs on every PR via CI) enforces the contract: it parses, every
-# collection is pinned to an exact version (never :latest, never a branch —
-# ANSIBLE-STANDARDS galaxy §2), every galaxy.yml dependency is covered by a
-# pin, and setup-environment.sh actually installs it.
+# the requirements gate: parses, exact pins only, every galaxy.yml dep covered, setup installs it
 REQS="ansible/collections/get_sybers.dxdfir/requirements.yml"
 GALAXY="ansible/collections/get_sybers.dxdfir/galaxy.yml"
 if command -v python3 >/dev/null 2>&1 && [[ -f "$REQS" ]]; then
@@ -74,10 +59,7 @@ for entry in (reqs or {}).get("collections", []):
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", ver):
         problems.append(f"{name}: version '{ver}' is not an exact X.Y.Z pin")
     pinned[name] = ver
-# A galaxy.yml dependency may instead be SUPPLIED BY A SUBMODULE (the
-# GoDFIR-toolz build galaxy): the gitlink is its pin, setup-environment.sh
-# and CI import it from the checkout — so a declared submodule whose
-# galaxy.yml carries the dependency's FQCN covers it.
+# a dep may instead be SUPPLIED BY A SUBMODULE: a declared submodule whose galaxy.yml carries the FQCN covers it
 import os
 gitlinked = {}
 if os.path.isfile(".gitmodules"):
@@ -127,8 +109,7 @@ fi
 # ------------------------------------------------------------------------------
 group "Ansible lint"
 # ------------------------------------------------------------------------------
-# Production-profile ansible-lint over the collection (config: the collection's
-# .ansible-lint). Skipped when ansible-lint is not installed (CI installs it).
+# production-profile ansible-lint; skipped when not installed (CI installs it)
 if command -v ansible-lint >/dev/null 2>&1; then
     # Capture (don't discard) the output so a failure is diagnosable in the log
     # instead of an opaque "reported violations" with no detail.
@@ -145,11 +126,7 @@ fi
 # ------------------------------------------------------------------------------
 group "Repo-root path resolution"
 # ------------------------------------------------------------------------------
-# The now-deleted scripts/v2 shipped four scripts computing $SCRIPT_DIR/..
-# while living one directory deeper, so they resolved the repo root to
-# <repo>/scripts. Three more in scripts/deprecated/ had the same bug and were
-# only found by this check. Every script that computes REPO_ROOT_DIR must land
-# on the real repo root, whatever depth it lives at.
+# every script computing REPO_ROOT_DIR must land on the real root, whatever depth it lives at
 while IFS= read -r f; do
     line=$(grep -m1 'REPO_ROOT_DIR=' "$f" 2>/dev/null | sed 's/^[[:space:]]*//')
     [[ -z "$line" ]] && continue
@@ -162,11 +139,7 @@ done < <(find scripts -name "*.sh" -type f | sort)
 # ------------------------------------------------------------------------------
 group "Python unit tests (get_sybers_dxdfir)"
 # ------------------------------------------------------------------------------
-# The package's pure-logic tests — the image supply-chain guard, the ruleset
-# fetchers, the Elastic rules-as-code loader, the STIX exchange (and its argparse
-# verbs — the Go binary owns the CLI now). No docker, no
-# evidence, no backend. Skipped when pytest is not installed (CI installs it
-# together with the package's own dependencies).
+# the package's pure-logic tests; skipped when pytest is not installed (CI installs it)
 if python3 -c 'import pytest' >/dev/null 2>&1; then
     if (cd python && PYTHONPATH=. python3 -m pytest -q -p no:cacheprovider tests >/dev/null 2>&1); then
         pass "pytest: python/tests"
@@ -180,9 +153,7 @@ fi
 # ------------------------------------------------------------------------------
 group "Go front-end (gofmt / vet / build / test)"
 # ------------------------------------------------------------------------------
-# The Go/termui dxdfir front-end (go/): gofmt must be clean, `go vet` must pass,
-# the module must build, and the package tests must pass. Skipped when the Go
-# toolchain is not installed (CI installs it via actions/setup-go).
+# gofmt clean, go vet, build, tests; skipped when Go is not installed (CI installs it)
 if command -v go >/dev/null 2>&1; then
     _gofmt_out="$(gofmt -l go 2>/dev/null)"
     if [[ -z "$_gofmt_out" ]]; then
@@ -216,10 +187,7 @@ fi
 # ------------------------------------------------------------------------------
 group "Versioning and documentation"
 # ------------------------------------------------------------------------------
-# One project version, stated in one form. Relabelling alpha -> beta touched a
-# dozen files by hand; this is what stops the next one leaving a stray behind.
-# The package must agree with itself: pyproject.toml and __init__.__version__
-# drift silently otherwise (the CLI prints the stale one).
+# one project version, stated in one form — pyproject and __init__ drift silently otherwise
 _pyproject_v=$(grep -m1 -oE '^version = "[0-9.]+"' python/pyproject.toml | grep -oE '[0-9.]+')
 _init_v=$(grep -m1 -oE '__version__ = "[0-9.]+"' python/get_sybers_dxdfir/__init__.py | grep -oE '[0-9.]+')
 if [[ -n "$_pyproject_v" && "$_pyproject_v" == "$_init_v" ]]; then

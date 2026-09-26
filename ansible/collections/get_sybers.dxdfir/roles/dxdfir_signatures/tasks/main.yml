@@ -1,18 +1,7 @@
 ---
-# dxdfir_signatures: the detection lane -> JSON Lines. The role GROUPS; the
-# playbook DECIDES. The lane drives the multi-tool get-sybers/signatures image
-# from its contract (docker/GoDFIR-toolz/signatures/contract.yml): one run per
-# sub-tool and evidence tree — `signatures-entry yara` over loose files and over
-# memory images, `signatures-entry suricata` over the captures,
-# `signatures-entry hayabusa` over the .evtx trees, `signatures-entry scan`
-# (gomount -> goyara, userspace) over the disk images — each discovering,
-# batching and skipping its own items (SIGNATURES_<SUBTOOL>_FORCE reruns). An
-# evidence tree that does not exist is skipped: its run is not declared. A
-# sub-tool with nothing to scan exits 1 and one with a failed item exits 3, both
-# tolerated (dxdfir_lane_require_no_failures=false); the gate is "some detection
-# output landed, or there was nothing to scan". This role asserts its own input
-# rules and declares the runs, then delegates the shared build + preflight +
-# process skeleton to dxdfir_lane.
+# The detection lane: one contract-driven run per sub-tool and evidence tree,
+# delegated to dxdfir_lane (semantics: README.md). Exits 1/3 are tolerated —
+# the gate is "output landed, or there was nothing to scan".
 
 - name: "signatures | assert inputs"
   ansible.builtin.assert:
@@ -32,7 +21,7 @@
          else ['yara', 'suricata', 'hayabusa', 'scan'] }}
   tags: [always]
 
-# Every evidence tree is optional: a run is declared only for the ones present.
+# every evidence tree is optional: a run is declared only for the ones present
 - name: "signatures | stat each evidence tree"
   ansible.builtin.stat:
     path: "{{ item.path }}"
@@ -55,9 +44,7 @@
               | zip(dxdfir_signatures_stats.results | map(attribute='stat.isdir', default=false))) }}
   tags: [always]
 
-# Facts persist for the whole play (a serial "process all"), so the run list is
-# reset before it is accumulated. The optional operator rulesets are one extra
-# read-only mount each, named to the sub-tool by its *_RULES variable.
+# facts persist for the whole play, so the run list is reset before accumulating
 - name: "signatures | start from an empty run list"
   ansible.builtin.set_fact:
     dxdfir_signatures_runs: []
@@ -159,9 +146,7 @@
     - dxdfir_signatures_present.disk | bool
   tags: [always]
 
-# Nothing to scan at all (no evidence tree present for the selected sub-tools)
-# is a legitimate no-op, not a failure: say so and stop before the skeleton,
-# which needs at least one run.
+# nothing to scan is a legitimate no-op — say so and stop before the skeleton
 - name: "signatures | note when no evidence tree is present for the selected sub-tools"
   ansible.builtin.debug:
     msg: >-

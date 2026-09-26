@@ -1,22 +1,5 @@
 ---
-# dxdfir_lane: the shared "run a hardened DFIR tool lane" skeleton. A lane role
-# (dxdfir_zeek, dxdfir_plaso, dxdfir_evtx, dxdfir_memory, dxdfir_signatures,
-# dxdfir_godfir_toolz, dxdfir_byakugan) asserts its own input rules and declares
-# its runs — one GoDFIR-toolz tool image each, driven purely by that tool's
-# contract.yml (env vars + mounts) — then delegates here: the confined
-# `docker run` argv is built from the contract, preflight checks the daemon and
-# the image supply chain, process runs each container and gates on its summary.
-#
-# The role GROUPS; the playbook DECIDES. Idempotence lives in each tool
-# container (an item with valid output is skipped unless <TOOL>_FORCE), not in a
-# task's `when:`.
-
-# build -> preflight -> process as one guarded unit, so scratch secrets are
-# cleaned up on EVERY exit path: a secret env-file is written in build
-# (tasks/argv.yml), and the always: below removes it whether process ran the
-# container, the container failed, or the lane never got that far (a docker
-# daemon/image-guard preflight failure, a later run's build refusal) — a
-# password never outlives the lane invocation that wrote it.
+# one guarded unit, so the always: cleans scratch secrets on EVERY exit path
 - name: "lane | build -> preflight -> process | {{ dxdfir_lane_name }}"
   block:
     - name: "build | the confined docker run per declared run | {{ dxdfir_lane_name }}"

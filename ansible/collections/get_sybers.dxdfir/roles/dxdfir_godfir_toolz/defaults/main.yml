@@ -1,55 +1,35 @@
 ---
 
-# Repo root is five levels up from this role
-# (roles/dxdfir_godfir_toolz -> get_sybers.dxdfir -> collections -> ansible -> repo).
 dxdfir_godfir_toolz_repo_root: "{{ role_path }}/../../../../.."
 
-# Disk-image tree (E01/raw/img/dd/vmdk/vhd/vhdx/aff), recursed — same input
-# family dxdfir_plaso reads, since this lane pulls its own artefact set out of the
-# same evidence images. The disk_images subdir comes from the shared evidence
-# taxonomy (evidence-taxonomy/), the one source of truth for where sort files
-# evidence AND where this role reads it — the two can't drift. A missing taxonomy
-# file falls back to the conventional subdir.
+# the same disk-image family dxdfir_plaso reads; subdir from the evidence taxonomy
 dxdfir_godfir_toolz_input_lane: >-
   {{ ((lookup('file', dxdfir_godfir_toolz_repo_root ~ '/evidence-taxonomy/disk_images.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir
   | default('disk_images', true) }}
 dxdfir_godfir_toolz_input_dir: "{{ dxdfir_godfir_toolz_repo_root }}/data_store/raw/{{ dxdfir_godfir_toolz_input_lane }}"
-# VM export folders (one per VM) — optional, mirrors dxdfir_plaso: processed
-# when the directory exists. The VM_files subdir is likewise taken from the taxonomy.
+# optional, mirrors dxdfir_plaso: processed when the directory exists
 dxdfir_godfir_toolz_vm_lane: >-
   {{ ((lookup('file', dxdfir_godfir_toolz_repo_root ~ '/evidence-taxonomy/vm_files.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir
   | default('VM_files', true) }}
 dxdfir_godfir_toolz_vm_dir: "{{ dxdfir_godfir_toolz_repo_root }}/data_store/raw/{{ dxdfir_godfir_toolz_vm_lane }}"
 dxdfir_godfir_toolz_out_dir: "{{ dxdfir_godfir_toolz_repo_root }}/data_store/processed/godfir-toolz"
-# Output base: one folder per tool (<out_dir>/<tool>/<item>/<tool>.jsonl), the
-# artefact export under _extracted/. Override directly to send output to a
-# custom location.
+# one folder per tool; the artefact export under _extracted/
 dxdfir_godfir_toolz_stage_dir: "{{ dxdfir_godfir_toolz_out_dir }}/_extracted"
 
-# The GoDFIR-toolz submodule root: every tool's contract.yml lives at
-# <toolz_dir>/<tool>/contract.yml.
+# every tool's contract.yml lives at <toolz_dir>/<tool>/contract.yml
 dxdfir_godfir_toolz_toolz_dir: "{{ dxdfir_godfir_toolz_repo_root }}/docker/GoDFIR-toolz"
-# The artefact export runs the plaso image's image_export sub-tool with the
-# filter file below (the godfir-toolz artefact set: registry hives + transaction
-# logs, Amcache, jump lists/.lnk, Recycle Bin $I records, the Windows Timeline
-# database, SRUM, Prefetch, a resident $MFT).
+# the export runs plaso's image_export with the artefact-set filter file below
 dxdfir_godfir_toolz_plaso_contract: "{{ dxdfir_godfir_toolz_toolz_dir }}/plaso/contract.yml"
 dxdfir_godfir_toolz_filter_file: "{{ role_path }}/files/image-export-filter.yaml"
-# Empty = the plaso contract's image (get-sybers/plaso:latest); set to pin a digest.
+# empty = the plaso contract's image; set to pin a digest
 dxdfir_godfir_toolz_plaso_image: ""
-# Also export from Volume Shadow Copies (PLASO_IMAGE_EXPORT_VSS).
+# also export from Volume Shadow Copies
 dxdfir_godfir_toolz_vss: false
 
-# The WINDOWS Go tools run over the export, in this order — one contract-driven
-# container each (<TOOL>_FORCE; /input ro = the export, /output = <out_dir>/<tool>).
-# Each tool content-detects its own artefacts anywhere under the tree, so all
-# run over the whole export; one finding nothing exits 1 (nothing produced),
-# which the lane tolerates. gowxt (Windows Timeline) is built but not yet run
-# (#88) — add it here once validated against a real ActivitiesCache.db.
-# The LINUX matrix is not in this list: it is ONE multi-tool image,
-# godaemonhunter, declared as its own `hunt` run in tasks/main.yml.
+# the WINDOWS Go tools, in run order; gowxt is built but not yet run (#88) —
+# add it once validated. The Linux matrix is its own hunt run in tasks/main.yml
 dxdfir_godfir_toolz_tools:
   - gore          # registry batch (recmd_batch shape)
   - gojle         # jump lists

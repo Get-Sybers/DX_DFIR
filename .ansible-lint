@@ -1,38 +1,24 @@
 ---
 profile: production
 
-# Lint the whole repo (the collection AND the ansible baked into the container
-# images under docker/); caches, evidence, the vendored submodule and generated
-# build output are excluded.
+# the whole repo lints; caches, evidence, the submodule and build output are excluded
 exclude_paths:
   - .ansible/
   - .claude/
   - data_store/
-  # The GoDFIR-toolz submodule: its harden.yml is linted in ITS repo, not here
-  # (matches the doc-link check; the Byakugan CAR engine is an external
-  # checkout outside the repo, so it never enters the walk).
+  # the submodule lints in ITS repo
   - docker/GoDFIR-toolz/
   - ansible/collections/get_sybers.dxdfir/.ansible/
-  # Elastic detection rules-as-code: these are rule DATA (ES|QL/EQL definitions
-  # with long query lines), not ansible. ansible-lint auto-discovers the YAML
-  # but has no business linting it — the rules have their own gate
-  # (detect/rules_loader.py validation + tests/test_rules.py).
+  # rule DATA, not ansible — the rules have their own gate (rules_loader + tests)
   - python/get_sybers_dxdfir/detect/rules/
-  # `pip install ./python` makes setuptools copy shipped package-data (the rule
-  # YAML, cti templates, the STIX schema) into python/build/lib/. That build
-  # output is generated, not source — the rules are already excluded at their
-  # real path above — so exclude the build tree too, or CI lints the copies.
+  # setuptools copies package-data into python/build/lib — generated, or CI lints the copies
   - python/build/
 
-# The collection's task names use the Get-Sybers house prefix
-# "<role>-<stage> | lowercase description"; the leading-uppercase idiom is
-# deliberately not applied to the prefixed form.
+# house task-name prefix "<role>-<stage> | lowercase description"
 skip_list:
   - name[casing]
 
-# community.docker and community.crypto are runtime dependencies (pinned in
-# requirements.yml); the lint environment is ansible-core only, so their
-# modules are mocked for resolution.
+# runtime deps (requirements.yml); the lint env is ansible-core only
 mock_modules:
   - community.docker.docker_container
   - community.docker.docker_container_info

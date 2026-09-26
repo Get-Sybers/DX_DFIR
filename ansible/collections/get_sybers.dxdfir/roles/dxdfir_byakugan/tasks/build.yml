@@ -1,14 +1,7 @@
 ---
-# Materialise the per-source CAR stores (car_<object>.jsonl per populated
-# object, car_relationships.jsonl ALWAYS written — the build's done/skip
-# marker, even when empty — car_inferred.jsonl with the derive pass) from the
-# processed tree: `byakugan build` batches over BYAKUGAN_BUILD_INPUT_DIR (the
-# processed tree, read-only) into BYAKUGAN_BUILD_OUT_DIR (the byakugan/ tree,
-# read-write) — one store per discovered source, a source whose
-# car_relationships.jsonl exists skipped unless FORCE. One failing source
-# never stops the rest (the engine exits 3, partial), so the lane tolerates
-# per-source failures and gates on "a store landed, or there were no
-# sources".
+# Materialise the per-source CAR stores (car_relationships.jsonl is the
+# done/skip marker, always written); per-source failures tolerated — the
+# gate is "a store landed, or there were no sources".
 - name: "car-build | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
     name: dxdfir_lane

@@ -1,18 +1,7 @@
 name: checks
 
-# Runs everything that can be verified without Docker or evidence.
-#
-# What this DOES cover: shell syntax, shellcheck, the collection's pinned
-# requirements, ansible-lint (production profile), repo-root path resolution,
-# the Python package's unit tests, version and documentation consistency,
-# evidence gitignore coverage, secret patterns, and documentation links.
-#
-# What it does NOT cover: the pipeline. Nothing here processes a disk image,
-# a PCAP, or an event log, and nothing runs a tool container or the Elastic
-# stack. That runtime correctness coverage lives in the separate `smoke`
-# workflow (smoke.yml), which runs the real pipeline against pinned fixtures and
-# asserts the CAR output. A green tick HERE means the repository is internally
-# consistent, not that the pipeline works — that is what `smoke` is for.
+# Everything verifiable without Docker or evidence; the pipeline itself is
+# the smoke workflow's job — docs/reference/build-and-test.md "Checks".
 
 on:
   push:
@@ -29,11 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # The evidence-gitignore checks call `git check-ignore`, which needs
-          # real git metadata rather than a tarball export.
+          # git check-ignore needs real git metadata, not a tarball export
           fetch-depth: 1
-          # Docs link into the GoDFIR-toolz submodule (every tool-image build
-          # context lives there), so the link checker needs it present.
+          # the link checker follows docs into the submodule
           submodules: recursive
 
       - name: Set up Python
@@ -41,8 +28,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      # The Go/termui front-end (go/) is built, vetted and tested by the Go
-      # check group in run-checks.sh, which is guarded on `go` being present.
+      # go/ is covered by run-checks.sh's Go group (guarded on `go` being present)
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -52,33 +38,19 @@ jobs:
       - name: Install check dependencies
         run: |
           set -euo pipefail
-          # shellcheck ships on ubuntu-latest runners; install only if absent
-          # so this still works on a self-hosted runner.
-          #
-          # Written as an if-block deliberately: `command -v x || a && b` parses
-          # as `(command -v x || a) && b`, so the install runs even when the
-          # tool is already present.
+          # an if-block deliberately: `command -v x || a && b` parses as `(x || a) && b`
           if ! command -v shellcheck >/dev/null 2>&1; then
             sudo apt-get update -qq
             sudo apt-get install -y -qq shellcheck
           fi
           python -m pip install --quiet --upgrade pip
-          # ansible-lint (production profile) gates the collection; its
-          # dependency resolution needs the pinned community.docker installed
-          # into the collection's project-local cache (gitignored).
+          # lint resolution needs the pinned deps in the project-local cache (gitignored)
           python -m pip install --quiet ansible-lint
           ansible-galaxy collection install --force \
             -r ansible/collections/get_sybers.dxdfir/requirements.yml \
             -p ansible/collections/get_sybers.dxdfir/.ansible/collections
-          # The GoDFIR-toolz build galaxy needs NO install: its roles resolve
-          # IN PLACE from the submodule checkout (docker/GoDFIR-toolz/roles on
-          # the repo-root roles_path) at the gitlink pin — no copy, no
-          # tarball, nothing to drift.
-          # The package's unit tests run inside the harness: install the
-          # package (PyYAML is the only declared dep the tests import;
-          # ansible-core/requests/docker are runtime deps of the collection's
-          # playbooks) and pytest, under the python/constraints.txt lock so CI
-          # exercises the same pinned resolution the installers ship.
+          # the build galaxy resolves in place from the submodule (roles_path);
+          # the package + pytest install under the constraints lock CI ships
           python -m pip install --quiet --constraint python/constraints.txt ./python pytest
 
       - name: Report tool versions

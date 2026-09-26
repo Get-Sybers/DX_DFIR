@@ -1,13 +1,8 @@
 ---
 
-# Repo root is five levels up from this role
-# (roles/dxdfir_plaso -> get_sybers.dxdfir -> collections -> ansible -> repo).
 dxdfir_plaso_repo_root: "{{ role_path }}/../../../../.."
 
-# The disk_images and VM_files subdirs come from the shared evidence taxonomy
-# (evidence-taxonomy/), the one source of truth for where sort files evidence AND
-# where this role reads it — the two can't drift. A missing taxonomy file falls
-# back to the conventional subdir.
+# subdirs from the shared evidence taxonomy (evidence-taxonomy/)
 dxdfir_plaso_input_lane: >-
   {{ ((lookup('file', dxdfir_plaso_repo_root ~ '/evidence-taxonomy/disk_images.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir
@@ -17,31 +12,23 @@ dxdfir_plaso_vm_lane: >-
   {{ ((lookup('file', dxdfir_plaso_repo_root ~ '/evidence-taxonomy/vm_files.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir
   | default('VM_files', true) }}
-# VM export folders (one per VM) — optional: processed when the directory exists.
+# optional: processed when the directory exists
 dxdfir_plaso_vm_dir: "{{ dxdfir_plaso_repo_root }}/data_store/raw/{{ dxdfir_plaso_vm_lane }}"
-# Loose-artefact trees (one folder per host: /var/log copies, mobile filesystem
-# dumps, triage output) — parsed by log2timeline as directory sources. Empty =
-# no loose sources (opt-in: loose trees can be very large).
+# loose-artefact trees, opt-in (they can be very large); empty = none
 dxdfir_plaso_loose_dir: ""
 dxdfir_plaso_out_dir: "{{ dxdfir_plaso_repo_root }}/data_store/processed/log2timeline"
-# Output base. log2timeline writes the durable storage files under storage/
-# (one folder per source holding <source>.plaso + log2timeline.log); psort
-# renders each into jsonl/<source>/timeline.jsonl. Override directly to send
-# output to a custom location.
+# storage/ holds the durable .plaso files; psort renders jsonl/<source>/timeline.jsonl
 dxdfir_plaso_storage_dir: "{{ dxdfir_plaso_out_dir }}/storage"
 dxdfir_plaso_jsonl_dir: "{{ dxdfir_plaso_out_dir }}/jsonl"
 
-# The tool contract the lane is driven from — the single source of truth for the
-# plaso image's per-sub-tool env vars (PLASO_LOG2TIMELINE_*, PLASO_PSORT_*) and
-# mounts (/input ro, /output, /work).
+# the contract the lane is driven from
 dxdfir_plaso_contract: "{{ dxdfir_plaso_repo_root }}/docker/GoDFIR-toolz/plaso/contract.yml"
-# Empty = the contract's image (get-sybers/plaso:latest); set to pin a digest.
+# empty = the contract's image; set to pin a digest
 dxdfir_plaso_image: ""
-# log2timeline: process every VSS store of an image (PLASO_LOG2TIMELINE_VSS).
+# process every VSS store of an image
 dxdfir_plaso_vss: true
-# log2timeline: parser preset/list (PLASO_LOG2TIMELINE_PARSERS); empty = plaso's default.
+# parser preset/list; empty = plaso's default
 dxdfir_plaso_parsers: ""
-# psort: the output module (PLASO_PSORT_OUTPUT_FORMAT); json_line renders one
-# event per line.
+# json_line renders one event per line
 dxdfir_plaso_output_format: json_line
 dxdfir_plaso_force: false

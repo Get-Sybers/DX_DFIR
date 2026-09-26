@@ -1,23 +1,13 @@
 ---
-# Pinned — never :latest, never a bare branch (ANSIBLE-STANDARDS: infra galaxy §2).
+# pinned — never :latest, never a bare branch (ansible-standards infra galaxy §2)
 collections:
   - name: community.docker
     version: "3.10.3"
-  # ansible.cfg enables the ansible.posix.profile_tasks callback for per-task
-  # timing on every run — a runtime dependency, not a nice-to-have.
+  # ansible.cfg enables its profile_tasks callback — a runtime dependency
   - name: ansible.posix
     version: "2.1.0"
-  # dxdfir_stack generates the stack's CA + node certificates host-side as
-  # state modules (no cert scripts); needs the `cryptography` python lib on
-  # the target, which ansible-core itself already depends on.
+  # dxdfir_stack's host-side TLS generation
   - name: community.crypto
     version: "2.26.9"
-  # NOT here: the BUILD galaxy (GoDFIR-toolz — the image inventory and the
-  # godfir_build role dxdfir_images delegates to). Its pin is the GITLINK:
-  # docker/GoDFIR-toolz/roles is on the repo-root ansible.cfg roles_path, so
-  # the role resolves IN PLACE from the submodule checkout, nothing
-  # installed. Only a checkout without the submodule has setup-environment.sh
-  # import the galaxy by ansible-galaxy from the source the repo root
-  # declares (.gitmodules URL at the gitlink revision) into the shared
-  # collections path, whose roles dir is roles_path's degraded-only last
-  # entry. Its dependency range is satisfied by the exact pins above.
+  # NOT here: the build galaxy — its pin is the GITLINK, resolved in place via
+  # roles_path (docs/reference/repository-map.md); its dep range is satisfied by the pins above

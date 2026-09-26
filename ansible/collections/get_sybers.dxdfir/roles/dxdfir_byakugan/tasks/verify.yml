@@ -1,21 +1,12 @@
 ---
-# The CAR correctness promotion gate over the materialised tree: each exercised
-# object populated, values sane, car_action in the model's vocabulary, every row
-# traceable, relationship edges naming real endpoints. The gate is the engine's
-# own `byakugan verify` sub-tool, driven from the contract like every other
-# lane: the tree is BYAKUGAN_VERIFY_INPUT_DIR (read-only), the report lands as
-# verify.txt in BYAKUGAN_VERIFY_OUT_DIR (beside the stores by default) and is
-# also the run's stderr. The object model and its vocabulary never leave the
-# engine image. The verdict is the summary line's `status`: `ok` is the only
-# pass — `failed` names the failed checks, `nothing` means no materialised CAR
-# under the tree — both exit 1, so the lane's own gate judges the status
-# (gate_verify.yml) instead of the default "output landed or nothing to do".
+# The CAR promotion gate = the engine's own `byakugan verify` sub-tool; `ok`
+# is the only pass (failed/nothing both exit 1), so the lane's own gate
+# (gate_verify.yml) judges the summary status instead of the default gate.
 - name: "car-verify | resolve where verify.txt lands and the lane's gate"
   ansible.builtin.set_fact:
     dxdfir_byakugan_verify_out_resolved: >-
       {{ dxdfir_byakugan_verify_out_dir | default(dxdfir_byakugan_dir, true) }}
-    # Resolved here, in this role: `role_path` templated inside dxdfir_lane
-    # would name that role instead.
+    # resolved HERE: role_path templated inside dxdfir_lane would name that role
     dxdfir_byakugan_verify_gate: "{{ role_path }}/tasks/gate_verify.yml"
 
 - name: "car-verify | run the shared tool-lane skeleton"

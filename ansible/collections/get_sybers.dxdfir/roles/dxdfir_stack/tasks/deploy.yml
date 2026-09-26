@@ -1,12 +1,7 @@
 ---
-# Bring the stack up FROM INVENTORY DATA: secrets and TLS material first,
-# then network, volumes, images, and one container per service in bootstrap
-# order — Elasticsearch answering before its security objects are
-# reconciled, those before Kibana, Kibana before Fleet — the ordering the
-# compose file expressed with depends_on, here as explicit waits. Every step
-# is state-based, so a re-deploy converges instead of recreating, and the
-# whole bring-up sits in a rescue that surfaces the failed step with the
-# live container states as one diagnostic.
+# Bring-up from inventory data in bootstrap order (compose's depends_on as
+# explicit waits); state-based throughout, the rescue surfaces the failed
+# step with the live container states.
 
 - name: "stack-deploy | the secret store"
   ansible.builtin.include_tasks: secrets.yml
@@ -14,11 +9,7 @@
 - name: "stack-deploy | the TLS material"
   ansible.builtin.include_tasks: certs.yml
 
-# MIGRATION: compose-era containers are replaced by this deploy — their
-# configuration (names, labels, mounts) predates the retirement, so they are
-# removed here and recreated below from inventory data. The data volumes are
-# byakugan_* on both sides and are NEVER touched: the migrated stack keeps
-# its evidence, credentials state and enrolments.
+# migration: compose-era containers are replaced; the byakugan_* data volumes are NEVER touched
 - name: "stack-deploy | retire compose-era containers (volumes survive)"
   community.docker.docker_container:
     name: "{{ item }}"
@@ -78,8 +69,7 @@
         published_ports:
           - "{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}:9200"
         healthcheck:
-          # TLS answers AND security rejects the unauthenticated call: the
-          # posture check.
+          # TLS answers AND security rejects the unauthenticated call — the posture check
           test: ["CMD-SHELL", "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'"]
           interval: 15s
           timeout: 10s
@@ -111,9 +101,7 @@
           fresh host the usual cause is vm.max_map_count < 262144.
         quiet: true
 
-    # ---- the security objects the compose setup service used to create ----
-    # Reconciled against the live API: read first, change only what
-    # differs, report changed honestly.
+    # ---- the compose setup-service's security objects, reconciled read-first against the live API
     - name: "stack-deploy | does kibana_system already hold its password"
       ansible.builtin.uri:
         url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_security/_authenticate"
@@ -146,10 +134,7 @@
       when: dxdfir_stack_kibana_system_auth.status == 401
       no_log: true
 
-    # The CAR loader's identity: least-privilege by construction —
-    # create_doc/create_index/read/view_index_metadata on logs-car.* only,
-    # no cluster privileges, so it can land evidence and read it back but
-    # never alter, delete or re-template what is already indexed.
+    # the CAR loader: least-privilege — create_doc/create_index/read/view_index_metadata on logs-car.* only
     - name: "stack-deploy | read the logs_car_writer role"
       ansible.builtin.uri:
         url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_security/role/logs_car_writer"
@@ -239,8 +224,7 @@
         published_ports:
           - "{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port }}:5601"
         healthcheck:
-          # Ready once the login redirect is served (503 "not ready yet"
-          # until then).
+          # ready once the login redirect is served (503 until then)
           test: ["CMD-SHELL", "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302'"]
           interval: 15s
           timeout: 10s
@@ -271,10 +255,7 @@
           `docker logs {{ dxdfir_stack_containers.kibana }}`.
         quiet: true
 
-    # Fleet Server = an elastic-agent. Bootstraps itself through Kibana's
-    # Fleet API (KIBANA_FLEET_SETUP) into the preconfigured
-    # fleet-server-policy from files/kibana.yml; a pre-created service token
-    # (dxdfir_elastic_fleet_service_token) skips the Kibana-brokered request.
+    # an elastic-agent bootstrapping itself through Kibana's Fleet API; a pre-created token skips the brokered request
     - name: "stack-deploy | fleet-server container"
       community.docker.docker_container:
         name: "{{ dxdfir_stack_containers['fleet-server'] }}"
@@ -310,11 +291,7 @@
           retries: 40
       no_log: true
 
-    # The shipper: tails the processed evidence tree (<type>/**/*.json[l],
-    # the layout the processors write) and writes it straight into
-    # logs-dxdfir.<type>-<namespace> data streams over the secured
-    # Elasticsearch API. Runs as root only to read operator-delivered
-    # files; the ingest mount is read-only.
+    # tails the processed tree into logs-dxdfir.<type>-<namespace>; root only to read operator-delivered files, ingest mount ro
     - name: "stack-deploy | filebeat container"
       community.docker.docker_container:
         name: "{{ dxdfir_stack_containers.filebeat }}"

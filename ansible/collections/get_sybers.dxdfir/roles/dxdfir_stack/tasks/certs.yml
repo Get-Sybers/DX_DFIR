@@ -1,25 +1,13 @@
 ---
-# THE STACK'S TLS MATERIAL (deploy only) — generated host-side as
-# community.crypto STATE MODULES, no cert scripts, no certutil container:
-# a self-signed CA and one signed pair per TLS instance (es01 for the
-# Elasticsearch HTTP+transport layers, fleet-server for Fleet), laid out
-# exactly as the containers expect under the bind-mounted certs dir:
-#   <certs>/ca/ca.crt (+ ca.key, root-only)
-#   <certs>/es01/es01.crt + es01.key
-#   <certs>/fleet-server/fleet-server.crt + fleet-server.key
-# Idempotent by module design: valid existing material is left untouched.
-# MIGRATION: a compose-era stack kept these in the byakugan_certs volume; a
-# root deploy imports that volume's tree first (force: false), so a migrated
-# stack keeps the CA its data and any enrolled agents already trust. The CA
-# pair itself is only ever CREATED, never regenerated over an import.
+# TLS material host-side as community.crypto state modules (layout and
+# migration: README "Secrets and TLS"). The CA pair is only ever CREATED,
+# never regenerated over an import.
 
 - name: "stack-certs | the certs tree exists"
   ansible.builtin.file:
     path: "{{ dxdfir_stack_certs_dir }}/{{ item }}"
     state: directory
-    # 0755: the tree holds public certificates and 0640/0600 keys; the
-    # container-side readers (uid 1000, gid 0) traverse it via the bind
-    # mount, host-side clients read only the world-readable CA cert.
+    # 0755: public certs traverse via the bind mount; the keys below stay 0640/0600
     mode: "0755"
   loop:
     - ""
@@ -51,9 +39,7 @@
       register: dxdfir_stack_legacy_cert_files
       when: dxdfir_stack_legacy_ca.stat.exists
 
-    # Per file, force: false — a file already in the store always wins, and a
-    # partial volume (only the CA, say) imports whatever it has. The known
-    # ca/es01/fleet-server subdirs exist already (the tree task above).
+    # per file force: false — the store always wins; a partial volume imports what it has
     - name: "stack-certs | copy the compose-era certificates into the store"
       ansible.builtin.copy:
         src: "{{ item.path }}"
@@ -112,11 +98,9 @@
         selfsigned_not_after: "+3650d"
         mode: "0644"
 
-# ---- the instance certificates (fully state-managed) ------------------------
-# The same instances and SANs the compose-era certutil run produced, so a
-# migrated stack's imported certificates verify as already-correct.
-# Weakening private material is never a silent decision (review finding):
-# an unprivileged deploy must OPT IN before 0644 node keys are written.
+# ---- the instance certificates: same instances/SANs as the compose-era
+# certutil, so imported certs verify as already-correct; weakening keys is
+# never silent — an unprivileged deploy must OPT IN before 0644 keys
 - name: "stack-certs | assert the key posture is deliberate"
   ansible.builtin.assert:
     that:
@@ -133,11 +117,7 @@
 - name: "stack-certs | instance private keys"
   community.crypto.openssl_privatekey:
     path: "{{ dxdfir_stack_certs_dir }}/{{ item.name }}/{{ item.name }}.key"
-    # The service containers read these as uid 1000 gid 0 through the bind
-    # mount. A root deploy hands them to root:root 0640 — gid 0 reads them
-    # in the container, host operators cannot. An unprivileged deployer
-    # cannot chown to gid 0, so the keys go 0644 there (noted below) —
-    # deploy as root for the protected posture.
+    # containers read as uid 1000 gid 0: root deploy = root:root 0640; unprivileged cannot chown gid 0, so 0644 (opted in)
     owner: "{{ 'root' if _root | bool else omit }}"
     group: "{{ 'root' if _root | bool else omit }}"
     mode: "{{ '0640' if _root | bool else '0644' }}"
@@ -176,8 +156,7 @@
   loop_control:
     label: "{{ item.name }}"
 
-# Imported material arrives with the volume's container-side ownership;
-# pin the whole tree to the store's posture (public certs, protected keys).
+# imported material arrives with container-side ownership — pin the tree to the store's posture
 - name: "stack-certs | find every private key in the tree"
   ansible.builtin.find:
     paths: "{{ dxdfir_stack_certs_dir }}"

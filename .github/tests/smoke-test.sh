@@ -1,36 +1,9 @@
 #!/bin/bash
 # ==============================================================================
-# Pipeline smoke test — does the pipeline actually WORK, end to end? (issue #10)
-#
-# run-checks.sh proves the repo is internally consistent; it never runs the
-# pipeline, so a green tick there says nothing about correctness. The bug that
-# motivated this — EvtxPayload parsing XML while goevtx emits JSON, silently
-# zeroing every Sysmon/Security-derived CAR field — passes every static check.
-# Only running real evidence through and reading the CAR objects catches it.
-#
-# What it does, entirely in throwaway temp dirs (never data_store/processed):
-#
-#   process pinned Sysmon .evtx through the real evtx lane (the dxdfir_evtx
-#   role: ansible builds the confined `docker run` of get-sybers/goevtx from its
-#   contract) -> normalise the output into materialised CAR (the dxdfir_byakugan
-#   role, build action: `byakugan build` inside the hardened get-sybers/byakugan
-#   image at its Dockerfile pin, over the processed tree) -> assert each
-#   Sysmon-sourced CAR object has rows AND its EvtxPayload-derived fields are
-#   populated with the expected values -> run the verify-car gate (the role's
-#   verify action: the engine's own `byakugan verify` sub-tool, env-driven from
-#   the contract like every lane) over the same tree.
-#
-# Fixtures: the `sysmon-attack-samples` group in dev-scripts/samples-manifest.tsv
-# (real Sysmon telemetry from sbousseaden/EVTX-ATTACK-SAMPLES, sha256-pinned, a
-# few tens of KB each). Fetched on demand if absent. Public research data, never
-# real evidence.
-#
-# FAILS LOUDLY, never skips: a smoke test that no-ops when Docker is missing
-# would recreate exactly the "green tick that tested nothing" problem (#10). If a
-# prerequisite is missing it exits non-zero and says why.
-#
-#   ./.github/tests/smoke-test.sh            # process, normalise, assert, gate
-#   KEEP=1 ./.github/tests/smoke-test.sh     # leave the temp output in place for inspection
+# Pipeline smoke test — the real pipeline end to end over sha256-pinned Sysmon
+# fixtures, in throwaway temp dirs (docs/reference/build-and-test.md "Smoke").
+# FAILS LOUDLY, never skips — a no-op on missing Docker would recreate the
+# "green tick that tested nothing" problem (#10). KEEP=1 keeps the temp output.
 # ==============================================================================
 set -uo pipefail
 
@@ -44,11 +17,7 @@ FIXTURE_DIR="$REPO_ROOT/data_store/raw/logs/winevt/sysmon-attack-samples"
 OUT_DIR="$(mktemp -d)"     # the processed tree: windows_logs/ from the evtx lane
 CAR_DIR="$(mktemp -d)"     # the materialised CAR built from it
 LOG_DIR="$(mktemp -d)"
-# The tool images run as a non-root uid (2000), so they must be able to traverse
-# the working tree — exactly as the real data_store is provisioned (g=rX + the
-# docker group; setup-environment.sh). mktemp defaults to 0700, which would block
-# the CAR engine container from reading the processed tree it normalises. The
-# roles make each read-write mount 0777 themselves.
+# mktemp defaults to 0700, which would block the containers' uid 2000 — open the tree like the real data_store
 chmod 0755 "$OUT_DIR" "$CAR_DIR"
 
 PASS=0; FAIL=0
@@ -57,9 +26,7 @@ fail() { FAIL=$((FAIL+1)); echo "    ✗ $1"; }
 die()  { echo "❌ $*" >&2; exit 1; }
 section() { echo; echo "── $1"; }
 
-# In-repo run: the get_sybers_dxdfir package (the image supply-chain guard the
-# lane preflight runs) is under python/; the roles set this themselves via
-# dxdfir_<lane>_python_path, and the CAR assertions below import nothing.
+# in-repo run: the package under python/ resolves for any python3 helper
 export PYTHONPATH="$REPO_ROOT/python${PYTHONPATH:+:$PYTHONPATH}"
 # ansible.cfg at the repo root resolves the roles; its log lands in logs/.
 export ANSIBLE_CONFIG="$REPO_ROOT/ansible.cfg"
@@ -75,12 +42,8 @@ cleanup() {
 trap cleanup EXIT
 
 # --- CAR assertion helpers ---------------------------------------------------
-# car_count <object> <action|-> <populated-fields,csv|-> <field=needle|->
-# Rows of car_<object>.jsonl (across every source under $CAR_DIR) with that
-# car_action (or any), every listed field populated, and — when given — the
-# needle somewhere in the field's value. Reads the materialised car_<object>.jsonl
-# directly — one JSON object per line, the contract the engine writes and its
-# verify gate (byakugan.verify, in the engine image) checks.
+# car_count <object> <action|-> <populated-fields,csv|-> <field=needle|-> —
+# matching rows of car_<object>.jsonl across every source under $CAR_DIR
 car_count() {
     python3 - "$CAR_DIR" "$1" "$2" "$3" "$4" <<'PY'
 import json, os, sys
@@ -140,19 +103,14 @@ command -v python3 >/dev/null 2>&1 || die "python3 not found."
 command -v ansible-playbook >/dev/null 2>&1 || die "ansible-playbook not found — it ships with 'pip install ./python'."
 docker image inspect get-sybers/goevtx:latest >/dev/null 2>&1 \
     || die "image get-sybers/goevtx:latest missing — build it: docker build -t get-sybers/goevtx:latest -f docker/GoDFIR-toolz/goevtx/Dockerfile docker/GoDFIR-toolz/goevtx"
-# The CAR lane drives the external Byakugan engine inside the hardened
-# get-sybers/byakugan image (cloned + built at its Dockerfile pin); the engine
-# reconstructs its model from its OWN nested submodules, all baked into the image.
+# the CAR lane drives the engine image at its Dockerfile pin
 docker image inspect get-sybers/byakugan:latest >/dev/null 2>&1 \
     || die "image get-sybers/byakugan:latest missing — build it: dxdfir build-docker (it clones Byakugan at its Dockerfile's BYAKUGAN_REF pin and builds the hardened engine image)."
 pass "docker, python3, ansible-playbook, get-sybers/goevtx:latest and the Byakugan engine image present"
 
 # =============================================================================
 section "Fixtures (sha256-pinned Sysmon .evtx)"
-# --fetch is idempotent: it sha256-verifies files already on disk and downloads
-# only what is missing. (Don't gate on --verify — it reports missing files as
-# "not fetched", not a failure, so it exits 0 on an empty checkout and would skip
-# the fetch entirely — exactly what happened on the first CI run.)
+# --fetch is idempotent; never gate on --verify (it exits 0 on an empty checkout — bit the first CI run)
 echo "   fetching sysmon-attack-samples (checksum-verified, idempotent)…"
 ./dev-scripts/fetch-samples.sh --fetch sysmon-attack-samples >/dev/null 2>&1 \
     || die "could not fetch the Sysmon fixtures (network? manifest?)."

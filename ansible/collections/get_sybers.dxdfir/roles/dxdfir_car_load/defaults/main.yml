@@ -1,92 +1,39 @@
 ---
-# dxdfir_car_load: bulk-load a materialised CAR tree into this repo's Elastic
-# stack (logs-car.<object>-<ns> x13 + rel + inferred + content streams)
-# via the byakugan image's `load` sub-tool. One role, one action for now
-# (dxdfir_car_load_action); the playbook picks it — same shape as dxdfir_byakugan.
-
-# Which action to run: load is the only one for now.
+# semantics and the setup-vs-loader identity story: README.md; variables: meta/argument_specs.yml
 dxdfir_car_load_action: load
 
-# Repo root is five levels up from this role
-# (roles/dxdfir_car_load -> get_sybers.dxdfir -> collections -> ansible -> repo).
 dxdfir_car_load_repo_root: "{{ role_path }}/../../../../.."
 
-# The materialised CAR tree `byakugan build` wrote (read-only input) and where
-# this run's bundles/manifest/report land (read-write output) — a SIBLING of
-# byakugan/, not inside it, so each gets its own directory chain in
-# data_store/.gitignore and Filebeat's raw-evidence exclusion
-# (the dxdfir_stack role's filebeat.yml) can name each one.
+# output is a SIBLING of byakugan/, never inside it (gitignore + filebeat exclusion chains)
 dxdfir_car_load_dir: "{{ dxdfir_car_load_repo_root }}/data_store/processed/byakugan"
 dxdfir_car_load_out_dir: "{{ dxdfir_car_load_repo_root }}/data_store/processed/byakugan-load"
 
-# The tool contract the run is driven from — same contract, single source of
-# truth, as dxdfir_byakugan (see dxdfir_byakugan_contract); this role just uses
-# a different declared sub-tool (load instead of build/verify/timeline). The
-# external Byakugan engine is cloned + built into the image at the repo-root
-# pin in its Dockerfile.
+# the same contract as dxdfir_byakugan, a different declared sub-tool
 dxdfir_car_load_contract: "{{ dxdfir_car_load_repo_root }}/docker/GoDFIR-toolz/byakugan/contract.yml"
-# Empty = the contract's image (get-sybers/byakugan:latest); set to pin a digest.
+# empty = the contract's image; set to pin a digest
 dxdfir_car_load_image: ""
 
-# The stack credentials, BY REFERENCE from the inventory layer
-# (playbooks/group_vars/all.yml, dxdfir_elastic_*) — the same definitions
-# dxdfir_stack deploys with, never parsed out of a file and never duplicated
-# into a second store. Empty fallbacks make a bare role run fail the
-# non-empty assert (tasks/load.yml) instead of loading with empty
-# credentials.
+# stack credentials BY REFERENCE from the inventory layer; empty fallbacks fail the non-empty assert
 dxdfir_car_load_elastic_password: "{{ dxdfir_elastic_password | default('') }}"
 dxdfir_car_load_byakugan_loader_password: "{{ dxdfir_elastic_byakugan_loader_password | default('') }}"
 
-# Push mode always (BYAKUGAN_LOAD_ES_URL set): this role's whole job is
-# delivering the CAR into the LIVE stack, never bundle-only. The service's
-# network alias, resolved on the stack network (dxdfir_car_load_network,
-# below) this run attaches to.
+# push mode always: the service's network alias on the stack network below
 dxdfir_car_load_es_url: "https://elasticsearch:9200"
-# The Elastic data-stream namespace: logs-car.<object>-<namespace>,
-# logs-car.rel-<namespace>, logs-car.inferred-<namespace>,
-# logs-car.content-<namespace> (one namespace per
-# case works well — the same convention as DFIR_NAMESPACE for the raw
-# logs-dxdfir.* streams; see the inventory layer, dxdfir_elastic_namespace).
+# one namespace per case, the same convention as the raw logs-dxdfir.* streams
 dxdfir_car_load_namespace: default
 
-# Apply the rendered logs-car.* index/component templates before loading —
-# push mode only. Default ON, first-run-friendly: a fresh stack has no
-# logs-car.* templates yet, so the first load must set them up. An operator
-# doing routine repeat loads once the templates exist passes --no-setup
-# (dxdfir_car_load_setup: false), which also drops this run to the
-# least-privilege byakugan_loader identity instead of elastic — see
-# dxdfir_car_load_elastic_user / dxdfir_car_load_loader_user below.
+# default ON (first-run-friendly); false also drops to the least-privilege loader identity (README)
 dxdfir_car_load_setup: true
-# Re-render bundles and re-push even when the manifest/load report already
-# show the run complete — BYAKUGAN_LOAD_FORCE.
+
 dxdfir_car_load_force: false
-# Also import the rendered Kibana saved objects (BYAKUGAN_LOAD_KIBANA_URL).
-# Only ever sent when dxdfir_car_load_setup is ALSO true — the contract
-# requires BYAKUGAN_LOAD_SETUP for the Kibana import. Off by default even on a
-# setup run: it is an extra, separately-opted-into step (dashboards/data
-# views), not required to land evidence.
+# sent only when setup is ALSO true (the contract requires it); a separately-opted-in extra
 dxdfir_car_load_kibana_import: false
 dxdfir_car_load_kibana_url: "http://kibana:5601"
 
-# Credentials never reach the docker run argv in cleartext — they are handed
-# to dxdfir_lane as secret_env, which writes them to a 0600 --env-file instead
-# (tasks/load.yml, dxdfir_lane's argv.yml). WHICH identity authenticates
-# depends on dxdfir_car_load_setup: setup-mode template PUTs (and, with the
-# Kibana import on, the saved-objects import) need cluster/Kibana privileges
-# the loader identity deliberately does not have
-# (the dxdfir_stack deploy: role logs_car_writer is create_doc /
-# create_index / read / view_index_metadata on logs-car.* ONLY — evidence
-# immutability at the credential layer), so a setup run authenticates as the
-# elastic superuser and a non-setup (steady-state, repeatable) run
-# authenticates as byakugan_loader — the counter-example to "filebeat writes
-# as elastic" (docs/architecture/the-stack.md).
+# credentials ride dxdfir_lane's secret_env; setup runs as elastic, steady-state as byakugan_loader (README)
 dxdfir_car_load_elastic_user: elastic
 dxdfir_car_load_loader_user: byakugan_loader
 
-# The stack's TLS tree (host-side, generated by dxdfir_stack's deploy) —
-# mounted read-only at /certs; BYAKUGAN_LOAD_ES_CA_FILE already defaults to
-# /certs/ca/ca.crt in the contract, matching the tree's layout, so it is
-# never overridden here. The network is the stack's own, so the run resolves
-# elasticsearch/kibana by their network aliases.
+# mounted ro at /certs; the contract's CA default already matches the tree layout
 dxdfir_car_load_certs_dir: "{{ dxdfir_elastic_certs_dir | default(dxdfir_car_load_repo_root ~ '/ansible/inventory/secrets/' ~ inventory_hostname ~ '/certs') }}"
 dxdfir_car_load_network: "{{ dxdfir_elastic_network | default('byakugan_default') }}"

@@ -1,10 +1,5 @@
-# Byakugan shipper — Filebeat.
-#
-# Tails the processed evidence tree mounted at /ingest (<type>/**/*.json[l], the
-# layout the processors write) and writes each line straight into
-# an Elastic data stream, logs-dxdfir.<type>-<namespace>, over the secured
-# Elasticsearch API. No Logstash filters: native -> ECS normalisation is
-# Elastic-native too (ingest pipelines on the data streams — a later phase).
+# Byakugan shipper: /ingest (<type>/**/*.json[l]) straight into
+# logs-dxdfir.<type>-<namespace> data streams; no Logstash.
 
 filebeat.inputs:
   - type: filestream
@@ -13,15 +8,10 @@ filebeat.inputs:
     paths:
       - /ingest/*/**/*.json
       - /ingest/*/**/*.jsonl
-    # CAR lands ECS-projected in logs-car.* via `byakugan load` (the
-    # dxdfir_car_load role / `dxdfir load-car`); raw car_<object>.jsonl /
-    # car_relationships.jsonl under processed/byakugan/ double-ingesting HERE
-    # too would duplicate it into logs-dxdfir.byakugan-* and compete with the
-    # ECS projection instead of complementing it. The loader's own output
-    # (bundles/manifest/report under processed/byakugan-load/) is working
-    # state, not evidence, and is excluded for the same reason: neither tree
-    # is raw evidence for this input to re-ingest. (filestream's scanner
-    # option, not the removed `log`-input top-level `exclude_files`.)
+    # CAR already lands ECS-projected in logs-car.* via `byakugan load` —
+    # re-ingesting the raw stores here would compete with that projection;
+    # the loader's own output is working state, not evidence. (filestream's
+    # scanner option, not the removed log-input exclude_files.)
     prospector.scanner.exclude_files:
       - '^/ingest/byakugan/.*'
       - '^/ingest/byakugan-load/.*'
@@ -32,15 +22,13 @@ filebeat.inputs:
           overwrite_keys: true
           expand_keys: true
     processors:
-      # The first directory under /ingest is the evidence type (zeek, plaso, ...);
-      # it becomes labels.type and routes the data stream.
+      # the first directory under /ingest is the evidence type; it routes the data stream
       - dissect:
           tokenizer: "/ingest/%{labels.type}/%{?rest}"
           field: log.file.path
           target_prefix: ""
 
-# Data streams are created by Elasticsearch's built-in logs-*-* template; Filebeat
-# manages neither templates nor ILM here (a custom index needs both off).
+# the built-in logs-*-* template creates the streams; Filebeat manages neither templates nor ILM
 setup.template.enabled: false
 setup.ilm.enabled: false
 
