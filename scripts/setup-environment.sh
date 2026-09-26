@@ -59,7 +59,8 @@ REQUIRED_CMDS=(curl git python3 unzip tar realpath readlink)
 
 ASSUME_YES=false
 
-# Output styling — the Sunset palette; ASCII-only, TTY-only (docs: Design decisions).
+# Output styling — the Sunset palette, TTY-only; status markers and spinner
+# frames are ASCII so they survive a C/POSIX locale (docs: Design decisions).
 USE_COLOR=true
 setup_colors() {
     if [[ "$USE_COLOR" == true && -t 1 && -z "${NO_COLOR:-}" && "${TERM:-dumb}" != dumb ]]; then
@@ -137,7 +138,8 @@ fi
 die() { fail "$*"; exit 1; }
 
 # invocation-scoped safe.directory flags, never --global; >=2.46 gets the
-# root/* leading-path match, older gits the scoped wildcard (docs: Design decisions)
+# root/* leading-path match, older gits the GLOBAL "*" wildcard — global for
+# that one invocation only, never persisted (docs: Design decisions)
 git_safe_flags() {
     local root="$1" major minor
     IFS=. read -r major minor _ <<< "$(git --version 2>/dev/null | awk '{print $3}')"

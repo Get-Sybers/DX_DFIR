@@ -111,16 +111,19 @@ After running the script:
 The script's non-obvious choices, recorded here so the script itself stays
 lean:
 
-- **Colour and markers are ASCII-only**, applied only on a real terminal
-  (`NO_COLOR`, a dumb TERM, piped output and `--no-color` all fall back to
-  plain): logs stay greppable, and braille/unicode spinner frames break
-  `${#var}` substring math under the C/POSIX locale a clean machine runs.
+- **Status markers and spinner frames are ASCII** (the banner and prose may
+  carry Unicode), and colour applies only on a real terminal (`NO_COLOR`, a
+  dumb TERM, piped output and `--no-color` all fall back to plain): logs
+  stay greppable, and braille/unicode spinner frames break `${#var}`
+  substring math under the C/POSIX locale a clean machine runs.
 - **Git trust is invocation-scoped, never `--global`**: recursive submodule
   operations walk into nested repos whose paths cannot be pre-enumerated, so
   git ≥ 2.46 gets a trailing `/*` leading-path `safe.directory` match scoped
-  to the checkout root; older gits fall back to the invocation-scoped
-  wildcard — per-command either way, nothing persisted in the operator's
-  config.
+  to the checkout root; older gits only match exact paths or the global
+  `"*"`, so there the fallback is that **global wildcard, confined to the
+  single git invocation** (`-c`, never persisted in the operator's config) —
+  a wider trust grant for that one command, which is why ≥ 2.46 gets the
+  path-scoped form.
 - **Long steps run behind a heartbeat** (a redrawn spinner on a TTY, a line
   every 10s piped) with sudo credentials refreshed up front, so a
   backgrounded privileged command never blocks on a password prompt it
