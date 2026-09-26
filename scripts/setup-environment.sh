@@ -289,18 +289,25 @@ fi
 # Ownership and permissions: u=rwX,g=rX — capital X keeps dirs traversable
 # and scripts runnable while evidence files stay non-executable.
 section "Repository ownership + permissions"
-step "Setting ownership to $RUN_USER:docker and permissions on the repository ..."
+# On a fresh host the docker group does not exist yet (docker itself is
+# installed by the bootstrap playbook, a later step) — pre-create it so the
+# chown below can reference it; daemon + membership stay the playbook's job.
+# The chown SPEC follows what actually exists: should the pre-create fail,
+# ownership falls back to the user alone instead of failing wholesale and
+# leaving the checkout root-owned.
+getent group docker >/dev/null 2>&1 || $SUDO groupadd --system docker || true
+if getent group docker >/dev/null 2>&1; then
+    OWN_SPEC="$RUN_USER:docker"
+else
+    OWN_SPEC="$RUN_USER"
+    warn "docker group unavailable — ownership falls back to $RUN_USER only (the bootstrap playbook manages the group)"
+fi
+step "Setting ownership to $OWN_SPEC and permissions on the repository ..."
 detail "Recursive over the whole checkout; a populated data_store/ makes this a"
 detail "large walk that can take a while — live progress is shown below."
-# On a fresh host the docker group does not exist yet (docker itself is
-# installed by the bootstrap playbook, step 5) — pre-create the group so this
-# chown can reference it; daemon + membership stay the playbook's job.
-getent group docker >/dev/null 2>&1 \
-    || $SUDO groupadd --system docker \
-    || warn "Could not pre-create the docker group — ownership will skip the group"
 if [[ -d "$REPO_ROOT_DIR" ]]; then
-    run_with_progress "   -> ownership  ($RUN_USER:docker)" \
-        $SUDO chown -R "$RUN_USER:docker" "$REPO_ROOT_DIR" \
+    run_with_progress "   -> ownership  ($OWN_SPEC)" \
+        $SUDO chown -R "$OWN_SPEC" "$REPO_ROOT_DIR" \
         || warn "Some ownership changes were skipped"
     run_with_progress "   -> permissions (u=rwX,g=rX,o=)" \
         $SUDO chmod -R u=rwX,g=rX,o= "$REPO_ROOT_DIR" \

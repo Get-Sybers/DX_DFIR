@@ -1,15 +1,15 @@
 # Setup flow
 
-`scripts/setup-environment.sh` provisions an online host in ten guarded, idempotent
+`scripts/setup-environment.sh` provisions an online host in guarded, idempotent
 steps. Each is safe to re-run; a step that finds its work already done reports and moves
 on. (The older prose walkthrough is [Setup_Environment.md](../scripts/Setup_Environment.md);
 the source is the best reference.)
 
 ```mermaid
 flowchart LR
-    A[1 Docker] --> B[2 Tools] --> C[3 docker group] --> D[4 Submodules]
-    D --> E[5 Permissions] --> F[6 Python + Ansible venv]
-    F --> G[7 Go + dxdfir] --> H[8 Ansible collections]
+    A[1 Tools] --> B[2 Submodules] --> C[3 Group + ownership]
+    C --> D[4 Ansible venv] --> E[5 Go + dxdfir]
+    E --> F[6 Collections] --> G[7 Docker engine · ansible]
 ```
 
 | # | Step | What it provisions |
