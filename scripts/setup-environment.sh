@@ -532,7 +532,7 @@ fi
 echo
 
 step "Use dxdfir in THIS shell (new logins pick PATH up automatically):"
-cmd "source /etc/profile.d/dxdfir.sh" "(the log-out/in above also applies it, along with the docker group)"
+cmd ". /etc/profile.d/dxdfir.sh" "(the log-out/in above also applies it, along with the docker group)"
 echo
 step "Build the hardened tool containers (everything the pipeline runs):"
 cmd "ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml"
