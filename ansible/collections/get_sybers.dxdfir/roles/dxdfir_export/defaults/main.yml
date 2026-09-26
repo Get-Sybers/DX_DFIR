@@ -1,0 +1,31 @@
+---
+
+dxdfir_export_repo_root: "{{ role_path }}/../../../../.."
+
+# a collection-scoped run lands one level below the leaf: processed/_extracted/<collection>/
+dxdfir_export_collection: ""
+
+# the evidence trees to export from — every entry that exists AND holds a disk
+# image gets one image_export run; the caller lists them (its disk-image and
+# VM-export trees). Empty or absent trees are skipped silently, so a lane
+# with no images never needs the plaso image at all.
+dxdfir_export_trees: []
+# what counts as an image inside a tree (the plaso contract's item rule)
+dxdfir_export_image_regex: '(?i)\.(e01|ex01|raw|dd|img|vmdk|vhd|vhdx|qcow2|aff4|001|bin)$'
+
+# ONE canonical stage shared by every lane that reads an export
+# (gowindowlicker, godaemonhunter, signatures' hayabusa): one folder per image
+# item, export/ + image_export.jsonl (the done marker) inside it. An image
+# already exported is not re-pulled unless force.
+dxdfir_export_stage_dir: >-
+  {{ dxdfir_export_repo_root }}/data_store/processed/_extracted{{
+  ('/' ~ dxdfir_export_collection) if dxdfir_export_collection | length > 0 else '' }}
+
+# the artefact set, ONE filter for every consumer (plaso yaml_filter_file format)
+dxdfir_export_filter_file: "{{ role_path }}/files/image-export-filter.yaml"
+dxdfir_export_plaso_contract: "{{ dxdfir_export_repo_root }}/docker/GoDFIR-toolz/plaso/contract.yml"
+# empty = the contract's image; set to pin a digest
+dxdfir_export_plaso_image: ""
+# also export from Volume Shadow Copies
+dxdfir_export_vss: false
+dxdfir_export_force: false

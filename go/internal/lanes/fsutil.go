@@ -13,94 +13,6 @@ import (
 // regexp (this package cannot import run without a cycle).
 var ansiRE = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]`)
 
-// glob joins parts into a pattern under root and returns matches (nil on error).
-func glob(root string, parts ...string) []string {
-	pattern := filepath.Join(append([]string{root}, parts...)...)
-	m, err := filepath.Glob(pattern)
-	if err != nil {
-		return nil
-	}
-	return m
-}
-
-// uniqueParents returns the distinct parent directories of the given paths.
-func uniqueParents(paths []string) []string {
-	seen := map[string]struct{}{}
-	for _, p := range paths {
-		seen[filepath.Dir(p)] = struct{}{}
-	}
-	out := make([]string, 0, len(seen))
-	for d := range seen {
-		out = append(out, d)
-	}
-	return out
-}
-
-// hostDirsWithOutput returns the immediate subdirectories of outDir that contain
-// at least one non-empty regular file (a completed godfir-toolz host).
-func hostDirsWithOutput(outDir string) []string {
-	entries, err := os.ReadDir(outDir)
-	if err != nil {
-		return nil
-	}
-	var out []string
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		dir := filepath.Join(outDir, e.Name())
-		if dirHasNonEmptyFile(dir) {
-			out = append(out, dir)
-		}
-	}
-	return out
-}
-
-func dirHasNonEmptyFile(dir string) bool {
-	found := false
-	_ = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return nil
-		}
-		if fi, err := d.Info(); err == nil && fi.Size() > 0 {
-			found = true
-			return filepath.SkipAll
-		}
-		return nil
-	})
-	return found
-}
-
-func fileNonEmpty(path string) bool {
-	fi, err := os.Stat(path)
-	return err == nil && !fi.IsDir() && fi.Size() > 0
-}
-
-// biggestMatch returns the size (bytes) of the largest file matching the glob —
-// used as plaso's "still alive" heartbeat (the growing .plaso db).
-func biggestMatch(root string, parts ...string) int64 {
-	var max int64
-	for _, m := range glob(root, parts...) {
-		if fi, err := os.Stat(m); err == nil && fi.Size() > max {
-			max = fi.Size()
-		}
-	}
-	return max
-}
-
-// newestMatch returns the most recently modified file matching the glob, or "".
-func newestMatch(root string, parts ...string) string {
-	var newest string
-	var newestMod int64 = -1
-	for _, m := range glob(root, parts...) {
-		if fi, err := os.Stat(m); err == nil && fi.ModTime().UnixNano() > newestMod {
-			newestMod = fi.ModTime().UnixNano()
-			newest = m
-		}
-	}
-	return newest
-}
-
 // readTail returns up to n filtered trailing lines of a (possibly large) log
 // file: it reads only the last maxBytes, strips redraw noise, collapses runs of
 // duplicate lines to "line (xN)", and keeps only lines likely to carry signal.
@@ -232,4 +144,81 @@ func sanitizeLog(line string) string {
 	line = ansiRE.ReplaceAllString(line, "")
 	line = strings.ReplaceAll(line, "](", "] (")
 	return strings.TrimRight(line, " \t")
+}
+
+// walkOpt narrows a counting walk.
+type walkOpt func(path string) bool
+
+// withParentNamed keeps only files whose parent directory has the given name.
+func withParentNamed(name string) walkOpt {
+	return func(path string) bool { return filepath.Base(filepath.Dir(path)) == name }
+}
+
+// countFilesMatching counts the regular files under root (any depth) whose
+// base name satisfies match and every opt, never descending into a
+// `_`-prefixed directory (a lane's staging area). A missing root counts zero.
+func countFilesMatching(root string, match func(name string) bool, opts ...walkOpt) int {
+	n := 0
+	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			if path != root && strings.HasPrefix(d.Name(), "_") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !d.Type().IsRegular() || !match(d.Name()) {
+			return nil
+		}
+		for _, o := range opts {
+			if !o(path) {
+				return nil
+			}
+		}
+		n++
+		return nil
+	})
+	return n
+}
+
+// countFilesNamed counts the files under root (any depth) called exactly name.
+func countFilesNamed(root, name string) int {
+	return countFilesMatching(root, func(n string) bool { return n == name })
+}
+
+// largestFileMatching returns the size (bytes) of the largest file under root
+// (any depth) whose name satisfies match — plaso's "still alive" heartbeat
+// (the growing .plaso db).
+func largestFileMatching(root string, match func(name string) bool) int64 {
+	var max int64
+	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !match(d.Name()) {
+			return nil
+		}
+		if fi, err := d.Info(); err == nil && fi.Size() > max {
+			max = fi.Size()
+		}
+		return nil
+	})
+	return max
+}
+
+// newestFileMatching returns the most recently modified file under root (any
+// depth) whose name satisfies match, or "".
+func newestFileMatching(root string, match func(name string) bool) string {
+	var newest string
+	var newestMod int64 = -1
+	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !match(d.Name()) {
+			return nil
+		}
+		if fi, err := d.Info(); err == nil && fi.ModTime().UnixNano() > newestMod {
+			newestMod = fi.ModTime().UnixNano()
+			newest = path
+		}
+		return nil
+	})
+	return newest
 }

@@ -5,6 +5,25 @@ root [CHANGELOG.md](../../../CHANGELOG.md).
 
 ## [Unreleased]
 
+### Changed
+
+- **The lanes are the tools, the output is per collection and per host.**
+  `dxdfir_evtx` and `dxdfir_godfir_toolz` retire into
+  **`dxdfir_gowindowlicker`** and **`dxdfir_godaemonhunter`** — one confined
+  run per (parser, host), `<out_dir>/<subtool>/<host>/<item>/<subtool>.jsonl`
+  (the daemon lane's Layer 1 into `knowledge/<host>/`, Layer 2 with it mounted
+  at `/knowledge`); `dxdfir_memory` is **`dxdfir_anamnesis`**
+  (`processed/anamnesis`). Every lane role takes `dxdfir_<lane>_collection`
+  and lands one level below its leaf when set. `dxdfir_plaso` writes the
+  storage file and the rendered timeline in one `<host>/` folder
+  (`dxdfir_plaso_storage_dir` / `_jsonl_dir` are gone); `dxdfir_signatures`
+  nests the collection under each sub-tool, its disk scan under `yara/`, and
+  reads the shared export for hayabusa. New **`dxdfir_export`**: the one
+  disk-image artefact export (`processed/_extracted/[<collection>/]`) the
+  three consumers share, one combined filter file. The stack's Filebeat
+  excludes `_extracted`. Playbooks follow: `dxdfir-process-gowindowlicker.yml`,
+  `dxdfir-process-godaemonhunter.yml`, `dxdfir-process-anamnesis.yml`.
+
 ### Added
 
 - **`dxdfir_exchange`** — the STIX/CTI exchange as a lane role: four actions

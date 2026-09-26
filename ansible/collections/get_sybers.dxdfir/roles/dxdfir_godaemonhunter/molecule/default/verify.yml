@@ -1,0 +1,31 @@
+---
+- name: Verify
+  hosts: localhost
+  gather_facts: false
+  vars:
+    molecule_out: /tmp/dxdfir_godaemonhunter_molecule/out
+  tasks:
+    - name: "molecule-verify | find the Layer-1 knowledge the lane produced"
+      ansible.builtin.find:
+        paths: "{{ molecule_out }}/knowledge/HOST01"
+        patterns: "gohost.jsonl"
+        recurse: true
+      register: dxdfir_godaemonhunter_knowledge
+
+    - name: "molecule-verify | find any parser output"
+      ansible.builtin.find:
+        paths: "{{ molecule_out }}"
+        patterns: "*.jsonl"
+        recurse: true
+      register: dxdfir_godaemonhunter_produced
+
+    # host-centric: knowledge/<host>/ from Layer 1, <subtool>/<host>/<item>/ from Layer 2
+    - name: "molecule-verify | assert the host's knowledge store and some parser output landed"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_godaemonhunter_knowledge.matched | int > 0
+          - dxdfir_godaemonhunter_produced.matched | int > dxdfir_godaemonhunter_knowledge.matched | int
+        fail_msg: >-
+          no knowledge store under <out>/knowledge/HOST01/ or no daemon-parser output
+          from the sample tree (does it hold /etc/os-release and some /var/log content?)
+        quiet: true

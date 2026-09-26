@@ -13,11 +13,6 @@ import (
 	"github.com/get-sybers/dx_dfir/go/internal/tui"
 )
 
-var validSources = map[string]bool{
-	"zeek": true, "evtx": true, "memory": true, "plaso": true,
-	"godfir-toolz": true, "signatures": true, "all": true,
-}
-
 func newProcessCmd(env *Env) *cobra.Command {
 	var force, noRegister bool
 	var extraVars []string
@@ -27,21 +22,20 @@ func newProcessCmd(env *Env) *cobra.Command {
 		Long: "Process evidence with a lane (a collection is what is processed; the lane is what\n" +
 			"it is processed with). Each lane is driven by its ansible-playbook; progress is\n" +
 			"reconstructed live by watching the deterministic output files land on disk.\n\n" +
-			"Lanes:\n" +
-			"  zeek         PCAPs -> Zeek JSON logs\n" +
-			"  evtx         Windows event logs -> goevtx JSON\n" +
-			"  memory       memory images -> plugin JSONL\n" +
-			"  plaso        disk images/VMs -> super timeline\n" +
-			"  godfir-toolz disk images/VMs -> registry/MFT/… artefacts\n" +
-			"  signatures   yara/suricata/hayabusa over the staged evidence\n" +
-			"  all          every lane above\n\n" +
+			"Lanes (named after the tool that drives them):\n" +
+			laneHelp() +
+			"  all             every lane above\n\n" +
+			"Every lane writes data_store/processed/<tool>/[<collection>/]<host>/... — one leaf per\n" +
+			"tool, a collection-scoped run one level below it, one folder per host (an image, a\n" +
+			"capture, a staged log folder) and the tool's own items under that.\n\n" +
 			"The two positionals may be given in either order — the lane is recognised by name,\n" +
 			"anything else is treated as a collection:\n" +
 			"  dxdfir process zeek                 # zeek over all staged raw evidence\n" +
 			"  dxdfir process my-case zeek         # zeek scoped to collection 'my-case'\n" +
 			"  dxdfir process my-case              # every lane with evidence in 'my-case'\n" +
-			"With a collection each lane is scoped to data_store/raw/collections/<name>/ and only\n" +
-			"lanes with staged evidence run. With no collection, the active one is used if set.\n\n" +
+			"With a collection each lane reads data_store/raw/collections/<name>/ and writes\n" +
+			"processed/<tool>/<name>/; only lanes with staged evidence run. With no collection,\n" +
+			"the active one is used if set.\n\n" +
 			"A collection named exactly like a lane (e.g. 'zeek') is read as the lane when given\n" +
 			"positionally — select it first (dxdfir select zeek) and it is used as the active\n" +
 			"collection instead.",
@@ -53,7 +47,7 @@ func newProcessCmd(env *Env) *cobra.Command {
 			source, collection := "", ""
 			for _, a := range args {
 				switch {
-				case validSources[a]:
+				case lanes.IsLaneWord(a):
 					if source != "" {
 						return Fail(2, "two lanes given (%q and %q) — pass at most one lane. "+
 							"If one names a collection, select it first (dxdfir select <name>) and pass only the lane",
@@ -62,7 +56,8 @@ func newProcessCmd(env *Env) *cobra.Command {
 					source = a
 				default:
 					if collection != "" {
-						return Fail(2, "unrecognised argument %q — %q is not a lane (zeek|evtx|memory|plaso|godfir-toolz|signatures|all) and a collection is already given (%q)", a, a, collection)
+						return Fail(2, "unrecognised argument %q — %q is not a lane (%s) and a collection is already given (%q)",
+							a, a, strings.Join(lanes.LaneWords(), "|"), collection)
 					}
 					collection = a
 				}
@@ -119,10 +114,9 @@ func runProcess(env *Env, source, collection string, force, noRegister bool, ext
 		}
 	}
 
-	// Decide which lanes to run.
-	var laneNames []string
-	if source == "all" {
-		laneNames = lanes.AllNames()
+	// Decide which lanes to run: the name, alias or group resolves to lane names.
+	laneNames, _ := lanes.Resolve(source)
+	if len(laneNames) > 1 {
 		if collection != "" {
 			filtered := laneNames[:0:0]
 			for _, ln := range laneNames {
@@ -137,8 +131,6 @@ func runProcess(env *Env, source, collection string, force, noRegister bool, ext
 				return nil
 			}
 		}
-	} else {
-		laneNames = []string{source}
 	}
 
 	// Build the lane runs.
@@ -153,6 +145,7 @@ func runProcess(env *Env, source, collection string, force, noRegister bool, ext
 			lr.InputDirs = scopeDirs[ln]
 			lr.InputCount = counts[ln]
 			lr.ScopeVars = scopeVars[ln]
+			lr.Collection = collection
 		} else {
 			lr.InputDirs = lanes.DefaultInputDirs(r, spec)
 		}
@@ -163,8 +156,8 @@ func runProcess(env *Env, source, collection string, force, noRegister bool, ext
 	if collection != "" {
 		title += " (collection " + collection + ")"
 	}
-	if source == "all" {
-		fmt.Fprintln(os.Stderr, style.Bold("process all -> "+strings.Join(laneNames, ", ")))
+	if len(laneNames) > 1 || laneNames[0] != source {
+		fmt.Fprintln(os.Stderr, style.Bold("process "+source+" -> "+strings.Join(laneNames, ", ")))
 	}
 
 	ctx, cancel := signalCtx()
@@ -175,4 +168,23 @@ func runProcess(env *Env, source, collection string, force, noRegister bool, ext
 	}
 	updates := job.Execute(ctx)
 	return exitFromErr(present(env, tui.NewProcess(), updates, cancel))
+}
+
+// laneHelp renders the lane table for `process -h`: every lane with its
+// aliases and summary, then the retired group name.
+func laneHelp() string {
+	var b strings.Builder
+	for _, sp := range lanes.Specs {
+		fmt.Fprintf(&b, "  %-15s %s\n", sp.Name, sp.Summary)
+		if len(sp.Aliases) > 0 {
+			fmt.Fprintf(&b, "  %-15s   also: %s\n", "", strings.Join(sp.Aliases, ", "))
+		}
+	}
+	for g, members := range lanes.Groups {
+		if g == "all" {
+			continue
+		}
+		fmt.Fprintf(&b, "  %-15s %s\n", g, strings.Join(members, " + "))
+	}
+	return b.String()
 }

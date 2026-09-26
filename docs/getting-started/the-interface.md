@@ -35,13 +35,13 @@ a lane/step queue that ticks as evidence lands. State icons: `▸` running, `✓
 ├ queue ──────────────────────────────────────────────────────────────────────── ┤
 │   LANE / STEP        PROGRESS   DETAIL                                           │
 │ ✓ zeek               12/12      conn, dns, http, ssl, files…                     │
-│ ▸ evtx               3/8        Security.evtx                                    │
-│ · memory             0/1        queued                                           │
+│ ▸ gowindowlicker     3/8        Security.evtx                                    │
+│ – godaemonhunter     –          skipped — no Linux host                          │
+│ · anamnesis          0/1        queued                                           │
 │ · plaso              0/1        queued                                           │
-│ – godfir-toolz       –          skipped — no disk image                          │
 ├ output ─────────────────────────────────────────────────────────────────────── ┤
 │ [zeek] wrote conn.log — 18,442 records                                           │
-│ [evtx] parsing Security.evtx …                                                   │
+│ [gowindowlicker] parsing Security.evtx …                                         │
 ├ command ────────────────────────────────────────────────────────────────────── ┤
 │ > process case-a all_                                                            │
 └ type a command, Enter to run · Tab/→ next · Shift-Tab/← prev · Ctrl-C quits ──── ┘

@@ -31,7 +31,9 @@ tool's contract; no host python).
         │
         └── raw/                                      # Unprocessed forensic data — the canonical evidence lanes (defined in evidence-taxonomy/)
         │   └── pcaps/                                # Packet captures (pcap/pcapng)
-        │   └── logs/winevt/                          # Windows event logs (.evtx)
+        │   └── logs/winevt/<host>/                   # Windows event logs (.evtx), one folder per host
+        │   └── logs/linux/<host>/                    # Linux logs / staged root trees, one folder per host
+        │   └── logs/macOS/<host>/                    # macOS logs (staged; no lane reads them yet)
         │   └── disk_images/                          # Forensic disk images (E01, QCOW, AFF, raw)
         │   └── VM_files/                             # VM disk exports (one folder per VM)
         │   └── memory/                               # Memory captures (raw dumps, crash/minidumps)
@@ -43,46 +45,30 @@ tool's contract; no host python).
         │
         └── dependencies/                             # Operator-supplied rulesets/tools (Hayabusa, rulesets, MemProcFS symbols)
         │
-        └── processed/                                # One subtree per source — what `dxdfir build-car` normalises to CAR
-            └── linux_logs/                           # Linux Distro logs (not wired into the backend)
-            │   └── syslog/                           # Global System Activity
-            │   │
-            │   └── auth/                             # Authentication (logon)
-            │   │
-            │   └── utmp/                             # Current User
-            │   │
-            │   └── wtmp/                             # Logon History
-            │   │
-            │   └── btmp/                             # Failed Logon History
-            │   │
-            │   └── mail/                             # Email (SMTP/postfix)
-            │   │
-            │   └── dpkg-yum/                         # Package Manager
-            │   │
-            │   └── audit/                            # Linux Daemon
-            │   │
-            │   └── cron/                             # Daemon Cron Jobs
+        └── processed/                                # processed/<tool>/[<collection>/]<host>/… — what `dxdfir build-car` normalises to CAR
+            └── zeek/[<collection>/]<capture>/        # Zeek JSON (conn.json + every other log) + zeek.jsonl
             │
-            └── log2timeline/
-            │   └── plaso/                            # Plaso storage files (.plaso) — also re-usable by Timesketch
-            │   └── jsonl/                            # Plaso json_line, one file per host
-            │   └── logs/                             # Job logs
+            └── windowlicker/[<collection>/]          # the Windows parsers (gowindowlicker lane)
+            │   └── <subtool>/<host>/<item>/          # goevtx/, gore/, gomft/, goprefetch/, goese/, … one <subtool>.jsonl per item
             │
-            └── windows_logs/                         # goevtx JSON, per host
+            └── daemonhunter/[<collection>/]          # the Linux daemon parsers (godaemonhunter lane)
+            │   └── knowledge/<host>/                 # Layer 1: gohost / gousers / gonetwork
+            │   └── <subtool>/<host>/<item>/          # Layer 2: gojournal/, goauditd/, gosyslog/, gounit/, gocron/, …
             │
-            └── zeek/
-            │   └── <capture>/                        # Zeek JSON (conn.json + every other log)
+            └── anamnesis/[<collection>/]<image>/     # anamnesis (MemProcFS) JSONL per plugin + car.db
             │
-            └── memory/
-            │   └── <image>/                          # anamnesis (MemProcFS) JSONL per plugin
+            └── log2timeline/[<collection>/]<host>/   # <host>.plaso (also re-usable by Timesketch) + timeline.jsonl, side by side
             │
-            └── godfir-toolz/                            # GoDFIR-toolz artefacts (registry, SRUM, MFT, …)
+            └── detections/
+            │   └── yara/ suricata/ hayabusa/         # [<collection>/]<host>/ — detection JSONL (YARA + the disk scan / Suricata EVE / Hayabusa Sigma)
+            │   └── byakugan/                         # reserved for the engine's own detections
             │
-            └── signatures/
-            │   └── yara/ suricata/ hayabusa/         # detection JSONL (YARA matches / Suricata EVE / Hayabusa Sigma)
+            └── _extracted/[<collection>/]<image>/    # the shared disk-image artefact export (staging: never a source, never shipped)
             │
-            └── car/
-                └── <source>/                         # the materialised CAR: car_<object>.jsonl (+ car_relationships.jsonl)
+            └── byakugan/
+            │   └── <source>/                         # the materialised CAR: car_<object>.jsonl (+ car_relationships.jsonl)
+            │
+            └── byakugan-load/  exchange/             # `load-car` state; the STIX/CTI exchange's bundles
 ```
 
 The CAR engine lives **outside** this tree entirely: the Byakugan engine is

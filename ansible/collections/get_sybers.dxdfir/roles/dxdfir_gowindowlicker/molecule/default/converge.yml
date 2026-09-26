@@ -1,0 +1,17 @@
+---
+- name: Converge
+  hosts: localhost
+  gather_facts: true
+  vars:
+    dxdfir_gowindowlicker_winevt_dir: /tmp/dxdfir_gowindowlicker_molecule/winevt
+    # no disk images: the export declares no run, the plaso image is never needed
+    dxdfir_gowindowlicker_input_dir: /tmp/dxdfir_gowindowlicker_molecule/images
+    dxdfir_gowindowlicker_vm_dir: ""
+    dxdfir_gowindowlicker_out_dir: /tmp/dxdfir_gowindowlicker_molecule/out
+    dxdfir_gowindowlicker_stage_dir: /tmp/dxdfir_gowindowlicker_molecule/_extracted
+    # Uses the default image (get-sybers/gowindowlicker); build it first with
+    # playbooks/dxdfir-build-images.yml.
+  tasks:
+    - name: "converge | run dxdfir_gowindowlicker"
+      ansible.builtin.include_role:
+        name: dxdfir_gowindowlicker

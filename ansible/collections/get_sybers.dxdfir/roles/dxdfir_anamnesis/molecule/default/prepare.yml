@@ -1,0 +1,38 @@
+---
+# A memory image is large/binary, so no fixture ships in-repo. Point this at a
+# memory image to run the scenario:
+#   molecule test -- -e molecule_sample_memory=/path/dump.raw
+- name: Prepare
+  hosts: localhost
+  gather_facts: false
+  vars:
+    molecule_mem_in: /tmp/dxdfir_anamnesis_molecule/mem
+    molecule_out: /tmp/dxdfir_anamnesis_molecule/out
+    molecule_sample_memory: ""
+  tasks:
+    - name: "molecule-prepare | require a sample memory image"
+      ansible.builtin.assert:
+        that:
+          - molecule_sample_memory | length > 0
+        fail_msg: >-
+          Provide -e molecule_sample_memory=<path/to/memory-image> (large/binary; not
+          shipped). The image is always offline: for populated Windows fields the
+          mounted symbol cache must cover the sample's Windows build.
+        quiet: true
+
+    - name: "molecule-prepare | start from a clean output dir"
+      ansible.builtin.file:
+        path: "{{ molecule_out }}"
+        state: absent
+
+    - name: "molecule-prepare | memory input dir exists"
+      ansible.builtin.file:
+        path: "{{ molecule_mem_in }}"
+        state: directory
+        mode: "0755"
+
+    - name: "molecule-prepare | stage the sample memory image"
+      ansible.builtin.copy:
+        src: "{{ molecule_sample_memory }}"
+        dest: "{{ molecule_mem_in }}/sample.raw"
+        mode: "0644"

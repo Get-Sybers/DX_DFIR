@@ -1,0 +1,37 @@
+---
+# A Linux root tree is not shipped in-repo. Point this at one (a staged root
+# filesystem, or a directory holding at least /etc/os-release and some
+# /var/log content) to run the scenario:
+#   molecule test -- -e molecule_sample_linux=/path/to/root-tree
+- name: Prepare
+  hosts: localhost
+  gather_facts: false
+  vars:
+    molecule_linux_in: /tmp/dxdfir_godaemonhunter_molecule/linux
+    molecule_out: /tmp/dxdfir_godaemonhunter_molecule/out
+    molecule_sample_linux: ""
+  tasks:
+    - name: "molecule-prepare | require a sample root tree"
+      ansible.builtin.assert:
+        that:
+          - molecule_sample_linux | length > 0
+        fail_msg: >-
+          Provide -e molecule_sample_linux=<path/to/root-tree> (not shipped).
+        quiet: true
+
+    - name: "molecule-prepare | start from a clean scenario dir"
+      ansible.builtin.file:
+        path: "{{ molecule_out | dirname }}"
+        state: absent
+
+    - name: "molecule-prepare | one host folder under the Linux tree"
+      ansible.builtin.file:
+        path: "{{ molecule_linux_in }}"
+        state: directory
+        mode: "0755"
+
+    - name: "molecule-prepare | stage the sample tree as HOST01"
+      ansible.builtin.copy:
+        src: "{{ molecule_sample_linux }}/"
+        dest: "{{ molecule_linux_in }}/HOST01/"
+        mode: preserve

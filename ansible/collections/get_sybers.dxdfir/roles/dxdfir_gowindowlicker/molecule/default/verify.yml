@@ -1,0 +1,25 @@
+---
+- name: Verify
+  hosts: localhost
+  gather_facts: false
+  vars:
+    molecule_out: /tmp/dxdfir_gowindowlicker_molecule/out
+  tasks:
+    - name: "molecule-verify | find the goevtx JSON Lines the lane produced"
+      ansible.builtin.find:
+        paths: "{{ molecule_out }}"
+        patterns: "goevtx.jsonl"
+        recurse: true
+      register: dxdfir_gowindowlicker_produced
+
+    # host-centric: <out>/goevtx/<host>/<log>/goevtx.jsonl — the host is a
+    # directory level, the item the log's name
+    - name: "molecule-verify | assert the log landed under its host folder"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_gowindowlicker_produced.matched | int > 0
+          - >-
+            dxdfir_gowindowlicker_produced.files | map(attribute='path')
+            | select('search', '/goevtx/HOST01/Security.evtx/goevtx.jsonl$') | list | length == 1
+        fail_msg: "no goevtx.jsonl under <out>/goevtx/HOST01/Security.evtx/ from the sample log"
+        quiet: true

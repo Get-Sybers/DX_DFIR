@@ -13,8 +13,11 @@ cd "$REPO_ROOT" || exit 1
 
 KEEP="${KEEP:-0}"
 PLAYBOOKS="ansible/collections/get_sybers.dxdfir/playbooks"
-FIXTURE_DIR="$REPO_ROOT/data_store/raw/logs/winevt/sysmon-attack-samples"
-OUT_DIR="$(mktemp -d)"     # the processed tree: windows_logs/ from the evtx lane
+# the fixtures land in one host folder under the event-log tree — the lane's
+# <host> level (logs/winevt/<host>/*.evtx): the tree is the lane's input
+WINEVT_DIR="$REPO_ROOT/data_store/raw/logs/winevt"
+FIXTURE_DIR="$WINEVT_DIR/sysmon-attack-samples"
+OUT_DIR="$(mktemp -d)"     # the processed tree: windowlicker/goevtx/<host>/ from the gowindowlicker lane
 CAR_DIR="$(mktemp -d)"     # the materialised CAR built from it
 LOG_DIR="$(mktemp -d)"
 # mktemp defaults to 0700, which would block the containers' uid 2000 — open the tree like the real data_store
@@ -34,7 +37,7 @@ export ANSIBLE_CONFIG="$REPO_ROOT/ansible.cfg"
 cleanup() {
     rm -rf "$LOG_DIR"
     if [[ "$KEEP" == "1" ]]; then
-        echo "   (KEEP=1: leaving $OUT_DIR (goevtx JSON Lines) and $CAR_DIR (CAR) in place)"
+        echo "   (KEEP=1: leaving $OUT_DIR (the windowlicker tree) and $CAR_DIR (CAR) in place)"
         return
     fi
     rm -rf "$OUT_DIR" "$CAR_DIR"
@@ -99,7 +102,7 @@ assert_has() {
 section "Preflight (fail loudly — never skip)"
 command -v docker >/dev/null 2>&1 || die "docker not found. This test RUNS the pipeline; it cannot be skipped."
 command -v python3 >/dev/null 2>&1 || die "python3 not found."
-command -v ansible-playbook >/dev/null 2>&1 || die "ansible-playbook not found — it ships with 'pip install ./python'."
+command -v ansible-playbook >/dev/null 2>&1 || die "ansible-playbook not found — pip install -r requirements.txt (or run scripts/setup-environment.sh)."
 # daemon reachability, image builds and the hardening guard are gated INSIDE
 # each lane's ansible preflight (docker version -> ensure_built -> verify):
 # only ansible interacts with the containers — this script never does.
@@ -116,16 +119,20 @@ n_fix=$(find "$FIXTURE_DIR" -iname '*.evtx' 2>/dev/null | wc -l)
 pass "$n_fix Sysmon .evtx fixtures present and verified"
 
 # =============================================================================
-section "Process fixtures through the real evtx lane (dxdfir_evtx -> goevtx)"
-if ! ansible-playbook "$PLAYBOOKS/dxdfir-process-evtx.yml" \
-        -e "dxdfir_evtx_evtx_dir=$FIXTURE_DIR" -e "dxdfir_evtx_out_dir=$OUT_DIR/windows_logs" \
-        >"$LOG_DIR/evtx.out" 2>&1; then
-    tail -40 "$LOG_DIR/evtx.out" >&2
-    die "the evtx lane failed (see the play output above)"
+section "Process fixtures through the real gowindowlicker lane (dxdfir_gowindowlicker -> goevtx per host)"
+# no disk images: the export declares no run and the plaso image is never needed
+if ! ansible-playbook "$PLAYBOOKS/dxdfir-process-gowindowlicker.yml" \
+        -e "dxdfir_gowindowlicker_winevt_dir=$WINEVT_DIR" \
+        -e "dxdfir_gowindowlicker_input_dir=$OUT_DIR/no-images" -e "dxdfir_gowindowlicker_vm_dir=" \
+        -e "dxdfir_gowindowlicker_out_dir=$OUT_DIR/windowlicker" \
+        -e "dxdfir_gowindowlicker_stage_dir=$OUT_DIR/_extracted" \
+        >"$LOG_DIR/gowindowlicker.out" 2>&1; then
+    tail -40 "$LOG_DIR/gowindowlicker.out" >&2
+    die "the gowindowlicker lane failed (see the play output above)"
 fi
-n_logs=$(find "$OUT_DIR/windows_logs" -name goevtx.jsonl -size +0 2>/dev/null | wc -l)
-(( n_logs > 0 )) || die "the evtx lane produced no goevtx.jsonl under $OUT_DIR/windows_logs"
-pass "goevtx parsed $n_logs log(s) into goevtx.jsonl"
+n_logs=$(find "$OUT_DIR/windowlicker/goevtx/sysmon-attack-samples" -name goevtx.jsonl -size +0 2>/dev/null | wc -l)
+(( n_logs > 0 )) || die "the gowindowlicker lane produced no goevtx.jsonl under $OUT_DIR/windowlicker/goevtx/sysmon-attack-samples (the host level)"
+pass "goevtx parsed $n_logs log(s) into windowlicker/goevtx/<host>/<log>/goevtx.jsonl"
 
 # =============================================================================
 # Normalise the processed evtx into finished CAR (Byakugan engine): one
@@ -140,7 +147,7 @@ if ! ansible-playbook "$PLAYBOOKS/dxdfir-build-car.yml" \
     die "CAR normalise (build-car) failed."
 fi
 n_car=$(find "$CAR_DIR" -name 'car_*.jsonl' -size +0 2>/dev/null | wc -l)
-(( n_car > 0 )) || die "the engine wrote no populated car_<object>.jsonl under $CAR_DIR (did it discover the windows_logs source?)"
+(( n_car > 0 )) || die "the engine wrote no populated car_<object>.jsonl under $CAR_DIR (did it discover the windowlicker/goevtx sources?)"
 pass "$n_car populated car_<object>.jsonl file(s) written"
 
 # =============================================================================

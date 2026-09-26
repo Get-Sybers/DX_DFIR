@@ -16,8 +16,9 @@ lives in the **playbook**, which is a thin, single-purpose wrapper (`hosts: loca
 
 ## One role per source or action
 
-`dxdfir_zeek`, `dxdfir_evtx`, `dxdfir_memory`, `dxdfir_plaso`, `dxdfir_godfir_toolz`,
-`dxdfir_signatures` (the [lanes](../architecture/processing-lanes.md)), plus `dxdfir_byakugan`,
+`dxdfir_zeek`, `dxdfir_gowindowlicker`, `dxdfir_godaemonhunter`, `dxdfir_anamnesis`,
+`dxdfir_plaso`, `dxdfir_signatures` (the [lanes](../architecture/processing-lanes.md)) and
+`dxdfir_export` (the disk-image export they share), plus `dxdfir_byakugan`,
 `dxdfir_images`, `dxdfir_stack`, `dxdfir_cleanup`, and the ingest/deploy roles. Every
 lane role carries only its own per-lane piece — asserting inputs and building the
 processor argv — and delegates the run to the shared **`dxdfir_lane`** skeleton

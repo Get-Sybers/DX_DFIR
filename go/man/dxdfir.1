@@ -137,11 +137,17 @@ bare \fINAME\fR in place of the noun: \fBregister\fR \fINAME\fR is
 the verb-first form to use.
 .TP
 .BI "process " [COLLECTION] " " [LANE]
-Process evidence with a lane. \fILANE\fR is one of
-.BR zeek ", " evtx ", " memory ", " plaso ", " godfir-toolz ", " signatures ", " all
-(the default when a collection is given); \fICOLLECTION\fR scopes the run to one
-registered collection (else the active one, if set). The two positionals may be
-given in either order \(em a lane name is the lane, anything else the collection.
+Process evidence with a lane, named after the tool that drives it. \fILANE\fR is one of
+.BR zeek ", " gowindowlicker ", " godaemonhunter ", " anamnesis ", " plaso ", " signatures ", " all
+(the default when a collection is given), or an alias (\fBevtx\fR, \fBwindowlicker\fR,
+\fBlick\fR for gowindowlicker; \fBdaemonhunter\fR, \fBhunt\fR; \fBmemory\fR;
+\fBlog2timeline\fR; \fBgodfir-toolz\fR runs both host lanes); \fICOLLECTION\fR scopes the
+run to one registered collection (else the active one, if set): its inputs come from
+.IR data_store/raw/collections/<name>/ ,
+its output lands in
+.IR data_store/processed/<tool>/<name>/<host>/... .
+The two positionals may be given in either order \(em a lane name is the lane,
+anything else the collection.
 Idempotent: inputs that already have output are skipped (use
 .B --force
 to reprocess).
@@ -426,7 +432,7 @@ Process packet captures with the zeek lane:
 .B dxdfir process zeek
 .TP
 Reprocess memory images, overriding the input directory:
-.B dxdfir process memory --force -e dxdfir_memory_memory_dir=/evidence/mem
+.B dxdfir process anamnesis --force -e dxdfir_anamnesis_memory_dir=/evidence/mem
 .TP
 Run only the YARA signature lane:
 .B dxdfir process signatures -e \(aq{\(dqdxdfir_signatures_lanes\(dq:[\(dqyara\(dq]}\(aq

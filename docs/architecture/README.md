@@ -41,8 +41,8 @@ Everything is file-driven, so any stage can be inspected on disk:
 ```
 raw ──process──▶ processed ──build-car──▶ car ──build-timeline──▶ timeline.jsonl
  │                   │                      │                          │
- │ data_store/raw/   │ data_store/          │ data_store/processed/    │  (also read live in
- │ <type>/           │ processed/<leaf>/    │ car/<source>/            │   the Timeline tab)
+ │ data_store/raw/   │ data_store/processed/│ data_store/processed/    │  (also read live in
+ │ <type>/           │ <tool>/[<coll>/]<host>│ byakugan/<source>/       │   the Timeline tab)
  │                   │                      │ car_<obj>.jsonl          │
  └───────────────────┴──────── Filebeat tails processed/ ──▶ logs-dxdfir.* data streams
 ```

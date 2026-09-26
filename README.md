@@ -62,7 +62,7 @@ Evidence that arrives mid-case goes back through the dropzone: copy it into
 ```bash
 dxdfir unselect                     # with no active collection, lanes read data_store/raw/<type>/ directly
 cp memdump.mem data_store/raw/memory/
-dxdfir process memory               # zeek | evtx | memory | plaso | godfir-toolz | signatures
+dxdfir process anamnesis            # zeek | gowindowlicker | godaemonhunter | anamnesis | plaso | signatures
 ```
 
 Bring up the backend:
@@ -109,14 +109,25 @@ supply-chain gate is ansible (the GoDFIR-toolz build galaxy's
 
 ## What it produces
 
+Every lane writes `data_store/processed/<tool>/[<collection>/]<host>/…` — one
+leaf per tool, a collection-scoped run (`dxdfir process <collection> <lane>`)
+one level below it, one folder per **host** (a disk image, a capture, a staged
+log folder) and the tool's own items under that:
+
 | Source | Command | Lands in (`data_store/processed/`) |
 |:---|:---|:---|
-| Disk images / VM exports (Plaso) | `process plaso` | `log2timeline/jsonl/<source>/timeline.jsonl` (Plaso `json_line`) + `log2timeline/storage/` (`.plaso`) |
-| PCAP (Zeek) | `process zeek` | `zeek/<capture>/` (`conn.json` + every other Zeek log) |
-| Windows event logs + Sysmon (goevtx) | `process evtx` | `windows_logs/<log>/goevtx.jsonl` |
-| Memory ([anamnesis](https://github.com/Get-Sybers/Anamnesis)) | `process memory` | `memory/<image>/` (per-plugin JSONL + `car.db`) |
-| GoDFIR-toolz artefacts — SRUM, registry, … | `process godfir-toolz` | `godfir-toolz/<subtool>/<item>/` |
-| YARA / Suricata / Hayabusa / disk scan | `process signatures` | `detections/<sub-tool>/<item>/` (JSONL) |
+| PCAP (Zeek) | `process zeek` | `zeek/[<collection>/]<capture>/` (`conn.json` + every other Zeek log) |
+| Windows hosts — event logs (`raw/logs/winevt/<host>/`) and disk images / VMs, through the [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) Windows parsers (goevtx, gore, gomft, goprefetch, goese, …) | `process gowindowlicker` | `windowlicker/[<collection>/]<subtool>/<host>/<item>/<subtool>.jsonl` |
+| Linux hosts — logs / root trees (`raw/logs/linux/<host>/`) and disk images / VMs, through the daemon parsers (gojournal, goauditd, gosyslog, …) enriched by a per-host knowledge store | `process godaemonhunter` | `daemonhunter/[<collection>/]<subtool>/<host>/<item>/<subtool>.jsonl` + `knowledge/<host>/` |
+| Memory ([anamnesis](https://github.com/Get-Sybers/Anamnesis)) | `process anamnesis` | `anamnesis/[<collection>/]<image>/` (per-plugin JSONL + `car.db`) |
+| Disk images / VM exports (Plaso) | `process plaso` | `log2timeline/[<collection>/]<host>/` (`<host>.plaso` + `timeline.jsonl`, Plaso `json_line`, side by side) |
+| YARA / Suricata / Hayabusa / disk scan | `process signatures` | `detections/{yara,suricata,hayabusa}/[<collection>/]<host>/` (JSONL) |
+
+Disk images are exported once into the shared stage
+`processed/_extracted/[<collection>/]<image>/export/` (the artefact set:
+registry hives, event logs, the Linux core, …) by whichever of the three
+consuming lanes runs first. The older lane names still work as aliases
+(`evtx`, `memory`, `godfir-toolz`).
 
 The **CAR layer is materialised**: the [Byakugan](https://github.com/Get-Sybers/byakugan)
 engine normalises each processed source into finished

@@ -18,8 +18,9 @@ import (
 type LaneRun struct {
 	Spec       Spec
 	InputDirs  []string // absolute dirs to count the denominator from
-	InputCount int      // known count (collection-scoped, from Python); <0 => count InputDirs
-	ScopeVars  []string // extra "-e var=dir" scoping the lane to a collection
+	InputCount int      // known count (collection-scoped, from the registry); <0 => count InputDirs
+	ScopeVars  []string // extra "-e var=dir" scoping the lane's INPUTS to a collection
+	Collection string   // the collection the run is scoped to ("" = loose): scopes the lane's OUTPUT
 }
 
 // Job runs a set of lanes sequentially and streams progress.
@@ -120,8 +121,8 @@ func (j *Job) run(ctx context.Context, updates chan<- model.Update) {
 func (j *Job) runLane(ctx context.Context, updates chan<- model.Update, lane *model.Lane, lr LaneRun, emit func(string, []string)) error {
 	lane.State = model.Running
 	lane.Started = time.Now()
-	outDir := lr.Spec.outDir(j.Repo.Root)
-	longPole := lr.Spec.Kind == model.KindHeartbeat || lr.Spec.Name == "memory"
+	outDir := lr.Spec.outDir(j.Repo.Root, lr.Collection)
+	longPole := lr.Spec.Kind == model.KindHeartbeat || lr.Spec.Name == "anamnesis"
 
 	args, err := j.ansibleArgs(lr)
 	if err != nil {
@@ -144,13 +145,13 @@ func (j *Job) runLane(ctx context.Context, updates chan<- model.Update, lane *mo
 
 	var tail []string
 	refresh := func() {
-		lane.Done = lr.Spec.countDone(outDir)
+		lane.Done = lr.Spec.countDone(outDir, lr.Collection)
 		if lane.Total > 0 && lane.Done > lane.Total {
 			lane.Total = lane.Done // outputs can exceed a stale denominator
 		}
 		switch lr.Spec.Kind {
 		case model.KindHeartbeat:
-			lane.Cur = biggestMatch(outDir, "plaso", "*.plaso")
+			lane.Cur = largestFileMatching(outDir, func(n string) bool { return strings.HasSuffix(n, ".plaso") })
 			lane.Detail = fmt.Sprintf("%d/%d images · %s", lane.Done, lane.Total, humanElapsed(lane.Started))
 		case model.KindSpinner:
 			lane.Detail = "scanning · " + humanElapsed(lane.Started)
@@ -207,6 +208,7 @@ func (j *Job) runLane(ctx context.Context, updates chan<- model.Update, lane *mo
 // ansibleArgs builds the argv (after the binary) that drives one lane's
 // process playbook, honouring the collection playbook contract and the roles'
 // argument_specs: -e dxdfir_<lane>_force selects the role's behaviour,
+// -e dxdfir_<lane>_collection scopes the OUTPUT (processed/<leaf>/<collection>/),
 // collection scope vars narrow the inputs.
 //
 // The base command (inventory localhost,/connection local + playbook path)
@@ -234,6 +236,9 @@ func (j *Job) ansibleArgs(lr LaneRun) ([]string, error) {
 	args = append(args,
 		"-e", "dxdfir_"+name+"_force="+boolStr(j.Force),
 	)
+	if lr.Collection != "" {
+		args = append(args, "-e", "dxdfir_"+name+"_collection="+lr.Collection)
+	}
 	for _, kv := range lr.ScopeVars { // collection scope first (an --extra-var can override)
 		args = append(args, "-e", kv)
 	}
@@ -246,10 +251,10 @@ func (j *Job) ansibleArgs(lr LaneRun) ([]string, error) {
 // activeLog returns the newest on-disk tool log for the lane's active item.
 func activeLog(s Spec, outDir string) string {
 	switch s.Name {
-	case "memory":
-		return newestMatch(outDir, "*", "anamnesis.log")
+	case "anamnesis":
+		return newestFileMatching(outDir, func(n string) bool { return n == "anamnesis.log" })
 	case "plaso":
-		return newestMatch(outDir, "logs", "*.log")
+		return newestFileMatching(outDir, func(n string) bool { return n == "log2timeline.log" || n == "psort.log" })
 	default:
 		return ""
 	}

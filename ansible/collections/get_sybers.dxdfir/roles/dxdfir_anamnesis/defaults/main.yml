@@ -1,0 +1,26 @@
+---
+
+dxdfir_anamnesis_repo_root: "{{ role_path }}/../../../../.."
+
+# subdir from the shared evidence taxonomy (evidence-taxonomy/)
+dxdfir_anamnesis_memory_lane: >-
+  {{ ((lookup('file', dxdfir_anamnesis_repo_root ~ '/evidence-taxonomy/memory.yml',
+  errors='ignore') | default('', true) | from_yaml) or {}).subdir
+  | default('memory', true) }}
+dxdfir_anamnesis_memory_dir: "{{ dxdfir_anamnesis_repo_root }}/data_store/raw/{{ dxdfir_anamnesis_memory_lane }}"
+# a collection-scoped run lands one level below the leaf: processed/anamnesis/<collection>/
+dxdfir_anamnesis_collection: ""
+# processed/anamnesis/[<collection>/]<image>/plugins/<plugin>.jsonl + car.db
+dxdfir_anamnesis_out_dir: >-
+  {{ dxdfir_anamnesis_repo_root }}/data_store/processed/anamnesis{{
+  ('/' ~ dxdfir_anamnesis_collection) if dxdfir_anamnesis_collection | length > 0 else '' }}
+# the contract the lane is driven from; the image is always offline — symbols
+# live in the persistent host cache below
+dxdfir_anamnesis_contract: "{{ dxdfir_anamnesis_repo_root }}/docker/GoDFIR-toolz/anamnesis/contract.yml"
+# the persistent symbol cache (symsrv layout): accumulates across runs; drop PDBs straight in
+dxdfir_anamnesis_symbols_dir: "{{ dxdfir_anamnesis_repo_root }}/data_store/dependencies/memprocfs-symbols"
+# empty = the contract's image; set to pin a digest
+dxdfir_anamnesis_image: ""
+dxdfir_anamnesis_force: false
+# comma-separated collector names; empty = the default CAR set
+dxdfir_anamnesis_plugins: ""

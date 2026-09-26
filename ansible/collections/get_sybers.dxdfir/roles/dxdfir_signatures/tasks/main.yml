@@ -21,6 +21,19 @@
          else ['yara', 'suricata', 'hayabusa', 'scan'] }}
   tags: [always]
 
+# the disk images' artefact export (event logs included) is the shared stage:
+# exported here when no other lane did it yet — each image one hayabusa host
+- name: "signatures | export the artefact set out of every disk image"
+  ansible.builtin.include_role:
+    name: dxdfir_export
+  vars:
+    dxdfir_export_collection: "{{ dxdfir_signatures_collection }}"
+    dxdfir_export_trees: ["{{ dxdfir_signatures_disk_dir }}"]
+    dxdfir_export_stage_dir: "{{ dxdfir_signatures_evtx_stage_dir }}"
+    dxdfir_export_force: "{{ dxdfir_signatures_force }}"
+  when: "'hayabusa' in (dxdfir_signatures_lanes if dxdfir_signatures_lanes | length > 0 else ['hayabusa'])"
+  tags: [always]
+
 # every evidence tree is optional: a run is declared only for the ones present
 - name: "signatures | stat each evidence tree"
   ansible.builtin.stat:
@@ -65,7 +78,7 @@
            'env': {'SIGNATURES_YARA_FORCE': dxdfir_signatures_force,
                    'SIGNATURES_YARA_RULES': dxdfir_signatures_yara_rules_env},
            'mounts': [{'host': item.path, 'path': '/input', 'mode': 'ro'},
-                      {'host': dxdfir_signatures_out_dir ~ '/yara/' ~ item.name, 'path': '/output', 'mode': 'rw'}]
+                      {'host': dxdfir_signatures_out_dir ~ '/yara' ~ dxdfir_signatures_scope, 'path': '/output', 'mode': 'rw'}]
                      + dxdfir_signatures_yara_rules_mount,
          }] }}
   loop:
@@ -91,7 +104,7 @@
                    'SIGNATURES_SURICATA_SET': dxdfir_signatures_suricata_set,
                    'SIGNATURES_SURICATA_RULES': ('/rules/suricata.rules' if dxdfir_signatures_suricata_rules | length > 0 else '')},
            'mounts': [{'host': dxdfir_signatures_pcap_dir, 'path': '/input', 'mode': 'ro'},
-                      {'host': dxdfir_signatures_out_dir ~ '/suricata', 'path': '/output', 'mode': 'rw'}]
+                      {'host': dxdfir_signatures_out_dir ~ '/suricata' ~ dxdfir_signatures_scope, 'path': '/output', 'mode': 'rw'}]
                      + ([{'host': dxdfir_signatures_suricata_rules, 'path': '/rules/suricata.rules', 'mode': 'ro'}]
                         if dxdfir_signatures_suricata_rules | length > 0 else []),
          }] }}
@@ -112,7 +125,7 @@
                    'SIGNATURES_HAYABUSA_PROFILE': dxdfir_signatures_hayabusa_profile,
                    'SIGNATURES_HAYABUSA_RULES': ('/rules/hayabusa' if dxdfir_signatures_hayabusa_rules | length > 0 else '')},
            'mounts': [{'host': item.path, 'path': '/input', 'mode': 'ro'},
-                      {'host': dxdfir_signatures_out_dir ~ '/hayabusa', 'path': '/output', 'mode': 'rw'}]
+                      {'host': dxdfir_signatures_out_dir ~ '/hayabusa' ~ dxdfir_signatures_scope, 'path': '/output', 'mode': 'rw'}]
                      + ([{'host': dxdfir_signatures_hayabusa_rules, 'path': '/rules/hayabusa', 'mode': 'ro'}]
                         if dxdfir_signatures_hayabusa_rules | length > 0 else []),
          }] }}
@@ -138,7 +151,7 @@
                    'SIGNATURES_SCAN_FILTER': dxdfir_signatures_scan_filter,
                    'SIGNATURES_SCAN_RULES': dxdfir_signatures_yara_rules_env},
            'mounts': [{'host': dxdfir_signatures_disk_dir, 'path': '/input', 'mode': 'ro'},
-                      {'host': dxdfir_signatures_out_dir ~ '/scan', 'path': '/output', 'mode': 'rw'}]
+                      {'host': dxdfir_signatures_out_dir ~ '/yara' ~ dxdfir_signatures_scope, 'path': '/output', 'mode': 'rw'}]
                      + dxdfir_signatures_yara_rules_mount,
          }] }}
   when:

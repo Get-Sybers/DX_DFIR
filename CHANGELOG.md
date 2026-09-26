@@ -7,6 +7,52 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Changed (the lanes are the tools; the processed tree is per collection, per host)
+- **`dxdfir process` lists `gowindowlicker` and `godaemonhunter`.** The
+  lanes are named after the tool that drives them — `zeek`,
+  `gowindowlicker`, `godaemonhunter`, `anamnesis`, `plaso`, `signatures` —
+  and the older names stay as aliases (`evtx`, `memory`, `log2timeline`;
+  `godfir-toolz` runs both host lanes). The `evtx` and `godfir-toolz` roles
+  retire into **`dxdfir_gowindowlicker`** (loose event logs per host +
+  every Windows parser over each disk image's export) and
+  **`dxdfir_godaemonhunter`** (loose Linux hosts under the new
+  `raw/logs/linux/<host>/` + the daemon parsers over each image, Layer 1
+  knowledge store then Layer 2 enriched by it); `dxdfir_memory` is
+  `dxdfir_anamnesis`. Both host lanes run one confined container per
+  (parser, host) — the tool's own batch mode, its own `<SUBTOOL>_*` env
+  block — instead of one sweep over everything.
+- **The processed tree is `processed/<tool>/[<collection>/]<host>/…`**: one
+  leaf per tool (`zeek`, `windowlicker`, `daemonhunter`, `anamnesis`,
+  `log2timeline`, `detections/{yara,suricata,hayabusa}`), a
+  collection-scoped run one level below it — `dxdfir process <collection>
+  <lane>` now passes `dxdfir_<lane>_collection` and every role scopes its
+  output by it, so two cases never share a folder or a CAR store — and one
+  folder per host (a disk image, a capture, a memory image, a staged log
+  folder) with the tool's items under it. plaso writes `<host>.plaso` and
+  `timeline.jsonl` side by side in the one `<host>/` folder (the psort
+  sub-tool's item is the storage file's folder now, GoDFIR-toolz 0.3.2);
+  the disk scan lands under `detections/yara/`. The retired leaves
+  (`windows_logs`, `godfir-toolz`, `memory`, `csv`, `json`, `linux_logs`,
+  `software_logs`) leave the skeleton.
+- **One shared disk-image export, `dxdfir_export`**: the plaso image's
+  `image_export` pulls ONE artefact set (the Windows artefacts with their
+  transaction logs, the event logs, the Linux core) into
+  `processed/_extracted/[<collection>/]<image>/export/`, once per image,
+  by whichever of gowindowlicker, godaemonhunter or the signatures hayabusa
+  run comes first; a tree with no image declares no run, so a logs-only
+  host never needs the plaso image. The stage is `_`-prefixed: the engine
+  never walks it, Filebeat never ships it (`_extracted` excluded).
+- **The engine discovers the new tree** — GoDFIR-toolz bumps to 0.3.2
+  (Byakugan #126: sources found by the files each tool writes at any depth
+  under the tool leaf, named after the path so collections stay apart; the
+  exchange reads the per-item detection folders). The Go progress watcher
+  counts the same markers (`zeek.jsonl`, `<subtool>.jsonl`,
+  `log2timeline.jsonl`, `plugins/*.jsonl`, the detection indexes) at any
+  depth instead of the retired `*_EvtxECmd_Output.json` / `.host` globs.
+- **The evidence taxonomy gains `logs/linux` and `logs/macOS`** (one folder
+  per host; `sort` and the collection skeleton create them; no lane reads
+  macOS yet).
+
 ### Fixed (fresh-host setup)
 - **`dxdfir` works right after `setup-environment.sh`, in any shell.** The
   binary went to `/opt/dxdfir/bin` and the ansible venv to

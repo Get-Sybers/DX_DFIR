@@ -14,10 +14,15 @@ argument_specs:
         type: str
         required: false
         description: "Directory tree of packet captures to process (recursed)."
+      dxdfir_zeek_collection:
+        type: str
+        required: false
+        default: ""
+        description: "The collection this run is scoped to (the CLI passes it); the output lands one level down, processed/zeek/<collection>/."
       dxdfir_zeek_out_dir:
         type: str
         required: false
-        description: "Output dir (default data_store/processed/zeek); override to send output to a custom location."
+        description: "Output dir (default data_store/processed/zeek[/<collection>]); override to send output to a custom location."
       dxdfir_zeek_contract:
         type: str
         required: false
