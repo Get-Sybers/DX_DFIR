@@ -168,7 +168,13 @@ lean:
   a system prefix any more, and an override still naming `/opt/dxdfir`
   (`DXDFIR_VENV`, `DXDFIR_COLLECTIONS`, `DXDFIR_BIN_DIR` — a stale export
   from an earlier release's shell) is ignored with a warning, by the script
-  and by `dxdfir` alike.
+  and by `dxdfir` alike. Nothing lands in the home directory either:
+  `ansible.cfg` sets ansible's state home (`home = .ansible`) to the
+  checkout, so the `ansible-galaxy` download staging, the galaxy cache and
+  token and any persistent-connection sockets live under `.ansible/`
+  (gitignored) instead of `~/.ansible`; the script exports the same
+  `ANSIBLE_HOME` (through `sudo` too) and fails its closing self-check if a
+  run created `~/.ansible` regardless.
 - **The Go toolchain is (re)installed when absent or under go.mod's floor**:
   the build pins `GOTOOLCHAIN=local`, which deliberately refuses
   auto-upgrades, so a host provisioned by an older release re-provisions

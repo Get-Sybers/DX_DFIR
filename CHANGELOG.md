@@ -62,6 +62,13 @@ is `0`, anything may change without notice.
   (`DXDFIR_VENV`, `DXDFIR_COLLECTIONS`, `DXDFIR_BIN_DIR` — a stale export
   from an earlier release's shell) is ignored with a warning by the script
   and by `dxdfir`, so a stale environment can never recreate the old layout.
+- **Nothing under `~/.ansible` either.** `ansible-galaxy` staged its
+  downloads in `~/.ansible/tmp` even with the collections installing
+  in-tree; `ansible.cfg` now sets ansible's state home to the checkout
+  (`home = .ansible`, so the local temp, galaxy cache/token and
+  persistent-connection sockets follow), the script exports the matching
+  `ANSIBLE_HOME` for its own galaxy and bootstrap steps (through `sudo`),
+  and its closing self-check fails should a run create `~/.ansible` anyway.
 - **`dxdfir` works right after `setup-environment.sh`, in any shell.** The
   binary went to `/opt/dxdfir/bin` and the ansible venv to
   `/opt/dxdfir/venv`, both reachable only through `/etc/profile.d/dxdfir.sh`

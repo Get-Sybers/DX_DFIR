@@ -507,6 +507,13 @@ ok "dxdfir (Go front-end) installed: $("$DXDFIR_BIN_DIR/dxdfir" --version 2>/dev
 # the venv: nothing of the pipeline lives under a system prefix any more.
 ################################################################################
 section "Ansible collections"
+# ansible's state home (ansible.cfg `home`): its local temp — where
+# ansible-galaxy stages the downloaded tarballs — galaxy cache/token and
+# persistent-connection sockets in the checkout, never ~/.ansible; the
+# export makes that hold even where the repo-root ansible.cfg is not read
+# (an ANSIBLE_CONFIG in the caller's shell, a world-writable checkout)
+export ANSIBLE_HOME="$REPO_ROOT_DIR/.ansible"
+_home_ansible_before=0; [[ -e "$HOME/.ansible" ]] && _home_ansible_before=1
 DXDFIR_COLLECTIONS="${DXDFIR_COLLECTIONS:-$REPO_ROOT_DIR/.ansible/collections}"
 step "Installing pinned Ansible collections into $DXDFIR_COLLECTIONS ..."
 "$DXDFIR_VENV/bin/ansible-galaxy" collection install \
@@ -549,7 +556,9 @@ step "Ensuring the Docker engine, daemon and group (dxdfir-bootstrap.yml) ..."
 # the venv binary by ABSOLUTE path (as the collections step above): sudo's
 # secure_path never carries the venv — a bare `sudo ansible-playbook` is
 # command-not-found on exactly the fresh host this bootstrap exists for
-( cd "$REPO_ROOT_DIR" && $SUDO "$DXDFIR_VENV/bin/ansible-playbook" \
+# ANSIBLE_HOME through sudo (its env reset would otherwise send root's run to
+# /root/.ansible): the same in-tree state home as the collections step
+( cd "$REPO_ROOT_DIR" && $SUDO env ANSIBLE_HOME="$ANSIBLE_HOME" "$DXDFIR_VENV/bin/ansible-playbook" \
     ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-bootstrap.yml ) \
     || die "Docker engine bootstrap failed (dxdfir-bootstrap.yml)."
 ok "Docker engine present, daemon running, group membership ensured."
@@ -600,6 +609,14 @@ case "$_ap" in
     "")      warn "Could not read dxdfir's ansible readiness line — check 'dxdfir --no-tui'." ;;
     *)       die "dxdfir does not resolve the venv's ansible: $_ap" ;;
 esac
+# ...and that ansible kept its state in the checkout: a ~/.ansible this run
+# created means the in-tree state home (ansible.cfg `home`, ANSIBLE_HOME)
+# was not honoured somewhere — the script's regression, not the operator's.
+if [[ "$_home_ansible_before" -eq 0 && -e "$HOME/.ansible" ]]; then
+    die "This run created $HOME/.ansible — ansible's state belongs in $REPO_ROOT_DIR/.ansible (ansible.cfg 'home')."
+else
+    ok "ansible state (temp, galaxy cache) stays in $REPO_ROOT_DIR/.ansible — nothing under $HOME/.ansible"
+fi
 
 # The docker group is the ONE thing a re-login is genuinely needed for, and
 # only when the membership is newer than the shell: compare the account's
