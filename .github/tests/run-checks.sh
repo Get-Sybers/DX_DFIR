@@ -278,6 +278,9 @@ for md in sorted(root.rglob("*.md")):
     # the repo, so it never enters this walk).
     if ".git/" in str(md) or rel.startswith("data_store/"): continue
     if "/.ansible/" in str(md) or rel.startswith(".ansible/"): continue
+    # the repo's own ansible venv (scripts/setup-environment.sh puts it at
+    # .venv/): pip's site-packages carry their projects' docs, not ours
+    if rel.startswith(".venv/") or "/.venv/" in str(md): continue
     if rel.startswith("docker/GoDFIR-toolz/") or "/GoDFIR-toolz/" in str(md): continue
     if rel.startswith("build/"): continue
     for m in lr.finditer(md.read_text(errors="ignore")):
