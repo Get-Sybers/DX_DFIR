@@ -21,6 +21,8 @@ import re
 import subprocess
 from pathlib import Path
 
+import yaml
+
 REPO = Path(__file__).resolve().parents[2]
 PACKAGE = REPO / "python" / "get_sybers_dxdfir"
 
@@ -77,10 +79,12 @@ ENGINE_WRITE_ROOTS = (
 
 
 def _git(*args: str) -> "subprocess.CompletedProcess[str]":
-    return subprocess.run(["git", *args], cwd=REPO, capture_output=True, text=True, check=False)
+    # repo rules only: a machine's global excludes must never satisfy the gate
+    return subprocess.run(["git", "-c", "core.excludesFile=/dev/null", *args],
+                          cwd=REPO, capture_output=True, text=True, check=False)
 
 
-def test_engine_written_output_is_never_commitable():
+def test_engine_written_output_is_never_committable():
     probes = [f"{root}/case-x/{name}" for root in ENGINE_WRITE_ROOTS
               for name in ("car_flow.jsonl", "stix_bundle.json", "verify.txt",
                            "elastic/logs-car.process.bulk.ndjson",
@@ -114,11 +118,11 @@ def test_engine_out_dir_defaults_stay_under_the_ignored_store():
             "ansible/collections/get_sybers.dxdfir/roles/dxdfir_car_load/defaults/main.yml",
     }
     for var, rel in defaults.items():
-        text = (REPO / rel).read_text(encoding="utf-8")
-        m = re.search(rf"^{var}: \"(.+)\"$", text, re.MULTILINE)
-        assert m, f"{rel}: {var} default not found"
-        assert "/data_store/processed/" in m.group(1), (
-            f"{var} defaults outside data_store/processed/ ({m.group(1)}) — the engine "
+        doc = yaml.safe_load((REPO / rel).read_text(encoding="utf-8"))
+        value = (doc or {}).get(var)
+        assert isinstance(value, str) and value, f"{rel}: {var} default not found"
+        assert "/data_store/processed/" in value, (
+            f"{var} defaults outside data_store/processed/ ({value}) — the engine "
             "would write commit-able files into the repo"
         )
 
