@@ -4,9 +4,9 @@ argument_specs:
     short_description: "Windows Event Logs (.evtx) -> goevtx JSON Lines."
     description:
       - >-
-        Runs the self-orchestrating get-sybers/goevtx image over
-        dxdfir_evtx_evtx_dir from its contract (GOEVTX_* env vars, /input +
-        /output mounts): every .evtx (by extension or ElfFile signature) is
+        Runs the get-sybers/gowindowlicker image's goevtx sub-tool over
+        dxdfir_evtx_evtx_dir from its contract (the canonical GOEVTX_* env
+        block, /input + /output mounts): every .evtx (by extension or ElfFile signature) is
         parsed into its own folder holding goevtx.jsonl, one record per event;
         the folder is the log's path relative to the input dir with separators
         folded to _. Idempotent: a log whose output already exists is skipped
@@ -48,7 +48,10 @@ argument_specs:
       dxdfir_evtx_contract:
         type: str
         required: false
-        description: "The goevtx contract.yml the parse run is built from (default docker/GoDFIR-toolz/goevtx/contract.yml)."
+        description: >-
+          The contract.yml the parse run is built from (default
+          docker/GoDFIR-toolz/gowindowlicker/contract.yml; goevtx is a
+          gowindowlicker sub-tool).
       dxdfir_evtx_plaso_contract:
         type: str
         required: false
@@ -57,7 +60,7 @@ argument_specs:
         type: str
         required: false
         default: ""
-        description: "Image ref overriding the contract's (get-sybers/goevtx:latest); e.g. a digest pin."
+        description: "Image ref overriding the contract's (get-sybers/gowindowlicker:latest); e.g. a digest pin."
       dxdfir_evtx_plaso_image:
         type: str
         required: false

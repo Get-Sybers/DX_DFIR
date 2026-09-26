@@ -1,0 +1,102 @@
+---
+# The playbook holds the decisions. Containerised molecule against the HOST
+# daemon: the repo and /tmp are mounted at identical paths, so every bind a
+# role hands the daemon is valid on the host. A role whose operator-supplied
+# fixture is absent is SKIPPED with a note, never failed.
+- name: "DFIR | run the collection's molecule scenarios, containerised"
+  hosts: "{{ dxdfir_hosts | default('localhost') }}"
+  connection: "{{ dxdfir_connection | default('local') }}"
+  gather_facts: false
+  vars:
+    dxdfir_molecule_repo_root: "{{ playbook_dir | dirname | dirname | dirname | dirname }}"
+    dxdfir_molecule_image: get-sybers/molecule:latest
+    dxdfir_molecule_roles:
+      - dxdfir_lane
+      - dxdfir_signatures
+      - dxdfir_zeek
+      - dxdfir_evtx
+      - dxdfir_plaso
+      - dxdfir_memory
+      - dxdfir_godfir_toolz
+    # operator-supplied fixtures (binary, not shipped); empty skips the scenario
+    dxdfir_molecule_sample_evtx: ""
+    dxdfir_molecule_sample_image: ""
+    dxdfir_molecule_sample_memory: ""
+  tasks:
+    - name: "dxdfir-molecule | the runner image exists (built once, cached)"
+      community.docker.docker_image:
+        name: "{{ dxdfir_molecule_image }}"
+        source: build
+        build:
+          path: "{{ dxdfir_molecule_repo_root }}"
+          dockerfile: .github/tests/molecule-runner.Dockerfile
+        state: present
+
+    - name: "dxdfir-molecule | resolve each scenario's fixture requirement"
+      ansible.builtin.set_fact:
+        dxdfir_molecule_plan: >-
+          {{ dxdfir_molecule_plan | default([]) + [{
+               'role': item,
+               'fixture_var': (dxdfir_molecule_fixtures[item] | default({})).var | default(''),
+               'fixture': (dxdfir_molecule_fixtures[item] | default({'value': 'n/a'})).value | default('n/a'),
+             }] }}
+      vars:
+        dxdfir_molecule_fixtures:
+          dxdfir_evtx: {var: molecule_sample_evtx, value: "{{ dxdfir_molecule_sample_evtx }}"}
+          dxdfir_plaso: {var: molecule_sample_image, value: "{{ dxdfir_molecule_sample_image }}"}
+          dxdfir_godfir_toolz: {var: molecule_sample_image, value: "{{ dxdfir_molecule_sample_image }}"}
+          dxdfir_memory: {var: molecule_sample_memory, value: "{{ dxdfir_molecule_sample_memory }}"}
+      loop: "{{ dxdfir_molecule_roles }}"
+
+    - name: "dxdfir-molecule | note every skipped scenario (fixture not provided)"
+      ansible.builtin.debug:
+        msg: >-
+          skipped {{ item.role }} — provide {{ item.fixture_var }}
+          (binary fixture, not shipped; see the role README)
+      loop: "{{ dxdfir_molecule_plan | selectattr('fixture', 'equalto', '') | list }}"
+      loop_control:
+        label: "{{ item.role }}"
+
+    # no self-judgement here: the verdict is taken over the registered LIST below
+    - name: "dxdfir-molecule | molecule test, one containerised run per role"
+      community.docker.docker_container:
+        name: "dxdfir-molecule-{{ item.role }}"
+        image: "{{ dxdfir_molecule_image }}"
+        pull: false
+        detach: false
+        cleanup: true
+        output_logs: true
+        working_dir: "{{ dxdfir_molecule_repo_root }}/ansible/collections/get_sybers.dxdfir/roles/{{ item.role }}"
+        volumes:
+          - "/var/run/docker.sock:/var/run/docker.sock"
+          - "{{ dxdfir_molecule_repo_root }}:{{ dxdfir_molecule_repo_root }}"
+          - "/tmp:/tmp"
+        command: >-
+          molecule test{{ '' if item.fixture == 'n/a'
+             else ' -- -e ' ~ item.fixture_var ~ '=' ~ item.fixture }}
+      loop: "{{ dxdfir_molecule_plan | rejectattr('fixture', 'equalto', '') | list }}"
+      loop_control:
+        label: "{{ item.role }}"
+      register: dxdfir_molecule_results
+      failed_when: false
+
+    - name: "dxdfir-molecule | judge each scenario"
+      ansible.builtin.assert:
+        that:
+          - item.status | default(1) | int == 0
+        fail_msg: >-
+          {{ item.item.role }} molecule test FAILED
+          (rc={{ item.status | default('?') }}
+          {{ item.msg | default('') }}):
+          {{ (item.container.Output | default(''))[-1500:] }}
+        quiet: true
+      loop: "{{ dxdfir_molecule_results.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item.role }} rc={{ item.status | default('?') }}"
+      when: dxdfir_molecule_results is not skipped
+
+    - name: "dxdfir-molecule | summary"
+      ansible.builtin.debug:
+        msg: >-
+          molecule: {{ dxdfir_molecule_plan | rejectattr('fixture', 'equalto', '') | list | length }} passed,
+          {{ dxdfir_molecule_plan | selectattr('fixture', 'equalto', '') | list | length }} skipped (missing fixtures)

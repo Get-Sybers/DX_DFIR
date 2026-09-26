@@ -60,10 +60,10 @@ rest. The load gauges ramp amber → ochre → crimson as usage climbs.
 │ memory                                                                          │
 │ ████████████████████████████████████  91%  ·  3 containers                     │
 ├ containers (3 running) ──────────────────────────────────────────────────────── ┤
-│ NAME             IMAGE                STATUS   CPU    MEM                        │
-│ zeek-case-a-01   get-sybers/zeek      Up 6s    128%   512MiB                     │
-│ evtx-case-a-01   get-sybers/goevtx    Up 2s    64%    210MiB                     │
-│ plaso-case-a-01  get-sybers/plaso     Up 1s    40%    1.1GiB                     │
+│ NAME             IMAGE                        STATUS   CPU    MEM                │
+│ zeek-case-a-01   get-sybers/zeek              Up 6s    128%   512MiB             │
+│ evtx-case-a-01   get-sybers/gowindowlicker    Up 2s    64%    210MiB             │
+│ plaso-case-a-01  get-sybers/plaso             Up 1s    40%    1.1GiB             │
 └─────────────────────────────────────────────────────────────────────────────── ┘
 ```
 

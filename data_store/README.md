@@ -29,7 +29,7 @@ data_store/
        ├── windows_logs/<log>/     # goevtx.jsonl, one folder per event log
        ├── zeek/<capture>/         # Zeek JSON (conn.json, dns.json, …)
        ├── memory/<image>/         # anamnesis (MemProcFS) JSONL per plugin + car.db
-       ├── godfir-toolz/<tool>/    # GoDFIR-toolz artefacts, one folder per item (registry, SRUM, MFT, …)
+       ├── godfir-toolz/<subtool>/ # GoDFIR-toolz artefacts, one folder per item (registry, SRUM, MFT, …)
        ├── detections/             # yara/ suricata/ hayabusa/ scan/ detection JSONL
        ├── linux_logs/             # syslog/auth/utmp/… (not yet wired into the backend)
        └── car/<source>/           # the materialised CAR: car_<object>.jsonl (+ car_relationships.jsonl)

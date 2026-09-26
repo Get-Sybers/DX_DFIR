@@ -1,0 +1,39 @@
+---
+# The refusals: each negative run must FAIL validation with a message naming
+# the offender — the multi-tool allowance never widens past the selected
+# sub-tool's own block.
+- name: Verify
+  hosts: localhost
+  gather_facts: false
+  vars:
+    molecule_repo_root: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/../../../../.."
+    molecule_mt_contract: "{{ molecule_repo_root }}/docker/GoDFIR-toolz/gowindowlicker/contract.yml"
+    molecule_plain_contract: "{{ lookup('env', 'MOLECULE_SCENARIO_DIRECTORY') }}/files/plain-contract.yml"
+    molecule_in: /tmp/dxdfir_lane_molecule/in
+    molecule_out: /tmp/dxdfir_lane_molecule/out
+    molecule_mounts:
+      - {host: "{{ molecule_in }}", path: /input, mode: ro}
+      - {host: "{{ molecule_out }}", path: /output, mode: rw}
+  tasks:
+    - name: "verify | negative matrix — every bad run spec is refused by name"
+      ansible.builtin.include_tasks: tasks/verify_negative.yml
+      loop:
+        - name: an undeclared variable under a multi-tool contract
+          needle: BOGUS_X
+          run: {name: neg-env, contract: "{{ molecule_mt_contract }}", subtool: goevtx,
+                env: {BOGUS_X: "1"}, mounts: "{{ molecule_mounts }}"}
+        - name: a multi-tool contract without a sub-tool
+          needle: "sub-tool ''"
+          run: {name: neg-nosub, contract: "{{ molecule_mt_contract }}",
+                mounts: "{{ molecule_mounts }}"}
+        - name: an unknown sub-tool
+          needle: gofrobnicate
+          run: {name: neg-unknown, contract: "{{ molecule_mt_contract }}", subtool: gofrobnicate,
+                mounts: "{{ molecule_mounts }}"}
+        - name: an undeclared variable under a plain contract
+          needle: NOT_DECLARED
+          run: {name: neg-plain, contract: "{{ molecule_plain_contract }}",
+                env: {NOT_DECLARED: "1"}, mounts: "{{ molecule_mounts }}"}
+      loop_control:
+        loop_var: molecule_case
+        label: "{{ molecule_case.name }}"

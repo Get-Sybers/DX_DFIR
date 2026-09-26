@@ -1,6 +1,7 @@
 ---
-# .evtx -> goevtx JSON Lines, delegated to dxdfir_lane (semantics: README.md);
-# with image_src set, plaso's image_export stages the logs out of disk images first.
+# .evtx -> goevtx JSON Lines (the gowindowlicker image's goevtx sub-tool),
+# delegated to dxdfir_lane (semantics: README.md); with image_src set,
+# plaso's image_export stages the logs out of disk images first.
 
 - name: "evtx | assert inputs"
   ansible.builtin.assert:
@@ -30,14 +31,16 @@
        + ([{'name': 'goevtx',
             'contract': dxdfir_evtx_contract,
             'image': dxdfir_evtx_image,
-            'env': {'GOEVTX_FORCE': dxdfir_evtx_force},
+            'subtool': 'goevtx',
+            'env': {'GOEVTX_FORCE': dxdfir_evtx_force | bool | ternary('1', '0')},
             'mounts': [{'host': dxdfir_evtx_evtx_dir, 'path': '/input', 'mode': 'ro'},
                        {'host': dxdfir_evtx_out_dir, 'path': '/output', 'mode': 'rw'}]}]
           if dxdfir_evtx_evtx_dir | length > 0 else [])
        + ([{'name': 'goevtx-staged',
             'contract': dxdfir_evtx_contract,
             'image': dxdfir_evtx_image,
-            'env': {'GOEVTX_FORCE': dxdfir_evtx_force},
+            'subtool': 'goevtx',
+            'env': {'GOEVTX_FORCE': dxdfir_evtx_force | bool | ternary('1', '0')},
             'mounts': [{'host': dxdfir_evtx_stage_dir, 'path': '/input', 'mode': 'ro'},
                        {'host': dxdfir_evtx_out_dir, 'path': '/output', 'mode': 'rw'}]}]
           if dxdfir_evtx_image_src | length > 0 else []) }}

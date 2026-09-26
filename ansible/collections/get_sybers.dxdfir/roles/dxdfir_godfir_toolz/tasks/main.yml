@@ -1,16 +1,15 @@
 ---
-# Disk images -> the GoDFIR-toolz artefact parse: export, the Windows Go
-# tools, godaemonhunter's hunt — all contract-driven runs delegated to
-# dxdfir_lane (semantics: README.md). Content decides; exits 1/3 tolerated.
+# Disk images -> the GoDFIR-toolz artefact parse: export, then the two
+# multi-tool matrices — gowindowlicker's lick (Windows) and godaemonhunter's
+# hunt (Linux) — all contract-driven runs delegated to dxdfir_lane
+# (semantics: README.md). Content decides; exits 1/3 tolerated.
 
 - name: "godfir-toolz | assert inputs"
   ansible.builtin.assert:
     that:
       - dxdfir_godfir_toolz_input_dir | length > 0
-      - dxdfir_godfir_toolz_tools | length > 0
     fail_msg: >-
-      dxdfir_godfir_toolz needs a non-empty dxdfir_godfir_toolz_input_dir and at
-      least one tool in dxdfir_godfir_toolz_tools.
+      dxdfir_godfir_toolz needs a non-empty dxdfir_godfir_toolz_input_dir.
     quiet: true
   tags: [always]
 
@@ -49,20 +48,23 @@
           if (dxdfir_godfir_toolz_vm_stat.stat | default({})).isdir | default(false) else []) }}
   tags: [always]
 
-- name: "godfir-toolz | one run per Go tool over the export"
+# the Windows matrix is ONE entry: the sweep fans out to every parser
+# internally, and /output is the lane root, so each sub-tool lands in the
+# same <out_dir>/<subtool>/ tree the retired per-tool runs wrote
+- name: "godfir-toolz | the Windows matrix in one run (gowindowlicker lick)"
   ansible.builtin.set_fact:
     dxdfir_godfir_toolz_runs: >-
       {{ dxdfir_godfir_toolz_runs + [{
-           'name': item,
-           'contract': dxdfir_godfir_toolz_toolz_dir ~ '/' ~ item ~ '/contract.yml',
-           'env': dict([[(item | upper) ~ '_FORCE', dxdfir_godfir_toolz_force]]),
+           'name': 'gowindowlicker',
+           'contract': dxdfir_godfir_toolz_toolz_dir ~ '/gowindowlicker/contract.yml',
+           'subtool': 'lick',
+           'env': {'GOWINDOWLICKER_FORCE': dxdfir_godfir_toolz_force},
            'mounts': [{'host': dxdfir_godfir_toolz_stage_dir, 'path': '/input', 'mode': 'ro'},
-                      {'host': dxdfir_godfir_toolz_out_dir ~ '/' ~ item, 'path': '/output', 'mode': 'rw'}],
+                      {'host': dxdfir_godfir_toolz_out_dir, 'path': '/output', 'mode': 'rw'}],
          }] }}
-  loop: "{{ dxdfir_godfir_toolz_tools }}"
   tags: [always]
 
-# the Linux matrix is ONE entry: hunt's layering is internal, and over a
+# the Linux matrix is ONE entry too: hunt's layering is internal, and over a
 # Windows-only export it exits 1 by design (lights up when Linux content arrives)
 - name: "godfir-toolz | the Linux matrix in one run (godaemonhunter hunt)"
   ansible.builtin.set_fact:

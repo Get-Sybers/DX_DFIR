@@ -1,0 +1,54 @@
+---
+# The skeleton's contract validation + argv build, against the REAL
+# multi-tool contract at the submodule pin. tasks_from: build touches no
+# daemon; the full lane (preflight + containers) is each lane's own scenario.
+- name: Converge
+  hosts: localhost
+  gather_facts: false
+  vars:
+    molecule_repo_root: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/../../../../.."
+    molecule_mt_contract: "{{ molecule_repo_root }}/docker/GoDFIR-toolz/gowindowlicker/contract.yml"
+    molecule_in: /tmp/dxdfir_lane_molecule/in
+    molecule_out: /tmp/dxdfir_lane_molecule/out
+  tasks:
+    - name: "converge | the mount trees exist"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop: ["{{ molecule_in }}", "{{ molecule_out }}"]
+
+    - name: "converge | a goevtx sub-run uses its own block; the lick sweep its declared one"
+      ansible.builtin.include_role:
+        name: dxdfir_lane
+        tasks_from: build
+      vars:
+        dxdfir_lane_name: molecule-positive
+        dxdfir_lane_runs:
+          - name: goevtx
+            contract: "{{ molecule_mt_contract }}"
+            subtool: goevtx
+            env: {GOEVTX_FORCE: "1"}
+            mounts:
+              - {host: "{{ molecule_in }}", path: /input, mode: ro}
+              - {host: "{{ molecule_out }}", path: /output, mode: rw}
+          - name: lick
+            contract: "{{ molecule_mt_contract }}"
+            subtool: lick
+            env: {GOWINDOWLICKER_FORCE: true}
+            mounts:
+              - {host: "{{ molecule_in }}", path: /input, mode: ro}
+              - {host: "{{ molecule_out }}", path: /output, mode: rw}
+
+    - name: "converge | the built argvs dispatch the sub-tool and carry the env"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_lane_runs_built | length == 2
+          - dxdfir_lane_runs_built[0].image == 'get-sybers/gowindowlicker:latest'
+          - dxdfir_lane_runs_built[0].argv[-1] == 'goevtx'
+          - "'GOEVTX_FORCE=1' in dxdfir_lane_runs_built[0].argv"
+          - dxdfir_lane_runs_built[1].argv[-1] == 'lick'
+          - "'GOWINDOWLICKER_FORCE=1' in dxdfir_lane_runs_built[1].argv"
+          - dxdfir_lane_runs_built[1].argv | select('match', '/work:') | list | length == 1
+        fail_msg: "built argvs: {{ dxdfir_lane_runs_built | map(attribute='argv') | list }}"
+        quiet: true

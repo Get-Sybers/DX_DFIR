@@ -5,8 +5,8 @@
   vars:
     dxdfir_evtx_evtx_dir: /tmp/dxdfir_evtx_molecule/in
     dxdfir_evtx_out_dir: /tmp/dxdfir_evtx_molecule/out
-    # Uses the default goevtx image (get-sybers/goevtx); build it first with
-    # playbooks/dxdfir-build-images.yml.
+    # Uses the default image (get-sybers/gowindowlicker, goevtx sub-tool);
+    # build it first with playbooks/dxdfir-build-images.yml.
   tasks:
     - name: "converge | run dxdfir_evtx (elastic)"
       ansible.builtin.include_role:

@@ -45,8 +45,8 @@ built from that tool's `contract.yml`:
 | `name` | label for task output |
 | `contract` | absolute path of the tool's `contract.yml` — the source of truth |
 | `image` | optional image ref overriding `contract.image` (e.g. a digest pin) |
-| `subtool` | the dispatcher argument of a multi-tool image (plaso, signatures, byakugan); empty for a self-orchestrating tool |
-| `env` | `{NAME: value}` overrides of the contract's env, rendered as `-e NAME=VALUE`; every NAME must be declared in the contract, bool-typed vars are normalised to 1/0, empty strings are omitted (the image default applies) |
+| `subtool` | the dispatcher argument of a multi-tool image (plaso, signatures, byakugan, gowindowlicker, godaemonhunter) — a `multi-tool` contract requires one, the whole-matrix sweeps (`lick`, `hunt`) included; empty for a self-orchestrating tool |
+| `env` | `{NAME: value}` overrides of the contract's env, rendered as `-e NAME=VALUE`; every NAME must be declared in the contract, bool-typed vars are normalised to 1/0, empty strings are omitted (the image default applies). Under a `multi-tool` contract a run may also set the selected sub-tool's own `<SUBTOOL>_*` variables (the convention those contracts declare — `GOEVTX_FORCE` on a `goevtx` run); they carry no contract type, so normalise booleans to `'1'`/`'0'` where declared |
 | `secret_env` | overrides exactly like `env` (same contract rules, same bool normalisation) for values that must never appear on the argv (a password): written to a 0600 temp file passed as `--env-file`, created by argv.yml with `no_log`, removed by the lane's `always:` block |
 | `mounts` | `[{host, path, mode}]` host binds, or `[{source, volume: true, path, mode}]` a docker **named volume** (e.g. the elastic stack's compose `certs` volume). Every mount names exactly one of `host` or `source` — never both, never neither. `path` must be a container path the contract declares, or one a declared env override names (how a contract asks for a mounted filter file/ruleset it does not list as a mount); anything else is refused. Every contract mount with `required: true` must be bound |
 | `network` | a docker network NAME (e.g. `byakugan_default`, to resolve compose services by name); `--network NAME` replaces `--network none`, honoured only when the contract declares `network: optional`. There is no bridge/boolean form — a boolean-shaped value is never a network name (a CLI extra-var arrives as a string, so `"true"` etc. are rejected too), and every other run gets `--network none` regardless. (The one boolean user was the memory lane's symbol fetch; its symbols are baked in now and that lane is always offline.) |
@@ -58,8 +58,9 @@ Everything is validated against the contract before anything runs, read-only
 (the daemon is untouched, no directory is created) except the secret
 env-file write:
 
-- every env/secret_env override is a declared contract variable (the
-  contract doesn't care HOW a value reaches it);
+- every env/secret_env override is a declared contract variable — or, under
+  a `multi-tool` contract, one of the selected sub-tool's own `<SUBTOOL>_*`
+  block (the contract doesn't care HOW a value reaches it);
 - every bound container path is contract-declared or env-named; every
   required mount is bound; a multi-tool image is given one of its declared
   sub-tools (unless the debug pass-through is used deliberately);
@@ -106,3 +107,16 @@ env-file write:
   the image's non-root uid (2000) and write into their bind-mounted output.
 - In check mode the containers are skipped, so the gates on their output
   are too.
+
+## Testing
+
+The **Molecule** scenario needs no fixture and no daemon: it runs the
+build step (`tasks_from: build`) against the real gowindowlicker contract
+at the submodule pin — the positives assert the built argv (sub-tool
+dispatch, env rendering, the `/work` tmpfs), the negatives assert each
+refusal by name (undeclared variables under both contract kinds, a missing
+and an unknown sub-tool):
+
+```bash
+molecule test
+```

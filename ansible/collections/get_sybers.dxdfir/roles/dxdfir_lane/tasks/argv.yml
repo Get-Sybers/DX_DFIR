@@ -6,10 +6,17 @@
 
 - name: "argv | the run spec is within the contract | {{ dxdfir_lane_spec.name }}"
   vars:
-    _env_undeclared: >-
+    # a multi-tool sub-run may also use the selected sub-tool's own
+    # <SUBTOOL>_* block — the convention those contracts themselves declare
+    _subtool_env_prefix: "{{ (dxdfir_lane_spec.subtool | default('none')) | upper ~ '_' }}"
+    _env_outside: >-
       {{ ((dxdfir_lane_spec.env | default({})) | list
           + (dxdfir_lane_spec.secret_env | default({})) | list)
          | difference(dxdfir_lane_contract.env | default({}) | list) }}
+    _env_undeclared: >-
+      {{ _env_outside | reject('match', _subtool_env_prefix) | list
+         if dxdfir_lane_contract.entrypoint | default('') == 'multi-tool'
+         else _env_outside }}
     _bound: "{{ dxdfir_lane_spec.mounts | default([]) | map(attribute='path') | list }}"
     _declared: "{{ dxdfir_lane_contract.mounts | default([]) | map(attribute='path') | list }}"
     _env_named: >-

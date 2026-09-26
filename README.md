@@ -113,7 +113,7 @@ GoDFIR-toolz build galaxy's `verify`/`audit` entries).
 | PCAP (Zeek) | `process zeek` | `zeek/<capture>/` (`conn.json` + every other Zeek log) |
 | Windows event logs + Sysmon (goevtx) | `process evtx` | `windows_logs/<log>/goevtx.jsonl` |
 | Memory ([anamnesis](https://github.com/Get-Sybers/Anamnesis)) | `process memory` | `memory/<image>/` (per-plugin JSONL + `car.db`) |
-| GoDFIR-toolz artefacts — SRUM, registry, … | `process godfir-toolz` | `godfir-toolz/<tool>/<item>/` |
+| GoDFIR-toolz artefacts — SRUM, registry, … | `process godfir-toolz` | `godfir-toolz/<subtool>/<item>/` |
 | YARA / Suricata / Hayabusa / disk scan | `process signatures` | `detections/<sub-tool>/<item>/` (JSONL) |
 
 The **CAR layer is materialised**: the [Byakugan](https://github.com/Get-Sybers/byakugan)

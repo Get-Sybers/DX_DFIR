@@ -72,7 +72,7 @@ dxdfir process zeek
 dxdfir process evtx
 ```
 - Converts `.evtx` in `data_store/raw/logs/winevt/<host>/` to normalised JSON
-  using **goevtx** (`get-sybers/goevtx`, built by `dxdfir build-docker`) —
+  using **goevtx** (a `get-sybers/gowindowlicker` sub-tool, built by `dxdfir build-docker`) —
   nothing operator-supplied.
 - See [Scripts-Overview](/docs/scripts/Scripts-Overview.md) for the pipeline layers.
 
