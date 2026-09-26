@@ -338,6 +338,10 @@ for _ans in ansible ansible-playbook ansible-galaxy; do
         || die "Expected $_ans in $DXDFIR_VENV/bin after installing ansible-core."
 done
 ok "ansible in the venv: $("$DXDFIR_VENV/bin/ansible-playbook" --version 2>/dev/null | head -1 || echo 'ansible-playbook')"
+# The rest of THIS script run sees the venv directly (child launchers
+# included); new shells get it from the profile.d drop-in written below, and
+# sudo steps keep invoking the venv binaries by absolute path regardless.
+export PATH="$DXDFIR_VENV/bin:$PATH"
 
 ################################################################################
 # Build + install the Go/termui front-end; the pinned toolchain is
@@ -503,8 +507,8 @@ if ! curl -fsI --connect-timeout 4 --max-time 8 https://download.docker.com/ >/d
     if compgen -G "$_tars/*.tar" >/dev/null; then
         step "No internet — loading + verifying the pre-seeded image tarballs from $_tars ..."
         # --verify loads every tarball THEN runs the hardened-inventory audit
-        # (both as playbooks; the venv's ansible was symlinked onto PATH
-        # above), so a missing or corrupt tarball fails here, not at first
+        # (both as playbooks; the launcher resolves the venv's ansible on its
+        # own), so a missing or corrupt tarball fails here, not at first
         # pipeline use.
         "$SCRIPT_DIR/save-docker-images.sh" --verify \
             || die "Offline image load/verify failed (scripts/save-docker-images.sh --verify)."
@@ -527,6 +531,9 @@ else
 fi
 echo
 
+step "Use dxdfir in THIS shell (new logins pick PATH up automatically):"
+cmd ". /etc/profile.d/dxdfir.sh" "(the log-out/in above also applies it, along with the docker group)"
+echo
 step "Build the hardened tool containers (everything the pipeline runs):"
 cmd "ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml"
 echo
