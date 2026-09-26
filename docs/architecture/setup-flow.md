@@ -1,27 +1,26 @@
 # Setup flow
 
-`scripts/setup-environment.sh` provisions an online host in ten guarded, idempotent
+`scripts/setup-environment.sh` provisions an online host in guarded, idempotent
 steps. Each is safe to re-run; a step that finds its work already done reports and moves
 on. (The older prose walkthrough is [Setup_Environment.md](../scripts/Setup_Environment.md);
 the source is the best reference.)
 
 ```mermaid
 flowchart LR
-    A[1 Docker] --> B[2 Tools] --> C[3 docker group] --> D[4 Submodules]
-    D --> E[5 Permissions] --> F[6 Python + Ansible venv]
-    F --> G[7 Go + dxdfir] --> H[8 Ansible collections]
+    A[1 Tools] --> B[2 Submodules] --> C[3 Group + ownership]
+    C --> D[4 Ansible venv] --> E[5 Go + dxdfir]
+    E --> F[6 Collections] --> G[7 Docker engine · ansible]
 ```
 
 | # | Step | What it provisions |
 |---|---|---|
-| 1 | **Docker engine** | `docker-ce`/cli/containerd/buildx/compose-plugin from the distro-derived Docker apt repo (skipped if present). |
-| 2 | **Userland tools** | `ca-certificates curl git gnupg unzip python3 python3-venv tar`. |
-| 3 | **Docker group** | `groupadd docker` + `usermod -aG` the invoking user. |
-| 4 | **Git submodules** | `submodule update --init --recursive` — [anamnesis](https://github.com/Get-Sybers/Anamnesis) (memory lane) and [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) (the tool images). |
-| 5 | **Permissions** | `chown -R <user>:docker` + `chmod -R u=rwX,g=rX,o=` (capital `X` keeps dirs traversable for the group). |
-| 6 | **Ansible (pinned)** | Create `/opt/dxdfir/venv`, `pip install -r requirements.txt` (ansible-core + the docker SDK the collection's modules import — no host python package); the venv's `ansible*` reach PATH through the profile.d drop-in of step 7 — no symlink shims. |
-| 7 | **Go + dxdfir** | Install the pinned, SHA-256-verified Go toolchain (if absent/too old), build the `dxdfir` binary from a clean ephemeral cache to `/opt/dxdfir/bin`, install the man page, then write ONE managed `/etc/profile.d/dxdfir.sh` putting the real tool locations on PATH (venv bin appended, so system python/pip keep winning) and retire any legacy `/usr/local/bin` shims a previous install created. |
-| 8 | **Ansible collections** | `ansible-galaxy install` the collection's pinned `requirements.yml` into `/opt/dxdfir/collections`. The GoDFIR-toolz **build galaxy** installs NOTHING on the primary path: its roles resolve in place from the submodule (`docker/GoDFIR-toolz/roles` on the repo-root `roles_path`) at the gitlink pin; only a checkout without the submodule has it imported by `ansible-galaxy` from the `.gitmodules` source at the gitlink revision, into the shared path `roles_path` also covers as its degraded-only last entry. |
+| 1 | **Userland tools** | `ca-certificates curl git gnupg unzip python3 python3-venv tar` (only what is missing). |
+| 2 | **Git submodules** | `submodule update --init --recursive` — [anamnesis](https://github.com/Get-Sybers/Anamnesis) (memory lane) and [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) (the tool images). |
+| 3 | **Docker group + ownership** | The `docker` group is pre-created when absent (`groupadd --system docker` — docker itself only arrives at step 7, but the chown needs the group NOW on a fresh host), then `chown -R <user>:docker` + `chmod -R u=rwX,g=rX,o=` over the checkout (capital `X` keeps dirs traversable for the group). |
+| 4 | **Ansible (pinned)** | Create `/opt/dxdfir/venv`, `pip install -r requirements.txt` (ansible-core + the docker SDK the collection's modules import — no host python package); the venv's `ansible*` reach PATH through the profile.d drop-in of step 5 — no symlink shims. |
+| 5 | **Go + dxdfir** | Install the pinned, SHA-256-verified Go toolchain (if absent/too old), build the `dxdfir` binary from a clean ephemeral cache to `/opt/dxdfir/bin`, install the man page, then write ONE managed `/etc/profile.d/dxdfir.sh` putting the real tool locations on PATH (venv bin appended, so system python/pip keep winning) and retire any legacy `/usr/local/bin` shims a previous install created. |
+| 6 | **Ansible collections** | `ansible-galaxy install` the collection's pinned `requirements.yml` into `/opt/dxdfir/collections`. The GoDFIR-toolz **build galaxy** installs NOTHING on the primary path: its roles resolve in place from the submodule (`docker/GoDFIR-toolz/roles` on the repo-root `roles_path`) at the gitlink pin; only a checkout without the submodule has it imported by `ansible-galaxy` from the `.gitmodules` source at the gitlink revision, into the shared path `roles_path` also covers as its degraded-only last entry. |
+| 7 | **Docker engine (ansible)** | `dxdfir-bootstrap.yml` — engine, daemon and the invoking user's docker-group membership, one implementation shared with the deploy. The script invokes the venv's `ansible-playbook` by ABSOLUTE path: the profile.d drop-in only reaches new shells, and sudo's `secure_path` never carries the venv, so a bare `sudo ansible-playbook` is command-not-found on exactly the fresh host this step exists for. |
 
 > The Byakugan CAR engine is **no longer provisioned on the host**. It is cloned + built into the hardened [`get-sybers/byakugan`](https://github.com/Get-Sybers/byakugan) image at the `sources.yml` pin (`docker/GoDFIR-toolz/byakugan/Dockerfile`, parse binary and model sources baked in) by `dxdfir build-docker`, alongside the other tool images — so the CAR lane only shells that image.
 

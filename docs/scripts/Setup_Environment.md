@@ -41,7 +41,7 @@ processing scripts pull their images on first use.
    (`curl`, `python3`, `unzip`, `tar`, plus `ca-certificates`/`gnupg`), so a
    missing dependency surfaces here rather than halfway through an ingest.
 4. **Permission Management**:
-   - Sets ownership to the current user and Docker group
+   - Sets ownership to the current user and Docker group (the group is pre-created when absent — docker itself arrives later, via the bootstrap playbook)
    - Sets permissions with `u=rwX,g=rX` so directories stay traversable by the
      Docker group and the `.sh` files stay executable
 
