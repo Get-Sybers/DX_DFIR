@@ -11,8 +11,11 @@ is `0`, anything may change without notice.
 - **`python/` is gone entirely** (~4,000 lines: the `get_sybers_dxdfir`
   package, its tests and packaging). The STIX/CTI exchange already lives in
   the Byakugan engine (`byakugan.exchange`, #124); the detection
-  rules-as-code and their validator move to GoDFIR-toolz, baked into the
-  byakugan image at `/rules` and gated by its build (GoDFIR-toolz #76); the
+  rules-as-code and their validator move into the Byakugan engine repo
+  itself (Byakugan #125 — the image clones it at the pin anyway) and ride
+  that clone into the image at `/rules`, gated by the engine's own
+  validator at build and by its suite, which also restores the cti-*
+  template cross-checks (GoDFIR-toolz #76 bakes from the pin); the
   signature ruleset fetchers were already GoDFIR-toolz's own (baked into the
   signatures image at build). The `stamp-detections` command retires with
   its writer — the `car-detections` contract rides the baked rules, and the

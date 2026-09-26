@@ -86,8 +86,8 @@ Kibana is at `http://127.0.0.1:5601`. Filebeat tails the processed evidence tree
 The CAR→ECS projection into `logs-car.*` and ES|QL `LOOKUP JOIN` flagging against
 the `car-detections` lookup index are proven by the Phase-0
 [risk gate](/docs/riskgate.md); the detection rules are data
-[baked into the byakugan image at `/rules`](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/README.md)
-(GoDFIR-toolz owns and build-gates them), and `dxdfir stix export` turns their
+[shipped with the Byakugan engine and baked into its image at `/rules`](https://github.com/Get-Sybers/byakugan/blob/main/rules/README.md)
+(build- and suite-gated engine-side), and `dxdfir stix export` turns their
 hits into STIX 2.1 sightings via the engine's own exchange. `dxdfir --help`
 lists every command (`man dxdfir` for the manual).
 
@@ -154,7 +154,7 @@ the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
 - **How it works:** [Architecture overview](/docs/architecture/README.md) · [Processing lanes](/docs/architecture/processing-lanes.md) · [CAR pipeline](/docs/architecture/car-pipeline.md) · [The stack](/docs/architecture/the-stack.md)
 - **Contributing:** [Standards](/docs/reference/README.md) · [Repository map](/docs/reference/repository-map.md) · [Contributing](/.github/CONTRIBUTING.md) · [Security](/.github/SECURITY.md)
 - **CAR engine reference** (owned by [Byakugan](https://github.com/Get-Sybers/byakugan)): [CAR pipeline](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Pipeline.md) · [extraction rules](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Extraction-Rules.md) · [relations](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Relations.md)
-- **Deep reference:** [risk gate](/docs/riskgate.md) · [detection rules-as-code](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/README.md)
+- **Deep reference:** [risk gate](/docs/riskgate.md) · [detection rules-as-code](https://github.com/Get-Sybers/byakugan/blob/main/rules/README.md)
 
 > The pre-beta code lives on the frozen
 > [`deprecated`](https://github.com/Get-Sybers/DX_DFIR/tree/deprecated) branch —

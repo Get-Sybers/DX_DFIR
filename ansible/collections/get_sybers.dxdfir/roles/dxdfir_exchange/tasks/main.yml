@@ -5,8 +5,8 @@
 # own stix-export / stix-behaviour / cti-pull / cti-sightings sub-tools
 # (byakugan.exchange) — driven from its contract
 # (docker/GoDFIR-toolz/byakugan/contract.yml) by the shared dxdfir_lane
-# skeleton. The rules-as-code ride the image at /rules (GoDFIR-toolz bakes
-# and build-gates them); dxdfir_exchange_rules_dir mounts an operator set
+# skeleton. The rules-as-code ship with the engine repo and ride its clone
+# into the image at /rules; dxdfir_exchange_rules_dir mounts an operator set
 # over them. Wire-bound runs (push, the live pull) additionally need
 # dxdfir_exchange_network — every other run stays --network none.
 

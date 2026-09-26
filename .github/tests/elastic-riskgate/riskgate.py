@@ -33,6 +33,7 @@ import base64
 import fnmatch
 import json
 import os
+import re
 import ssl
 import sys
 import urllib.error
@@ -40,10 +41,34 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(HERE, os.pardir, os.pardir, os.pardir))
-# The wave-1 contract (read-only): the lookup index template the deploy step PUTs.
-CONTRACT_TEMPLATE = os.path.join(
-    REPO_ROOT, "docker", "GoDFIR-toolz", "byakugan", "rules", "car-detections",
-    "car-detections.index-template.json")
+# The wave-1 contract (read-only): the lookup index template the deploy step
+# PUTs. It ships with the Byakugan engine (its rules/), so the harness reads
+# it AT THE PIN the submodule's Dockerfile carries — the proof always runs
+# against exactly the contract the deployed image bakes. RISKGATE_TEMPLATE
+# names a local copy instead (air-gapped runs: point it into a byakugan
+# checkout at the pin).
+PIN_DOCKERFILE = os.path.join(REPO_ROOT, "docker", "GoDFIR-toolz", "byakugan", "Dockerfile")
+CONTRACT_TEMPLATE_URL = ("https://raw.githubusercontent.com/Get-Sybers/byakugan/"
+                         "{ref}/rules/car-detections/car-detections.index-template.json")
+
+
+def engine_pin() -> str:
+    with open(PIN_DOCKERFILE, encoding="utf-8") as fh:
+        m = re.search(r"^ARG BYAKUGAN_REF=([0-9a-f]{40})$", fh.read(), re.M)
+    if not m:
+        raise SystemExit(f"cannot resolve BYAKUGAN_REF from {PIN_DOCKERFILE}")
+    return m.group(1)
+
+
+def contract_template() -> tuple[dict, str]:
+    """The template document and a short label naming where it came from."""
+    local = os.environ.get("RISKGATE_TEMPLATE", "")
+    if local:
+        return read_json(local), local
+    ref = engine_pin()
+    url = CONTRACT_TEMPLATE_URL.format(ref=ref)
+    with urllib.request.urlopen(url, timeout=30) as resp:
+        return json.loads(resp.read().decode("utf-8")), f"byakugan rules/@{ref[:12]}"
 FIXTURES = os.path.join(HERE, "fixtures")
 QUERIES = os.path.join(HERE, "queries")
 EXPECTED = os.path.join(HERE, "expected")
@@ -363,11 +388,11 @@ def cmd_load(es: Es, rep: Report) -> None:
     cmd_clean(es, rep, quiet=True)
     # 2.1 — the contract template, verbatim. index.mode: lookup is what makes an
     # index joinable; a cluster that rejects it cannot run proof 2 at all.
-    template = read_json(CONTRACT_TEMPLATE)
+    template, source = contract_template()
     status, doc = es.call("PUT", f"/_index_template/{TEMPLATE_NAME}", template)
     rep.check("2.1", status == 200 and bool(doc.get("acknowledged")),
               f"contract template accepted: PUT _index_template/{TEMPLATE_NAME} "
-              f"({os.path.relpath(CONTRACT_TEMPLATE, REPO_ROOT)})",
+              f"({source})",
               f"contract template rejected: HTTP {status}: {reason(doc)}")
     # 1.1 — dead-box CAR rows into the logs-car.* streams (created on first write
     # by Elasticsearch's built-in logs-*-* template, exactly as the loader will).
@@ -493,8 +518,8 @@ def cmd_probe(es: Es, rep: Report) -> None:
 
 def cmd_selftest(rep: Report) -> None:
     """Offline: the harness agrees with itself and with the read-only contract."""
-    rep.section("selftest — fixtures, queries and expected tables agree (no cluster needed)")
-    template = read_json(CONTRACT_TEMPLATE)
+    rep.section("selftest — fixtures, queries and expected tables agree (no cluster; the contract read wants the network or RISKGATE_TEMPLATE)")
+    template, _source = contract_template()
     patterns = template.get("index_patterns") or []
     settings = (template.get("template") or {}).get("settings") or {}
     rep.check("S.1", any(fnmatch.fnmatchcase(LOOKUP_INDEX, p) for p in patterns)

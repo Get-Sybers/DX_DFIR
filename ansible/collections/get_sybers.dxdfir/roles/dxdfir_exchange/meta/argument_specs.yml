@@ -18,7 +18,7 @@ argument_specs:
         bundle) and sightings (`byakugan cti-sightings`: indicator-match
         alerts to sightings of the platform's own indicators, optionally
         pushed back). Indicator patterns resolve from the image's baked
-        /rules set (GoDFIR-toolz owns and build-gates it) unless an
+        /rules set (shipped with the engine repo, gated by its build) unless an
         operator set is mounted over it. The OpenCTI endpoint, token and
         connector id come from the environment (DXDFIR_OPENCTI_URL /
         _TOKEN / _CONNECTOR_ID) — the token rides the lane's secret_env

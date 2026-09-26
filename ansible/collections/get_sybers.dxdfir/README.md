@@ -47,8 +47,8 @@ un-hardened, or unexpected images (something added that shouldn't be). Run
 see [the role README](roles/dxdfir_images/README.md).
 
 Detection is not a role: the detections are Elastic rules-as-code
-([owned by GoDFIR-toolz, baked into the byakugan image at `/rules` and
-gated by its build](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/README.md)) run by Elastic's Detection Engine on the
+([shipped with the Byakugan engine and baked into its image at `/rules`,
+gated by the engine's build and suite](https://github.com/Get-Sybers/byakugan/blob/main/rules/README.md)) run by Elastic's Detection Engine on the
 analysis stack. The CAR lane (`dxdfir build-car` / `dxdfir verify-car`)
 prepares and gates the materialised CAR they read; `dxdfir_exchange` carries
 their hits into the STIX/CTI exchange.

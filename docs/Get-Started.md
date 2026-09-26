@@ -136,9 +136,10 @@ dxdfir deploy stack             # installs docker if missing, generates secrets 
 
 ### Step 9: Detect and exchange
 - The detections are Elastic rules-as-code — one ES|QL or EQL rule file per
-  detection, [owned by GoDFIR-toolz and baked into the byakugan image at
-  `/rules`](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/README.md), validated by its image build gate
-  (`validate-rules.py`) — run by Elastic's Detection Engine on the stack above.
+  detection, [shipped with the Byakugan engine and baked into its image at
+  `/rules`](https://github.com/Get-Sybers/byakugan/blob/main/rules/README.md), validated by the engine's build gate and
+  test suite (`rules/validate.py`) — run by Elastic's Detection Engine on the
+  stack above.
 - `dxdfir stix export` turns detection hits into STIX 2.1 sightings, and the
   `stix` sub-app carries the OpenCTI exchange (indicators in, sightings back),
   each verb one confined run of the byakugan image's own exchange sub-tools

@@ -5,9 +5,9 @@ dxdfir_exchange_action: export
 
 dxdfir_exchange_repo_root: "{{ role_path }}/../../../../.."
 
-# the contract the actions are driven from; the engine AND the deployment's
-# rules-as-code ride the image at the submodule pin (GoDFIR-toolz bakes and
-# build-gates the rules at /rules)
+# the contract the actions are driven from; the engine ships its rules-as-code
+# (the repo's rules/), and the image bakes both from the clone at the pin
+# (/rules; the engine's own validator gates the set at build)
 dxdfir_exchange_contract: "{{ dxdfir_exchange_repo_root }}/docker/GoDFIR-toolz/byakugan/contract.yml"
 # empty = the contract's image; set to pin a digest
 dxdfir_exchange_image: ""

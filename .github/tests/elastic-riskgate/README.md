@@ -26,5 +26,5 @@ each proof demonstrates, the pass/fail bar, and what to do when a check fails.
 Everything it creates is namespaced `riskgate` (`logs-car.*-riskgate`,
 `car-detections-riskgate`); the only shared object it writes is the contract's
 own `car-detections` index template, PUT verbatim from
-[`byakugan/rules/car-detections/`](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/car-detections/car-detections.index-template.json) (read from the submodule at its pin)
+[the engine's `rules/car-detections/`](https://github.com/Get-Sybers/byakugan/blob/main/rules/car-detections/car-detections.index-template.json) (fetched at the `BYAKUGAN_REF` pin the submodule Dockerfile carries; `RISKGATE_TEMPLATE` names a local copy for air-gapped runs)
 (idempotent; `clean --drop-template` removes it).

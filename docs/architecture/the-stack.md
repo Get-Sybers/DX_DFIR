@@ -114,7 +114,7 @@ in `dxdfir` runs ES|QL against the same streams without leaving the terminal.
 ## Detections and STIX
 
 Detections are **rules-as-code** for Elastic's Detection Engine. One YAML file per rule,
-[owned by GoDFIR-toolz and baked into the byakugan image at `/rules`](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/README.md)
+[shipped with the Byakugan engine and baked into its image at `/rules`](https://github.com/Get-Sybers/byakugan/blob/main/rules/README.md)
 (the image build gates them),
 each carrying an ES|QL or EQL query plus the contract for the evidence line it tags
 (shape, fields, `car_join`, ATT&CK technique/tactic ids). Queries request
@@ -135,7 +135,7 @@ relationships point at MITRE's own ATT&CK object ids (none minted locally); each
 sighting; hosts are identities; network/file entities become connected observed-data
 objects. OpenCTI is the wire. Deep reference:
 [the engine's STIX-Exchange.md](https://github.com/Get-Sybers/byakugan/blob/main/docs/STIX-Exchange.md),
-[the baked rules-as-code](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/README.md),
+[the baked rules-as-code](https://github.com/Get-Sybers/byakugan/blob/main/rules/README.md),
 [risk gate](../riskgate.md), [signature rules](../Signature-Rules.md).
 
 ## Lifecycle
