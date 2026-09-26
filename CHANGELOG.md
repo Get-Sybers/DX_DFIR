@@ -54,6 +54,15 @@ is `0`, anything may change without notice.
   macOS yet).
 
 ### Fixed (fresh-host setup)
+- **`dxdfir deploy-stack` (and every verb) runs the modules under the venv's
+  python.** `ansible/inventory/hosts.yml` pinned `ansible_python_interpreter`
+  to the venv, but the front-end passes `-i localhost,`, which never reads
+  that file: interpreter discovery landed on the system python, without the
+  controller-side module deps the venv pins — `Cannot detect the required
+  Python library cryptography` from `community.crypto` at the stack's CA
+  key. The setting now lives playbook-adjacent
+  (`playbooks/host_vars/localhost.yml`), which every inventory source loads,
+  `-i localhost,` included.
 - **`dxdfir build-docker` finds `godfir_build` again.** The front-end
   exported `ANSIBLE_ROLES_PATH` with the collection's roles only, and the
   variable replaces `ansible.cfg`'s `roles_path` rather than extending it,

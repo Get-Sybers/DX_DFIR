@@ -1,0 +1,12 @@
+---
+# The workstation's host vars — PLAYBOOK-ADJACENT so they apply under every
+# inventory source: the default ansible/inventory (ansible.cfg) and the
+# front-end's `-i localhost,` alike. An inventory-file var would not reach a
+# `-i localhost,` run (the host is a fresh entry), and the play would then
+# discover a different python without the module deps.
+#
+# The interpreter running ansible-playbook — the venv's: its site-packages
+# hold the module deps the collections import on the controller
+# (cryptography for community.crypto, the docker SDK). Interpreter discovery
+# lands on the system python, which has neither.
+ansible_python_interpreter: "{{ ansible_playbook_python }}"

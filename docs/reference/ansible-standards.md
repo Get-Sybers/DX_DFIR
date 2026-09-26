@@ -41,7 +41,10 @@ files land — see [the interface](../getting-started/the-interface.md).
 
 The default inventory is the workstation itself (`ansible/inventory/hosts.yml`,
 local connection, wired in `ansible.cfg`; the Go front-end passes the equivalent
-`-i localhost,`). What *varies* is discovered: lanes find the items to process
+`-i localhost,` — equivalent because the workstation's vars, the venv interpreter
+above all, live playbook-adjacent in `playbooks/host_vars/localhost.yml`, which
+every inventory source loads; a var in the inventory file would never reach a
+`-i localhost,` run). What *varies* is discovered: lanes find the items to process
 rather than hard-coding hosts, and remote/fleet targets join the inventory and
 are selected per run with `-e dxdfir_hosts=<pattern>`. The Go front-end passes
 `ANSIBLE_ROLES_PATH` so roles resolve from the in-tree collection without being
