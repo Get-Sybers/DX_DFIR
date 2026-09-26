@@ -41,7 +41,7 @@ See the [collection concept](../architecture/processing-lanes.md#collections).
 
 | Command | What it does |
 |---|---|
-| `dxdfir process [COLLECTION] [LANE]` | Process evidence with a [lane](../architecture/processing-lanes.md). `LANE` ∈ `zeek·evtx·memory·plaso·godfir-toolz·signatures·all`; positionals are order-independent. |
+| `dxdfir process [COLLECTION] [LANE]` | Process evidence with a [lane](../architecture/processing-lanes.md). `LANE` ∈ `zeek·gowindowlicker·godaemonhunter·anamnesis·plaso·signatures·all` (aliases: `evtx`/`windowlicker`/`lick` → gowindowlicker, `daemonhunter`/`hunt` → godaemonhunter, `memory` → anamnesis, `log2timeline` → plaso, `godfir-toolz` → both host lanes); positionals are order-independent. Output lands in `processed/<tool>/[<collection>/]<host>/…`. |
 | `dxdfir process … --force` | Reprocess inputs that already have output (default is idempotent). |
 | `dxdfir process … -e KEY=VALUE` | Pass an Ansible extra-var (repeatable). |
 

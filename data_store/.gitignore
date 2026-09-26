@@ -56,18 +56,12 @@
 !/processed/detections/yara/.gitkeep
 !/processed/detections/suricata/.gitkeep
 !/processed/detections/hayabusa/.gitkeep
-!/processed/memory/.gitkeep
-!/processed/csv/.gitkeep
-!/processed/json/.gitkeep
-!/processed/linux_logs/.gitkeep
+# one leaf per tool: processed/<tool>/[<collection>/]<host>/…
+!/processed/anamnesis/.gitkeep
+!/processed/daemonhunter/.gitkeep
 !/processed/log2timeline/.gitkeep
-!/processed/software_logs/.gitkeep
-!/processed/windows_logs/.gitkeep
-!/processed/windows_logs/hostname1/.gitkeep
-!/processed/windows_logs/hostname2/.gitkeep
-!/processed/windows_logs/hostname3/.gitkeep
+!/processed/windowlicker/.gitkeep
 !/processed/zeek/.gitkeep
-!/processed/godfir-toolz/.gitkeep
 
 !/raw/.gitkeep
 !/raw/VM_files/.gitkeep
@@ -76,6 +70,8 @@
 !/raw/mobile/.gitkeep
 !/raw/logs/.gitkeep
 !/raw/logs/winevt/.gitkeep
+!/raw/logs/linux/.gitkeep
+!/raw/logs/macOS/.gitkeep
 !/raw/filesystem/.gitkeep
 !/raw/filesystem/documents/
 !/raw/filesystem/documents/.gitkeep

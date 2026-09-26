@@ -12,9 +12,10 @@ on:
     paths:
       # the lanes the smoke test drives, and the shared skeleton
       - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_lane/**"
-      - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_evtx/**"
+      - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_export/**"
+      - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_gowindowlicker/**"
       - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_byakugan/**"
-      - "ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-process-evtx.yml"
+      - "ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-process-gowindowlicker.yml"
       - "ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-car.yml"
       - "ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-verify-car.yml"
       - "ansible/collections/get_sybers.dxdfir/requirements.yml"

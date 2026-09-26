@@ -1,0 +1,54 @@
+---
+argument_specs:
+  main:
+    short_description: "memory images -> per-plugin JSON Lines (anamnesis / MemProcFS)."
+    description:
+      - >-
+        Discovers memory images under dxdfir_anamnesis_memory_dir and runs the CAR
+        collector set (via the anamnesis container, a native MemProcFS engine — no
+        Volatility, no Python), writing one <plugin>.jsonl per image plus car.db.
+        Idempotent per collector: one whose valid .jsonl output already exists is
+        skipped. The container is always offline (no PDB download, no network
+        toggle): the PDB symbols the Windows plugins need live in the
+        persistent host cache dxdfir_anamnesis_symbols_dir, bind-mounted
+        read-write at /opt/anamnesis/lib/Symbols.
+    options:
+      dxdfir_anamnesis_memory_dir:
+        type: str
+        required: false
+        description: "Directory tree of memory images to process (recursed); mounted read-only at /input inside the container."
+      dxdfir_anamnesis_collection:
+        type: str
+        required: false
+        default: ""
+        description: "The collection this run is scoped to (the CLI passes it); the output lands one level down, processed/anamnesis/<collection>/."
+      dxdfir_anamnesis_out_dir:
+        type: str
+        required: false
+        description: "Output dir (default data_store/processed/anamnesis[/<collection>]); one <image>/ folder per memory image beneath it."
+      dxdfir_anamnesis_symbols_dir:
+        type: str
+        required: false
+        description: >-
+          Persistent MemProcFS symbol cache (default
+          data_store/dependencies/memprocfs-symbols, symsrv layout); mounted
+          read-write at /opt/anamnesis/lib/Symbols so it accumulates across runs.
+      dxdfir_anamnesis_contract:
+        type: str
+        required: false
+        description: "The anamnesis contract.yml the lane is driven from (default docker/GoDFIR-toolz/anamnesis/contract.yml)."
+      dxdfir_anamnesis_image:
+        type: str
+        required: false
+        default: ""
+        description: "Image ref overriding the contract's (get-sybers/anamnesis:latest); e.g. a digest pin."
+      dxdfir_anamnesis_plugins:
+        type: str
+        required: false
+        default: ""
+        description: "Comma-separated collector names (ANAMNESIS_PLUGINS); empty = the default CAR set."
+      dxdfir_anamnesis_force:
+        type: bool
+        required: false
+        default: false
+        description: "Rerun collectors that already have valid output."

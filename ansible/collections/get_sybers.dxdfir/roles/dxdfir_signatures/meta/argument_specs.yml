@@ -14,6 +14,11 @@ argument_specs:
         Rules are the ones baked into the image unless an operator ruleset is
         given. Standalone — no processor run is needed first.
     options:
+      dxdfir_signatures_collection:
+        type: str
+        required: false
+        default: ""
+        description: "The collection this run is scoped to (the CLI passes it); every sub-tool's output lands one level down, detections/<sub-tool>/<collection>/."
       dxdfir_signatures_out_dir:
         type: str
         required: false
@@ -50,9 +55,10 @@ argument_specs:
         type: str
         required: false
         description: >-
-          The evtx lane's disk-image export (default
-          data_store/processed/windows_logs/_extracted_evtx); hayabusa scans it
-          too when present, so an image is exported once for both lanes.
+          The shared disk-image artefact export (default
+          data_store/processed/_extracted[/<collection>], dxdfir_export's stage —
+          exported here when no other lane did it yet); every image's export is
+          one hayabusa host.
       dxdfir_signatures_disk_dir:
         type: str
         required: false

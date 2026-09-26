@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/get-sybers/dx_dfir/go/internal/lanes"
 	"github.com/get-sybers/dx_dfir/go/internal/repo"
 	"github.com/get-sybers/dx_dfir/go/internal/style"
 )
@@ -29,19 +30,18 @@ func extSet(xs ...string) map[string]bool {
 	return m
 }
 
-// diskImageExts is shared by the plaso and godfir-toolz lanes.
-var diskImageExts = extSet(".e01", ".ex01", ".dd", ".raw", ".img", ".vmdk",
-	".vhd", ".vhdx", ".001", ".aff4", ".vmx", ".ova")
-
-// evidenceLanes is the ordered lane view over data_store/raw/ (matches the
-// Python CLI's Source order, skipping the non-lane "signatures" and "all").
-var evidenceLanes = []evidenceLane{
-	{"zeek", []string{"pcaps"}, extSet(".pcap", ".pcapng", ".cap")},
-	{"evtx", []string{"logs/winevt"}, extSet(".evtx")},
-	{"memory", []string{"memory"}, extSet(".dmp", ".mem", ".lime", ".vmem", ".raw", ".dump", ".bin")},
-	{"plaso", []string{"disk_images", "VM_files"}, diskImageExts},
-	{"godfir-toolz", []string{"disk_images", "VM_files"}, diskImageExts},
-}
+// evidenceLanes is the ordered lane view over data_store/raw/ — the lane
+// specs' raw inputs, skipping the detection lane (it scans the others' evidence).
+var evidenceLanes = func() []evidenceLane {
+	var out []evidenceLane
+	for _, s := range lanes.Specs {
+		if s.Name == "signatures" {
+			continue
+		}
+		out = append(out, evidenceLane{s.Name, s.InputSubdirs, extSet(s.Exts...)})
+	}
+	return out
+}()
 
 // rawSubdirs are the top-level data_store/raw/ subdirs shown by `list raw`.
 var rawSubdirs = []string{
@@ -50,11 +50,15 @@ var rawSubdirs = []string{
 }
 
 // processedSubdirs are the top-level data_store/processed/ subdirs shown by
-// `list processed`.
-var processedSubdirs = []string{
-	"zeek", "windows_logs", "memory", "plaso", "godfir-toolz",
-	"linux_logs", "software_logs", "log2timeline", "csv", "json",
-}
+// `list processed`: one leaf per tool (the lane specs' OutLeaf), then the
+// detection tree and the engine's own leaves.
+var processedSubdirs = func() []string {
+	var out []string
+	for _, s := range lanes.Specs {
+		out = append(out, s.OutLeaf)
+	}
+	return append(out, "byakugan", "exchange")
+}()
 
 // countFiles returns the number of regular files anywhere beneath dir
 // (recursive). A missing/unreadable dir counts as zero.
@@ -186,9 +190,9 @@ func printLanesView(r *repo.Repo) {
 			note = style.Grey("  (not staged)")
 		}
 		loc := strings.Join(lane.subs, ", ") + "/"
-		fmt.Printf("  %-13s %s file(s)  %s%s\n", lane.name, cnt, loc, note)
+		fmt.Printf("  %-15s %s file(s)  %s%s\n", lane.name, cnt, loc, note)
 	}
-	fmt.Printf("  %-13s %5s          scans pcaps / files / disk images / evtx (the lanes above)\n", "signatures", "-")
+	fmt.Printf("  %-15s %5s          scans pcaps / files / memory / disk images / evtx (the lanes above)\n", "signatures", "-")
 	fmt.Println("")
 	fmt.Println("Process one with:  dxdfir process <source>   (see  dxdfir process -h)")
 	fmt.Println("Other views:       dxdfir list raw   |   dxdfir list processed   |   dxdfir list collections")

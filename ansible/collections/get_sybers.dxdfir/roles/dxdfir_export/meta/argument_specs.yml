@@ -1,0 +1,58 @@
+---
+argument_specs:
+  main:
+    short_description: "disk images -> the shared artefact export (processed/_extracted)."
+    description:
+      - >-
+        For every tree in dxdfir_export_trees that exists and holds a disk image,
+        runs the plaso image's image_export sub-tool with the role's ONE filter
+        file (Windows artefacts + transaction logs, event logs, the Linux core)
+        into dxdfir_export_stage_dir — one folder per image holding export/ and
+        image_export.jsonl, the done marker. Idempotent per image: one already
+        exported is not re-pulled unless dxdfir_export_force. A tree with no
+        image declares no run, so a host without images never needs the plaso
+        image. On exit dxdfir_export_hosts lists every exported image
+        ({name, export}) — the <host> level the parsing lanes fan out over.
+    options:
+      dxdfir_export_trees:
+        type: list
+        elements: str
+        required: false
+        default: []
+        description: "The evidence trees to export from (disk images, VM exports); missing or image-less entries are skipped."
+      dxdfir_export_collection:
+        type: str
+        required: false
+        default: ""
+        description: "The collection this run is scoped to; the stage lands one level down, processed/_extracted/<collection>/."
+      dxdfir_export_stage_dir:
+        type: str
+        required: false
+        description: "Where the exports land (default data_store/processed/_extracted[/<collection>]); one folder per image."
+      dxdfir_export_image_regex:
+        type: str
+        required: false
+        description: "What counts as a disk image inside a tree (a case-insensitive extension regex)."
+      dxdfir_export_filter_file:
+        type: str
+        required: false
+        description: "The image_export filter file (plaso yaml_filter_file format) declaring the artefact set."
+      dxdfir_export_plaso_contract:
+        type: str
+        required: false
+        description: "The plaso contract.yml the export runs are built from."
+      dxdfir_export_plaso_image:
+        type: str
+        required: false
+        default: ""
+        description: "Image ref overriding the plaso contract's (get-sybers/plaso:latest)."
+      dxdfir_export_vss:
+        type: bool
+        required: false
+        default: false
+        description: "Also export from Volume Shadow Copies (PLASO_IMAGE_EXPORT_VSS)."
+      dxdfir_export_force:
+        type: bool
+        required: false
+        default: false
+        description: "Re-export images that already have an export."

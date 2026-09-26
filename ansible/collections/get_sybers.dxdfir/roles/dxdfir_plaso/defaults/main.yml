@@ -16,10 +16,14 @@ dxdfir_plaso_vm_lane: >-
 dxdfir_plaso_vm_dir: "{{ dxdfir_plaso_repo_root }}/data_store/raw/{{ dxdfir_plaso_vm_lane }}"
 # loose-artefact trees, opt-in (they can be very large); empty = none
 dxdfir_plaso_loose_dir: ""
-dxdfir_plaso_out_dir: "{{ dxdfir_plaso_repo_root }}/data_store/processed/log2timeline"
-# storage/ holds the durable .plaso files; psort renders jsonl/<source>/timeline.jsonl
-dxdfir_plaso_storage_dir: "{{ dxdfir_plaso_out_dir }}/storage"
-dxdfir_plaso_jsonl_dir: "{{ dxdfir_plaso_out_dir }}/jsonl"
+# a collection-scoped run lands one level below the leaf: processed/log2timeline/<collection>/
+dxdfir_plaso_collection: ""
+# processed/log2timeline/[<collection>/]<host>/ — ONE folder per image holding
+# the durable <host>.plaso (reusable by Timesketch) + log2timeline.log, and
+# psort's timeline.jsonl + psort.log rendered beside it
+dxdfir_plaso_out_dir: >-
+  {{ dxdfir_plaso_repo_root }}/data_store/processed/log2timeline{{
+  ('/' ~ dxdfir_plaso_collection) if dxdfir_plaso_collection | length > 0 else '' }}
 
 # the contract the lane is driven from
 dxdfir_plaso_contract: "{{ dxdfir_plaso_repo_root }}/docker/GoDFIR-toolz/plaso/contract.yml"

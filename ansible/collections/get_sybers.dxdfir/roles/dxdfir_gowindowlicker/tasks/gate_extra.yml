@@ -1,0 +1,18 @@
+---
+# gowindowlicker output gate, included at the end of dxdfir_lane's process
+# block instead of the default one: some parser produced output, UNLESS no
+# parser found an artefact to parse (a host with none of the set is NORMAL,
+# not a failure — most parsers find nothing on most images). Per-item
+# failures are tolerated (dxdfir_lane_require_no_failures is false). A
+# trusted literal assert — dxdfir_lane_summaries + dxdfir_lane_verify are in
+# scope from the shared process step.
+- name: "gowindowlicker-process | assert output was produced for the artefacts present"
+  ansible.builtin.assert:
+    that:
+      - >-
+        dxdfir_lane_verify.matched | int > 0
+        or (dxdfir_lane_summaries | map(attribute='inputs') | map('int') | sum) == 0
+    fail_msg: >-
+      gowindowlicker produced no output at all though artefacts were present
+      (every parser container failed?).
+    quiet: true

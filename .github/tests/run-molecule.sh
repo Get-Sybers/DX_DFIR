@@ -21,6 +21,7 @@ if [[ $# -gt 0 ]]; then
     EXTRA+=(-e "{\"dxdfir_molecule_roles\": [${roles_json%,}]}")
 fi
 [[ -n "${MOLECULE_SAMPLE_EVTX:-}" ]]   && EXTRA+=(-e "dxdfir_molecule_sample_evtx=$MOLECULE_SAMPLE_EVTX")
+[[ -n "${MOLECULE_SAMPLE_LINUX:-}" ]]  && EXTRA+=(-e "dxdfir_molecule_sample_linux=$MOLECULE_SAMPLE_LINUX")
 [[ -n "${MOLECULE_SAMPLE_IMAGE:-}" ]]  && EXTRA+=(-e "dxdfir_molecule_sample_image=$MOLECULE_SAMPLE_IMAGE")
 [[ -n "${MOLECULE_SAMPLE_MEMORY:-}" ]] && EXTRA+=(-e "dxdfir_molecule_sample_memory=$MOLECULE_SAMPLE_MEMORY")
 [[ -n "${MOLECULE_IMAGE:-}" ]]         && EXTRA+=(-e "dxdfir_molecule_image=$MOLECULE_IMAGE")

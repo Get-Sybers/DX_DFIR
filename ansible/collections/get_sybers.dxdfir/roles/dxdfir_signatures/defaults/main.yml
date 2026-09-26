@@ -2,8 +2,14 @@
 
 dxdfir_signatures_repo_root: "{{ role_path }}/../../../../.."
 
+# a collection-scoped run lands one level below each sub-tool's leaf:
+# processed/detections/<sub-tool>/<collection>/
+dxdfir_signatures_collection: ""
+# processed/detections/<sub-tool>/[<collection>/]<item>/ — every yara-family
+# run (files, memory, the disk scan) under yara/, suricata under suricata/,
+# hayabusa under hayabusa/ (one <host>/ per event-log host)
 dxdfir_signatures_out_dir: "{{ dxdfir_signatures_repo_root }}/data_store/processed/detections"
-# one folder per sub-tool, one per item under it
+dxdfir_signatures_scope: "{{ ('/' ~ dxdfir_signatures_collection) if dxdfir_signatures_collection | length > 0 else '' }}"
 
 # empty = all four sub-tools (yara / suricata / hayabusa / scan — README.md)
 dxdfir_signatures_lanes: []
@@ -29,8 +35,10 @@ dxdfir_signatures_evtx_dir: >-
   {{ dxdfir_signatures_repo_root }}/data_store/raw/{{
   ((lookup('file', dxdfir_signatures_repo_root ~ '/evidence-taxonomy/logs_winevt.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('logs/winevt', true) }}
-# the evtx lane's image export, shared: exported once for both lanes
-dxdfir_signatures_evtx_stage_dir: "{{ dxdfir_signatures_repo_root }}/data_store/processed/windows_logs/_extracted_evtx"
+# the shared disk-image export (dxdfir_export): exported once for every lane
+# that reads it; one <image>/export tree per image = one hayabusa host each
+dxdfir_signatures_evtx_stage_dir: >-
+  {{ dxdfir_signatures_repo_root }}/data_store/processed/_extracted{{ dxdfir_signatures_scope }}
 
 # operator rulesets, mounted ro; empty = the baked set (docs/Signature-Rules.md)
 dxdfir_signatures_yara_rules: ""        # a rules file or compiled index (yara + scan)

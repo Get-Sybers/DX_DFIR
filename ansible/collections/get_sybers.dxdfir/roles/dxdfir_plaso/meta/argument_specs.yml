@@ -29,18 +29,18 @@ argument_specs:
           - Loose-artefact trees, one folder per host (/var/log copies, mobile
             filesystem dumps, triage output), parsed by log2timeline as directory
             sources. Empty disables loose sources (opt-in — trees can be large).
+      dxdfir_plaso_collection:
+        type: str
+        required: false
+        default: ""
+        description: "The collection this run is scoped to (the CLI passes it); the output lands one level down, processed/log2timeline/<collection>/."
       dxdfir_plaso_out_dir:
         type: str
         required: false
-        description: "Output dir (default data_store/processed/log2timeline); storage/ and jsonl/ hang off it."
-      dxdfir_plaso_storage_dir:
-        type: str
-        required: false
-        description: "Where log2timeline writes <source>/<source>.plaso (default <out_dir>/storage)."
-      dxdfir_plaso_jsonl_dir:
-        type: str
-        required: false
-        description: "Where psort writes <source>/timeline.jsonl (default <out_dir>/jsonl)."
+        description: >-
+          Output dir (default data_store/processed/log2timeline[/<collection>]): ONE
+          <host>/ folder per image holding <host>.plaso + log2timeline.log
+          (log2timeline) and timeline.jsonl + psort.log (psort, rendered beside it).
       dxdfir_plaso_contract:
         type: str
         required: false

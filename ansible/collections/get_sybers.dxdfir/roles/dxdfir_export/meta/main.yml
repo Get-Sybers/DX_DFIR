@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  role_name: dxdfir_export
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    The shared disk-image artefact export: plaso's image_export sub-tool pulls
+    the one artefact set (Windows artefacts, event logs, the Linux core) out
+    of every image into processed/_extracted/[<collection>/]<image>/export,
+    the stage gowindowlicker, godaemonhunter and the signatures hayabusa run
+    parse. Runs the get-sybers/plaso image from its contract.
+  company: Get-Sybers
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [dfir, plaso, export, forensics]
+
+dependencies: []

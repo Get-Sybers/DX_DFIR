@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  role_name: dxdfir_gowindowlicker
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    The Windows artefact lane: gowindowlicker's parsers (goevtx, gore, gomft,
+    goprefetch, goese, goamcache, goappcompat, gosbe, gorb, gole, gojle, gowxt)
+    over every host — loose event-log folders and the artefact export of every
+    disk image — one confined run per parser and host, from the one image's
+    contract; processed/windowlicker/[<collection>/]<subtool>/<host>/<item>/.
+  company: Get-Sybers
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [dfir, windows, evtx, registry, amcache, srum, forensics]
+
+dependencies: []

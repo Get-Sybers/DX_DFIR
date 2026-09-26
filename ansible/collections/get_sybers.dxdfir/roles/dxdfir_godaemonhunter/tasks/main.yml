@@ -1,0 +1,168 @@
+---
+# The Linux daemon lane: godaemonhunter's layered matrix over every HOST — a
+# loose log / root-tree folder (logs/linux/<host>/) or a disk image's artefact
+# export (the shared dxdfir_export stage) — one confined run per (parser,
+# host): Layer 1 (gohost, gousers, gonetwork) into the host's knowledge store,
+# then Layer 2 (the daemon parsers) with that store mounted, so the output
+# tree is host-centric: <out_dir>/<subtool>/<host>/<item>/<subtool>.jsonl and
+# <out_dir>/knowledge/<host>/. All contract-driven runs delegated to
+# dxdfir_lane (semantics: README.md). Content decides; exits 1/3 tolerated —
+# over a Windows-only export every parser exits 1 by design.
+
+- name: "godaemonhunter | assert inputs"
+  ansible.builtin.assert:
+    that:
+      - (dxdfir_godaemonhunter_linux_dir | length > 0) or (dxdfir_godaemonhunter_input_dir | length > 0)
+    fail_msg: >-
+      dxdfir_godaemonhunter needs an input source (dxdfir_godaemonhunter_linux_dir
+      or dxdfir_godaemonhunter_input_dir).
+    quiet: true
+  tags: [always]
+
+# 1. the disk images: exported once into the shared stage
+- name: "godaemonhunter | export the artefact set out of every disk image"
+  ansible.builtin.include_role:
+    name: dxdfir_export
+  vars:
+    dxdfir_export_collection: "{{ dxdfir_godaemonhunter_collection }}"
+    dxdfir_export_trees: ["{{ dxdfir_godaemonhunter_input_dir }}", "{{ dxdfir_godaemonhunter_vm_dir }}"]
+    dxdfir_export_stage_dir: "{{ dxdfir_godaemonhunter_stage_dir }}"
+    dxdfir_export_plaso_contract: "{{ dxdfir_godaemonhunter_plaso_contract }}"
+    dxdfir_export_plaso_image: "{{ dxdfir_godaemonhunter_plaso_image }}"
+    dxdfir_export_vss: "{{ dxdfir_godaemonhunter_vss }}"
+    dxdfir_export_force: "{{ dxdfir_godaemonhunter_force }}"
+  tags: [always]
+
+# 2. the loose hosts: one folder per host under logs/linux/ (a staged root
+#    filesystem or a pile of its logs — the parsers content-detect either)
+- name: "godaemonhunter | stat the loose Linux tree"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_godaemonhunter_linux_dir }}"
+  when: dxdfir_godaemonhunter_linux_dir | length > 0
+  register: dxdfir_godaemonhunter_linux_stat
+  tags: [always]
+
+- name: "godaemonhunter | the loose hosts: every folder directly under the Linux tree"
+  ansible.builtin.find:
+    paths: "{{ dxdfir_godaemonhunter_linux_dir }}"
+    file_type: directory
+    recurse: false
+  when: (dxdfir_godaemonhunter_linux_stat.stat | default({})).isdir | default(false)
+  register: dxdfir_godaemonhunter_loose_hosts
+  tags: [always]
+
+- name: "godaemonhunter | files at the tree root, outside any host folder"
+  ansible.builtin.find:
+    paths: "{{ dxdfir_godaemonhunter_linux_dir }}"
+    recurse: false
+    file_type: file
+  when: (dxdfir_godaemonhunter_linux_stat.stat | default({})).isdir | default(false)
+  register: dxdfir_godaemonhunter_loose_root
+  tags: [always]
+
+- name: "godaemonhunter | WARN — files outside a host folder are not parsed"
+  ansible.builtin.debug:
+    msg: >-
+      godaemonhunter: {{ dxdfir_godaemonhunter_loose_root.matched }} file(s) sit directly
+      under {{ dxdfir_godaemonhunter_linux_dir }} — stage each host in its own folder
+      (logs/linux/<host>/) to have them parsed:
+      {{ dxdfir_godaemonhunter_loose_root.files | map(attribute='path') | map('basename') | list }}
+  when: (dxdfir_godaemonhunter_loose_root.matched | default(0)) | int > 0
+  tags: [always]
+
+# the host level: loose folders + exported images, {name, export}
+- name: "godaemonhunter | start from the exported images"
+  ansible.builtin.set_fact:
+    dxdfir_godaemonhunter_hosts: "{{ dxdfir_export_hosts | default([]) }}"
+  tags: [always]
+
+- name: "godaemonhunter | add each loose host"
+  ansible.builtin.set_fact:
+    dxdfir_godaemonhunter_hosts: >-
+      {{ [{'name': item.path | basename, 'export': item.path}] + dxdfir_godaemonhunter_hosts }}
+  loop: "{{ (dxdfir_godaemonhunter_loose_hosts.files | default([])) | sort(attribute='path', reverse=true) }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  tags: [always]
+
+# the knowledge stores pre-exist: Layer 2 binds them read-only, and a
+# read-only mount must exist before the argv is built
+- name: "godaemonhunter | ensure each host's knowledge store exists"
+  ansible.builtin.file:
+    path: "{{ dxdfir_godaemonhunter_out_dir }}/knowledge/{{ item.name }}"
+    state: directory
+    mode: "0777"
+  loop: "{{ dxdfir_godaemonhunter_hosts }}"
+  loop_control:
+    label: "{{ item.name }}"
+  tags: [always]
+
+# facts persist for the whole play, so the run list is reset before accumulating
+- name: "godaemonhunter | start from an empty run list"
+  ansible.builtin.set_fact:
+    dxdfir_godaemonhunter_runs: []
+  tags: [always]
+
+# Layer 1 first, every host: <out_dir>/knowledge/<host>/<item>/<subtool>.jsonl
+- name: "godaemonhunter | Layer 1 — the knowledge store of each host"
+  ansible.builtin.set_fact:
+    dxdfir_godaemonhunter_runs: >-
+      {{ dxdfir_godaemonhunter_runs + [{
+           'name': item.1 ~ ':' ~ item.0.name,
+           'contract': dxdfir_godaemonhunter_contract,
+           'image': dxdfir_godaemonhunter_image,
+           'subtool': item.1,
+           'env': {(item.1 | upper) ~ '_FORCE': dxdfir_godaemonhunter_force | bool | ternary('1', '0')},
+           'mounts': [{'host': item.0.export, 'path': '/input', 'mode': 'ro'},
+                      {'host': dxdfir_godaemonhunter_out_dir ~ '/knowledge/' ~ item.0.name, 'path': '/output', 'mode': 'rw'}],
+         }] }}
+  loop: "{{ dxdfir_godaemonhunter_hosts | product(dxdfir_godaemonhunter_layer1) | list }}"
+  loop_control:
+    label: "{{ item.1 }}:{{ item.0.name }}"
+  tags: [always]
+
+# then Layer 2, enriched by the host's store: <out_dir>/<subtool>/<host>/<item>/<subtool>.jsonl
+- name: "godaemonhunter | Layer 2 — the daemon parsers over each host"
+  ansible.builtin.set_fact:
+    dxdfir_godaemonhunter_runs: >-
+      {{ dxdfir_godaemonhunter_runs + [{
+           'name': item.1 ~ ':' ~ item.0.name,
+           'contract': dxdfir_godaemonhunter_contract,
+           'image': dxdfir_godaemonhunter_image,
+           'subtool': item.1,
+           'env': {(item.1 | upper) ~ '_FORCE': dxdfir_godaemonhunter_force | bool | ternary('1', '0')},
+           'mounts': [{'host': item.0.export, 'path': '/input', 'mode': 'ro'},
+                      {'host': dxdfir_godaemonhunter_out_dir ~ '/knowledge/' ~ item.0.name, 'path': '/knowledge', 'mode': 'ro'},
+                      {'host': dxdfir_godaemonhunter_out_dir ~ '/' ~ item.1 ~ '/' ~ item.0.name, 'path': '/output', 'mode': 'rw'}],
+         }] }}
+  loop: "{{ dxdfir_godaemonhunter_hosts | product(dxdfir_godaemonhunter_layer2) | list }}"
+  loop_control:
+    label: "{{ item.1 }}:{{ item.0.name }}"
+  tags: [always]
+
+- name: "godaemonhunter | note when there is no host to hunt"
+  ansible.builtin.debug:
+    msg: >-
+      godaemonhunter: no host under {{ dxdfir_godaemonhunter_linux_dir }} and no exported
+      disk image under {{ dxdfir_godaemonhunter_stage_dir }} — nothing to parse.
+  when: dxdfir_godaemonhunter_runs | length == 0
+  tags: [always]
+
+# resolved HERE: role_path templated inside dxdfir_lane would name that role
+- name: "godaemonhunter | resolve lane-specific task paths"
+  ansible.builtin.set_fact:
+    dxdfir_godaemonhunter_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
+  tags: [always]
+
+- name: "godaemonhunter | run the shared tool-lane skeleton"
+  ansible.builtin.include_role:
+    name: dxdfir_lane
+  vars:
+    dxdfir_lane_name: godaemonhunter
+    dxdfir_lane_runs: "{{ dxdfir_godaemonhunter_runs }}"
+    dxdfir_lane_verify_dir: "{{ dxdfir_godaemonhunter_out_dir }}"
+    dxdfir_lane_verify_glob: "*.jsonl"
+    dxdfir_lane_require_no_failures: false
+    dxdfir_lane_gate_extra: "{{ dxdfir_godaemonhunter_gate_extra }}"
+  when: dxdfir_godaemonhunter_runs | length > 0
+  tags: [always]

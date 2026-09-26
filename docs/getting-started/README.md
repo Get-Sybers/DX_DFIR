@@ -43,7 +43,7 @@ cd DX_DFIR
 ./scripts/setup-environment.sh --yes      # host prep (log out/in once for the docker group)
 dxdfir build-docker                        # build the hardened tool images
 # drop evidence under data_store/raw/<type>/ …
-dxdfir process evtx                        # process a lane
+dxdfir process gowindowlicker              # process a lane
 dxdfir build-car && dxdfir verify-car      # normalise into CAR + gate it
 ```
 

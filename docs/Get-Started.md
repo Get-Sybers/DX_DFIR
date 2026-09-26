@@ -12,7 +12,7 @@ walk a run end to end:
 
 ```bash
 scripts/setup-environment.sh  # builds the Go dxdfir front-end (go/) + installs the processors and ansible-core
-dxdfir process plaso     # sources: plaso | zeek | evtx | memory | godfir-toolz | signatures
+dxdfir process plaso     # lanes: zeek | gowindowlicker | godaemonhunter | anamnesis | plaso | signatures
 dxdfir build-car         # normalise every processed source into CAR (car_<object>.jsonl)
 dxdfir verify-car        # the CAR correctness gate over what was written
 dxdfir validate          # run the repo check harness
@@ -56,24 +56,29 @@ _Refer to [📁 Dir-Structure](/docs/Dir-Structure.md) for detailed directory st
 dxdfir process plaso
 ```
 - Automates forensic analysis of all `.E01` disk images and VMware VM exports using Plaso.
-- Output lands in `data_store/processed/log2timeline/jsonl/<source>/timeline.jsonl`
-  (Plaso `json_line`) and the `.plaso` storage files in `storage/<source>/`, each with
-  its tool log beside it.
+- Output lands in `data_store/processed/log2timeline/<host>/` — the `.plaso` storage
+  file and the rendered `timeline.jsonl` (Plaso `json_line`) side by side, each with
+  its tool log; a collection-scoped run one level down (`log2timeline/<collection>/<host>/`).
 
 ### Step 4: Process PCAPs with Zeek
 ```bash
 dxdfir process zeek
 ```
 - Automates processing of all network capture files (`.pcap` and `.pcapng`) using Zeek.
-- Output lands in `data_store/processed/zeek/<pcap-name>/`.
+- Output lands in `data_store/processed/zeek/[<collection>/]<pcap-name>/`.
 
-### Step 5: Parse Windows Event Logs (optional)
+### Step 5: Parse Windows and Linux hosts (optional)
 ```bash
-dxdfir process evtx
+dxdfir process gowindowlicker   # alias: evtx
+dxdfir process godaemonhunter   # alias: daemonhunter
 ```
-- Converts `.evtx` in `data_store/raw/logs/winevt/<host>/` to normalised JSON
-  using **goevtx** (a `get-sybers/gowindowlicker` sub-tool, built by `dxdfir build-docker`) —
-  nothing operator-supplied.
+- `gowindowlicker` converts `.evtx` in `data_store/raw/logs/winevt/<host>/` with
+  **goevtx** and runs every Windows artefact parser (registry, MFT, Prefetch, SRUM, …)
+  over the disk images' export; output lands in
+  `processed/windowlicker/[<collection>/]<subtool>/<host>/<item>/`.
+- `godaemonhunter` does the same for Linux hosts (`raw/logs/linux/<host>/` and the
+  images' export) into `processed/daemonhunter/[<collection>/]<subtool>/<host>/<item>/`.
+- Both ride `get-sybers/*` images built by `dxdfir build-docker` — nothing operator-supplied.
 - See [Scripts-Overview](/docs/scripts/Scripts-Overview.md) for the pipeline layers.
 
 ### Step 6: Build and verify the CAR

@@ -8,8 +8,13 @@ dxdfir_zeek_pcap_lane: >-
   errors='ignore') | default('', true) | from_yaml) or {}).subdir
   | default('pcaps', true) }}
 dxdfir_zeek_pcap_dir: "{{ dxdfir_zeek_repo_root }}/data_store/raw/{{ dxdfir_zeek_pcap_lane }}"
-dxdfir_zeek_out_dir: "{{ dxdfir_zeek_repo_root }}/data_store/processed/zeek"
-# one folder per capture; the contract the lane is driven from
+# a collection-scoped run lands one level below the leaf: processed/zeek/<collection>/
+dxdfir_zeek_collection: ""
+# processed/zeek/[<collection>/]<capture>/ — one folder per capture
+dxdfir_zeek_out_dir: >-
+  {{ dxdfir_zeek_repo_root }}/data_store/processed/zeek{{
+  ('/' ~ dxdfir_zeek_collection) if dxdfir_zeek_collection | length > 0 else '' }}
+# the contract the lane is driven from
 dxdfir_zeek_contract: "{{ dxdfir_zeek_repo_root }}/docker/GoDFIR-toolz/zeek/contract.yml"
 # empty = the contract's image; set to pin a digest
 dxdfir_zeek_image: ""

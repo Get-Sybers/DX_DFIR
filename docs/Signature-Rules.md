@@ -155,10 +155,11 @@ explicitly the same way when it should differ.
 
 ## Hayabusa (Sigma over Windows Event Logs)
 
-The `hayabusa` sub-tool scans every `.evtx` tree — the loose logs under
-`data_store/raw/logs/winevt/` and the evtx lane's disk-image export under
-`processed/windows_logs/_extracted_evtx/` — with the image's default Sigma set.
+The `hayabusa` sub-tool scans every event-log host — the loose logs under
+`data_store/raw/logs/winevt/<host>/` and every disk image's artefact export in the
+shared stage `processed/_extracted/[<collection>/]<image>/` — with the image's
+default Sigma set.
 An operator rules directory (`dxdfir_signatures_hayabusa_rules`) is mounted at
 `/rules/hayabusa` and passed as `SIGNATURES_HAYABUSA_RULES`; the output profile
 is `verbose` (the MITRE columns) unless `dxdfir_signatures_hayabusa_profile` says
-otherwise. Detections land in `detections/hayabusa/<item>/timeline.jsonl`.
+otherwise. Detections land in `detections/hayabusa/[<collection>/]<host>/timeline.jsonl`.

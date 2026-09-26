@@ -1,0 +1,106 @@
+---
+# The shared image export: plaso's image_export sub-tool pulls the artefact
+# set (files/image-export-filter.yaml — Windows artefacts, event logs and the
+# Linux core in ONE filter) out of every disk image under the caller's trees
+# into the one canonical stage, processed/_extracted/[<collection>/]<image>/export.
+# Every lane that parses an export (gowindowlicker, godaemonhunter, the
+# signatures hayabusa run) includes this first; whichever runs first exports,
+# the others find the item done (image_export.jsonl) and skip. Delegated to
+# dxdfir_lane (semantics: README.md). On exit, dxdfir_export_hosts lists every
+# exported image — the <host> level the parsing lanes fan out over.
+
+- name: "export | stat each evidence tree"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ dxdfir_export_trees | reject('equalto', '') | list }}"
+  register: dxdfir_export_tree_stats
+  tags: [always]
+
+# a tree with no disk image in it declares no run — the plaso image is never
+# needed on a host with no images
+- name: "export | look for disk images in each present tree"
+  ansible.builtin.find:
+    paths: "{{ item.item }}"
+    use_regex: true
+    patterns: ["{{ dxdfir_export_image_regex }}"]
+    recurse: true
+    file_type: file
+  loop: "{{ dxdfir_export_tree_stats.results | selectattr('stat.isdir', 'defined') | selectattr('stat.isdir') | list }}"
+  loop_control:
+    label: "{{ item.item }}"
+  register: dxdfir_export_tree_images
+  tags: [always]
+
+# facts persist for the whole play, so the run list is reset before accumulating
+- name: "export | start from an empty run list"
+  ansible.builtin.set_fact:
+    dxdfir_export_runs: []
+  tags: [always]
+
+- name: "export | one image_export run per tree holding an image"
+  ansible.builtin.set_fact:
+    dxdfir_export_runs: >-
+      {{ dxdfir_export_runs + [{
+           'name': 'image_export:' ~ (item.item.item | basename),
+           'contract': dxdfir_export_plaso_contract,
+           'image': dxdfir_export_plaso_image,
+           'subtool': 'image_export',
+           'env': {'PLASO_IMAGE_EXPORT_FILTER_FILE': '/filters/dxdfir.yaml',
+                   'PLASO_IMAGE_EXPORT_VSS': dxdfir_export_vss,
+                   'PLASO_IMAGE_EXPORT_FORCE': dxdfir_export_force},
+           'mounts': [{'host': item.item.item, 'path': '/input', 'mode': 'ro'},
+                      {'host': dxdfir_export_stage_dir, 'path': '/output', 'mode': 'rw'},
+                      {'host': dxdfir_export_filter_file, 'path': '/filters/dxdfir.yaml', 'mode': 'ro'}],
+         }] }}
+  loop: "{{ dxdfir_export_tree_images.results | default([]) | selectattr('matched', 'defined') | selectattr('matched', 'gt', 0) | list }}"
+  loop_control:
+    label: "{{ item.item.item }} ({{ item.matched }} image(s))"
+  tags: [always]
+
+# the stage pre-exists (container-writable) so a consumer's ro-mount of it
+# passes on a fresh host even when nothing was exported
+- name: "export | ensure the stage exists"
+  ansible.builtin.file:
+    path: "{{ dxdfir_export_stage_dir }}"
+    state: directory
+    mode: "0777"
+  tags: [always]
+
+- name: "export | run the shared tool-lane skeleton"
+  ansible.builtin.include_role:
+    name: dxdfir_lane
+  vars:
+    dxdfir_lane_name: export
+    dxdfir_lane_runs: "{{ dxdfir_export_runs }}"
+    dxdfir_lane_verify_dir: "{{ dxdfir_export_stage_dir }}"
+    dxdfir_lane_verify_glob: "image_export.jsonl"
+    # an image with no artefact of the set is exported empty, not failed
+    dxdfir_lane_require_no_failures: false
+  when: dxdfir_export_runs | length > 0
+  tags: [always]
+
+# the exported images: every <image>/ under the stage carrying the done marker
+- name: "export | list the exported images"
+  ansible.builtin.find:
+    paths: "{{ dxdfir_export_stage_dir }}"
+    patterns: ["image_export.jsonl"]
+    recurse: true
+    depth: 2
+    file_type: file
+  register: dxdfir_export_markers
+  tags: [always]
+
+- name: "export | start from an empty host list"
+  ansible.builtin.set_fact:
+    dxdfir_export_hosts: []
+  tags: [always]
+
+- name: "export | the <host> level: one entry per exported image"
+  ansible.builtin.set_fact:
+    dxdfir_export_hosts: >-
+      {{ dxdfir_export_hosts + [{'name': item | dirname | basename,
+                                 'export': (item | dirname) ~ '/export'}] }}
+  loop: "{{ dxdfir_export_markers.files | map(attribute='path') | sort }}"
+  loop_control:
+    label: "{{ item | dirname | basename }}"
+  tags: [always]

@@ -1,8 +1,8 @@
 # dxdfir_lane
 
 The shared "run a hardened DFIR tool lane" skeleton. A per-tool lane role
-(`dxdfir_zeek`, `dxdfir_plaso`, `dxdfir_evtx`, `dxdfir_memory`,
-`dxdfir_signatures`, `dxdfir_godfir_toolz`, `dxdfir_byakugan`) asserts its
+(`dxdfir_zeek`, `dxdfir_plaso`, `dxdfir_gowindowlicker`, `dxdfir_godaemonhunter`,
+`dxdfir_anamnesis`, `dxdfir_signatures`, `dxdfir_export`, `dxdfir_byakugan`) asserts its
 own input rules, declares its runs — one GoDFIR-toolz tool image each,
 driven purely by that tool's `contract.yml` — and delegates here. The role
 groups; the playbook decides. Idempotence lives in each tool container (an
@@ -91,7 +91,7 @@ env-file write:
 - `dxdfir_lane_require_no_failures` (default true) asserts every summary
   reported `failed == 0`; lanes whose tools legitimately exit 3 with
   per-item failures (plaso per-image, memory per-plugin without symbols,
-  godfir-toolz per-tool, the detection sub-tools) set it false and gate
+  the host lanes per parser, the detection sub-tools) set it false and gate
   purely on output.
 - Default output gate: something landed in `dxdfir_lane_verify_dir`
   matching `dxdfir_lane_verify_glob`, unless every run genuinely had nothing

@@ -1,6 +1,7 @@
 # Processing lanes
 
-A **lane** processes one family of evidence with one specialist tool. There are six.
+A **lane** processes one family of evidence with one specialist tool, and is named
+after it. There are six.
 Each is an Ansible role that declares one or more runs of a
 [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) tool image and delegates
 them to a shared skeleton, which builds each confined `docker run` purely from the
@@ -14,14 +15,27 @@ evidence. See the [command reference](../getting-started/commands.md#processing)
 
 ## The six lanes
 
-| Lane | Evidence in | Tool | Container(s) | Output under `data_store/processed/` |
+Every lane writes `data_store/processed/<tool>/[<collection>/]<host>/…`: one leaf
+per tool, a collection-scoped run one level below it, one folder per **host** — the
+evidence item: a disk image, a capture, a memory image, a folder of loose logs
+staged as `logs/<os>/<host>/` — and the tool's own items under that.
+
+| Lane (aliases) | Evidence in | Tool | Container(s) | Output under `data_store/processed/` |
 |---|---|---|---|---|
-| **zeek** | Packet captures (`data_store/raw/pcaps`) | Zeek → JSON logs | `get-sybers/zeek` | `zeek/<capture>/*.json` + `zeek.jsonl` |
-| **evtx** | Windows event logs (`raw/logs/winevt`, or exported from disk images by the plaso image) | [goevtx](https://github.com/Get-Sybers/GoDFIR-toolz) (static-Go `.evtx` parser, a gowindowlicker sub-tool) | `get-sybers/gowindowlicker` (+ `get-sybers/plaso` for the export) | `windows_logs/<log>/goevtx.jsonl` |
-| **memory** | Memory images (`raw/memory`) | [anamnesis](https://github.com/Get-Sybers/Anamnesis) (MemProcFS) | `get-sybers/anamnesis` | `memory/<image>/plugins/*.jsonl` + `car.db` |
-| **plaso** | Disk images + VM exports (`raw/disk_images`, `raw/VM_files`) | Plaso (`log2timeline` → `psort` sub-tools) | `get-sybers/plaso` | `log2timeline/storage/<source>/<source>.plaso`, `log2timeline/jsonl/<source>/timeline.jsonl` |
-| **godfir-toolz** | Same disk-image family | The two [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) matrices over the plaso image's artefact export: **gowindowlicker** run as `lick` — every Windows parser (gore, gomft, goese, goprefetch…) a sub-tool of one image — and **godaemonhunter** run as `hunt` (Layer-1 knowledge store → enriched daemon parsers) over the same tree | `get-sybers/gowindowlicker` + `get-sybers/godaemonhunter` + `get-sybers/plaso` for the export | `godfir-toolz/<subtool>/<item>/<subtool>.jsonl`; the Linux tree under `godfir-toolz/godaemonhunter/` (`knowledge/` + one dir per daemon parser) |
-| **signatures** | loose files · memory · PCAPs · `.evtx` · disk images | YARA · Suricata replay · Hayabusa Sigma · gomount→goyara disk scan (four sub-tools of one image) | `get-sybers/signatures` | `detections/<sub-tool>/<item>/` |
+| **zeek** | Packet captures (`data_store/raw/pcaps`) | Zeek → JSON logs | `get-sybers/zeek` | `zeek/[<collection>/]<capture>/*.json` + `zeek.jsonl` |
+| **gowindowlicker** (`windowlicker`, `lick`, `evtx`) | Windows hosts: loose event logs (`raw/logs/winevt/<host>/`) and disk images + VM exports (`raw/disk_images`, `raw/VM_files`), exported once by the shared [`dxdfir_export`](../../ansible/collections/get_sybers.dxdfir/roles/dxdfir_export/README.md) step | The [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) Windows parsers — every one a sub-tool of one static-Go image: goevtx, gore, gosbe, gomft, goprefetch, goese, goamcache, goappcompat, gorb, gole, gojle, gowxt — one run per (parser, host) | `get-sybers/gowindowlicker` (+ `get-sybers/plaso` for the export) | `windowlicker/[<collection>/]<subtool>/<host>/<item>/<subtool>.jsonl` |
+| **godaemonhunter** (`daemonhunter`, `hunt`) | Linux hosts: loose logs / root trees (`raw/logs/linux/<host>/`) and the same disk-image family through the shared export | The GoDFIR-toolz Linux matrix: Layer 1 (gohost, gousers, gonetwork) into a per-host knowledge store, then the daemon parsers (gojournal, goauditd, gowtmp, gosyslog, gounit, gocron, goshell, gotrash, goctl) enriched by it — one run per (parser, host) | `get-sybers/godaemonhunter` (+ `get-sybers/plaso` for the export) | `daemonhunter/[<collection>/]<subtool>/<host>/<item>/<subtool>.jsonl` + `knowledge/<host>/` |
+| **anamnesis** (`memory`) | Memory images (`raw/memory`) | [anamnesis](https://github.com/Get-Sybers/Anamnesis) (MemProcFS) | `get-sybers/anamnesis` | `anamnesis/[<collection>/]<image>/plugins/*.jsonl` + `car.db` |
+| **plaso** (`log2timeline`, `psort`) | Disk images + VM exports | Plaso (`log2timeline` → `psort` sub-tools) | `get-sybers/plaso` | `log2timeline/[<collection>/]<host>/<host>.plaso` + `timeline.jsonl`, side by side |
+| **signatures** | loose files · memory · PCAPs · event-log hosts · disk images (+ their export) | YARA · Suricata replay · Hayabusa Sigma · gomount→goyara disk scan (four sub-tools of one image) | `get-sybers/signatures` | `detections/{yara,suricata,hayabusa}/[<collection>/]<host>/` |
+
+`godfir-toolz`, the retired lane that ran both matrices, is a group: it runs
+`gowindowlicker` + `godaemonhunter`. Disk images are exported once into the shared
+stage `processed/_extracted/[<collection>/]<image>/export/` — the artefact set
+(registry hives + transaction logs, Amcache, jump lists, `$MFT`, Prefetch, SRUM,
+the event logs, the Linux core) in one filter — by whichever consuming lane runs
+first; the others find every image done and skip. The stage is `_`-prefixed:
+never a CAR source, never shipped.
 
 Each tool discovers its items by **content first** (magic bytes / signatures),
 extension as a fallback — so a mislabelled `.pcap` is still recognised. Every tool
@@ -30,7 +44,7 @@ read-only rootfs.
 
 ## The shared lane skeleton
 
-Each lane role (`dxdfir_zeek`, `dxdfir_evtx`, …) carries only its own per-lane piece —
+Each lane role (`dxdfir_zeek`, `dxdfir_gowindowlicker`, …) carries only its own per-lane piece —
 asserting its inputs and declaring its runs (`{contract, subtool, env, mounts}`) —
 then delegates to the shared **`dxdfir_lane`** role. That skeleton is the same for
 every lane:
@@ -70,7 +84,10 @@ A **collection** groups raw evidence into one named, registered set so the whole
 pipeline can be scoped to it. Physically it's a folder under
 `data_store/raw/collections/<NAME>/` with the lane subdirs, plus control files: a SQLite
 registry (`.registry.db`), a `.collection` marker, a log, and a `.collection.hashes`
-SHA-1 manifest.
+SHA-1 manifest. `dxdfir process <NAME> <lane>` passes the role its collection subdirs
+as inputs and `dxdfir_<lane>_collection=<NAME>` for the output, so everything the
+run writes lands one level below the tool's leaf (`processed/<tool>/<NAME>/…`) and
+the CAR engine names every store after that path — two cases never share one.
 
 The **dropzone** is `data_store/raw/sort/`. Drop a mixed pile there and:
 

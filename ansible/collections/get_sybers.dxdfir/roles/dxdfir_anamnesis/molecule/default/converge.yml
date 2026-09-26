@@ -1,0 +1,11 @@
+---
+- name: Converge
+  hosts: localhost
+  gather_facts: true
+  vars:
+    dxdfir_anamnesis_memory_dir: /tmp/dxdfir_anamnesis_molecule/mem
+    dxdfir_anamnesis_out_dir: /tmp/dxdfir_anamnesis_molecule/out
+  tasks:
+    - name: "converge | run dxdfir_anamnesis (elastic)"
+      ansible.builtin.include_role:
+        name: dxdfir_anamnesis

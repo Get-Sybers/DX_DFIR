@@ -51,7 +51,7 @@ Run a [processing lane](../architecture/processing-lanes.md) over the evidence
 lane, anything else the collection):
 
 ```bash
-dxdfir process evtx            # one lane over all staged evidence of its type
+dxdfir process gowindowlicker  # one lane over all staged evidence of its type
 dxdfir process all             # every lane that has evidence
 ```
 

@@ -13,27 +13,41 @@ The full annotated tree (including the analysis backend) is in
 
 ```bash
 data_store/
-   ├── raw/                        # Unprocessed evidence — you place it here
-   │   ├── disk_images/            # Disk images (.E01, .raw/.dd, .vmdk, …)
+   ├── raw/                        # Unprocessed evidence — the lanes defined in evidence-taxonomy/
    │   ├── pcaps/                  # Packet captures (.pcap, .pcapng)
+   │   ├── logs/winevt/<host>/     # Windows event logs, one folder per host
+   │   ├── logs/linux/<host>/      # Linux logs / staged root trees, one folder per host
+   │   ├── logs/macOS/<host>/      # macOS logs (staged; no lane reads them yet)
+   │   ├── disk_images/            # Disk images (.E01, .raw/.dd, .vmdk, …)
    │   ├── VM_files/               # VMware VM exports (one folder per VM)
    │   ├── memory/                 # Memory captures
-   │   └── other_raw_data/         # e.g. WinEvt/<host>/*.evtx for the EVTX path
+   │   ├── filesystem/documents/   # Documents and loose filesystem artefacts
+   │   ├── mobile/                 # Mobile-device extractions
+   │   ├── other_raw_data/         # Catch-all; other_raw_data/sql holds SQLite/SQL databases
+   │   ├── sort/                   # Dropzone for `dxdfir sort`
+   │   └── collections/<name>/     # Registered collections — the same lane subdirs, per case
    │
    ├── dependencies/               # Operator-supplied rulesets/symbols
    │
-   └── processed/                  # One subtree per source — what `dxdfir build-car` reads
-       ├── log2timeline/
-       │   ├── storage/<source>/   # <source>.plaso (reusable by Timesketch) + log2timeline.log
-       │   └── jsonl/<source>/     # Plaso json_line timeline.jsonl + psort.log
-       ├── windows_logs/<log>/     # goevtx.jsonl, one folder per event log
-       ├── zeek/<capture>/         # Zeek JSON (conn.json, dns.json, …)
-       ├── memory/<image>/         # anamnesis (MemProcFS) JSONL per plugin + car.db
-       ├── godfir-toolz/<subtool>/ # GoDFIR-toolz artefacts, one folder per item (registry, SRUM, MFT, …)
-       ├── detections/             # yara/ suricata/ hayabusa/ scan/ detection JSONL
-       ├── linux_logs/             # syslog/auth/utmp/… (not yet wired into the backend)
-       └── car/<source>/           # the materialised CAR: car_<object>.jsonl (+ car_relationships.jsonl)
+   └── processed/                  # processed/<tool>/[<collection>/]<host>/… — what `dxdfir build-car` reads
+       ├── zeek/[<collection>/]<capture>/                        # Zeek JSON (conn.json, dns.json, …) + zeek.jsonl
+       ├── windowlicker/[<collection>/]<subtool>/<host>/<item>/  # the Windows parsers: goevtx, gore, gomft, goprefetch, goese, …
+       ├── daemonhunter/[<collection>/]<subtool>/<host>/<item>/  # the Linux daemon parsers; knowledge/<host>/ is Layer 1
+       ├── anamnesis/[<collection>/]<image>/                     # anamnesis (MemProcFS) JSONL per plugin + car.db
+       ├── log2timeline/[<collection>/]<host>/                   # <host>.plaso (reusable by Timesketch) + timeline.jsonl, side by side
+       ├── detections/{yara,suricata,hayabusa}/[<collection>/]<host>/  # detection JSONL (the disk scan lands under yara/)
+       ├── detections/byakugan/                                  # reserved for the engine's own detections
+       ├── _extracted/[<collection>/]<image>/export/             # the shared disk-image artefact export (staging, never shipped)
+       ├── byakugan/<source>/                                    # the materialised CAR: car_<object>.jsonl (+ car_relationships.jsonl)
+       ├── byakugan-load/                                        # `load-car` state
+       └── exchange/                                             # the STIX/CTI exchange's bundles
 ```
+
+A **collection** (`dxdfir process <collection> …`) reads
+`raw/collections/<collection>/<lane subdir>/` and writes one level below each
+tool's leaf, so two cases never share an output folder or a CAR store. A
+**host** is the evidence item — a disk image, a capture, a memory image, or a
+folder of loose logs staged as `logs/<os>/<host>/`.
 
 ---
 
@@ -57,18 +71,18 @@ dxdfir process all case-a                # run every lane over just this collect
 [How It Runs](/README.md#how-it-runs)):
 
 ```bash
-dxdfir process plaso        # disk images / VM exports
-dxdfir process zeek         # pcaps
-dxdfir process evtx         # Windows event logs
-dxdfir process memory       # memory
-dxdfir process godfir-toolz    # GoDFIR-toolz artefacts from disk images
-dxdfir process signatures   # yara / suricata / hayabusa
+dxdfir process zeek            # pcaps
+dxdfir process gowindowlicker  # Windows hosts: event logs + the disk-image artefacts (aliases: evtx, windowlicker)
+dxdfir process godaemonhunter  # Linux hosts: logs + the disk-image artefacts (alias: daemonhunter)
+dxdfir process anamnesis       # memory (alias: memory)
+dxdfir process plaso           # disk images / VM exports
+dxdfir process signatures      # yara / suricata / hayabusa
 ```
 
 **3. Build and verify the CAR:**
 
 ```bash
-dxdfir build-car            # every source -> processed/car/<source>/car_<object>.jsonl
+dxdfir build-car            # every source -> processed/byakugan/<source>/car_<object>.jsonl
 dxdfir verify-car           # the correctness gate over what was written
 ```
 

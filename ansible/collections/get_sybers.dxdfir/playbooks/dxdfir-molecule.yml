@@ -15,12 +15,13 @@
       - dxdfir_exchange
       - dxdfir_signatures
       - dxdfir_zeek
-      - dxdfir_evtx
+      - dxdfir_gowindowlicker
+      - dxdfir_godaemonhunter
       - dxdfir_plaso
-      - dxdfir_memory
-      - dxdfir_godfir_toolz
+      - dxdfir_anamnesis
     # operator-supplied fixtures (binary, not shipped); empty skips the scenario
     dxdfir_molecule_sample_evtx: ""
+    dxdfir_molecule_sample_linux: ""
     dxdfir_molecule_sample_image: ""
     dxdfir_molecule_sample_memory: ""
   tasks:
@@ -43,10 +44,10 @@
              }] }}
       vars:
         dxdfir_molecule_fixtures:
-          dxdfir_evtx: {var: molecule_sample_evtx, value: "{{ dxdfir_molecule_sample_evtx }}"}
+          dxdfir_gowindowlicker: {var: molecule_sample_evtx, value: "{{ dxdfir_molecule_sample_evtx }}"}
+          dxdfir_godaemonhunter: {var: molecule_sample_linux, value: "{{ dxdfir_molecule_sample_linux }}"}
           dxdfir_plaso: {var: molecule_sample_image, value: "{{ dxdfir_molecule_sample_image }}"}
-          dxdfir_godfir_toolz: {var: molecule_sample_image, value: "{{ dxdfir_molecule_sample_image }}"}
-          dxdfir_memory: {var: molecule_sample_memory, value: "{{ dxdfir_molecule_sample_memory }}"}
+          dxdfir_anamnesis: {var: molecule_sample_memory, value: "{{ dxdfir_molecule_sample_memory }}"}
       loop: "{{ dxdfir_molecule_roles }}"
 
     - name: "dxdfir-molecule | note every skipped scenario (fixture not provided)"

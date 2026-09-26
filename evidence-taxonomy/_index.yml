@@ -6,6 +6,8 @@ catch_all_subdir: other_raw_data
 order:
   - pcaps
   - logs_winevt
+  - logs_linux
+  - logs_macos
   - disk_images
   - vm_files
   - memory

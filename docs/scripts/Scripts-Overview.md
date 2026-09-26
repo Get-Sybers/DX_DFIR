@@ -40,13 +40,13 @@ image, with operator rulesets mounted in their place — see
 |---|---|---|
 | `yara` | **loose files** under `raw/other_raw_data/` and **memory images** under `raw/memory/` (scanned directly) | one hit record per rule match (rule, target, offsets/strings). |
 | `suricata` | every capture under `raw/pcaps/` | Suricata EVE JSON per capture. |
-| `hayabusa` | every `.evtx` tree: `raw/logs/winevt/` and the evtx lane's disk-image export (`processed/windows_logs/_extracted_evtx/`) | Hayabusa Sigma detection timeline (native binary, `verbose` profile). |
+| `hayabusa` | every event-log host: `raw/logs/winevt/<host>/` and every disk image's artefact export in the shared stage (`processed/_extracted/[<collection>/]<image>/`) | Hayabusa Sigma detection timeline (native binary, `verbose` profile). |
 | `scan` | every disk image under `raw/disk_images/`, streamed by gomount through goyara in **userspace** — no `/dev/fuse`, nothing mounted on the host | goyara hit records per image. |
 
-> Disk-image event logs reach Hayabusa through the evtx lane's one canonical
-> export (`image_export --artifact_filters WindowsEventLogs`, event logs only),
-> so an image is exported once for both lanes. Hayabusa needs real `.evtx`
-> input — its `-J` JSON input does not detect.
+> Disk-image event logs reach Hayabusa through the one shared artefact export
+> (`dxdfir_export`: registry hives, event logs, the Linux core in one filter),
+> so an image is exported once for every lane that reads it. Hayabusa needs
+> real `.evtx` input — its `-J` JSON input does not detect.
 
 ---
 

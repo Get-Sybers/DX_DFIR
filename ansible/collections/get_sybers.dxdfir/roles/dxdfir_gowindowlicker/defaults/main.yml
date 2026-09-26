@@ -1,0 +1,49 @@
+---
+
+dxdfir_gowindowlicker_repo_root: "{{ role_path }}/../../../../.."
+
+# a collection-scoped run lands one level below the leaf: processed/windowlicker/<collection>/
+dxdfir_gowindowlicker_collection: ""
+
+# subdirs from the shared evidence taxonomy (evidence-taxonomy/)
+# loose Windows event logs, one folder per host: logs/winevt/<host>/*.evtx
+dxdfir_gowindowlicker_winevt_lane: >-
+  {{ ((lookup('file', dxdfir_gowindowlicker_repo_root ~ '/evidence-taxonomy/logs_winevt.yml',
+  errors='ignore') | default('', true) | from_yaml) or {}).subdir
+  | default('logs/winevt', true) }}
+dxdfir_gowindowlicker_winevt_dir: "{{ dxdfir_gowindowlicker_repo_root }}/data_store/raw/{{ dxdfir_gowindowlicker_winevt_lane }}"
+# the disk-image family (exported by dxdfir_export, then every parser runs per image)
+dxdfir_gowindowlicker_input_lane: >-
+  {{ ((lookup('file', dxdfir_gowindowlicker_repo_root ~ '/evidence-taxonomy/disk_images.yml',
+  errors='ignore') | default('', true) | from_yaml) or {}).subdir
+  | default('disk_images', true) }}
+dxdfir_gowindowlicker_input_dir: "{{ dxdfir_gowindowlicker_repo_root }}/data_store/raw/{{ dxdfir_gowindowlicker_input_lane }}"
+dxdfir_gowindowlicker_vm_lane: >-
+  {{ ((lookup('file', dxdfir_gowindowlicker_repo_root ~ '/evidence-taxonomy/vm_files.yml',
+  errors='ignore') | default('', true) | from_yaml) or {}).subdir
+  | default('VM_files', true) }}
+dxdfir_gowindowlicker_vm_dir: "{{ dxdfir_gowindowlicker_repo_root }}/data_store/raw/{{ dxdfir_gowindowlicker_vm_lane }}"
+
+# processed/windowlicker/[<collection>/]<subtool>/<host>/<item>/<subtool>.jsonl
+dxdfir_gowindowlicker_out_dir: >-
+  {{ dxdfir_gowindowlicker_repo_root }}/data_store/processed/windowlicker{{
+  ('/' ~ dxdfir_gowindowlicker_collection) if dxdfir_gowindowlicker_collection | length > 0 else '' }}
+# the shared export stage (dxdfir_export): processed/_extracted/[<collection>/]<image>/export
+dxdfir_gowindowlicker_stage_dir: >-
+  {{ dxdfir_gowindowlicker_repo_root }}/data_store/processed/_extracted{{
+  ('/' ~ dxdfir_gowindowlicker_collection) if dxdfir_gowindowlicker_collection | length > 0 else '' }}
+
+# the contract the lane is driven from; every parser is a sub-tool of the one image
+dxdfir_gowindowlicker_contract: "{{ dxdfir_gowindowlicker_repo_root }}/docker/GoDFIR-toolz/gowindowlicker/contract.yml"
+# empty = the contract's image; set to pin a digest
+dxdfir_gowindowlicker_image: ""
+# the parsers run per exported image (one run each, into its own <subtool>/<host>/ tree);
+# loose event-log hosts get goevtx only
+dxdfir_gowindowlicker_subtools:
+  [goprefetch, goese, gorb, gomft, goamcache, goappcompat, goevtx, gore, gosbe, gole, gojle, gowxt]
+# the export step (dxdfir_export)
+dxdfir_gowindowlicker_plaso_contract: "{{ dxdfir_gowindowlicker_repo_root }}/docker/GoDFIR-toolz/plaso/contract.yml"
+dxdfir_gowindowlicker_plaso_image: ""
+dxdfir_gowindowlicker_vss: false
+
+dxdfir_gowindowlicker_force: false

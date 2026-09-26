@@ -42,7 +42,7 @@
                    'PLASO_LOG2TIMELINE_VSS': dxdfir_plaso_vss,
                    'PLASO_LOG2TIMELINE_PARSERS': dxdfir_plaso_parsers},
            'mounts': [{'host': item, 'path': '/input', 'mode': 'ro'},
-                      {'host': dxdfir_plaso_storage_dir, 'path': '/output', 'mode': 'rw'}],
+                      {'host': dxdfir_plaso_out_dir, 'path': '/output', 'mode': 'rw'}],
          }] }}
   loop: >-
     {{ [dxdfir_plaso_input_dir]
@@ -51,7 +51,9 @@
           | selectattr('stat.isdir') | map(attribute='item') | list) }}
   tags: [always]
 
-# psort renders every storage file; it runs last
+# psort renders every storage file; it runs last, over the SAME tree it writes
+# into: its item is the storage file's folder, so timeline.jsonl lands beside
+# <host>.plaso in the one <host>/ folder
 - name: "plaso | the psort run over the storage tree"
   ansible.builtin.set_fact:
     dxdfir_plaso_runs: >-
@@ -62,15 +64,15 @@
            'subtool': 'psort',
            'env': {'PLASO_PSORT_FORCE': dxdfir_plaso_force,
                    'PLASO_PSORT_OUTPUT_FORMAT': dxdfir_plaso_output_format},
-           'mounts': [{'host': dxdfir_plaso_storage_dir, 'path': '/input', 'mode': 'ro'},
-                      {'host': dxdfir_plaso_jsonl_dir, 'path': '/output', 'mode': 'rw'}],
+           'mounts': [{'host': dxdfir_plaso_out_dir, 'path': '/input', 'mode': 'ro'},
+                      {'host': dxdfir_plaso_out_dir, 'path': '/output', 'mode': 'rw'}],
          }] }}
   tags: [always]
 
-# the storage tree pre-exists (container-writable) so the ro-mount check passes on a fresh host
-- name: "plaso | ensure the storage tree exists"
+# the output tree pre-exists (container-writable) so psort's ro-mount check passes on a fresh host
+- name: "plaso | ensure the output tree exists"
   ansible.builtin.file:
-    path: "{{ dxdfir_plaso_storage_dir }}"
+    path: "{{ dxdfir_plaso_out_dir }}"
     state: directory
     mode: "0777"
   tags: [always]
@@ -81,7 +83,7 @@
   vars:
     dxdfir_lane_name: plaso
     dxdfir_lane_runs: "{{ dxdfir_plaso_runs }}"
-    dxdfir_lane_verify_dir: "{{ dxdfir_plaso_jsonl_dir }}"
+    dxdfir_lane_verify_dir: "{{ dxdfir_plaso_out_dir }}"
     dxdfir_lane_verify_glob: "timeline.jsonl"
     dxdfir_lane_require_no_failures: false
   tags: [always]
