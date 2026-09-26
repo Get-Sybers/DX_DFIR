@@ -18,7 +18,7 @@ import (
 )
 
 // This file is the native-Go SHA-1 manifest hasher (epic #174, phase 3), a
-// byte-for-byte port of get_sybers_dxdfir.collection.{hash_collection,
+// byte-for-byte port of the retired python registry's {hash_collection,
 // write_manifest}: every evidence file is SHA-1'd, the collection rollup is the
 // SHA-1 of every file's hex digest sorted and concatenated (order-independent
 // change detection, NOT cryptographic integrity), the .collection.hashes

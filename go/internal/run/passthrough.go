@@ -15,9 +15,8 @@ import (
 // it prints the grey "→ command" echo to stderr, then returns the child's exit
 // code (propagating it), or 127 if the binary could not be launched.
 //
-// Because stdout is inherited, a verb whose payload is machine-readable (stix
-// bundles, engine NDJSON) stays pipe-clean — the echo and diagnostics go to
-// stderr only.
+// Because stdout is inherited, a verb whose payload is machine-readable
+// stays pipe-clean — the echo and diagnostics go to stderr only.
 func Passthrough(ctx context.Context, p Plan, echo bool) int {
 	if echo {
 		fmt.Fprintln(os.Stderr, style.Grey(style.GlyphArrow+" "+p.Command()))

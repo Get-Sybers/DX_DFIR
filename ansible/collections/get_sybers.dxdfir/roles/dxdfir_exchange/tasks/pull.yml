@@ -1,0 +1,41 @@
+---
+# OpenCTI indicators -> the cti-* Elastic _bulk copy (<out>/cti-bulk.ndjson):
+# the one input-less action. Live by default (the wire asserted below);
+# dxdfir_exchange_from_bundle re-normalises an already-pulled indicator
+# bundle instead — fully offline, the file mounted read-only at /input.
+- name: "exchange-pull | a live pull has the wire"
+  ansible.builtin.include_tasks: wire.yml
+  when: dxdfir_exchange_from_bundle | length == 0
+
+- name: "exchange-pull | run the shared tool-lane skeleton"
+  ansible.builtin.include_role:
+    name: dxdfir_lane
+  vars:
+    dxdfir_lane_name: exchange-pull
+    dxdfir_lane_runs:
+      - name: cti-pull
+        contract: "{{ dxdfir_exchange_contract }}"
+        image: "{{ dxdfir_exchange_image }}"
+        subtool: cti-pull
+        env:
+          BYAKUGAN_CTI_PULL_SINCE: "{{ dxdfir_exchange_since }}"
+          BYAKUGAN_CTI_PULL_INDEX: "{{ dxdfir_exchange_index }}"
+          BYAKUGAN_CTI_PULL_FROM_BUNDLE: >-
+            {{ ('/input/' ~ (dxdfir_exchange_from_bundle | basename))
+               if dxdfir_exchange_from_bundle | length > 0 else '' }}
+          BYAKUGAN_CTI_PULL_BUNDLE_OUT: >-
+            {{ '/output/opencti-indicators.json'
+               if dxdfir_exchange_keep_bundle | bool else '' }}
+          BYAKUGAN_OPENCTI_URL: "{{ dxdfir_exchange_opencti_url }}"
+          BYAKUGAN_OPENCTI_CONNECTOR_ID: "{{ dxdfir_exchange_opencti_connector_id }}"
+        secret_env:
+          BYAKUGAN_OPENCTI_TOKEN: "{{ dxdfir_exchange_opencti_token }}"
+        mounts: >-
+          {{ [{'host': dxdfir_exchange_out_dir, 'path': '/output', 'mode': 'rw'}]
+             + ([{'host': dxdfir_exchange_from_bundle | dirname, 'path': '/input', 'mode': 'ro'}]
+                if dxdfir_exchange_from_bundle | length > 0 else []) }}
+        network: >-
+          {{ dxdfir_exchange_network
+             if dxdfir_exchange_from_bundle | length == 0 else '' }}
+    dxdfir_lane_verify_dir: "{{ dxdfir_exchange_out_dir }}"
+    dxdfir_lane_verify_glob: "cti-bulk.ndjson"

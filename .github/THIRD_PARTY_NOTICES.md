@@ -65,45 +65,16 @@ The terms still bind whoever downloads them, and they are not uniform:
 None of these are case evidence. `data_store/` remains deny-by-default and
 holds nothing, and `samples/` is now written the same way.
 
-### DetectRaptor YARA content — fetched, not redistributed
+### DetectRaptor YARA content and ET Open (Suricata rules) — fetched at image build, by GoDFIR-toolz
 
-**This repository ships none of it.** The YARA lane's `--fetch`
-(`get_sybers_dxdfir/signatures/detectraptor.py`) downloads the YARA rulesets from
-[mgreen27/DetectRaptor](https://github.com/mgreen27/DetectRaptor) — commit-pinned,
-sha256-verified — and merges them into
-`data_store/dependencies/yara-rules/detectraptor/detectraptor.yar`, which is
-deny-by-default gitignored. Only the manifest (URLs + hashes) lives in this
-repository, so no redistribution obligation attaches — the same position as the
-sample corpora above.
-
-Terms still bind the operator who fetches, and they are layered:
-
-- **DetectRaptor itself declares no repository-level licence.** Treat the
-  aggregation as all-rights-reserved beyond the fetching-for-use its README
-  invites; do not redistribute the merged file.
-- **Each rule carries its own provenance** — upstream is a YARA-Forge-style
-  aggregation and every rule's `meta` block records `author`, `source_url` and
-  `license_url` (Neo23x0 signature-base, Mandiant, Arkbird_SOLG, …). The merge
-  keeps those blocks byte-for-byte; the per-rule licences (mostly DRL/CC/Apache)
-  govern the rules.
-- DetectRaptor's **VQL artifacts and CSV lookups are not fetched** — they need a
-  Velociraptor server this pipeline does not run.
-
-### Emerging Threats Open (Suricata rules) — fetched, not redistributed
-
-**This repository ships none of it.** The Suricata lane's `--fetch`
-(`get_sybers_dxdfir/signatures/suricata_rules.py`) downloads the
-[ET Open](https://rules.emergingthreats.net/open/) ruleset — the version-pinned
-tarball published per Suricata engine release — and concatenates its `*.rules`
-into `data_store/dependencies/suricata-rules/suricata.rules`, which is
-deny-by-default gitignored. Only the source URL lives in this repository, so no
-redistribution obligation attaches — the same position as DetectRaptor above.
-
-- ET Open is a **rolling feed** (rebuilt daily), so the pin is the engine-version
-  URL, not a content hash; the fetch is HTTPS + structural validation, the trust
-  model the official `suricata-update` uses.
-- The ruleset carries **Proofpoint's ET Open licence** (BSD-style, non-commercial
-  attribution terms); those terms bind the operator who fetches, not this repo.
+**This repository ships none of it and no longer fetches any of it.** The
+DetectRaptor YARA merge and the ET Open Suricata ruleset are baked into the
+`get-sybers/signatures` image at build time by the GoDFIR-toolz build galaxy
+(its `signatures/detectraptor.py` and `signatures/suricata_rules.py`
+fetchers, commit-/version-pinned). Their layered terms — DetectRaptor's
+per-rule provenance and licences, Proofpoint's ET Open licence — are
+recorded where the fetch now lives:
+[GoDFIR-toolz's THIRD_PARTY_NOTICES.md](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/THIRD_PARTY_NOTICES.md).
 
 ### Hayabusa (Sigma over EVTX) — downloaded at build, not redistributed
 
@@ -161,14 +132,14 @@ go-common-utils. mousetrap is linked on Windows builds only.
 The Go toolchain itself (BSD-3-Clause) is installed by
 `scripts/setup-environment.sh` when absent; it is not redistributed.
 
-## Runtime dependencies — the Python package
+## Runtime dependencies — the pinned ansible layer
 
-The `get_sybers_dxdfir` package's direct dependencies, declared in
-`python/pyproject.toml` and installed beside it (never vendored — this closes a
-tracing gap: the Python dependencies were not recorded here before). Exact
-tested versions, transitive closure included, are pinned in
-`python/constraints.txt`; an air-gapped install consumes them as unmodified,
-pinned versions through `setup-environment.sh`'s constraint-locked install.
+The controller-side Python dependencies (never vendored): `ansible-core` and
+the docker SDK + requests that the collection's `community.docker` modules
+import on the controller. Exact tested versions, transitive closure
+included, are pinned in `requirements.txt`; an air-gapped install consumes
+them as unmodified, pinned versions through `setup-environment.sh`'s locked
+install.
 
 | Package | Licence |
 |---|---|
@@ -261,8 +232,8 @@ project enables only the free Basic-tier features
 your own casework; it restricts providing the software to third parties as a
 hosted or managed service and circumventing licence keys — read it if either
 is on the table for an engagement. The ES|QL / EQL detection rules, the
-CAR→ECS projection and the index templates under `python/get_sybers_dxdfir/`
-are this project's own work under MIT.
+CAR→ECS projection and the index templates are the program's own work
+(rules-as-code now live in GoDFIR-toolz, baked into the byakugan image).
 
 **Formerly invoked: the Azure Data Explorer Kusto emulator** (proprietary,
 Microsoft Software License Terms, `ACCEPT_EULA=Y`) was the analysis backend

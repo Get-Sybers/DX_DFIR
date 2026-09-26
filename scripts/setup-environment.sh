@@ -302,19 +302,20 @@ if [[ -d "$REPO_ROOT_DIR" ]]; then
 fi
 
 ################################################################################
-# Install the processor package into a dedicated venv (PEP 668), --editable
-# by REQUIREMENT: the package resolves paths relative to its own files, and a
-# copying install loses data_store/ (docs: Design decisions).
+# Install the pinned ansible layer into a dedicated venv (PEP 668). There is
+# no host python package any more — the engine logic lives in
+# get-sybers/byakugan and the detections in GoDFIR-toolz, both inside
+# images; requirements.txt is the one pip surface left (ansible-core + the
+# docker SDK the collection's modules import on the controller).
 ################################################################################
-section "Python package + Ansible"
+section "Ansible (pinned)"
 DXDFIR_VENV="${DXDFIR_VENV:-/opt/dxdfir/venv}"
-step "Installing the get_sybers_dxdfir package (+ ansible) into $DXDFIR_VENV ..."
+step "Installing the pinned ansible layer into $DXDFIR_VENV ..."
 $SUDO python3 -m venv "$DXDFIR_VENV" || die "Failed to create the venv (need python3-venv)."
 $SUDO "$DXDFIR_VENV/bin/pip" install --quiet --upgrade pip || die "pip upgrade in the venv failed."
-# --constraint pins the tested versions (the lock is the single source of truth)
-$SUDO "$DXDFIR_VENV/bin/pip" install --quiet --editable "$REPO_ROOT_DIR/python" \
-    --constraint "$REPO_ROOT_DIR/python/constraints.txt" \
-    || die "Failed to install the get_sybers_dxdfir package (and its pinned dependencies)."
+# requirements.txt pins the tested versions (the lock is the single source of truth)
+$SUDO "$DXDFIR_VENV/bin/pip" install --quiet -r "$REPO_ROOT_DIR/requirements.txt" \
+    || die "Failed to install the pinned ansible layer (requirements.txt)."
 
 # ansible lands in the same venv bin; PATH picks it up via /etc/profile.d
 # below (no symlink shims) — here just

@@ -5,6 +5,23 @@ root [CHANGELOG.md](../../../CHANGELOG.md).
 
 ## [Unreleased]
 
+### Added
+
+- **`dxdfir_exchange`** — the STIX/CTI exchange as a lane role: four actions
+  (`export` / `behaviour` / `pull` / `sightings`), each one confined run of
+  the byakugan image's own exchange sub-tools (`stix-export`,
+  `stix-behaviour`, `cti-pull`, `cti-sightings`) through the shared
+  `dxdfir_lane` skeleton, fronted by the four `dxdfir-exchange-*.yml`
+  playbooks. Out-dir default `data_store/processed/exchange` (engine-written,
+  never commit-able); indicator patterns resolve from the image's baked
+  `/rules` set unless `dxdfir_exchange_rules_dir` mounts an operator one; the
+  OpenCTI wire comes from the environment and the token rides `secret_env`,
+  never argv; `behaviour` requires the case id, `sightings` the alerts tree,
+  and every wire-bound run a named docker network (the confined default is
+  `--network none`). The lane's secret env-file tasks are `changed_when:
+  false` (per-invocation scratch the role's `always:` removes — molecule's
+  idempotence gate now covers a secret-bearing run).
+
 ### Changed
 
 - **The Windows parser lane is the gowindowlicker sweep; the evtx lane rides its `goevtx` sub-tool.** GoDFIR-toolz ships the parser dozen as ONE multi-tool image now (the bumped gitlink's manifest stands at 8 images; the `.NET` per-tool lane is retired there), so `dxdfir_godfir_toolz` declares one `gowindowlicker lick` run over the export — `/output` is the lane root, so every sub-tool writes the same `<out_dir>/<subtool>/<item>/<subtool>.jsonl` tree the retired per-tool runs wrote, `gowxt` riding the sweep like the rest (`dxdfir_godfir_toolz_tools` is gone: content decides) — beside the unchanged `godaemonhunter hunt` run. `dxdfir_evtx` drives the same image's `goevtx` sub-tool under its canonical `GOEVTX_*` block; layout, record shapes and file names are unchanged everywhere. `dxdfir_lane`'s contract validation honours the multi-tool convention those contracts declare: a sub-run may set its selected sub-tool's own `<SUBTOOL>_*` variables, and a `multi-tool` contract always takes a sub-tool — the whole-matrix sweeps (`lick`, `hunt`) included.

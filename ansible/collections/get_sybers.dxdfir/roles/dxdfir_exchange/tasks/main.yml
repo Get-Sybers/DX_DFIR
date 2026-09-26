@@ -1,0 +1,27 @@
+---
+# dxdfir_exchange: the STIX/CTI exchange between the evidence stores and
+# OpenCTI. The role GROUPS; the playbook DECIDES the action. Every action is
+# one confined run of the multi-tool get-sybers/byakugan image — the engine's
+# own stix-export / stix-behaviour / cti-pull / cti-sightings sub-tools
+# (byakugan.exchange) — driven from its contract
+# (docker/GoDFIR-toolz/byakugan/contract.yml) by the shared dxdfir_lane
+# skeleton. The rules-as-code ride the image at /rules (GoDFIR-toolz bakes
+# and build-gates them); dxdfir_exchange_rules_dir mounts an operator set
+# over them. Wire-bound runs (push, the live pull) additionally need
+# dxdfir_exchange_network — every other run stays --network none.
+
+- name: "exchange | assert inputs"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_exchange_action in ['export', 'behaviour', 'pull', 'sightings']
+      - dxdfir_exchange_out_dir | length > 0
+    fail_msg: >-
+      dxdfir_exchange needs dxdfir_exchange_action
+      (export|behaviour|pull|sightings) and a non-empty
+      dxdfir_exchange_out_dir.
+    quiet: true
+  tags: [always]
+
+- name: "exchange | run the exchange action | {{ dxdfir_exchange_action }}"
+  ansible.builtin.include_tasks: "{{ dxdfir_exchange_action }}.yml"
+  tags: [always]

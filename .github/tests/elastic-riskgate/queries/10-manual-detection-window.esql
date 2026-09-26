@@ -4,7 +4,7 @@
 // can never see it — the runner executes the rule through POST /_query with
 // the window written into the WHERE clause instead.
 //
-// Shape: a Byakugan line-shaped ES|QL rule (python/get_sybers_dxdfir/detect/rules/
+// Shape: a Byakugan line-shaped ES|QL rule (the baked rules-as-code (GoDFIR-toolz byakugan/rules/)
 // README.md) — METADATA _id/_index/_version so the Detection Engine would raise
 // one alert per matched document, the rule identity + ATT&CK mapping EVAL'd
 // inline (the tagged evidence line). The riskgate-* rule ids are local to this

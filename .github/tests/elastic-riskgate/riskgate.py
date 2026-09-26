@@ -8,7 +8,7 @@ RUNNING docker/elastic stack (Elasticsearch 9.4.3, security on, Basic licence):
            evidence whose @timestamps lie years in the past — and nothing old is
            silently dropped, re-stamped or aged out on the way in;
   proof 2  ES|QL LOOKUP JOIN against the car-detections lookup index (the wave-1
-           contract, read verbatim from python/get_sybers_dxdfir/detect/rules/)
+           contract, read verbatim from the submodule's byakugan/rules/)
            flags logs-car.* rows in place — the tagged-evidence-line model.
 
 Stands up NOTHING. Loads a small synthetic fixture into a `riskgate` namespace
@@ -39,10 +39,10 @@ import urllib.error
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = os.path.abspath(os.path.join(HERE, os.pardir, os.pardir))
+REPO_ROOT = os.path.abspath(os.path.join(HERE, os.pardir, os.pardir, os.pardir))
 # The wave-1 contract (read-only): the lookup index template the deploy step PUTs.
 CONTRACT_TEMPLATE = os.path.join(
-    REPO_ROOT, "python", "get_sybers_dxdfir", "detect", "rules", "car-detections",
+    REPO_ROOT, "docker", "GoDFIR-toolz", "byakugan", "rules", "car-detections",
     "car-detections.index-template.json")
 FIXTURES = os.path.join(HERE, "fixtures")
 QUERIES = os.path.join(HERE, "queries")

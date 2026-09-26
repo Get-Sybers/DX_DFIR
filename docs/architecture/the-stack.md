@@ -48,8 +48,8 @@ deploy) and reused on every run; override any of them as an ansible variable
 generated for it. Deploy also writes two artifacts there for tools outside
 ansible:
 
-- `elastic.env` — the generated credential handoff the TUI's Kibana tab,
-  `dxdfir stamp-detections` and the [risk gate](../riskgate.md) read (same
+- `elastic.env` — the generated credential handoff the TUI's Kibana tab
+  and the [risk gate](../riskgate.md) read (same
   dotenv dialect the retired `.env` used; regenerated every deploy — edit the
   per-secret files or override the variables instead).
 - `certs/` — the stack's TLS material (CA at `certs/ca/ca.crt`), generated
@@ -113,26 +113,29 @@ in `dxdfir` runs ES|QL against the same streams without leaving the terminal.
 
 ## Detections and STIX
 
-Detections are **rules-as-code** for Elastic's Detection Engine. One YAML file per rule
-under [`python/get_sybers_dxdfir/detect/rules/`](../../python/get_sybers_dxdfir/detect/rules/README.md),
+Detections are **rules-as-code** for Elastic's Detection Engine. One YAML file per rule,
+[owned by GoDFIR-toolz and baked into the byakugan image at `/rules`](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/README.md)
+(the image build gates them),
 each carrying an ES|QL or EQL query plus the contract for the evidence line it tags
 (shape, fields, `car_join`, ATT&CK technique/tactic ids). Queries request
 `METADATA _id,_index,_version` so the engine emits one alert per matched document.
 Examples: `win-defender-tamper`, `mem-malfind-injection`, `zeek-dns-oversized-query`,
 `sig-yara-match`.
 
-The **STIX** side turns detection hits into a STIX 2.1 bundle:
+The **STIX** side turns detection hits into a STIX 2.1 bundle, engine-side
+(`byakugan stix-export` through the `dxdfir_exchange` role — a confined
+container run, like every lane):
 
 ```bash
-dxdfir stix export --hits detections.jsonl --out bundle.json [--push]
+dxdfir stix export [HITS_DIR] [--case CASE-17] [--push --network NET]
 ```
 
 Each rule becomes an indicator whose pattern *is* the rule query; `indicates`
 relationships point at MITRE's own ATT&CK object ids (none minted locally); each row is a
 sighting; hosts are identities; network/file entities become connected observed-data
 objects. OpenCTI is the wire. Deep reference:
-[stix/README.md](../../python/get_sybers_dxdfir/stix/README.md),
-[detect/rules/README.md](../../python/get_sybers_dxdfir/detect/rules/README.md),
+[the engine's STIX-Exchange.md](https://github.com/Get-Sybers/byakugan/blob/main/docs/STIX-Exchange.md),
+[the baked rules-as-code](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/README.md),
 [risk gate](../riskgate.md), [signature rules](../Signature-Rules.md).
 
 ## Lifecycle

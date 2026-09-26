@@ -67,10 +67,11 @@ No shell scripts here either:
   ([the stack](../architecture/the-stack.md)). Filebeat tails the processed tree directly
   (`ELASTIC_INGEST_DIR` is the knob) into `logs-dxdfir.<type>-*` data
   streams; **`dxdfir load-car`** bulk-loads the materialised CAR into
-  `logs-car.*` instead (the `dxdfir_car_load` role, `byakugan load`), and
-  **`dxdfir stamp-detections`** stamps Byakugan's behaviour hits into the
-  `car-detections` lookup index — the Detection-Engine-alert sweep is still
-  future work ([risk gate](/docs/riskgate.md)).
+  `logs-car.*` instead (the `dxdfir_car_load` role, `byakugan load`);
+  **`dxdfir stix`** carries the STIX/CTI exchange through the byakugan
+  image's own exchange sub-tools (the `dxdfir_exchange` role). The
+  `car-detections` Detection-Engine-alert sweep is still future work
+  ([risk gate](/docs/riskgate.md)).
 
 ## Provisioning scripts
 

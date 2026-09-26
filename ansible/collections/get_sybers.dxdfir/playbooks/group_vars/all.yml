@@ -14,7 +14,7 @@ dxdfir_elastic_label_key: com.get-sybers.stack
 dxdfir_elastic_legacy_project: byakugan
 
 # ---- images and topology
-# the ONE Elastic pin; the stix version-pin test reads this exact line
+# the ONE Elastic pin; every stack image rides it
 dxdfir_elastic_version: "9.4.3"
 dxdfir_elastic_images:
   elasticsearch: "docker.elastic.co/elasticsearch/elasticsearch:{{ dxdfir_elastic_version }}"

@@ -5,8 +5,8 @@ generates for that host — one file per secret (`elastic_password`,
 `kibana_system_password`, `byakugan_loader_password`, the three Kibana
 encryption keys), the stack's TLS material under `certs/` (CA at
 `certs/ca/ca.crt`), and the generated `elastic.env` credential handoff that
-tools outside ansible read (the `dxdfir` TUI's Kibana tab, `dxdfir
-stamp-detections`, the elastic riskgate).
+tools outside ansible read (the `dxdfir` TUI's Kibana tab, the elastic
+riskgate).
 
 - **Everything here except this README is gitignored — never commit it.**
 - A secret is generated on the first deploy that needs it and reused after

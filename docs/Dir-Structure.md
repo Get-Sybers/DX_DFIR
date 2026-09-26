@@ -2,22 +2,18 @@
 
 The pipeline is a three-layer design: the **`dxdfir` front-end** (the Go binary,
 `go/` — the verbs) drives the **`get_sybers.dxdfir` Ansible collection**
-(orchestration), which invokes the **`get_sybers_dxdfir` Python package** (the
-per-item processing).
+(orchestration), which runs the **hardened GoDFIR-toolz tool containers** (the
+per-item processing — every lane is a confined `docker run` built from the
+tool's contract; no host python).
 
 ```
   $DX_DFIR
     └── go/                                           # the dxdfir front-end (Go/termui) — verbs + dashboards; shells out, re-implements nothing
     │   └── man/                                      # dxdfir.1 man page
     │
-    └── python/                                       # get_sybers_dxdfir package — the processors the front-end and roles invoke
-    │   └── get_sybers_dxdfir/                          # processors (zeek/plaso/memory/evtx/godfir_toolz/signatures), the CAR lane (mitrecar, carcheck), stix/
-    │   │   └── detect/rules/                         # the Elastic detection rules-as-code (ES|QL / EQL, one YAML per rule)
-    │   └── tests/                                    # pytest unit tests (pure logic, no Docker)
-    │
     └── ansible/collections/get_sybers.dxdfir/         # the Ansible collection — orchestration
-    │   └── roles/                                    # one role per source + dxdfir_images / dxdfir_byakugan / dxdfir_stack / dxdfir_cleanup
-    │   └── playbooks/                                # dxdfir-process-* / dxdfir-build-images / dxdfir-verify-images / dxdfir-build-car / dxdfir-verify-car / dxdfir-car-timeline / dxdfir-stack-* / dxdfir-cleanup
+    │   └── roles/                                    # one role per source + dxdfir_images / dxdfir_byakugan / dxdfir_exchange / dxdfir_stack / dxdfir_cleanup
+    │   └── playbooks/                                # dxdfir-process-* / dxdfir-build-images / dxdfir-verify-images / dxdfir-build-car / dxdfir-verify-car / dxdfir-car-timeline / dxdfir-exchange-* / dxdfir-stack-* / dxdfir-cleanup
     │
     └── scripts/                                      # Host provisioning: setup, image save/load, the offline bundle (bash)
     │

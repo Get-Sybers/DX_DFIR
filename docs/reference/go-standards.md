@@ -43,7 +43,8 @@ terminal.
 | `internal/repo` · `identify` · `health` · `fsx` · `termdetect` · `style` | Discovery, classification, readiness, fs helpers, TTY detection, plain-output palette |
 
 The binary shells out via [go-ansible](https://github.com/apenella/go-ansible) (which
-only *builds* argv — `internal/run` executes it) or `python -m get_sybers_dxdfir.*`.
+only *builds* argv — `internal/run` executes it); everything it fronts is
+`ansible-playbook`.
 
 ## The Sunset theme
 

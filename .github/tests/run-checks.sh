@@ -137,20 +137,6 @@ while IFS= read -r f; do
 done < <(find scripts -name "*.sh" -type f | sort)
 
 # ------------------------------------------------------------------------------
-group "Python unit tests (get_sybers_dxdfir)"
-# ------------------------------------------------------------------------------
-# the package's pure-logic tests; skipped when pytest is not installed (CI installs it)
-if python3 -c 'import pytest' >/dev/null 2>&1; then
-    if (cd python && PYTHONPATH=. python3 -m pytest -q -p no:cacheprovider tests >/dev/null 2>&1); then
-        pass "pytest: python/tests"
-    else
-        fail "pytest reported failures (run: cd python && PYTHONPATH=. python3 -m pytest tests)"
-    fi
-else
-    skip "pytest not installed"
-fi
-
-# ------------------------------------------------------------------------------
 group "Go front-end (gofmt / vet / build / test)"
 # ------------------------------------------------------------------------------
 # gofmt clean, go vet, build, tests; skipped when Go is not installed (CI installs it)
@@ -187,15 +173,6 @@ fi
 # ------------------------------------------------------------------------------
 group "Versioning and documentation"
 # ------------------------------------------------------------------------------
-# one project version, stated in one form — pyproject and __init__ drift silently otherwise
-_pyproject_v=$(grep -m1 -oE '^version = "[0-9.]+"' python/pyproject.toml | grep -oE '[0-9.]+')
-_init_v=$(grep -m1 -oE '__version__ = "[0-9.]+"' python/get_sybers_dxdfir/__init__.py | grep -oE '[0-9.]+')
-if [[ -n "$_pyproject_v" && "$_pyproject_v" == "$_init_v" ]]; then
-    pass "pyproject version ($_pyproject_v) matches get_sybers_dxdfir.__version__"
-else
-    fail "version drift: pyproject=$_pyproject_v __init__=$_init_v"
-fi
-
 PROJECT_VERSION=$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+[^]]*\]' CHANGELOG.md 2>/dev/null | tr -d '#[] ')
 if [[ -n "$PROJECT_VERSION" ]]; then
     pass "project version from CHANGELOG: $PROJECT_VERSION"
@@ -302,9 +279,7 @@ for md in sorted(root.rglob("*.md")):
     if ".git/" in str(md) or rel.startswith("data_store/"): continue
     if "/.ansible/" in str(md) or rel.startswith(".ansible/"): continue
     if rel.startswith("docker/GoDFIR-toolz/") or "/GoDFIR-toolz/" in str(md): continue
-    # setuptools copies package-data docs into python/build/lib/ during
-    # `pip install ./python`; that build output is generated, not source.
-    if rel.startswith(("build/", "python/build/")): continue
+    if rel.startswith("build/"): continue
     for m in lr.finditer(md.read_text(errors="ignore")):
         t = m.group(1).split("#")[0].strip()
         if not t or t.startswith(("http://", "https://", "mailto:")): continue

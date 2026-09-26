@@ -85,9 +85,10 @@ Kibana is at `http://127.0.0.1:5601`. Filebeat tails the processed evidence tree
 `logs-dxdfir.<type>-*` data streams — see [the stack](/docs/architecture/the-stack.md).
 The CAR→ECS projection into `logs-car.*` and ES|QL `LOOKUP JOIN` flagging against
 the `car-detections` lookup index are proven by the Phase-0
-[risk gate](/docs/riskgate.md); the detection rules are data under
-[`python/get_sybers_dxdfir/detect/rules/`](/python/get_sybers_dxdfir/detect/rules/README.md),
-and `dxdfir stix export` turns their hits into STIX 2.1 sightings. `dxdfir --help`
+[risk gate](/docs/riskgate.md); the detection rules are data
+[baked into the byakugan image at `/rules`](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/README.md)
+(GoDFIR-toolz owns and build-gates them), and `dxdfir stix export` turns their
+hits into STIX 2.1 sightings via the engine's own exchange. `dxdfir --help`
 lists every command (`man dxdfir` for the manual).
 
 ## How it runs
@@ -100,10 +101,11 @@ writing the processed tree the CAR lane builds from and Filebeat ships. Each
 source runs as `dxdfir process <source>` (driving the matching
 `dxdfir_<source>` role); the role builds every `docker run` purely from the
 tool's `contract.yml` (its environment variables and mounts) and the container
-discovers, batches and skips its own inputs. The `get_sybers_dxdfir` Python
-package keeps the detection rules-as-code and the STIX exchange — nothing in
-it runs a container, and the image supply-chain gate is ansible (the
-GoDFIR-toolz build galaxy's `verify`/`audit` entries).
+discovers, batches and skips its own inputs. There is no host python layer:
+the engine logic lives in the Byakugan image, the detection rules-as-code ride
+that image at `/rules` (owned and build-gated by GoDFIR-toolz), and the image
+supply-chain gate is ansible (the GoDFIR-toolz build galaxy's
+`verify`/`audit` entries).
 
 ## What it produces
 
@@ -152,7 +154,7 @@ the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
 - **How it works:** [Architecture overview](/docs/architecture/README.md) · [Processing lanes](/docs/architecture/processing-lanes.md) · [CAR pipeline](/docs/architecture/car-pipeline.md) · [The stack](/docs/architecture/the-stack.md)
 - **Contributing:** [Standards](/docs/reference/README.md) · [Repository map](/docs/reference/repository-map.md) · [Contributing](/.github/CONTRIBUTING.md) · [Security](/.github/SECURITY.md)
 - **CAR engine reference** (owned by [Byakugan](https://github.com/Get-Sybers/byakugan)): [CAR pipeline](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Pipeline.md) · [extraction rules](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Extraction-Rules.md) · [relations](https://github.com/Get-Sybers/byakugan/blob/main/docs/CAR-Relations.md)
-- **Deep reference:** [risk gate](/docs/riskgate.md) · [detection rules-as-code](/python/get_sybers_dxdfir/detect/rules/README.md)
+- **Deep reference:** [risk gate](/docs/riskgate.md) · [detection rules-as-code](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/README.md)
 
 > The pre-beta code lives on the frozen
 > [`deprecated`](https://github.com/Get-Sybers/DX_DFIR/tree/deprecated) branch —
@@ -163,10 +165,9 @@ the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
 Apache-2.0 at the repository root (see [LICENSE](/LICENSE)) — the terms of the
 [MITRE CAR](https://github.com/mitre-attack/car) model the pipeline follows,
 redistributed via the `get-sybers/byakugan` image (see [THIRD_PARTY_NOTICES.md](/.github/THIRD_PARTY_NOTICES.md)).
-The pipeline code is offered under the more permissive **MIT** licence as
-self-contained components: the `get_sybers_dxdfir` package (`python/`) and the
-`get_sybers.dxdfir` collection (`ansible/collections/`); each subtree carries its
-own declared licence. The Go `dxdfir` front-end (`go/`) declares none of its own
+The pipeline code is offered under the more permissive **MIT** licence as a
+self-contained component: the `get_sybers.dxdfir` collection
+(`ansible/collections/`), which carries its own declared licence. The Go `dxdfir` front-end (`go/`) declares none of its own
 and so carries the repository's Apache-2.0. Third-party tool obligations that fall
 on *you* are in [THIRD_PARTY_NOTICES.md](/.github/THIRD_PARTY_NOTICES.md); Apache-2.0 §4
 attribution is in [NOTICE](/NOTICE).

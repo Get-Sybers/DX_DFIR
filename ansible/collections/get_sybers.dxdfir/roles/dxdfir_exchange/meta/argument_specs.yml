@@ -1,0 +1,129 @@
+---
+argument_specs:
+  main:
+    short_description: "The STIX/CTI exchange between the evidence stores and OpenCTI."
+    description:
+      - >-
+        Drives the Byakugan engine's own exchange sub-tools
+        (byakugan.exchange) as confined runs of the hardened
+        get-sybers/byakugan image, from its contract via the shared
+        dxdfir_lane skeleton. Four actions selected by
+        dxdfir_exchange_action: export (`byakugan stix-export`: detection
+        hits to STIX 2.1 sightings + indicators, the CAR projection's
+        stix_bundle.json merged through, optionally pushed to OpenCTI),
+        behaviour (`byakugan stix-behaviour`: the detection lanes joined to
+        CAR entities as sightings over spindle-keyed observed-data —
+        fully offline), pull (`byakugan cti-pull`: OpenCTI indicators to
+        the cti-* Elastic _bulk copy, or an offline re-normalise of a kept
+        bundle) and sightings (`byakugan cti-sightings`: indicator-match
+        alerts to sightings of the platform's own indicators, optionally
+        pushed back). Indicator patterns resolve from the image's baked
+        /rules set (GoDFIR-toolz owns and build-gates it) unless an
+        operator set is mounted over it. The OpenCTI endpoint, token and
+        connector id come from the environment (DXDFIR_OPENCTI_URL /
+        _TOKEN / _CONNECTOR_ID) — the token rides the lane's secret_env
+        0600 env-file, never argv — and every wire-bound run must also
+        name a docker network, since the lane's confined default is
+        --network none.
+    options:
+      dxdfir_exchange_action:
+        type: str
+        required: false
+        default: export
+        choices: [export, behaviour, pull, sightings]
+        description: "Which exchange action to run."
+      dxdfir_exchange_repo_root:
+        type: str
+        required: false
+        description: "Repository root (defaulted from the role's own path)."
+      dxdfir_exchange_contract:
+        type: str
+        required: false
+        description: "The byakugan contract.yml the runs are driven from (the submodule pin's copy)."
+      dxdfir_exchange_image:
+        type: str
+        required: false
+        description: "Image override (e.g. a digest pin); empty = the contract's image."
+      dxdfir_exchange_out_dir:
+        type: str
+        required: false
+        description: >-
+          Where every exchange product lands (default
+          data_store/processed/exchange — engine-written output the
+          data_store deny-by-default gitignore keeps un-commit-able).
+      dxdfir_exchange_rules_dir:
+        type: str
+        required: false
+        description: "Operator rules-as-code mounted read-only over the image's baked /rules; empty = the baked set."
+      dxdfir_exchange_opencti_url:
+        type: str
+        required: false
+        description: "OpenCTI endpoint (default: env DXDFIR_OPENCTI_URL)."
+      dxdfir_exchange_opencti_token:
+        type: str
+        required: false
+        description: "OpenCTI bearer token (default: env DXDFIR_OPENCTI_TOKEN); rides secret_env, never argv."
+      dxdfir_exchange_opencti_connector_id:
+        type: str
+        required: false
+        description: "OpenCTI connector id for pushes (default: env DXDFIR_OPENCTI_CONNECTOR_ID)."
+      dxdfir_exchange_network:
+        type: str
+        required: false
+        description: >-
+          Docker network NAME a wire-bound run attaches to (required for
+          push and the live pull; the confined default is --network none).
+      dxdfir_exchange_case:
+        type: str
+        required: false
+        description: "Case id scoping the STIX ids (REQUIRED by the behaviour action)."
+      dxdfir_exchange_tlp:
+        type: str
+        required: false
+        description: "TLP marking on exported objects (white|green|amber|red|none; empty = the engine's amber)."
+      dxdfir_exchange_hits_dir:
+        type: str
+        required: false
+        description: "export: the hits tree — every regular file under it is a hits input (default data_store/processed/detections)."
+      dxdfir_exchange_bundles_dir:
+        type: str
+        required: false
+        description: "export: a materialised CAR tree whose stix_bundle.json projections pass through merged; empty = none."
+      dxdfir_exchange_push:
+        type: bool
+        required: false
+        default: false
+        description: "export/sightings: also deliver the bundle to OpenCTI (needs the wire + network)."
+      dxdfir_exchange_car_dir:
+        type: str
+        required: false
+        description: "behaviour: the materialised CAR tree (default data_store/processed/byakugan)."
+      dxdfir_exchange_detections_dir:
+        type: str
+        required: false
+        description: "behaviour: the detection-lane output dir (default data_store/processed/detections)."
+      dxdfir_exchange_producer:
+        type: str
+        required: false
+        description: "behaviour: the producer identity name (empty = the engine's DX_DFIR)."
+      dxdfir_exchange_since:
+        type: str
+        required: false
+        description: "pull: only indicators modified after this ISO-8601 timestamp."
+      dxdfir_exchange_index:
+        type: str
+        required: false
+        description: "pull: the cti-* index the bulk lines target (empty = the engine's cti-opencti)."
+      dxdfir_exchange_from_bundle:
+        type: str
+        required: false
+        description: "pull: re-normalise this already-pulled indicator bundle FILE instead of contacting OpenCTI (offline)."
+      dxdfir_exchange_keep_bundle:
+        type: bool
+        required: false
+        default: false
+        description: "pull: also keep the pulled indicator bundle beside the copy (opencti-indicators.json)."
+      dxdfir_exchange_alerts_dir:
+        type: str
+        required: false
+        description: "sightings: the directory holding this case's exported indicator-match alerts (REQUIRED by the action)."

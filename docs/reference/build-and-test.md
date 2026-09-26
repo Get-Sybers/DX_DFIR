@@ -18,7 +18,6 @@ Groups it runs:
 - **Collection requirements** — asserts every collection dep is an exact `X.Y.Z` pin
   covering every `galaxy.yml` dependency, and that `setup-environment.sh` installs it.
 - **Ansible lint** — `ansible-lint --profile production`.
-- **Python** — `pytest` under the `python/constraints.txt` lock.
 - **Go front-end** — `gofmt -l go` must be empty, `go vet ./...`, `go build ./...`,
   `go test ./...` (all guarded on `go` being present; CI installs Go 1.24).
 - Plus repo-path resolution, version/doc consistency, evidence-gitignore coverage, secret

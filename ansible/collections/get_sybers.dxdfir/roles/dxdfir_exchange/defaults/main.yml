@@ -1,0 +1,64 @@
+---
+# one role, four exchange actions (export / behaviour / pull / sightings);
+# the playbook picks
+dxdfir_exchange_action: export
+
+dxdfir_exchange_repo_root: "{{ role_path }}/../../../../.."
+
+# the contract the actions are driven from; the engine AND the deployment's
+# rules-as-code ride the image at the submodule pin (GoDFIR-toolz bakes and
+# build-gates the rules at /rules)
+dxdfir_exchange_contract: "{{ dxdfir_exchange_repo_root }}/docker/GoDFIR-toolz/byakugan/contract.yml"
+# empty = the contract's image; set to pin a digest
+dxdfir_exchange_image: ""
+
+# where every exchange product lands — engine-written output, kept
+# un-commit-able by data_store/.gitignore's deny-by-default
+dxdfir_exchange_out_dir: "{{ dxdfir_exchange_repo_root }}/data_store/processed/exchange"
+
+# operator rules-as-code mounted read-only over /rules; empty = the baked set
+dxdfir_exchange_rules_dir: ""
+
+# The OpenCTI wire (export/sightings push, the live pull), read from the
+# environment so the token NEVER rides argv or an inventory file by accident;
+# it reaches the container through the lane's secret_env (0600 env-file).
+dxdfir_exchange_opencti_url: "{{ lookup('ansible.builtin.env', 'DXDFIR_OPENCTI_URL') }}"
+dxdfir_exchange_opencti_token: "{{ lookup('ansible.builtin.env', 'DXDFIR_OPENCTI_TOKEN') }}"
+dxdfir_exchange_opencti_connector_id: "{{ lookup('ansible.builtin.env', 'DXDFIR_OPENCTI_CONNECTOR_ID') }}"
+# the docker network NAME a wire-bound run attaches to (the lane defaults to
+# --network none; the contract's `network: optional` honours a name here) —
+# required whenever a run pushes or pulls live
+dxdfir_exchange_network: ""
+
+# shared by export / behaviour / sightings: the case id scoping STIX ids, and
+# the TLP marking (white|green|amber|red|none; empty = the engine's amber)
+dxdfir_exchange_case: ""
+dxdfir_exchange_tlp: ""
+
+# export: detection hits -> STIX 2.1 sightings + indicators (<out>/bundle.json)
+dxdfir_exchange_hits_dir: "{{ dxdfir_exchange_repo_root }}/data_store/processed/detections"
+# a materialised CAR tree whose stix_bundle.json projections pass through; empty = none
+dxdfir_exchange_bundles_dir: ""
+dxdfir_exchange_push: false
+
+# behaviour: the CAR tree joined to the detection lanes as sightings
+# (<out>/behaviour-sightings.json); the case is REQUIRED by the contract
+dxdfir_exchange_car_dir: "{{ dxdfir_exchange_repo_root }}/data_store/processed/byakugan"
+dxdfir_exchange_detections_dir: "{{ dxdfir_exchange_repo_root }}/data_store/processed/detections"
+dxdfir_exchange_producer: ""
+
+# pull: OpenCTI indicators -> the cti-* Elastic _bulk copy
+# (<out>/cti-bulk.ndjson; the one input-less action)
+dxdfir_exchange_since: ""
+dxdfir_exchange_index: ""
+# offline: normalise an already-pulled indicator bundle FILE instead of
+# contacting OpenCTI (mounted read-only; no network)
+dxdfir_exchange_from_bundle: ""
+# also keep the pulled indicator bundle beside the copy, for later offline
+# re-normalising (<out>/opencti-indicators.json)
+dxdfir_exchange_keep_bundle: false
+
+# sightings: exported indicator-match alerts -> sightings of the platform's
+# own indicators (<out>/sightings.json), pushed back with push=true.
+# No sane default exists: point it at this case's alerts export.
+dxdfir_exchange_alerts_dir: ""

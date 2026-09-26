@@ -245,7 +245,7 @@ Turn "map now" into a concrete implementation plan against the real files:
 
 ## References
 
-- Current tree: `python/get_sybers_dxdfir/collection.py` (registry + shadows),
+- Current tree: `go/internal/collection/` (registry + shadows),
   `go/internal/lanes/` (glob-based state),
   `dev-scripts/plaso/l2t_json_dxdfir.py` (emits disk_id / volume_id /
   volume_offset), [`../Dir-Structure.md`](../Dir-Structure.md).

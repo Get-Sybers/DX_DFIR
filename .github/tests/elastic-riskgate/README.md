@@ -26,5 +26,5 @@ each proof demonstrates, the pass/fail bar, and what to do when a check fails.
 Everything it creates is namespaced `riskgate` (`logs-car.*-riskgate`,
 `car-detections-riskgate`); the only shared object it writes is the contract's
 own `car-detections` index template, PUT verbatim from
-[`python/get_sybers_dxdfir/detect/rules/car-detections/`](../../../python/get_sybers_dxdfir/detect/rules/car-detections/car-detections.index-template.json)
+[`byakugan/rules/car-detections/`](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/car-detections/car-detections.index-template.json) (read from the submodule at its pin)
 (idempotent; `clean --drop-template` removes it).

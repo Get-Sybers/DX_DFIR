@@ -29,7 +29,6 @@ The full directory map is [Dir-Structure.md](../Dir-Structure.md). The pieces th
 | Path | What it is |
 |---|---|
 | `go/` | The [`dxdfir` Go front-end](go-standards.md) — CLI + TUI. |
-| `python/get_sybers_dxdfir/` | The Python processing package (one module per lane) + `detect/` + `stix/`. |
 | `ansible/collections/get_sybers.dxdfir/` | The [Ansible collection](ansible-standards.md) — roles + playbooks. |
 | `docker/` | The GoDFIR-toolz submodule — every hardened tool-image build context AND the image inventory it supplies ([Containers.md](../Containers.md)); the Elastic stack is deployed by the `dxdfir_stack` role ([the stack](../architecture/the-stack.md)). |
 | `data_store/` | Evidence lifecycle: `raw/ → processed/ → processed/byakugan/` (git-ignored). |

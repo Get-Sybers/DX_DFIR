@@ -13,7 +13,7 @@ built on top of them:
 2. **`LOOKUP JOIN` works.** An ES|QL query can `LOOKUP JOIN` the
    `car-detections` lookup index against `logs-car.*` and bring every CAR row a
    detection matched back stamped in place — the tagged-evidence-line model of
-   the [rules-as-code contract](/python/get_sybers_dxdfir/detect/rules/README.md)
+   the [rules-as-code contract](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/README.md)
    — on Elasticsearch 9.4.3, Basic licence.
 
 The harness lives in [`.github/tests/elastic-riskgate/`](/.github/tests/elastic-riskgate/README.md).
@@ -54,7 +54,7 @@ Everything the run creates is namespaced **`riskgate`**: the data streams
 `logs-car.process-riskgate` and `logs-car.file-riskgate` and the lookup index
 `car-detections-riskgate`. The one shared object it writes is the contract's own
 `car-detections` index template, `PUT` verbatim from
-[`car-detections.index-template.json`](/python/get_sybers_dxdfir/detect/rules/car-detections/car-detections.index-template.json)
+[`car-detections.index-template.json`](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/car-detections/car-detections.index-template.json)
 — idempotent, and exactly what the deploy step will do. Running the gate against
 a cluster holding a real case adds and removes only the `riskgate` objects.
 
@@ -123,7 +123,7 @@ rules into Kibana is phase 2.
 
 The contract as data: `car-detections.index-template.json` (`index.mode:
 lookup`, strict mappings) and
-[`join-keys.yml`](/python/get_sybers_dxdfir/detect/rules/car-detections/join-keys.yml)
+[`join-keys.yml`](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/car-detections/join-keys.yml)
 (`event.id` on every CAR object, `process.entity_id` for the process cascade).
 The gate PUTs the template verbatim, writes the three lookup rows and runs the
 joins.

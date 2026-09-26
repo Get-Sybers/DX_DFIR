@@ -1,0 +1,40 @@
+---
+# Detection hits -> a validated STIX 2.1 bundle (<out>/bundle.json): every
+# regular file under the hits tree is an input, indicator patterns resolve
+# from the image's baked /rules (or the operator override), and a named CAR
+# tree's stix_bundle.json projections pass through merged. PUSH also
+# delivers the bundle to OpenCTI over the asserted wire.
+- name: "exchange-export | a push has the wire"
+  ansible.builtin.include_tasks: wire.yml
+  when: dxdfir_exchange_push | bool
+
+- name: "exchange-export | run the shared tool-lane skeleton"
+  ansible.builtin.include_role:
+    name: dxdfir_lane
+  vars:
+    dxdfir_lane_name: exchange-export
+    dxdfir_lane_runs:
+      - name: stix-export
+        contract: "{{ dxdfir_exchange_contract }}"
+        image: "{{ dxdfir_exchange_image }}"
+        subtool: stix-export
+        env:
+          BYAKUGAN_STIX_EXPORT_CASE: "{{ dxdfir_exchange_case }}"
+          BYAKUGAN_STIX_EXPORT_TLP: "{{ dxdfir_exchange_tlp }}"
+          BYAKUGAN_STIX_EXPORT_PUSH: "{{ dxdfir_exchange_push }}"
+          BYAKUGAN_STIX_EXPORT_BUNDLES_DIR: >-
+            {{ '/bundles' if dxdfir_exchange_bundles_dir | length > 0 else '' }}
+          BYAKUGAN_OPENCTI_URL: "{{ dxdfir_exchange_opencti_url }}"
+          BYAKUGAN_OPENCTI_CONNECTOR_ID: "{{ dxdfir_exchange_opencti_connector_id }}"
+        secret_env:
+          BYAKUGAN_OPENCTI_TOKEN: "{{ dxdfir_exchange_opencti_token }}"
+        mounts: >-
+          {{ [{'host': dxdfir_exchange_hits_dir, 'path': '/input', 'mode': 'ro'},
+              {'host': dxdfir_exchange_out_dir, 'path': '/output', 'mode': 'rw'}]
+             + ([{'host': dxdfir_exchange_bundles_dir, 'path': '/bundles', 'mode': 'ro'}]
+                if dxdfir_exchange_bundles_dir | length > 0 else [])
+             + ([{'host': dxdfir_exchange_rules_dir, 'path': '/rules', 'mode': 'ro'}]
+                if dxdfir_exchange_rules_dir | length > 0 else []) }}
+        network: "{{ dxdfir_exchange_network if dxdfir_exchange_push | bool else '' }}"
+    dxdfir_lane_verify_dir: "{{ dxdfir_exchange_out_dir }}"
+    dxdfir_lane_verify_glob: "bundle.json"

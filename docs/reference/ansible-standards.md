@@ -8,8 +8,9 @@ The `get_sybers.dxdfir` collection (`ansible/collections/get_sybers.dxdfir/`, na
 
 ## A task does one action, with no logic
 
-A task runs one thing — usually invoking the `get_sybers_dxdfir` Python package as a
-single action. The *logic* — which lanes run —
+A task runs one thing — usually one confined tool-container run built from
+its contract (the `dxdfir_lane` skeleton) as a single action. The *logic* —
+which lanes run —
 lives in the **playbook**, which is a thin, single-purpose wrapper (`hosts: localhost`,
 `gather_facts: false`). This keeps every task legible and independently reasoned about.
 

@@ -9,7 +9,6 @@ import (
 	"context"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -32,8 +31,6 @@ const probeTimeout = 5 * time.Second
 func Probe(r *repo.Repo) []model.Check {
 	probes := []func(*repo.Repo) model.Check{
 		checkRepo,
-		checkPython,
-		checkProcessors,
 		checkAnsible,
 		checkCollection,
 		checkDocker,
@@ -64,68 +61,6 @@ func checkRepo(r *repo.Repo) model.Check {
 	}
 	c.State = model.CheckOK
 	c.Detail = r.Root
-	return c
-}
-
-func checkPython(r *repo.Repo) model.Check {
-	c := model.Check{Name: "python3", Gate: true}
-	py, err := repo.Python()
-	if err != nil {
-		c.State = model.CheckFail
-		c.Detail = "no python interpreter on PATH (set $DXDFIR_PYTHON or install python3)"
-		return c
-	}
-	out, _, ok := capture(py, "--version")
-	if !ok {
-		// Found on PATH but it will not even print its version — a wedged or
-		// broken interpreter. Warn (a gate that is not OK blocks READY) rather
-		// than claim the environment is usable.
-		c.State = model.CheckWarn
-		c.Detail = "found at " + py + ", but `" + filepath.Base(py) + " --version` failed or timed out"
-		return c
-	}
-	c.State = model.CheckOK
-	if ver := strings.TrimSpace(firstLine(out)); ver != "" {
-		c.Detail = ver + " (" + py + ")"
-	} else {
-		c.Detail = py
-	}
-	return c
-}
-
-// checkProcessors verifies the get_sybers_dxdfir package is importable — the
-// processor package every lane and the collection registry depend on. It imports
-// exactly as a driven child would: PYTHONPATH-prepended <repo>/python.
-func checkProcessors(r *repo.Repo) model.Check {
-	c := model.Check{Name: "processors", Gate: true}
-	py, err := repo.Python()
-	if err != nil {
-		c.State = model.CheckFail
-		c.Detail = "python interpreter unavailable"
-		return c
-	}
-	var env []string
-	if r != nil {
-		env = []string{"PYTHONPATH=" + pythonPath(r)}
-	}
-	const script = "import get_sybers_dxdfir as m,sys; sys.stdout.write(getattr(m,'__version__',''))"
-	out, errOut, ok := captureEnv(env, py, "-c", script)
-	if !ok {
-		// Keep the actionable remediation; fold the traceback tail in as context
-		// rather than replacing the hint with it.
-		c.State = model.CheckFail
-		c.Detail = "not importable - run scripts/setup-environment.sh (pip install ./python)"
-		if msg := lastMeaningful(errOut); msg != "" {
-			c.Detail = "not importable (" + msg + ") - run scripts/setup-environment.sh (pip install ./python)"
-		}
-		return c
-	}
-	c.State = model.CheckOK
-	if v := strings.TrimSpace(out); v != "" {
-		c.Detail = "get_sybers_dxdfir " + v
-	} else {
-		c.Detail = "get_sybers_dxdfir importable"
-	}
 	return c
 }
 
@@ -259,14 +194,6 @@ func checkByakugan(_ *repo.Repo) model.Check {
 }
 
 // --- helpers ---
-
-func pythonPath(r *repo.Repo) string {
-	pp := r.Path("python")
-	if cur := os.Getenv("PYTHONPATH"); cur != "" {
-		pp += string(os.PathListSeparator) + cur
-	}
-	return pp
-}
 
 func capture(bin string, args ...string) (stdout, stderr string, ok bool) {
 	return captureEnv(nil, bin, args...)

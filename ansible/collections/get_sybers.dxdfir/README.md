@@ -28,6 +28,7 @@ summary line.
 | `dxdfir_godfir_toolz` | Disk images → the GoDFIR-toolz artefact parse | `get-sybers/plaso` `image_export` + `get-sybers/gowindowlicker` (`lick` — the Windows parser dozen as sub-tools) + `get-sybers/godaemonhunter` (`hunt`) |
 | `dxdfir_signatures` | YARA / Suricata / Hayabusa / disk-scan detections | `get-sybers/signatures` (`yara`, `suricata`, `hayabusa`, `scan`) |
 | `dxdfir_byakugan` | Processed tree → materialised MITRE CAR (build / verify / timeline) | `get-sybers/byakugan` (`build`, `timeline`) |
+| `dxdfir_exchange` | The STIX/CTI exchange with OpenCTI (export / behaviour / pull / sightings) | `get-sybers/byakugan` (`stix-export`, `stix-behaviour`, `cti-pull`, `cti-sightings`) |
 
 Stack lifecycle: **`dxdfir_stack`** (deploy/destroy/start/stop/status for the
 Elastic analysis backend, the `dxdfir_stack` role). The stack's Filebeat tails the
@@ -37,19 +38,20 @@ delivery role — the tools write, Filebeat ships.
 **`dxdfir_images`** builds every tool container the roles run — hardened, from
 the GoDFIR-toolz submodule, tool runs as uid 2000, no shell or python beyond what
 the tool irreducibly needs — and verifies the contract per build. No third-party
-tool image is pulled at runtime. A start-time **inventory guard**
-(`get_sybers_dxdfir.images`) refuses to run anything but a known hardened
-`get-sybers/*` image — each lane preflight asserts every image it is about to run
+tool image is pulled at runtime. A start-time **inventory guard** (the build
+galaxy's `godfir_build` verify entry) refuses to run anything but a known
+hardened `get-sybers/*` image — each lane preflight asserts every image it is about to run
 is hardened, and `dxdfir verify-images` audits the whole namespace for missing,
 un-hardened, or unexpected images (something added that shouldn't be). Run
 `playbooks/dxdfir-build-images.yml` once per host (and after a submodule bump);
 see [the role README](roles/dxdfir_images/README.md).
 
 Detection is not a role: the detections are Elastic rules-as-code
-(`python/get_sybers_dxdfir/detect/rules/`, ES|QL/EQL loaded and validated by
-`get_sybers_dxdfir.detect.rules_loader`) run by Elastic's Detection Engine on the
+([owned by GoDFIR-toolz, baked into the byakugan image at `/rules` and
+gated by its build](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/rules/README.md)) run by Elastic's Detection Engine on the
 analysis stack. The CAR lane (`dxdfir build-car` / `dxdfir verify-car`)
-prepares and gates the materialised CAR they read.
+prepares and gates the materialised CAR they read; `dxdfir_exchange` carries
+their hits into the STIX/CTI exchange.
 
 ## Usage
 The **`dxdfir` front-end** (the Go binary built from `go/`) drives these roles for

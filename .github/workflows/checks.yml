@@ -50,8 +50,8 @@ jobs:
             -r ansible/collections/get_sybers.dxdfir/requirements.yml \
             -p ansible/collections/get_sybers.dxdfir/.ansible/collections
           # the build galaxy resolves in place from the submodule (roles_path);
-          # the package + pytest install under the constraints lock CI ships
-          python -m pip install --quiet --constraint python/constraints.txt ./python pytest
+          # the pinned ansible layer installs from the repo lock
+          python -m pip install --quiet -r requirements.txt
 
       - name: Report tool versions
         run: |
@@ -59,7 +59,6 @@ jobs:
           echo "shellcheck  $(shellcheck --version | grep version: | head -1)"
           echo "python      $(python --version)"
           echo "ansible-lint $(ansible-lint --version | head -1)"
-          echo "pytest      $(python -m pytest --version 2>&1 | head -1)"
           echo "go          $(go version 2>&1 | head -1)"
 
       - name: Run repository checks

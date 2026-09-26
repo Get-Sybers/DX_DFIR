@@ -8,15 +8,17 @@
   vars:
     molecule_repo_root: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/../../../../.."
     molecule_mt_contract: "{{ molecule_repo_root }}/docker/GoDFIR-toolz/gowindowlicker/contract.yml"
+    molecule_bk_contract: "{{ molecule_repo_root }}/docker/GoDFIR-toolz/byakugan/contract.yml"
     molecule_in: /tmp/dxdfir_lane_molecule/in
     molecule_out: /tmp/dxdfir_lane_molecule/out
+    molecule_det: /tmp/dxdfir_lane_molecule/detections
   tasks:
     - name: "converge | the mount trees exist"
       ansible.builtin.file:
         path: "{{ item }}"
         state: directory
         mode: "0755"
-      loop: ["{{ molecule_in }}", "{{ molecule_out }}"]
+      loop: ["{{ molecule_in }}", "{{ molecule_out }}", "{{ molecule_det }}"]
 
     - name: "converge | a goevtx sub-run uses its own block; the lick sweep its declared one"
       ansible.builtin.include_role:
@@ -39,11 +41,26 @@
             mounts:
               - {host: "{{ molecule_in }}", path: /input, mode: ro}
               - {host: "{{ molecule_out }}", path: /output, mode: rw}
+          # the exchange shape (dxdfir_exchange's behaviour action): an
+          # env-named mount vouched by the sub-tool's own declared block,
+          # and a secret riding the 0600 env-file, never argv
+          - name: stix-behaviour
+            contract: "{{ molecule_bk_contract }}"
+            subtool: stix-behaviour
+            env:
+              BYAKUGAN_STIX_BEHAVIOUR_DETECTIONS_DIR: /detections
+              BYAKUGAN_STIX_BEHAVIOUR_CASE: MOL-1
+            secret_env:
+              BYAKUGAN_OPENCTI_TOKEN: molecule-secret-token
+            mounts:
+              - {host: "{{ molecule_in }}", path: /input, mode: ro}
+              - {host: "{{ molecule_out }}", path: /output, mode: rw}
+              - {host: "{{ molecule_det }}", path: /detections, mode: ro}
 
     - name: "converge | the built argvs dispatch the sub-tool and carry the env"
       ansible.builtin.assert:
         that:
-          - dxdfir_lane_runs_built | length == 2
+          - dxdfir_lane_runs_built | length == 3
           - dxdfir_lane_runs_built[0].image == 'get-sybers/gowindowlicker:latest'
           - dxdfir_lane_runs_built[0].argv[-1] == 'goevtx'
           - "'GOEVTX_FORCE=1' in dxdfir_lane_runs_built[0].argv"
@@ -51,4 +68,18 @@
           - "'GOWINDOWLICKER_FORCE=1' in dxdfir_lane_runs_built[1].argv"
           - dxdfir_lane_runs_built[1].argv | select('match', '/work:') | list | length == 1
         fail_msg: "built argvs: {{ dxdfir_lane_runs_built | map(attribute='argv') | list }}"
+        quiet: true
+
+    - name: "converge | the exchange run: engine image, env-named mount, secret off argv"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_lane_runs_built[2].image == 'get-sybers/byakugan:latest'
+          - dxdfir_lane_runs_built[2].argv[-1] == 'stix-behaviour'
+          - "'BYAKUGAN_STIX_BEHAVIOUR_CASE=MOL-1' in dxdfir_lane_runs_built[2].argv"
+          - dxdfir_lane_runs_built[2].argv | select('search', '/detections') | list | length > 0
+          - "'--env-file' in dxdfir_lane_runs_built[2].argv"
+          - "'molecule-secret-token' not in dxdfir_lane_runs_built[2].argv | join(' ')"
+          - "'--network' in dxdfir_lane_runs_built[2].argv"
+          - "'none' in dxdfir_lane_runs_built[2].argv"
+        fail_msg: "built exchange argv: {{ dxdfir_lane_runs_built[2].argv }}"
         quiet: true

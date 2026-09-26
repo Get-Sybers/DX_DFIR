@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: dxdfir_exchange
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    The STIX/CTI exchange between the evidence stores and OpenCTI via the
+    external Byakugan engine's own exchange sub-tools, run as the
+    get-sybers/byakugan image from its contract. One role, four actions
+    (export|behaviour|pull|sightings); the playbook decides.
+  company: Get-Sybers
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [dfir, stix, cti, opencti]
+
+dependencies: []

@@ -88,11 +88,15 @@
   loop_control:
     label: "{{ item.item.path }}"
 
+# changed_when false: per-invocation scratch, not operator state — the
+# always: block in main.yml removes it on every exit path, so its recreation
+# on the next run is plumbing for that run's docker argv, never drift
 - name: "argv | create the secret env-file | {{ dxdfir_lane_spec.name }}"
   ansible.builtin.tempfile:
     state: file
     suffix: ".env"
   register: dxdfir_lane_secret_env_file
+  changed_when: false
   when: (dxdfir_lane_spec.secret_env | default({})) | length > 0
 
 # content: carries the cleartext values, hence no_log
@@ -119,6 +123,7 @@
     dest: "{{ dxdfir_lane_secret_env_file.path }}"
     content: "{{ _secret_kv | join('\n') }}"
     mode: "0600"
+  changed_when: false
   when: (dxdfir_lane_spec.secret_env | default({})) | length > 0
 
 # filter-only expressions: a jinja block would come back as a string, not a list
