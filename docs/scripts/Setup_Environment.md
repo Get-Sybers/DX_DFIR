@@ -161,7 +161,14 @@ lean:
   PATH edit in between; `. .venv/bin/activate` is the convention every
   python user already knows; and a system-prefix venv brought root-owned
   pip caches and a second install prefix to keep in step with the checkout.
-  An earlier release's `/opt/dxdfir/venv` is retired on the next run.
+  An earlier release's `/opt/dxdfir/venv` is retired on the next run — and
+  so is the whole `/opt/dxdfir` prefix once the pinned collections have
+  moved into the checkout too (`.ansible/collections`, the first entry of
+  `ansible.cfg`'s `collections_path`). Nothing of the pipeline lives under
+  a system prefix any more, and an override still naming `/opt/dxdfir`
+  (`DXDFIR_VENV`, `DXDFIR_COLLECTIONS`, `DXDFIR_BIN_DIR` — a stale export
+  from an earlier release's shell) is ignored with a warning, by the script
+  and by `dxdfir` alike.
 - **The Go toolchain is (re)installed when absent or under go.mod's floor**:
   the build pins `GOTOOLCHAIN=local`, which deliberately refuses
   auto-upgrades, so a host provisioned by an older release re-provisions

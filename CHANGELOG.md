@@ -54,6 +54,14 @@ is `0`, anything may change without notice.
   macOS yet).
 
 ### Fixed (fresh-host setup)
+- **Nothing under `/opt/dxdfir` any more.** The pinned Ansible collections
+  were the prefix's last tenant; they install into the checkout's own
+  `.ansible/collections` now (gitignored, as the invoking user, the first
+  entry of `ansible.cfg`'s `collections_path`), and the script removes the
+  retired prefix once it is empty. An override still naming `/opt/dxdfir`
+  (`DXDFIR_VENV`, `DXDFIR_COLLECTIONS`, `DXDFIR_BIN_DIR` — a stale export
+  from an earlier release's shell) is ignored with a warning by the script
+  and by `dxdfir`, so a stale environment can never recreate the old layout.
 - **`dxdfir` works right after `setup-environment.sh`, in any shell.** The
   binary went to `/opt/dxdfir/bin` and the ansible venv to
   `/opt/dxdfir/venv`, both reachable only through `/etc/profile.d/dxdfir.sh`

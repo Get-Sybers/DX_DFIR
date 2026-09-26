@@ -85,6 +85,20 @@ func TestAnsiblePlaybookHonoursDXDFIRVenv(t *testing.T) {
 	}
 }
 
+func TestAnsiblePlaybookIgnoresALegacyPrefixOverride(t *testing.T) {
+	// a stale DXDFIR_VENV from an earlier release's shell must not resurrect /opt/dxdfir
+	t.Setenv("DXDFIR_VENV", "/opt/dxdfir/venv")
+	t.Setenv("PATH", t.TempDir())
+	r := fakeRepo(t, true)
+	got, err := r.AnsiblePlaybook()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(r.Root, VenvDir, "bin", "ansible-playbook"); got != want {
+		t.Fatalf("got %q, want the repo venv %q", got, want)
+	}
+}
+
 func TestAnsiblePlaybookMissingNamesTheVenv(t *testing.T) {
 	t.Setenv("DXDFIR_VENV", "")
 	t.Setenv("PATH", t.TempDir())
