@@ -1,0 +1,192 @@
+---
+# The exchange role's DECISION layer, positively: every action dispatched
+# through the lane stand-in, and the recorded run specs asserted — sub-tool
+# selection, conditional mounts (/bundles, /rules, the from-bundle /input),
+# the env-named /detections, the token under secret_env only, and the
+# network handed over only when a run opts into the wire.
+- name: Converge
+  hosts: localhost
+  gather_facts: false
+  vars:
+    molecule_root: /tmp/dxdfir_exchange_molecule
+    molecule_wire:
+      dxdfir_exchange_opencti_url: https://opencti.molecule.test
+      dxdfir_exchange_opencti_token: molecule-secret-token
+      dxdfir_exchange_opencti_connector_id: conn-mol
+      dxdfir_exchange_network: molecule-net
+  tasks:
+    - name: "converge | a fresh recording"
+      ansible.builtin.set_fact:
+        dxdfir_exchange_molecule_calls: []
+
+    - name: "converge | export, wired: push + bundles + operator rules"
+      ansible.builtin.include_role:
+        name: dxdfir_exchange
+      vars:
+        dxdfir_exchange_action: export
+        dxdfir_exchange_hits_dir: "{{ molecule_root }}/hits"
+        dxdfir_exchange_out_dir: "{{ molecule_root }}/out"
+        dxdfir_exchange_bundles_dir: "{{ molecule_root }}/car"
+        dxdfir_exchange_rules_dir: "{{ molecule_root }}/rules"
+        dxdfir_exchange_case: MOL-1
+        dxdfir_exchange_tlp: amber
+        dxdfir_exchange_push: true
+        dxdfir_exchange_opencti_url: "{{ molecule_wire.dxdfir_exchange_opencti_url }}"
+        dxdfir_exchange_opencti_token: "{{ molecule_wire.dxdfir_exchange_opencti_token }}"
+        dxdfir_exchange_opencti_connector_id: "{{ molecule_wire.dxdfir_exchange_opencti_connector_id }}"
+        dxdfir_exchange_network: "{{ molecule_wire.dxdfir_exchange_network }}"
+
+    - name: "converge | export, offline minimal: baked rules, no wire"
+      ansible.builtin.include_role:
+        name: dxdfir_exchange
+      vars:
+        dxdfir_exchange_action: export
+        dxdfir_exchange_hits_dir: "{{ molecule_root }}/hits"
+        dxdfir_exchange_out_dir: "{{ molecule_root }}/out"
+        dxdfir_exchange_opencti_url: ""
+        dxdfir_exchange_opencti_token: ""
+        dxdfir_exchange_opencti_connector_id: ""
+
+    - name: "converge | behaviour: offline join, case required and given"
+      ansible.builtin.include_role:
+        name: dxdfir_exchange
+      vars:
+        dxdfir_exchange_action: behaviour
+        dxdfir_exchange_car_dir: "{{ molecule_root }}/car"
+        dxdfir_exchange_detections_dir: "{{ molecule_root }}/detections"
+        dxdfir_exchange_out_dir: "{{ molecule_root }}/out"
+        dxdfir_exchange_case: MOL-2
+        dxdfir_exchange_producer: molecule-producer
+
+    - name: "converge | pull, live: the wire + network"
+      ansible.builtin.include_role:
+        name: dxdfir_exchange
+      vars:
+        dxdfir_exchange_action: pull
+        dxdfir_exchange_out_dir: "{{ molecule_root }}/out"
+        dxdfir_exchange_since: "2026-09-01T00:00:00Z"
+        dxdfir_exchange_index: cti-mol
+        dxdfir_exchange_keep_bundle: true
+        dxdfir_exchange_opencti_url: "{{ molecule_wire.dxdfir_exchange_opencti_url }}"
+        dxdfir_exchange_opencti_token: "{{ molecule_wire.dxdfir_exchange_opencti_token }}"
+        dxdfir_exchange_opencti_connector_id: "{{ molecule_wire.dxdfir_exchange_opencti_connector_id }}"
+        dxdfir_exchange_network: "{{ molecule_wire.dxdfir_exchange_network }}"
+
+    - name: "converge | pull, offline: re-normalise a kept bundle"
+      ansible.builtin.include_role:
+        name: dxdfir_exchange
+      vars:
+        dxdfir_exchange_action: pull
+        dxdfir_exchange_out_dir: "{{ molecule_root }}/out"
+        dxdfir_exchange_from_bundle: "{{ molecule_root }}/pulled/opencti-indicators.json"
+        dxdfir_exchange_opencti_url: ""
+        dxdfir_exchange_opencti_token: ""
+        dxdfir_exchange_opencti_connector_id: ""
+
+    - name: "converge | sightings: alerts in, pushed back"
+      ansible.builtin.include_role:
+        name: dxdfir_exchange
+      vars:
+        dxdfir_exchange_action: sightings
+        dxdfir_exchange_alerts_dir: "{{ molecule_root }}/alerts"
+        dxdfir_exchange_out_dir: "{{ molecule_root }}/out"
+        dxdfir_exchange_case: MOL-3
+        dxdfir_exchange_push: true
+        dxdfir_exchange_opencti_url: "{{ molecule_wire.dxdfir_exchange_opencti_url }}"
+        dxdfir_exchange_opencti_token: "{{ molecule_wire.dxdfir_exchange_opencti_token }}"
+        dxdfir_exchange_opencti_connector_id: "{{ molecule_wire.dxdfir_exchange_opencti_connector_id }}"
+        dxdfir_exchange_network: "{{ molecule_wire.dxdfir_exchange_network }}"
+
+    - name: "converge | six lane hand-overs recorded, one run each"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_exchange_molecule_calls | length == 6
+          - dxdfir_exchange_molecule_calls | map(attribute='runs') | map('length') | unique == [1]
+          - dxdfir_exchange_molecule_calls | map(attribute='lane') | list == [
+              'exchange-export', 'exchange-export', 'exchange-behaviour',
+              'exchange-pull', 'exchange-pull', 'exchange-sightings']
+          - dxdfir_exchange_molecule_calls | map(attribute='verify_glob') | list == [
+              'bundle.json', 'bundle.json', 'behaviour-sightings.json',
+              'cti-bulk.ndjson', 'cti-bulk.ndjson', 'sightings.json']
+        fail_msg: "recorded: {{ dxdfir_exchange_molecule_calls }}"
+        quiet: true
+
+    - name: "converge | the wired export: sub-tool, conditional mounts, wire on"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_exchange_molecule_calls[0].runs[0].subtool == 'stix-export'
+          - dxdfir_exchange_molecule_calls[0].runs[0].env.BYAKUGAN_STIX_EXPORT_BUNDLES_DIR == '/bundles'
+          - dxdfir_exchange_molecule_calls[0].runs[0].env.BYAKUGAN_STIX_EXPORT_PUSH | bool
+          - dxdfir_exchange_molecule_calls[0].runs[0].env.BYAKUGAN_OPENCTI_URL == 'https://opencti.molecule.test'
+          - dxdfir_exchange_molecule_calls[0].runs[0].mounts | selectattr('path', 'equalto', '/bundles') | list | length == 1
+          - dxdfir_exchange_molecule_calls[0].runs[0].mounts | selectattr('path', 'equalto', '/rules') | list | length == 1
+          - dxdfir_exchange_molecule_calls[0].runs[0].network == 'molecule-net'
+        fail_msg: "wired export spec: {{ dxdfir_exchange_molecule_calls[0] }}"
+        quiet: true
+
+    - name: "converge | the offline export: baked rules, no extra mounts, no network"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_exchange_molecule_calls[1].runs[0].env.BYAKUGAN_STIX_EXPORT_BUNDLES_DIR == ''
+          - dxdfir_exchange_molecule_calls[1].runs[0].mounts | map(attribute='path') | sort == ['/input', '/output']
+          - dxdfir_exchange_molecule_calls[1].runs[0].network == ''
+        fail_msg: "offline export spec: {{ dxdfir_exchange_molecule_calls[1] }}"
+        quiet: true
+
+    - name: "converge | behaviour: env-named /detections, offline by construction"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_exchange_molecule_calls[2].runs[0].subtool == 'stix-behaviour'
+          - dxdfir_exchange_molecule_calls[2].runs[0].env.BYAKUGAN_STIX_BEHAVIOUR_DETECTIONS_DIR == '/detections'
+          - dxdfir_exchange_molecule_calls[2].runs[0].env.BYAKUGAN_STIX_BEHAVIOUR_CASE == 'MOL-2'
+          - >-
+            dxdfir_exchange_molecule_calls[2].runs[0].mounts
+            | selectattr('path', 'equalto', '/detections')
+            | selectattr('mode', 'equalto', 'ro') | list | length == 1
+          - "'network' not in dxdfir_exchange_molecule_calls[2].runs[0]"
+        fail_msg: "behaviour spec: {{ dxdfir_exchange_molecule_calls[2] }}"
+        quiet: true
+
+    - name: "converge | the live pull: input-less, wired; the offline pull: /input-mapped bundle, no network"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_exchange_molecule_calls[3].runs[0].subtool == 'cti-pull'
+          - dxdfir_exchange_molecule_calls[3].runs[0].env.BYAKUGAN_CTI_PULL_FROM_BUNDLE == ''
+          - dxdfir_exchange_molecule_calls[3].runs[0].env.BYAKUGAN_CTI_PULL_BUNDLE_OUT == '/output/opencti-indicators.json'
+          - dxdfir_exchange_molecule_calls[3].runs[0].mounts | map(attribute='path') | list == ['/output']
+          - dxdfir_exchange_molecule_calls[3].runs[0].network == 'molecule-net'
+          - dxdfir_exchange_molecule_calls[4].runs[0].env.BYAKUGAN_CTI_PULL_FROM_BUNDLE == '/input/opencti-indicators.json'
+          - >-
+            dxdfir_exchange_molecule_calls[4].runs[0].mounts
+            | selectattr('path', 'equalto', '/input') | map(attribute='host')
+            | list == ['/tmp/dxdfir_exchange_molecule/pulled']
+          - dxdfir_exchange_molecule_calls[4].runs[0].network == ''
+        fail_msg: "pull specs: {{ dxdfir_exchange_molecule_calls[3] }} / {{ dxdfir_exchange_molecule_calls[4] }}"
+        quiet: true
+
+    - name: "converge | sightings: alerts mounted read-only, pushed over the named network"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_exchange_molecule_calls[5].runs[0].subtool == 'cti-sightings'
+          - dxdfir_exchange_molecule_calls[5].runs[0].env.BYAKUGAN_CTI_SIGHTINGS_CASE == 'MOL-3'
+          - dxdfir_exchange_molecule_calls[5].runs[0].env.BYAKUGAN_CTI_SIGHTINGS_PUSH | bool
+          - >-
+            dxdfir_exchange_molecule_calls[5].runs[0].mounts
+            | selectattr('path', 'equalto', '/input')
+            | selectattr('mode', 'equalto', 'ro') | list | length == 1
+          - dxdfir_exchange_molecule_calls[5].runs[0].network == 'molecule-net'
+        fail_msg: "sightings spec: {{ dxdfir_exchange_molecule_calls[5] }}"
+        quiet: true
+
+    - name: "converge | the token rides secret_env ONLY — never a plain env value"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_exchange_molecule_calls[0].runs[0].secret_env.BYAKUGAN_OPENCTI_TOKEN == 'molecule-secret-token'
+          - dxdfir_exchange_molecule_calls[3].runs[0].secret_env.BYAKUGAN_OPENCTI_TOKEN == 'molecule-secret-token'
+          - dxdfir_exchange_molecule_calls[5].runs[0].secret_env.BYAKUGAN_OPENCTI_TOKEN == 'molecule-secret-token'
+          - dxdfir_exchange_molecule_calls | map(attribute='runs') | flatten
+            | map(attribute='env') | map('dict2items') | flatten
+            | map(attribute='value') | map('string')
+            | select('search', 'molecule-secret-token') | list | length == 0
+        fail_msg: "a secret leaked into plain env: {{ dxdfir_exchange_molecule_calls }}"
+        quiet: true

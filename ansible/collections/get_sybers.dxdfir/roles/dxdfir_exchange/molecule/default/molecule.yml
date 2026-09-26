@@ -1,0 +1,29 @@
+---
+# offline by design: the galaxy dep is the git submodule, resolved via roles_path
+prerun: false
+dependency:
+  name: galaxy
+  enabled: false
+driver:
+  name: default            # delegated — decision-layer validation only, no containers
+platforms:
+  - name: localhost
+provisioner:
+  name: ansible
+  env:
+    # the scenario's dxdfir_lane STAND-IN first (records the handed specs and
+    # runs nothing — the real skeleton's argv/mount/secret handling against
+    # the real contract at the pin is dxdfir_lane's own scenario), then the
+    # collection's roles + the build galaxy's (resolved from the submodule)
+    ANSIBLE_ROLES_PATH: "${MOLECULE_SCENARIO_DIRECTORY}/roles:${MOLECULE_PROJECT_DIRECTORY}/..:\
+      ${MOLECULE_PROJECT_DIRECTORY}/../../../../../docker/GoDFIR-toolz/roles"
+  inventory:
+    host_vars:
+      localhost:
+        ansible_connection: local
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  playbooks:
+    converge: converge.yml
+    verify: verify.yml
+verifier:
+  name: ansible

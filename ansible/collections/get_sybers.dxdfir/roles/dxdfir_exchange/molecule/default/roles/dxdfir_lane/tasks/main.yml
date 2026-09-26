@@ -1,0 +1,14 @@
+---
+# The scenario's dxdfir_lane STAND-IN, shadowing the real skeleton on the
+# scenario's roles path: it records exactly what dxdfir_exchange hands over —
+# converge.yml asserts those specs — and runs nothing. The real skeleton's
+# contract validation, argv build and secret env-file handling for the
+# exchange shape are covered by dxdfir_lane's own scenario.
+- name: "lane-stub | record the handed run spec"
+  ansible.builtin.set_fact:
+    dxdfir_exchange_molecule_calls: >-
+      {{ (dxdfir_exchange_molecule_calls | default([])) + [{
+           'lane': dxdfir_lane_name,
+           'runs': dxdfir_lane_runs,
+           'verify_dir': dxdfir_lane_verify_dir | default(''),
+           'verify_glob': dxdfir_lane_verify_glob | default('') }] }}

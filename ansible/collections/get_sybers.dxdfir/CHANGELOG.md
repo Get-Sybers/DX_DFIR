@@ -18,8 +18,17 @@ root [CHANGELOG.md](../../../CHANGELOG.md).
   OpenCTI wire comes from the environment and the token rides `secret_env`,
   never argv; `behaviour` requires the case id, `sightings` the alerts tree,
   and every wire-bound run a named docker network (the confined default is
-  `--network none`). The lane's secret env-file tasks are `changed_when:
-  false` (per-invocation scratch the role's `always:` removes — molecule's
+  `--network none`). The role ships its own offline molecule scenario (a
+  recording dxdfir_lane stand-in on the scenario's roles path): converge
+  asserts the six positive hand-overs — sub-tool selection, the conditional
+  `/bundles`/`/rules` and from-bundle `/input` mounts, the env-named
+  `/detections`, the token under `secret_env` only, network only on wire
+  opt-in — and verify asserts six refusals by name; the real skeleton's
+  argv/mount/secret handling for the exchange shape rides `dxdfir_lane`'s
+  own scenario, whose converge gained a `stix-behaviour` run against the
+  real contract at the pin and whose negatives gained an undeclared-mount
+  case. The lane's secret env-file tasks are `changed_when: false`
+  (per-invocation scratch the role's `always:` removes — molecule's
   idempotence gate now covers a secret-bearing run).
 
 ### Changed
