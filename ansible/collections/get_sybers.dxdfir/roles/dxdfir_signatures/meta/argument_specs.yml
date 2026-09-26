@@ -18,7 +18,9 @@ argument_specs:
         type: str
         required: false
         default: ""
-        description: "The collection this run is scoped to (the CLI passes it); every sub-tool's output lands one level down, detections/<sub-tool>/<collection>/."
+        description: >-
+          The collection this run is scoped to (the CLI passes it); every
+          sub-tool's output lands one level down, detections/<sub-tool>/<collection>/.
       dxdfir_signatures_out_dir:
         type: str
         required: false

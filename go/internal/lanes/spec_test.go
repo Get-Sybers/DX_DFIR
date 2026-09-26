@@ -81,9 +81,9 @@ func TestCountDoneReadsTheToolLeafLayout(t *testing.T) {
 		return filepath.Join(append([]string{root, "data_store", "processed"}, parts...)...)
 	}
 
-	touch(t, p("zeek", "case-a", "cap1.pcap", "conn.json"), 3)
-	touch(t, p("zeek", "case-a", "cap1.pcap", "zeek.jsonl"), 3)
-	touch(t, p("zeek", "case-a", "cap2.pcap", "conn.json"), 3) // still running: no index yet
+	touch(t, p("zeek", "case-a", "cap1", "conn.json"), 3)
+	touch(t, p("zeek", "case-a", "cap1", "zeek.jsonl"), 3)
+	touch(t, p("zeek", "case-a", "cap2", "conn.json"), 3) // still running: no index yet
 
 	touch(t, p("windowlicker", "case-a", "goevtx", "HOST01", "Security.evtx", "goevtx.jsonl"), 3)
 	touch(t, p("windowlicker", "case-a", "gore", "img.E01", "Windows_System32_config_SYSTEM", "gore.jsonl"), 3)
@@ -103,7 +103,7 @@ func TestCountDoneReadsTheToolLeafLayout(t *testing.T) {
 	touch(t, p("log2timeline", "case-a", "img.E01", "timeline.jsonl"), 3)
 	touch(t, p("log2timeline", "case-a", "img2.E01", "img2.E01.plaso"), 40) // still running
 
-	touch(t, p("detections", "suricata", "case-a", "cap1.pcap", "suricata.jsonl"), 3)
+	touch(t, p("detections", "suricata", "case-a", "cap1", "suricata.jsonl"), 3)
 	touch(t, p("detections", "hayabusa", "case-a", "HOST01", "hayabusa.jsonl"), 3)
 	touch(t, p("detections", "yara", "case-a", "img.E01", "scan.jsonl"), 3)
 
