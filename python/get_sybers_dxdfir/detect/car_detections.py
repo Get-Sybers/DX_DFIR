@@ -17,8 +17,9 @@ still future work, phase 2) lands.
 
 INPUT. A byakugan output tree (default ``data_store/processed/byakugan``,
 matching ``dxdfir build-car``'s own default): every ``<source>/stix_bundle.json``
-under it, found the same way :mod:`..stix.behaviour` walks a tree for
-materialised CAR source directories. Nothing here imports Byakugan or
+under it, found the same way the engine's exchange (``byakugan.exchange``)
+walks a tree for materialised CAR source directories. Nothing here imports
+Byakugan or
 re-derives what it already computed (D4) — this module only reads the bundle
 Byakugan wrote.
 
@@ -30,7 +31,7 @@ process resolved, carries ``x_car_process_entity_id`` (module/thread/file/
 socket rows carry their OWNING process's guid there via ``owning_guid`` — the
 same cascade ``join-keys.yml``'s own note describes). ATT&CK technique NAMES
 and tactic id/name come from this repo's own committed, offline index
-(:mod:`..stix.attack_index`) — Byakugan's bundle never carries a technique's
+(:mod:`.attack_index`) — Byakugan's bundle never carries a technique's
 human name (its ``attack-pattern.name`` is the bare id; see
 ``byakugan/stix.py``'s ``_attack_pattern_obj``), so this is genuine enrichment,
 not a second copy of anything Byakugan already emits.
@@ -41,7 +42,7 @@ YAML, which declares one) — check ``byakugan/stix.py``'s ``_indicator_obj``:
 it stamps id/name/object/action, nothing else, and it is right not to invent
 one. ``detection.severity`` and ``event.risk_score`` are therefore never
 written here (never a fabricated grade), per the ``honest nulls omitted``
-instruction and this package's own rule everywhere else (``stix/behaviour.py``:
+instruction and the exchange's own rule (``byakugan.exchange.behaviour``:
 "never given an invented attack-pattern or a fabricated entity"). A future
 sweep writer, reading real Detection Engine alerts with real ``rule.severity``,
 can fill them; this one cannot, and says so instead of guessing.
@@ -74,7 +75,7 @@ same (analytic, event) pair — a re-run of ``stamp-detections`` over the same
 tree, a source re-exported after a rebuild — is the ordinary case, not a
 conflict to reject: this writer's ``--post`` uses the Elasticsearch ``_bulk``
 ``index`` action (replace-if-present), never ``create`` (which would 409 on
-every re-run), exactly as ``stix/cti/indicators.py``'s own ``bulk_lines``
+every re-run), exactly as the engine's ``byakugan.exchange.cti.indicators.bulk_lines``
 already does for the same reason ("so a re-pull upserts").
 
 ONE ROW PER (DETECTION, EVENT), EVEN WHEN BYAKUGAN SIGHTS IT TWICE.
@@ -131,10 +132,9 @@ import urllib.request
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
+from . import attack_index as attack_index_mod
 from . import rules_loader
-from ..stix import attack_index as attack_index_mod
-from ..stix.attack_index import AttackIndex, load_attack_index
-from ..stix.hits import flatten
+from .attack_index import AttackIndex, load_attack_index
 
 DEFAULT_TREE = os.path.join("data_store", "processed", "byakugan")
 BUNDLE_FILENAME = "stix_bundle.json"
@@ -169,8 +169,8 @@ class EsError(Exception):
 # --------------------------------------------------------------------- reading
 def iter_bundles(tree: str) -> list[tuple[str, str]]:
     """Every ``stix_bundle.json`` under ``tree`` (any depth — the same walk
-    :func:`..stix.behaviour._car_source_dirs` uses for materialised CAR source
-    directories), as ``(source, path)`` sorted by path. ``source`` is the
+    the engine's ``byakugan.exchange.behaviour`` uses for materialised CAR
+    source directories), as ``(source, path)`` sorted by path. ``source`` is the
     bundle's parent directory name — the same value Byakugan's own
     ``stix.export()`` defaults its ``case`` to
     (``os.path.basename(car_dir)``), so :func:`stamp_doc`'s ``detection.run_id``
@@ -196,6 +196,20 @@ def load_bundle(path: str) -> dict | None:
     if not isinstance(doc, dict) or not isinstance(doc.get("objects"), list):
         return None
     return doc
+
+
+def flatten(doc: dict, prefix: str = "") -> dict:
+    """Nested ``{"host": {"name": ..}}`` -> dotted ``{"host.name": ..}`` (lists
+    kept) — what the stamped-fields audit walks. The exchange's own copy lives
+    in the Byakugan engine (``byakugan.exchange``)."""
+    out: dict = {}
+    for k, v in doc.items():
+        key = f"{prefix}{k}"
+        if isinstance(v, dict) and v:
+            out.update(flatten(v, key + "."))
+        else:
+            out[key] = v
+    return out
 
 
 def _index_by_id(bundle: dict) -> dict[str, dict]:
@@ -297,7 +311,7 @@ def extract_rows(tree: str) -> tuple[list[dict], dict]:
 # ---------------------------------------------------------------- ATT&CK enrichment
 def _tactics_by_phase(index_path: str | None = None) -> dict[str, tuple[str, str]]:
     """``{kill-chain phase shortname: (tactic id, tactic name)}`` — the
-    reverse of the SAME ``tactics`` block :mod:`..stix.attack_index` already
+    reverse of the SAME ``tactics`` block :mod:`.attack_index` already
     commits and reads (its ``AttackIndex.tactics`` keeps only the id -> phase
     direction, which a technique's ``.phases`` already gives us; this is the
     other direction of the one committed file, not a second table)."""
@@ -314,7 +328,7 @@ def _tactics_by_phase(index_path: str | None = None) -> dict[str, tuple[str, str
 
 def _scalar_or_list(values: Iterable[str]):
     """A single value bare, several as a sorted list, none as ``None`` — the
-    shape ``stix/cti/indicators.py``'s ``_set`` already uses for a
+    shape the engine's ``byakugan.exchange.cti.indicators`` already uses for a
     multi-valued ECS field (Elasticsearch accepts the same field mapped
     scalar or array; ES|QL rule files in this repo's own ``rules/*.yml``
     ``MV_APPEND`` the same way when more than one value applies)."""
@@ -385,9 +399,9 @@ def document_id(detection_id: str, event_id: str) -> str:
 
 def _mapped_fields(properties: dict | None, prefix: str = "") -> set[str]:
     """Every leaf field path an index template's ``mappings.properties`` maps
-    — the same small walk ``rules_loader._mapped_fields`` /
-    ``stix/cti/indicators.py``'s ``template_fields`` already do for their own
-    templates; this module owns its own copy rather than reach into another
+    — the same small walk ``rules_loader._mapped_fields`` (and the engine's
+    ``byakugan.exchange.cti.indicators.template_fields``) already does for its
+    own templates; this module owns its own copy rather than reach into another
     module's private helper."""
     out: set[str] = set()
     for name, spec in (properties or {}).items():

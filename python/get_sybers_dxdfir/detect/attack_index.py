@@ -3,20 +3,24 @@
 STIX Best Practices §5.2: "STIX content that references ATT&CK or CAPEC should
 leverage the authoritative Attack Pattern objects", and §2.2 (common object
 repositories): MITRE publishes ATT&CK as STIX 2.1, so "only identifier
-references need to be shared". The export therefore never mints an
+references need to be shared". A STIX exporter therefore never mints an
 ``attack-pattern`` of its own: an ``indicates`` relationship targets MITRE's
 object id for the technique, and the object itself stays where it lives (the
 consumer's ATT&CK import — OpenCTI's MITRE connector — holds an exact copy).
 
-The exchange runs offline, so a compact index of that bundle is committed
+The pipeline runs offline, so a compact index of that bundle is committed
 beside this module (``data/attack-index.json``): technique external id ->
 attack-pattern id, name, kill-chain phases and revocation; tactic id -> phase
-name (for ``kill_chain_phases``). Regenerate it from a downloaded bundle::
+name (for ``kill_chain_phases``). Its deploy-side consumer is
+:mod:`.car_detections` (technique names and ``threat.tactic.*`` for the
+lookup rows); the STIX/CTI exchange keeps its own copy in the Byakugan
+engine (``byakugan.exchange``). Regenerate this one from a downloaded
+bundle::
 
-    python -m get_sybers_dxdfir.stix.attack_index enterprise-attack.json
+    python -m get_sybers_dxdfir.detect.attack_index enterprise-attack.json
 
-``StixConfig.attack_index`` (``DXDFIR_STIX_ATTACK_INDEX``) points at another
-index, or straight at an ATT&CK STIX bundle (told apart by its ``type``).
+``dxdfir stamp-detections --attack-index`` points a run at another index, or
+straight at an ATT&CK STIX bundle (told apart by its ``type``).
 
 A rule that names a REVOKED technique resolves to the replacement MITRE points
 at (the ``revoked-by`` relationship, as ATT&CK's own tooling does); the
@@ -199,7 +203,7 @@ def load_attack_index(path: str | None = None) -> AttackIndex:
 
 # ------------------------------------------------------------------------ main
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(prog="python -m get_sybers_dxdfir.stix.attack_index",
+    ap = argparse.ArgumentParser(prog="python -m get_sybers_dxdfir.detect.attack_index",
                                  description="Regenerate the committed ATT&CK technique index from a MITRE STIX bundle.")
     ap.add_argument("bundle", help="enterprise-attack.json (MITRE attack-stix-data / mitre/cti)")
     ap.add_argument("-o", "--out", default=DEFAULT_INDEX_PATH, help=f"where to write (default: {DEFAULT_INDEX_PATH})")

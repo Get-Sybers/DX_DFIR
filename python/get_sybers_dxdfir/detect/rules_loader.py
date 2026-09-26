@@ -63,12 +63,14 @@ CAR_DETECTIONS_DIR = os.path.join(RULES_DIR, "car-detections")
 CAR_DETECTIONS_TEMPLATE = os.path.join(CAR_DETECTIONS_DIR, "car-detections.index-template.json")
 CAR_DETECTIONS_JOIN_KEYS = os.path.join(CAR_DETECTIONS_DIR, "join-keys.yml")
 # The CTI indicator-match rule contract (rules/cti/): one Detection Engine
-# threat_match rule as data, checked against the cti-* index template the
-# exchange package (stix/cti) writes — by path only; nothing is imported.
+# threat_match rule as data. The cti-* index template its threat_index reads
+# lives in the Byakugan engine now (byakugan.exchange.cti — the cti-pull
+# sub-tool fills it), so the rule validates standalone here; hand
+# validate_indicator_match a template (a copy a deployment kept) and the
+# cross-checks run too. The template<->pattern-mapping agreement itself is
+# tested engine-side.
 CTI_DIR = os.path.join(RULES_DIR, "cti")
 CTI_RULE = os.path.join(CTI_DIR, "cti-indicator-match.yml")
-CTI_TEMPLATE = os.path.normpath(os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), os.pardir, "stix", "cti", "cti.index-template.json"))
 THREAT_MATCH = "threat_match"
 # Elastic's names for the Kibana query languages a threat_match rule speaks
 # (not the Kusto "KQL" the rules' source column keeps).
@@ -77,8 +79,9 @@ THREAT_MAPPING_TYPES = ("mapping",)
 THREAT_MATCH_REQUIRED = ("id", "name", "type", "status", "severity", "attack", "language", "index",
                          "query", "threat_index", "threat_language", "threat_indicator_path",
                          "threat_mapping", "evidence", "car_join")
-# What the sightings push (stix/cti/sightings.py) reads off an indicator-match
-# alert: the platform's indicator id and the value that matched.
+# What the sightings push (the engine's cti-sightings sub-tool,
+# byakugan.exchange.cti.sightings) reads off an indicator-match alert: the
+# platform's indicator id and the value that matched.
 ROUND_TRIP_FIELDS = ("threat.enrichments.indicator.id", "threat.enrichments.matched.atomic")
 
 # Elastic's severity set (the registry's "info" maps to "low") and the Detection
