@@ -25,7 +25,7 @@ summary line.
 | `dxdfir_memory` | Memory images → per-plugin JSONL (anamnesis / MemProcFS) | `get-sybers/anamnesis` |
 | `dxdfir_evtx` | Windows Event Logs (`.evtx`) → goevtx JSON Lines | `get-sybers/gowindowlicker` (the `goevtx` sub-tool; + `get-sybers/plaso` `image_export` for disk images) |
 | `dxdfir_plaso` | Disk images / VM exports → Plaso JSON Lines | `get-sybers/plaso` (`log2timeline`, `psort`) |
-| `dxdfir_godfir_toolz` | Disk images → the GoDFIR-toolz artefact parse | `get-sybers/plaso` `image_export` + `get-sybers/{gore,gojle,gole,goamcache,goappcompat,gosbe,gorb,gomft,goese,goprefetch}` |
+| `dxdfir_godfir_toolz` | Disk images → the GoDFIR-toolz artefact parse | `get-sybers/plaso` `image_export` + `get-sybers/gowindowlicker` (`lick` — the Windows parser dozen as sub-tools) + `get-sybers/godaemonhunter` (`hunt`) |
 | `dxdfir_signatures` | YARA / Suricata / Hayabusa / disk-scan detections | `get-sybers/signatures` (`yara`, `suricata`, `hayabusa`, `scan`) |
 | `dxdfir_byakugan` | Processed tree → materialised MITRE CAR (build / verify / timeline) | `get-sybers/byakugan` (`build`, `timeline`) |
 
