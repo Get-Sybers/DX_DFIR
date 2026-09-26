@@ -82,3 +82,4 @@
 !/raw/other_raw_data/.gitkeep
 !/raw/other_raw_data/sql/.gitkeep
 !/raw/pcaps/.gitkeep
+!/raw/collections/.gitkeep
