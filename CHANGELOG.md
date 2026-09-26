@@ -54,6 +54,24 @@ is `0`, anything may change without notice.
   macOS yet).
 
 ### Fixed (fresh-host setup)
+- **`dxdfir deploy-stack` (and every verb) runs the modules under the venv's
+  python.** `ansible/inventory/hosts.yml` pinned `ansible_python_interpreter`
+  to the venv, but the front-end passes `-i localhost,`, which never reads
+  that file: interpreter discovery landed on the system python, without the
+  controller-side module deps the venv pins — `Cannot detect the required
+  Python library cryptography` from `community.crypto` at the stack's CA
+  key. The setting now lives playbook-adjacent
+  (`playbooks/host_vars/localhost.yml`), which every inventory source loads,
+  `-i localhost,` included.
+- **`dxdfir build-docker` finds `godfir_build` again.** The front-end
+  exported `ANSIBLE_ROLES_PATH` with the collection's roles only, and the
+  variable replaces `ansible.cfg`'s `roles_path` rather than extending it,
+  so every play run through `dxdfir` (the image build, each lane's image
+  preflight) lost the GoDFIR-toolz build galaxy the config file resolves in
+  place from the submodule: `the role 'godfir_build' was not found`. The
+  variable now carries the same three entries in the same order, and a Go
+  test keeps it identical to `ansible.cfg` (CI drove the build through a
+  bare `ansible-playbook`, which is why it never saw the failure).
 - **Nothing under `/opt/dxdfir` any more.** The pinned Ansible collections
   were the prefix's last tenant; they install into the checkout's own
   `.ansible/collections` now (gitignored, as the invoking user, the first
@@ -62,6 +80,13 @@ is `0`, anything may change without notice.
   (`DXDFIR_VENV`, `DXDFIR_COLLECTIONS`, `DXDFIR_BIN_DIR` — a stale export
   from an earlier release's shell) is ignored with a warning by the script
   and by `dxdfir`, so a stale environment can never recreate the old layout.
+- **Nothing under `~/.ansible` either.** `ansible-galaxy` staged its
+  downloads in `~/.ansible/tmp` even with the collections installing
+  in-tree; `ansible.cfg` now sets ansible's state home to the checkout
+  (`home = .ansible`, so the local temp, galaxy cache/token and
+  persistent-connection sockets follow), the script exports the matching
+  `ANSIBLE_HOME` for its own galaxy and bootstrap steps (through `sudo`),
+  and its closing self-check fails should a run write under `~/.ansible` anyway.
 - **`dxdfir` works right after `setup-environment.sh`, in any shell.** The
   binary went to `/opt/dxdfir/bin` and the ansible venv to
   `/opt/dxdfir/venv`, both reachable only through `/etc/profile.d/dxdfir.sh`

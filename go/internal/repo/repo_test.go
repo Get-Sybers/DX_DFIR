@@ -3,6 +3,7 @@ package repo
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -112,5 +113,60 @@ func TestAnsiblePlaybookMissingNamesTheVenv(t *testing.T) {
 	r := fakeRepo(t, false)
 	if _, err := r.AnsiblePlaybook(); err == nil {
 		t.Fatal("expected an error with no ansible-playbook anywhere")
+	}
+}
+
+// TestRolesPathCarriesTheBuildGalaxy pins the ANSIBLE_ROLES_PATH the front-end
+// exports: it overrides ansible.cfg's roles_path, so a play including
+// godfir_build (dxdfir build-docker, the lanes' image preflight) resolves the
+// submodule's roles only if the variable carries them itself.
+func TestRolesPathCarriesTheBuildGalaxy(t *testing.T) {
+	r := fakeRepo(t, false)
+	got := strings.Split(r.RolesPath(), string(os.PathListSeparator))
+	want := []string{
+		filepath.Join(r.Root, "ansible", "collections", "get_sybers.dxdfir", "roles"),
+		filepath.Join(r.Root, "docker", "GoDFIR-toolz", "roles"),
+		filepath.Join(r.Root, ".ansible", "collections", "ansible_collections", "get_sybers", "godfir_toolz", "roles"),
+	}
+	if len(got) != len(want) {
+		t.Fatalf("RolesPath = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("RolesPath[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+// TestRolesPathMatchesAnsibleCfg keeps the exported variable and the checkout's
+// ansible.cfg roles_path identical, entry for entry: a bare ansible-playbook
+// from the repo root and a dxdfir verb must search the same roles in the same
+// order, or a role resolves one way and not the other (the godfir_build
+// regression).
+func TestRolesPathMatchesAnsibleCfg(t *testing.T) {
+	root, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(root, "ansible.cfg"))
+	if err != nil {
+		t.Skipf("no checkout ansible.cfg beside the module: %v", err)
+	}
+	var cfg string
+	for _, line := range strings.Split(string(raw), "\n") {
+		if k, v, ok := strings.Cut(line, "="); ok && strings.TrimSpace(k) == "roles_path" {
+			cfg = strings.TrimSpace(v)
+		}
+	}
+	if cfg == "" {
+		t.Fatal("ansible.cfg sets no roles_path")
+	}
+	r := &Repo{Root: root}
+	want := make([]string, 0, 3)
+	for _, rel := range strings.Split(cfg, ":") {
+		want = append(want, filepath.Join(root, rel))
+	}
+	if got := strings.Split(r.RolesPath(), string(os.PathListSeparator)); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("RolesPath() = %v\nansible.cfg roles_path = %v — keep them identical", got, want)
 	}
 }
