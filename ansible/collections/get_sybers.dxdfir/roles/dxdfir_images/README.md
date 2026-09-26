@@ -9,26 +9,27 @@ No third-party tool image is pulled at runtime. Every image builds from the
   context): byakugan, plaso, signatures, zeek — plus **anamnesis** (memory,
   cloned from [anamnesis](https://github.com/Get-Sybers/Anamnesis) at its
   Dockerfile's `ANAMNESIS_REF` pin).
-- **The Windows-artefact tool family**, almost entirely
-  **static-Go `FROM scratch` substitutes** (no
-  shell, no python, just the binary) — `goevtx` (.evtx), `gomft` ($MFT),
+- **The Windows-artefact matrix, `gowindowlicker`** — ONE
+  **static-Go `FROM scratch`** image (no
+  shell, no python, just the binary) whose sub-tools substitute the whole
+  family: `goevtx` (.evtx), `gomft` ($MFT),
   `goamcache`/`goappcompat` (Amcache/AppCompatCache), `gore`/`gosbe`
   (registry batch / ShellBags, with dirty-hive `.LOG` replay), `gole`/`gojle`
   (`.lnk` / jump lists), `gorb` (Recycle Bin), `gowxt` (Windows Timeline), plus
   the two artefact families that had no Linux-viable parser at all before the
   Go ports — `goprefetch` (XP→Win11 `.pf`,
   MAM-compressed included) and `goese` (SRUDB.dat / SUM
-  `Current.mdb`). Each builds from its OWN subdir in the submodule. Nothing
-  .NET remains in the inventory.
+  `Current.mdb`). Every parser keeps its tool name and env block as a
+  sub-tool of the one binary. Nothing .NET remains in the inventory.
 
 The image inventory — names + per-image build context / dockerfile / args — is SUPPLIED by
 the GoDFIR-toolz submodule: its root **`images.yml`** (read at the gitlink pin) is
 the single source of truth this role reads — and the runtime `verify`/`audit`
 gates read the same file through the build galaxy; DX_DFIR carries no image
 list of its own.
-Add or change an image there, in one place — the .NET per-tool images
-(`sqlecmd`, `bstrings`, …) are ordinary manifest entries built from the
-parameterized `godfir-tool/Dockerfile`.
+Add or change an image there, in one place — retired names (the `.NET`
+per-tool lane: `sqlecmd`, `bstrings`, …) refuse via the manifest's
+`unbuildable` map instead of turning into unknown tools.
 
 Every image runs as uid 2000 (the single `dxdfir_runtime_uid` knob). The
 build + hardening verification themselves are the **build galaxy's**: this

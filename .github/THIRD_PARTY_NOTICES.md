@@ -234,7 +234,7 @@ repository.**
 | [Plaso / log2timeline](https://github.com/log2timeline/plaso) | `log2timeline/plaso:latest` container | Apache-2.0 | None |
 | [Zeek](https://zeek.org/) | `zeek/zeek:latest` container | BSD-3-Clause | None |
 | [Elastic Stack](https://www.elastic.co/) (Elasticsearch, Kibana, Elastic Agent / Fleet Server, Filebeat) | `docker.elastic.co/*` images at a pinned `ELASTIC_VERSION` — **the analysis backend** (`docker/elastic/`) | [Elastic License 2.0](https://www.elastic.co/licensing/elastic-license) (default distribution; only the free Basic-tier features are enabled) | See below |
-| [go-evtx](https://github.com/Velocidex/evtx) (Velociraptor) | The `dxdfir_evtx` lane runs **goevtx** (`get-sybers/goevtx`, `docker/GoDFIR-toolz/goevtx`) — a static-Go `.evtx` parser on go-evtx | Apache-2.0 | None |
+| [go-evtx](https://github.com/Velocidex/evtx) (Velociraptor) | The `dxdfir_evtx` lane runs **goevtx** (a sub-tool of `get-sybers/gowindowlicker`, `docker/GoDFIR-toolz/gowindowlicker`) — a static-Go `.evtx` parser on go-evtx | Apache-2.0 | None |
 | [Velociraptor](https://github.com/Velocidex/velociraptor) | Formerly: JSON output normalised by `dev-scripts/` (the lane was removed in 0.6.0) | AGPL-3.0 | None — output ingestion does not trigger AGPL |
 
 No tool binaries are vendored in this repository — every tool above is either

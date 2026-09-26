@@ -7,6 +7,28 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Changed (the multi-tool matrices: gowindowlicker + godaemonhunter; the ansible-only container rule)
+- **The Windows parsers deploy as the gowindowlicker sweep.** GoDFIR-toolz
+  ships the parser dozen as one multi-tool image (gitlink bumped to the
+  merged inventory: 8 images, the `.NET` per-tool lane retired):
+  `dxdfir_godfir_toolz` runs `gowindowlicker lick` once over the artefact
+  export beside the unchanged `godaemonhunter hunt` — writing the same
+  `<out_dir>/<subtool>/<item>/<subtool>.jsonl` tree the retired per-tool
+  runs wrote, `gowxt` riding the sweep like the rest — and `dxdfir_evtx`
+  drives the same image's `goevtx` sub-tool under its canonical `GOEVTX_*`
+  block. Layouts, record shapes and file names are unchanged; the CAR path
+  is untouched.
+- **Strict rule, enforced: only ansible interacts with the containers.**
+  The molecule harness is a committed playbook
+  (`playbooks/dxdfir-molecule.yml`; `.github/tests/run-molecule.sh` is only
+  its launcher, the runner image's Dockerfile a real file), the smoke
+  test's direct docker preflights are gone — each lane's ansible preflight
+  (daemon check → `ensure_built` → hardened `verify`) is the gate — and
+  `dev-scripts/purge-docker.sh` is retired: `dxdfir-cleanup.yml` is the
+  wipe. Read-only daemon observation (the CLI health probe, the TUI
+  containers panel) is the one documented exception (collection README,
+  standards table).
+
 ### Changed (the two-galaxy split: GoDFIR-toolz builds, DX_DFIR deploys)
 - **GoDFIR-toolz owns the image inventory and the build logic; DX_DFIR only
   consumes them.** The submodule gained its canonical root `images.yml` — all

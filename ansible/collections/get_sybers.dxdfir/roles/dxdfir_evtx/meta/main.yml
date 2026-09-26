@@ -5,8 +5,8 @@ galaxy_info:
   author: Get-Sybers
   description: >-
     Parse Windows Event Logs (.evtx) with goevtx into JSON Lines. Runs the
-    self-orchestrating get-sybers/goevtx image from its contract; one folder of
-    goevtx.jsonl per log.
+    get-sybers/gowindowlicker image's goevtx sub-tool from its contract; one
+    folder of goevtx.jsonl per log.
   company: Get-Sybers
   license: MIT
   min_ansible_version: "2.15"

@@ -28,18 +28,4 @@ dxdfir_godfir_toolz_plaso_image: ""
 # also export from Volume Shadow Copies
 dxdfir_godfir_toolz_vss: false
 
-# the WINDOWS Go tools, in run order; gowxt is built but not yet run (#88) —
-# add it once validated. The Linux matrix is its own hunt run in tasks/main.yml
-dxdfir_godfir_toolz_tools:
-  - gore          # registry batch (recmd_batch shape)
-  - gojle         # jump lists
-  - gole          # .lnk shortcuts
-  - goamcache     # Amcache.hve
-  - goappcompat   # AppCompatCache (ShimCache)
-  - gosbe         # ShellBags
-  - gorb          # Recycle Bin $I records
-  - gomft         # $MFT
-  - goese         # SRUM / SUM ESE databases
-  - goprefetch    # Prefetch
-
 dxdfir_godfir_toolz_force: false

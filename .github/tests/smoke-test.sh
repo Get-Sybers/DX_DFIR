@@ -98,15 +98,12 @@ assert_has() {
 # =============================================================================
 section "Preflight (fail loudly — never skip)"
 command -v docker >/dev/null 2>&1 || die "docker not found. This test RUNS the pipeline; it cannot be skipped."
-docker info >/dev/null 2>&1 || die "docker daemon not reachable."
 command -v python3 >/dev/null 2>&1 || die "python3 not found."
 command -v ansible-playbook >/dev/null 2>&1 || die "ansible-playbook not found — it ships with 'pip install ./python'."
-docker image inspect get-sybers/goevtx:latest >/dev/null 2>&1 \
-    || die "image get-sybers/goevtx:latest missing — build it: docker build -t get-sybers/goevtx:latest -f docker/GoDFIR-toolz/goevtx/Dockerfile docker/GoDFIR-toolz/goevtx"
-# the CAR lane drives the engine image at its Dockerfile pin
-docker image inspect get-sybers/byakugan:latest >/dev/null 2>&1 \
-    || die "image get-sybers/byakugan:latest missing — build it: dxdfir build-docker (it clones Byakugan at its Dockerfile's BYAKUGAN_REF pin and builds the hardened engine image)."
-pass "docker, python3, ansible-playbook, get-sybers/goevtx:latest and the Byakugan engine image present"
+# daemon reachability, image builds and the hardening guard are gated INSIDE
+# each lane's ansible preflight (docker version -> ensure_built -> verify):
+# only ansible interacts with the containers — this script never does.
+pass "docker, python3 and ansible-playbook present (daemon + image gates run in each lane's ansible preflight)"
 
 # =============================================================================
 section "Fixtures (sha256-pinned Sysmon .evtx)"

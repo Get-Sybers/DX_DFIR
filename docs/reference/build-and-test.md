@@ -30,7 +30,7 @@ build and install the binary.
 ## Smoke — the real pipeline
 
 `.github/workflows/smoke.yml` → `.github/tests/smoke-test.sh` runs the pipeline end to end for
-correctness: a sha256-pinned Sysmon `.evtx` → the real evtx lane (`get-sybers/goevtx`) →
+correctness: a sha256-pinned Sysmon `.evtx` → the real evtx lane (`get-sybers/gowindowlicker`, the `goevtx` sub-tool) →
 materialised CAR via the external [Byakugan engine](https://github.com/Get-Sybers/byakugan)
 → asserts every Sysmon-sourced CAR object has rows with the expected fields → the
 `verify-car` gate.

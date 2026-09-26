@@ -16,10 +16,12 @@ ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-im
 |---|---|---|
 | `get-sybers/zeek` | PCAP → Zeek JSON | Zeek LTS from the project's OBS Debian repo (`docker/GoDFIR-toolz/zeek/`) |
 | `get-sybers/signatures` | detections — YARA + Suricata (offline replay) + Hayabusa | Debian packages + the pinned Hayabusa release (`docker/GoDFIR-toolz/signatures/`) |
-| `get-sybers/byakugan` | CAR/STIX behaviour engine | clone-at-build at the `sources.yml` pin (`docker/GoDFIR-toolz/byakugan/`) |
+| `get-sybers/byakugan` | CAR/STIX behaviour engine | clone-at-build at its Dockerfile's `BYAKUGAN_REF` pin (`docker/GoDFIR-toolz/byakugan/`) |
 | `get-sybers/anamnesis` | memory (anamnesis / MemProcFS) | `docker/GoDFIR-toolz/anamnesis/` (clone-at-build) |
 | `get-sybers/plaso` | Plaso timelining + `image_export` (dfVFS) | GIFT stable PPA (`docker/GoDFIR-toolz/plaso/`) |
-| `get-sybers/goevtx` | Windows Event Logs (.evtx) | static Go on go-evtx, FROM scratch (`docker/GoDFIR-toolz/goevtx/`) |
+| `get-sybers/gowindowlicker` | the Windows artefact matrix — every parser (goevtx, gomft, gore, goprefetch, …) a sub-tool of one binary | static Go, FROM scratch (`docker/GoDFIR-toolz/gowindowlicker/`) |
+| `get-sybers/godaemonhunter` | the Linux daemon-parser matrix (`hunt`: Layer-1 knowledge store → enriched daemon parsers) | static Go, FROM scratch (repo-root context) |
+| `get-sybers/gomount` | disk-image mount for the signatures disk scan | static Go, FROM scratch (`docker/GoDFIR-toolz/gomount/`) |
 
 The `dxdfir_images` role builds each one and **verifies the minimal-posture
 contract** per build — the static image config plus a shell-free

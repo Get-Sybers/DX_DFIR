@@ -1,6 +1,6 @@
 ---
 # A .evtx is binary, so no fixture ships in-repo. Point this at a sample log to run
-# the scenario (goevtx is the bundled image — nothing else needed):
+# the scenario (goevtx rides the bundled gowindowlicker image — nothing else needed):
 #   molecule test -- -e molecule_sample_evtx=/path/Security.evtx
 - name: Prepare
   hosts: localhost

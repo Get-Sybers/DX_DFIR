@@ -54,7 +54,7 @@ argument_specs:
         elements: str
         required: false
         default: []
-        description: "Full image refs the calling play needs built, e.g. get-sybers/goevtx:latest."
+        description: "Full image refs the calling play needs built, e.g. get-sybers/gowindowlicker:latest."
   save:
     short_description: "Save the analysis images as tarballs for an offline host."
     description:

@@ -57,11 +57,11 @@ jobs:
 
       # built exactly as `dxdfir build-docker` builds them (stamps + hardening asserts);
       # only the two pipeline images here — the `images` job builds the full manifest
-      - name: Build the goevtx + byakugan images (the images role, hardening asserted)
+      - name: Build the gowindowlicker + byakugan images (the images role, hardening asserted)
         run: |
           ansible-playbook \
             ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml \
-            -e '{"dxdfir_images_set": ["goevtx", "byakugan"]}'
+            -e '{"dxdfir_images_set": ["gowindowlicker", "byakugan"]}'
 
       - name: Run the pipeline smoke test
         run: ./.github/tests/smoke-test.sh

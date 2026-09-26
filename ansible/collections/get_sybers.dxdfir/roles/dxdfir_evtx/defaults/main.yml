@@ -18,8 +18,8 @@ dxdfir_evtx_stage_dir: "{{ dxdfir_evtx_repo_root }}/data_store/processed/windows
 # export from every Volume Shadow Copy too
 dxdfir_evtx_vss: false
 
-# the contracts the lane is driven from
-dxdfir_evtx_contract: "{{ dxdfir_evtx_repo_root }}/docker/GoDFIR-toolz/goevtx/contract.yml"
+# the contracts the lane is driven from (goevtx is a gowindowlicker sub-tool)
+dxdfir_evtx_contract: "{{ dxdfir_evtx_repo_root }}/docker/GoDFIR-toolz/gowindowlicker/contract.yml"
 dxdfir_evtx_plaso_contract: "{{ dxdfir_evtx_repo_root }}/docker/GoDFIR-toolz/plaso/contract.yml"
 # empty = the contracts' images; set to pin digests
 dxdfir_evtx_image: ""
