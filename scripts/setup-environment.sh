@@ -345,7 +345,7 @@ section "Ansible (pinned)"
 # export from an earlier release's shell, a forgotten ~/.bashrc line) would
 # recreate exactly the layout this script retires — ignore it, loudly.
 for _legacy in DXDFIR_VENV DXDFIR_COLLECTIONS DXDFIR_BIN_DIR; do
-    if [[ "${!_legacy:-}" == /opt/dxdfir/* ]]; then
+    if [[ "${!_legacy:-}" == /opt/dxdfir || "${!_legacy:-}" == /opt/dxdfir/* ]]; then
         warn "Ignoring $_legacy=${!_legacy} — /opt/dxdfir is the retired prefix; everything lives in the checkout now."
         unset "$_legacy"
     fi

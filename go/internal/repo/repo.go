@@ -93,12 +93,20 @@ const VenvDir = ".venv"
 // under; an override still naming it (a stale export from that release's
 // shell) is ignored, never honoured — the same rule setup-environment.sh
 // applies.
-const legacyPrefix = "/opt/dxdfir/"
+const legacyPrefix = "/opt/dxdfir"
+
+// underLegacyPrefix reports whether p is the retired prefix itself or a path
+// beneath it — on a path boundary, so a sibling such as /opt/dxdfir-old is
+// an ordinary override.
+func underLegacyPrefix(p string) bool {
+	p = filepath.Clean(p)
+	return p == legacyPrefix || strings.HasPrefix(p, legacyPrefix+string(filepath.Separator))
+}
 
 // Venv returns the ansible virtualenv for this checkout: $DXDFIR_VENV when
 // set (and not under the retired /opt/dxdfir prefix), else <root>/.venv.
 func (r *Repo) Venv() string {
-	if v := os.Getenv("DXDFIR_VENV"); v != "" && !strings.HasPrefix(v, legacyPrefix) {
+	if v := os.Getenv("DXDFIR_VENV"); v != "" && !underLegacyPrefix(v) {
 		return v
 	}
 	return r.Path(VenvDir)
