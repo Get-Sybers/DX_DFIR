@@ -77,7 +77,7 @@ is `0`, anything may change without notice.
   (`home = .ansible`, so the local temp, galaxy cache/token and
   persistent-connection sockets follow), the script exports the matching
   `ANSIBLE_HOME` for its own galaxy and bootstrap steps (through `sudo`),
-  and its closing self-check fails should a run create `~/.ansible` anyway.
+  and its closing self-check fails should a run write under `~/.ansible` anyway.
 - **`dxdfir` works right after `setup-environment.sh`, in any shell.** The
   binary went to `/opt/dxdfir/bin` and the ansible venv to
   `/opt/dxdfir/venv`, both reachable only through `/etc/profile.d/dxdfir.sh`

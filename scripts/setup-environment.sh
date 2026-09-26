@@ -513,7 +513,9 @@ section "Ansible collections"
 # export makes that hold even where the repo-root ansible.cfg is not read
 # (an ANSIBLE_CONFIG in the caller's shell, a world-writable checkout)
 export ANSIBLE_HOME="$REPO_ROOT_DIR/.ansible"
-_home_ansible_before=0; [[ -e "$HOME/.ansible" ]] && _home_ansible_before=1
+# a timestamp to audit ~/.ansible against at the end: anything under it newer
+# than this was written by this run, whether or not the directory predates it
+_ansible_stamp=$(mktemp) || die "mktemp failed."
 DXDFIR_COLLECTIONS="${DXDFIR_COLLECTIONS:-$REPO_ROOT_DIR/.ansible/collections}"
 step "Installing pinned Ansible collections into $DXDFIR_COLLECTIONS ..."
 "$DXDFIR_VENV/bin/ansible-galaxy" collection install \
@@ -609,11 +611,18 @@ case "$_ap" in
     "")      warn "Could not read dxdfir's ansible readiness line — check 'dxdfir --no-tui'." ;;
     *)       die "dxdfir does not resolve the venv's ansible: $_ap" ;;
 esac
-# ...and that ansible kept its state in the checkout: a ~/.ansible this run
-# created means the in-tree state home (ansible.cfg `home`, ANSIBLE_HOME)
-# was not honoured somewhere — the script's regression, not the operator's.
-if [[ "$_home_ansible_before" -eq 0 && -e "$HOME/.ansible" ]]; then
-    die "This run created $HOME/.ansible — ansible's state belongs in $REPO_ROOT_DIR/.ansible (ansible.cfg 'home')."
+# ...and that ansible kept its state in the checkout: anything under
+# ~/.ansible written since the collections step (the directory itself, if the
+# run created it) means the in-tree state home (ansible.cfg `home`,
+# ANSIBLE_HOME) was not honoured somewhere — the script's regression, not the
+# operator's. A ~/.ansible older than the run (an earlier release's, another
+# ansible project's) is not the script's to judge, only to leave untouched.
+_written=$(find "$HOME/.ansible" -newer "$_ansible_stamp" -print -quit 2>/dev/null)
+rm -f "$_ansible_stamp"
+if [[ -n "$_written" ]]; then
+    die "This run wrote under $HOME/.ansible ($_written) — ansible's state belongs in $REPO_ROOT_DIR/.ansible (ansible.cfg 'home')."
+elif [[ -e "$HOME/.ansible" ]]; then
+    ok "ansible state (temp, galaxy cache) stays in $REPO_ROOT_DIR/.ansible — the pre-existing $HOME/.ansible was not written to"
 else
     ok "ansible state (temp, galaxy cache) stays in $REPO_ROOT_DIR/.ansible — nothing under $HOME/.ansible"
 fi

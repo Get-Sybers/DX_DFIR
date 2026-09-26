@@ -174,7 +174,8 @@ lean:
   token and any persistent-connection sockets live under `.ansible/`
   (gitignored) instead of `~/.ansible`; the script exports the same
   `ANSIBLE_HOME` (through `sudo` too) and fails its closing self-check if a
-  run created `~/.ansible` regardless.
+  run wrote anything under `~/.ansible` regardless (a `~/.ansible` older
+  than the run is left alone, not judged).
 - **The Go toolchain is (re)installed when absent or under go.mod's floor**:
   the build pins `GOTOOLCHAIN=local`, which deliberately refuses
   auto-upgrades, so a host provisioned by an older release re-provisions
