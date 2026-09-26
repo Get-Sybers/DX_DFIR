@@ -66,10 +66,11 @@ make check      # gofmt -l, go vet, go build
 ```
 
 `make link` is the quick way to rebuild after a code change and have `dxdfir`
-runnable anywhere without the full filepath: it builds, installs the binary to
-`/opt/dxdfir/bin/dxdfir`, and symlinks `/usr/local/bin/dxdfir` to it — the exact
-layout `scripts/setup-environment.sh` provisions, so it reuses (or creates) the
-same shortcut. Override the destinations with `make link GO_BIN_DIR=… LINK_DIR=…`.
+runnable anywhere without the full filepath: it builds and installs the binary
+as `/usr/local/bin/dxdfir` — a real file on a directory every default PATH
+(and sudo's `secure_path`) already carries, the exact layout
+`scripts/setup-environment.sh` provisions, so it replaces the provisioned
+binary in place. Override the destination with `make link BIN_DIR=…`.
 (`make install` uses `go install`, which lands in `$GOBIN`/`$GOPATH/bin` and only
 works as a shortcut if that directory is already on your `PATH`.)
 
@@ -79,16 +80,19 @@ Requires Go ≥ 1.24. Dependencies (termui, cobra, go-ansible) are pinned in `go
 
 `dxdfir` locates the repo like the Python CLI did (`--repo-root`, then
 `$DFIR_REPO_ROOT`, then walking up from the cwd, then from the binary's own
-directory — the marker is `ansible/collections/get_sybers.dxdfir`). It prepends
-`<repo>/python` to `PYTHONPATH` for every child it shells, so the processors are
-importable from a bare checkout as well as an installed environment.
+directory — the marker is `ansible/collections/get_sybers.dxdfir`). It then
+resolves `ansible-playbook` from the checkout's own venv, `<repo>/.venv/bin`
+(what `scripts/setup-environment.sh` installs; `$DXDFIR_VENV` overrides),
+falling back to PATH only when that venv is absent — so a provisioned host
+works from any shell, login or not, with no PATH edit or re-login in between,
+and a dev host with its own venv activated keeps working unchanged.
 
 Environment / flags:
 
 - `--repo-root PATH` / `$DFIR_REPO_ROOT` — the DX_DFIR checkout.
 - `--no-tui` / `$DXDFIR_NO_TUI` / `$CI` / `TERM=dumb` — force plain output.
 - `--tui` — force the dashboard even when auto-detection is unsure.
-- `$DXDFIR_PYTHON` — the Python interpreter to use (else `python3`/`python`).
+- `$DXDFIR_VENV` — the ansible venv to use (else `<repo>/.venv`, then PATH).
 
 The external Byakugan CAR engine is no longer a host checkout: it is cloned +
 built into the hardened `get-sybers/byakugan` image at its Dockerfile's `BYAKUGAN_REF` pin by

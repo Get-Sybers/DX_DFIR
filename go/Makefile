@@ -5,11 +5,12 @@ PREFIX  ?=
 
 # `make link` install layout — the SAME as scripts/setup-environment.sh, so a
 # rebuild after a code edit drops the new binary exactly where the provisioned
-# host already points. Override any of these on the command line if needed.
+# host already runs it: a real file in /usr/local/bin, on every default PATH
+# (sudo's secure_path included), no shim and no PATH edit. Override on the
+# command line if needed.
 # (Keep these assignments comment-free: a trailing `# ...` here would leak the
 # whitespace before it into the value and corrupt the install paths.)
-GO_BIN_DIR ?= /opt/dxdfir/bin
-LINK_DIR   ?= /usr/local/bin
+BIN_DIR    ?= /usr/local/bin
 MAN_DIR    ?= /usr/local/share/man/man1
 # Auto-elevate only when not already root (empty $(SUDO) is a no-op prefix).
 SUDO       ?= $(shell [ "$$(id -u)" -eq 0 ] || echo sudo)
@@ -22,13 +23,11 @@ build: ## build ./dxdfir
 install: ## go install as `dxdfir` (into $GOBIN / $GOPATH/bin)
 	$(GO) install ./cmd/dxdfir
 
-link: build ## build, then put a `dxdfir` shortcut on PATH (same layout as setup-environment.sh; uses sudo when not root)
-	$(SUDO) mkdir -p "$(GO_BIN_DIR)" "$(LINK_DIR)"
-	$(SUDO) install -m0755 "$(BIN)" "$(GO_BIN_DIR)/dxdfir"
-	$(SUDO) ln -sf "$(GO_BIN_DIR)/dxdfir" "$(LINK_DIR)/dxdfir"
+link: build ## build, then install `dxdfir` onto PATH (same layout as setup-environment.sh; uses sudo when not root)
+	$(SUDO) install -Dm0755 "$(BIN)" "$(BIN_DIR)/dxdfir"
 	$(SUDO) install -Dm644 man/dxdfir.1 "$(MAN_DIR)/dxdfir.1" 2>/dev/null \
 		|| echo "note: man page not installed (read: man ./man/dxdfir.1)"
-	@echo "linked: $(LINK_DIR)/dxdfir -> $(GO_BIN_DIR)/dxdfir   —   run it anywhere:  dxdfir"
+	@echo "installed: $(BIN_DIR)/dxdfir   —   run it anywhere:  dxdfir"
 
 check: fmt-check vet build ## gofmt -l, go vet, build
 

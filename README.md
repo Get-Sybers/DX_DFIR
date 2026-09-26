@@ -29,7 +29,7 @@ Fresh Debian/Ubuntu host — installs Docker and the `dxdfir` CLI:
 ```bash
 git clone --recursive https://github.com/Get-Sybers/DX_DFIR.git
 cd DX_DFIR
-./scripts/setup-environment.sh      # Docker + dxdfir CLI (log out/in once for the docker group)
+./scripts/setup-environment.sh      # Docker + dxdfir CLI — usable in this shell as it is
 ```
 
 Build the hardened tool images — first run, and again after every pull (images

@@ -66,10 +66,10 @@ func checkRepo(r *repo.Repo) model.Check {
 
 func checkAnsible(r *repo.Repo) model.Check {
 	c := model.Check{Name: "ansible", Gate: true}
-	ap, err := repo.AnsiblePlaybook()
+	ap, err := r.AnsiblePlaybook()
 	if err != nil {
 		c.State = model.CheckFail
-		c.Detail = "ansible-playbook not found - it ships with the get_sybers_dxdfir install"
+		c.Detail = "ansible-playbook not found in " + r.Venv() + " or on PATH - run scripts/setup-environment.sh"
 		return c
 	}
 	out, _, ok := capture(ap, "--version")

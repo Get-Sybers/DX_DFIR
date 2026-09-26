@@ -8,6 +8,28 @@ is `0`, anything may change without notice.
 ## [Unreleased]
 
 ### Fixed (fresh-host setup)
+- **`dxdfir` works right after `setup-environment.sh`, in any shell.** The
+  binary went to `/opt/dxdfir/bin` and the ansible venv to
+  `/opt/dxdfir/venv`, both reachable only through `/etc/profile.d/dxdfir.sh`
+  — which login shells read and nothing else does (`su user`, a desktop
+  terminal, tmux, sudo, the very shell the script ran in), so the closing
+  `dxdfir --help` was command-not-found until a full re-login, and after one
+  too when the drop-in landed unreadable. Even on PATH the binary then
+  reported "ansible-playbook not found", having looked only on PATH. Now:
+  the binary is a real file in `/usr/local/bin` (every default PATH, sudo's
+  `secure_path` included); the **venv lives inside the checkout at `.venv`**
+  (gitignored, created by the invoking user, `$DXDFIR_VENV` overrides) and
+  `dxdfir` resolves it by relation to the repo it just located, falling back
+  to PATH only when it is absent; the Go build runs unprivileged; the
+  drop-in is written with an explicit `0644` mode and is a login-shell
+  convenience only (the pinned Go + the venv's `ansible*`); the legacy
+  `/opt/dxdfir/{bin,venv}` are retired on the next run; and the script
+  **proves** the result from a fresh non-login shell (`command -v dxdfir`
+  and the dashboard's `ansible` readiness line) before it says done. The
+  docker group is the one remaining re-login, and the script only says so
+  when the membership is genuinely newer than the running shell (`newgrp
+  docker` in place also works). `make link` and `save-docker-images.sh`
+  follow the same layout.
 - **`setup-environment.sh` completes on a brand-new machine again.** The
   Docker engine bootstrap invoked a bare `sudo ansible-playbook`, which is
   command-not-found on exactly the fresh host it exists for (the profile.d

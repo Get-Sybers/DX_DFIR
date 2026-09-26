@@ -42,6 +42,17 @@
 #     files alone.
 #   - unzip is installed, not merely hoped for. dev-scripts/fetch-samples.sh
 #     unpacks zip fixtures with it and the old script never mentioned it.
+#   - Nothing this script installs depends on a PATH edit taking effect. The
+#     previous revision put the dxdfir binary under /opt/dxdfir/bin and the
+#     ansible venv under /opt/dxdfir/venv, reachable only through an
+#     /etc/profile.d drop-in — which login shells read and nothing else does
+#     (`su user`, a desktop terminal, tmux, sudo's secure_path, the very shell
+#     the script ran in), so the closing "dxdfir --help" was command-not-found
+#     until a full re-login, and sometimes after it. Now the binary is a real
+#     file in /usr/local/bin (on every default PATH, sudo's included), the venv
+#     lives INSIDE the checkout at .venv (gitignored) where dxdfir resolves it
+#     by relation to the repo it just found, and the script proves the result
+#     from a fresh non-login shell before it says "done".
 #
 # Usage: scripts/setup-environment.sh [--yes] [--no-color] [--help]
 # ==============================================================================
@@ -257,7 +268,7 @@ section "Setup plan"
 ok   "1. Install required userland tools"
 step "2. Initialise the git submodules (recursively)"
 step "3. Set ownership and permissions on the DX_DFIR repository"
-step "4. Install the Python package + Ansible (venv) and the pinned collections"
+step "4. Install the pinned Ansible layer (repo-local .venv) and the pinned collections"
 step "5. Ensure the Docker engine, daemon and group via ansible (dxdfir-bootstrap.yml)"
 detail "the Byakugan CAR engine is no longer a host checkout — it is built into"
 detail "the get-sybers/byakugan image by 'dxdfir build-docker'"
@@ -315,32 +326,44 @@ if [[ -d "$REPO_ROOT_DIR" ]]; then
 fi
 
 ################################################################################
-# Install the pinned ansible layer into a dedicated venv (PEP 668). There is
-# no host python package any more — the engine logic lives in
+# Install the pinned ansible layer into the checkout's own venv (PEP 668).
+# There is no host python package any more — the engine logic lives in
 # get-sybers/byakugan and the detections in GoDFIR-toolz, both inside
 # images; requirements.txt is the one pip surface left (ansible-core + the
 # docker SDK the collection's modules import on the controller).
+#
+# The venv is <repo>/.venv, NOT a system prefix: the dxdfir front-end
+# resolves it by relation to the repo it just located (no PATH edit, profile
+# drop-in or re-login in between), `. .venv/bin/activate` is the convention
+# every python user already knows for direct ansible use, .gitignore already
+# covers it, and it is created by the invoking user — no root-owned pip
+# caches or venv files. $DXDFIR_VENV overrides the location (dxdfir and
+# save-docker-images.sh honour the same variable).
 ################################################################################
 section "Ansible (pinned)"
-DXDFIR_VENV="${DXDFIR_VENV:-/opt/dxdfir/venv}"
+DXDFIR_VENV="${DXDFIR_VENV:-$REPO_ROOT_DIR/.venv}"
 step "Installing the pinned ansible layer into $DXDFIR_VENV ..."
-$SUDO python3 -m venv "$DXDFIR_VENV" || die "Failed to create the venv (need python3-venv)."
-$SUDO "$DXDFIR_VENV/bin/pip" install --quiet --upgrade pip || die "pip upgrade in the venv failed."
+python3 -m venv "$DXDFIR_VENV" || die "Failed to create the venv (need python3-venv)."
+"$DXDFIR_VENV/bin/pip" install --quiet --upgrade pip || die "pip upgrade in the venv failed."
 # requirements.txt pins the tested versions (the lock is the single source of truth)
-$SUDO "$DXDFIR_VENV/bin/pip" install --quiet -r "$REPO_ROOT_DIR/requirements.txt" \
+"$DXDFIR_VENV/bin/pip" install --quiet -r "$REPO_ROOT_DIR/requirements.txt" \
     || die "Failed to install the pinned ansible layer (requirements.txt)."
 
-# ansible lands in the same venv bin; PATH picks it up via /etc/profile.d
-# below (no symlink shims) — here just
-# hold the venv to its contract.
+# hold the venv to its contract: the front-end and the scripts call these by
+# absolute path, so they must exist here
 for _ans in ansible ansible-playbook ansible-galaxy; do
     [[ -x "$DXDFIR_VENV/bin/$_ans" ]] \
         || die "Expected $_ans in $DXDFIR_VENV/bin after installing ansible-core."
 done
 ok "ansible in the venv: $("$DXDFIR_VENV/bin/ansible-playbook" --version 2>/dev/null | head -1 || echo 'ansible-playbook')"
+# The legacy system-prefix venv of earlier releases: nothing reads it any more
+# (dxdfir resolves the repo venv, the profile.d drop-in below is rewritten
+# without it), so retire it rather than leave a stale ansible around.
+if [[ -d /opt/dxdfir/venv && "$DXDFIR_VENV" != /opt/dxdfir/venv ]]; then
+    $SUDO rm -rf /opt/dxdfir/venv && detail "Retired legacy venv /opt/dxdfir/venv"
+fi
 # The rest of THIS script run sees the venv directly (child launchers
-# included); new shells get it from the profile.d drop-in written below, and
-# sudo steps keep invoking the venv binaries by absolute path regardless.
+# included); sudo steps keep invoking the venv binaries by absolute path.
 export PATH="$DXDFIR_VENV/bin:$PATH"
 
 ################################################################################
@@ -351,7 +374,9 @@ export PATH="$DXDFIR_VENV/bin:$PATH"
 section "Go toolchain + dxdfir front-end"
 GO_VERSION="${GO_VERSION:-1.24.7}"
 GO_MIN_MINOR=24
-GO_BIN_DIR="${GO_BIN_DIR:-/opt/dxdfir/bin}"
+# a real file on a directory every default PATH already carries (sudo's
+# secure_path included) — no shim, no drop-in, nothing to re-login for
+DXDFIR_BIN_DIR="${DXDFIR_BIN_DIR:-/usr/local/bin}"
 _go_ok=0
 if command -v go >/dev/null 2>&1; then
     _gominor="$(go version 2>/dev/null | grep -oE 'go1\.[0-9]+' | head -1 | cut -d. -f2)"
@@ -392,61 +417,79 @@ if (( ! _go_ok )); then
     $SUDO rm -rf /usr/local/go
     $SUDO tar -C /usr/local -xzf "/tmp/${_gotar}" || die "Failed to extract the Go toolchain."
     rm -f "/tmp/${_gotar}"
-    # No symlink shim: /usr/local/go/bin joins PATH for this run here and for
-    # every shell via the /etc/profile.d drop-in written below.
+    # /usr/local/go/bin joins PATH for this run here and for login shells via
+    # the /etc/profile.d drop-in written below (a rebuild convenience only —
+    # nothing at runtime needs `go`).
     export PATH="/usr/local/go/bin:$PATH"
 fi
 step "Building the dxdfir Go front-end ($(go version 2>/dev/null | awk '{print $3}')) ..."
-$SUDO mkdir -p "$GO_BIN_DIR"
 
-# build from a clean, ephemeral cache: deps resolve from go/vendor/ or the
-# proxy every run, never a previous run's leftovers (docs: Design decisions)
+# build UNPRIVILEGED from a clean, ephemeral cache: deps resolve from
+# go/vendor/ or the proxy every run, never a previous run's leftovers (docs:
+# Design decisions); only the final install into $DXDFIR_BIN_DIR escalates
 _gotmp="$(mktemp -d)"
-_goclean() { [[ -n "$_gotmp" ]] && { $SUDO chmod -R u+w "$_gotmp" 2>/dev/null; $SUDO rm -rf "$_gotmp"; }; }
+_goclean() { [[ -n "$_gotmp" ]] && { chmod -R u+w "$_gotmp" 2>/dev/null; rm -rf "$_gotmp"; }; }
 _goenv=( PATH="$PATH" HOME="$_gotmp" GOTOOLCHAIN=local
          GOCACHE="$_gotmp/build" GOMODCACHE="$_gotmp/mod" )
 _gomod="-mod=mod"
 [[ -f "$REPO_ROOT_DIR/go/vendor/modules.txt" ]] && _gomod="-mod=vendor"
 if ! ( cd "$REPO_ROOT_DIR/go" \
-        && $SUDO env "${_goenv[@]}" go build "$_gomod" -o "$GO_BIN_DIR/dxdfir" ./cmd/dxdfir ); then
+        && env "${_goenv[@]}" go build "$_gomod" -o "$_gotmp/dxdfir" ./cmd/dxdfir ); then
     if [[ "$_gomod" == "-mod=vendor" ]]; then
         # A vendored tree captured before a dependency changed would fail an
         # update; fall back to the proxy rather than wedge on stale vendoring.
         warn "Vendored modules look stale — fetching through the module proxy instead."
         ( cd "$REPO_ROOT_DIR/go" \
-            && $SUDO env "${_goenv[@]}" go build -mod=mod -o "$GO_BIN_DIR/dxdfir" ./cmd/dxdfir ) \
+            && env "${_goenv[@]}" go build -mod=mod -o "$_gotmp/dxdfir" ./cmd/dxdfir ) \
             || { _goclean; die "Failed to build the dxdfir Go front-end (module proxy unreachable? re-vendor on a networked host: 'cd go && go mod vendor')."; }
     else
         _goclean
         die "Failed to build the dxdfir Go front-end (need network for the module proxy, or vendor the modules for an air-gapped install: 'cd go && go mod vendor')."
     fi
 fi
+# a stale symlink from a legacy install would otherwise be followed
+[[ -L "$DXDFIR_BIN_DIR/dxdfir" ]] && $SUDO rm -f "$DXDFIR_BIN_DIR/dxdfir"
+$SUDO install -Dm755 "$_gotmp/dxdfir" "$DXDFIR_BIN_DIR/dxdfir" \
+    || { _goclean; die "Failed to install dxdfir into $DXDFIR_BIN_DIR."; }
 _goclean
+# the legacy prefix binary of earlier releases (reachable only via the old
+# drop-in): retire it so two dxdfir versions never coexist on a host
+if [[ -f /opt/dxdfir/bin/dxdfir && "$DXDFIR_BIN_DIR" != /opt/dxdfir/bin ]]; then
+    $SUDO rm -f /opt/dxdfir/bin/dxdfir && $SUDO rmdir /opt/dxdfir/bin 2>/dev/null
+    detail "Retired legacy binary /opt/dxdfir/bin/dxdfir"
+fi
 # the manual installs beside the binary; best-effort
 $SUDO install -Dm644 "$REPO_ROOT_DIR/go/man/dxdfir.1" /usr/local/share/man/man1/dxdfir.1 2>/dev/null \
     || warn "Could not install the man page — read it in-tree: man ./go/man/dxdfir.1"
 
-# PATH via one managed /etc/profile.d drop-in — venv bin APPENDED so the
-# system python/pip keep winning; legacy shims retired (docs: Design decisions)
+# One managed /etc/profile.d drop-in — a CONVENIENCE for login shells only
+# (`go` for rebuilds, a bare `ansible-playbook` for hand-driven plays); dxdfir
+# itself needs none of it. Venv bin APPENDED so the system python/pip keep
+# winning. Written with an explicit mode: /etc/profile skips a drop-in it
+# cannot read, and a strict umask under sudo would leave it 0600.
+# Legacy shims from earlier releases are retired (docs: Design decisions).
 step "Writing the PATH drop-in (/etc/profile.d/dxdfir.sh) and retiring legacy shims ..."
+_dropin="$(mktemp)"
 printf '%s\n' \
-    "# Managed by DX_DFIR scripts/setup-environment.sh — no symlink shims:" \
-    "# the real tool locations join PATH. The venv bin is appended so its" \
-    "# ansible* resolve while the system python/pip keep winning by order." \
-    "export PATH=\"$GO_BIN_DIR:/usr/local/go/bin:\$PATH:$DXDFIR_VENV/bin\"" \
-    | $SUDO tee /etc/profile.d/dxdfir.sh >/dev/null \
-    || die "Failed to write /etc/profile.d/dxdfir.sh."
+    "# Managed by DX_DFIR scripts/setup-environment.sh — a convenience for login" \
+    "# shells: the pinned Go toolchain (rebuilds) and the repo venv's ansible*" \
+    "# (hand-driven plays), venv appended so the system python/pip keep winning." \
+    "# dxdfir itself lives in $DXDFIR_BIN_DIR and resolves the venv on its own." \
+    "export PATH=\"/usr/local/go/bin:\$PATH:$DXDFIR_VENV/bin\"" > "$_dropin"
+$SUDO install -m0644 "$_dropin" /etc/profile.d/dxdfir.sh \
+    || { rm -f "$_dropin"; die "Failed to write /etc/profile.d/dxdfir.sh."; }
+rm -f "$_dropin"
 for _shim in dxdfir go ansible ansible-playbook ansible-galaxy; do
     if [[ -L "/usr/local/bin/$_shim" ]]; then
         case "$(readlink "/usr/local/bin/$_shim")" in
-            "$GO_BIN_DIR/"*|"$DXDFIR_VENV/bin/"*|/usr/local/go/bin/*)
+            /opt/dxdfir/*|"$DXDFIR_VENV/bin/"*|/usr/local/go/bin/*)
                 $SUDO rm -f "/usr/local/bin/$_shim"
                 detail "Retired legacy shim /usr/local/bin/$_shim" ;;
         esac
     fi
 done
-export PATH="$GO_BIN_DIR:/usr/local/go/bin:$PATH:$DXDFIR_VENV/bin"
-ok "dxdfir (Go front-end) installed: $("$GO_BIN_DIR/dxdfir" --version 2>/dev/null || echo "$GO_BIN_DIR/dxdfir") — new shells pick PATH up from /etc/profile.d/dxdfir.sh"
+export PATH="/usr/local/go/bin:$PATH:$DXDFIR_VENV/bin"
+ok "dxdfir (Go front-end) installed: $("$DXDFIR_BIN_DIR/dxdfir" --version 2>/dev/null || echo "$DXDFIR_BIN_DIR/dxdfir") -> $DXDFIR_BIN_DIR/dxdfir"
 
 ################################################################################
 # Install the pinned Ansible dependencies (requirements.yml) to the fixed
@@ -488,10 +531,9 @@ ok "Collections installed: $("$DXDFIR_VENV/bin/ansible-galaxy" collection list -
 ################################################################################
 section "Docker engine (ansible)"
 step "Ensuring the Docker engine, daemon and group (dxdfir-bootstrap.yml) ..."
-# the venv binary by ABSOLUTE path (as the collections step above): the
-# profile.d drop-in only reaches NEW shells, and sudo's secure_path never
-# carries the venv — a bare `sudo ansible-playbook` is command-not-found on
-# exactly the fresh host this bootstrap exists for
+# the venv binary by ABSOLUTE path (as the collections step above): sudo's
+# secure_path never carries the venv — a bare `sudo ansible-playbook` is
+# command-not-found on exactly the fresh host this bootstrap exists for
 ( cd "$REPO_ROOT_DIR" && $SUDO "$DXDFIR_VENV/bin/ansible-playbook" \
     ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-bootstrap.yml ) \
     || die "Docker engine bootstrap failed (dxdfir-bootstrap.yml)."
@@ -524,23 +566,48 @@ fi
 cmd() { printf '       %s%s%s  %s%s%s\n' "$C_ACCENT" "$1" "$C_RESET" "$C_DIM" "${2:-}" "$C_RESET"; }
 
 section "Setup complete"
-if [[ "$DOCKER_WAS_INSTALLED" == false ]]; then
-    warn "Log out and back in for the Docker group change to take effect."
+# Prove the install from a FRESH, NON-LOGIN shell with the default PATH — the
+# case the profile.d drop-in never covered (`su user`, a desktop terminal,
+# tmux) — rather than assert it. A failure here is the script's bug, not the
+# operator's shell.
+_probe="$(env -i HOME="$HOME" bash -c 'command -v dxdfir' 2>/dev/null)"
+if [[ "$_probe" == "$DXDFIR_BIN_DIR/dxdfir" ]]; then
+    ok "dxdfir resolves from a fresh non-login shell: $_probe (no re-login needed)"
 else
-    ok "Docker was already present; if the bootstrap just added you to the docker group, log out and back in once."
+    die "dxdfir does not resolve from a fresh shell (got '${_probe:-nothing}', expected $DXDFIR_BIN_DIR/dxdfir) — is $DXDFIR_BIN_DIR on the default PATH?"
+fi
+# ...and that the binary finds the venv's ansible on its own: the landing
+# dashboard's readiness line, from the same clean environment.
+_ap="$(env -i HOME="$HOME" NO_COLOR=1 bash -c "dxdfir --repo-root '$REPO_ROOT_DIR' --no-tui" 2>/dev/null \
+    | grep -E '^ *\[[^]]*\] +ansible ' | head -1 | sed 's/^ *//')"
+case "$_ap" in
+    "[ok]"*) ok "dxdfir readiness: $_ap" ;;
+    "")      warn "Could not read dxdfir's ansible readiness line — check 'dxdfir --no-tui'." ;;
+    *)       die "dxdfir does not resolve the venv's ansible: $_ap" ;;
+esac
+
+# The docker group is the ONE thing a re-login is genuinely needed for, and
+# only when the membership is newer than the shell: compare the account's
+# groups (the file) with the running process's.
+if [[ "$EUID" -ne 0 ]] && id -nG "$RUN_USER" 2>/dev/null | tr ' ' '\n' | grep -qx docker \
+    && ! id -nG | tr ' ' '\n' | grep -qx docker; then
+    warn "Your docker-group membership is new — this shell does not carry it yet."
+    detail "Run 'newgrp docker' here, or log out and back in once; dxdfir itself needs neither."
+elif [[ "$DOCKER_WAS_INSTALLED" == false ]]; then
+    ok "Docker engine installed."
 fi
 echo
 
-step "Use dxdfir in THIS shell (new logins pick PATH up automatically):"
-cmd ". /etc/profile.d/dxdfir.sh" "(the log-out/in above also applies it, along with the docker group)"
+step "Run DX_DFIR (works in this shell as it is):"
+cmd "dxdfir --help" "(process evidence, build + verify CAR, deploy the analysis stack — see README.md)"
 echo
 step "Build the hardened tool containers (everything the pipeline runs):"
-cmd "ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml"
+cmd "dxdfir build-docker" "(runs dxdfir-build-images.yml with the venv's ansible)"
+echo
+step "Drive ansible by hand (the venv is the repo's own):"
+cmd ". $DXDFIR_VENV/bin/activate" "(login shells also get it from /etc/profile.d/dxdfir.sh)"
 echo
 step "Pre-seed the analysis images as tarballs for an offline host:"
 cmd "scripts/save-docker-images.sh --build" "(connected host: build + save every image)"
 cmd "scripts/save-docker-images.sh --load" "(offline host: load tarballs — or just re-run this script)"
-echo
-step "Run DX_DFIR:"
-cmd "dxdfir --help" "(process evidence, build + verify CAR, deploy the analysis stack — see README.md)"
 echo

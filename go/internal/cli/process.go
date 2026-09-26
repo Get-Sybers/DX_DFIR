@@ -9,7 +9,6 @@ import (
 
 	coll "github.com/get-sybers/dx_dfir/go/internal/collection" // aliased: `collection` is a param name here
 	"github.com/get-sybers/dx_dfir/go/internal/lanes"
-	"github.com/get-sybers/dx_dfir/go/internal/repo"
 	"github.com/get-sybers/dx_dfir/go/internal/style"
 	"github.com/get-sybers/dx_dfir/go/internal/tui"
 )
@@ -85,7 +84,7 @@ func runProcess(env *Env, source, collection string, force, noRegister bool, ext
 	if err != nil {
 		return err
 	}
-	ap, err := repo.AnsiblePlaybook()
+	ap, err := r.AnsiblePlaybook()
 	if err != nil {
 		return Fail(127, "%v", err)
 	}

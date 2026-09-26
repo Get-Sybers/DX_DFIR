@@ -58,15 +58,13 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-# setup-environment.sh symlinks the venv's ansible into /usr/local/bin; fall
-# back to the venv directly for a PATH that lacks it.
-if ! command -v ansible-playbook >/dev/null 2>&1; then
-    _venv="${DXDFIR_VENV:-/opt/dxdfir/venv}"
-    if [[ -x "$_venv/bin/ansible-playbook" ]]; then
-        PATH="$_venv/bin:$PATH"
-    else
-        die "ansible-playbook not found — run scripts/setup-environment.sh first."
-    fi
+# The repo's own venv first (what setup-environment.sh installs; the same
+# resolution dxdfir uses), then whatever ansible-playbook PATH carries.
+_venv="${DXDFIR_VENV:-$REPO_ROOT_DIR/.venv}"
+if [[ -x "$_venv/bin/ansible-playbook" ]]; then
+    PATH="$_venv/bin:$PATH"
+elif ! command -v ansible-playbook >/dev/null 2>&1; then
+    die "ansible-playbook not found (no $_venv, nothing on PATH) — run scripts/setup-environment.sh first."
 fi
 
 # Extra vars the playbooks take from this launcher: only the dir override.
