@@ -36,87 +36,49 @@
 !/.gitignore
 !/README.md
 
-!/dependencies/
 !/dependencies/.gitkeep
-!/dependencies/hayabusa/
 !/dependencies/hayabusa/.gitkeep
-!/dependencies/suricata-rules/
 !/dependencies/suricata-rules/.gitkeep
-!/dependencies/memprocfs-symbols/
 !/dependencies/memprocfs-symbols/.gitkeep
-!/dependencies/yara-rules/
 !/dependencies/yara-rules/.gitkeep
 # NOTE: /dependencies/hayabusa/ (fetched tool cache, embeds a git repo under
 # rules/) needs no special rule any more — like every other unlisted directory
 # it is ignored and pruned outright.
 
-!/docker_images/
 !/docker_images/.gitkeep
 
-!/processed/
 !/processed/.gitkeep
-!/processed/byakugan/
 !/processed/byakugan/.gitkeep
-!/processed/byakugan-load/
 !/processed/byakugan-load/.gitkeep
-!/processed/exchange/
 !/processed/exchange/.gitkeep
-!/processed/detections/
 !/processed/detections/.gitkeep
-!/processed/detections/byakugan/
 !/processed/detections/byakugan/.gitkeep
-!/processed/detections/yara/
 !/processed/detections/yara/.gitkeep
-!/processed/detections/suricata/
 !/processed/detections/suricata/.gitkeep
-!/processed/detections/hayabusa/
 !/processed/detections/hayabusa/.gitkeep
-!/processed/memory/
 !/processed/memory/.gitkeep
-!/processed/csv/
 !/processed/csv/.gitkeep
-!/processed/json/
 !/processed/json/.gitkeep
-!/processed/linux_logs/
 !/processed/linux_logs/.gitkeep
-!/processed/log2timeline/
 !/processed/log2timeline/.gitkeep
-!/processed/software_logs/
 !/processed/software_logs/.gitkeep
-!/processed/windows_logs/
 !/processed/windows_logs/.gitkeep
-!/processed/windows_logs/hostname1/
 !/processed/windows_logs/hostname1/.gitkeep
-!/processed/windows_logs/hostname2/
 !/processed/windows_logs/hostname2/.gitkeep
-!/processed/windows_logs/hostname3/
 !/processed/windows_logs/hostname3/.gitkeep
-!/processed/zeek/
 !/processed/zeek/.gitkeep
-!/processed/godfir-toolz/
 !/processed/godfir-toolz/.gitkeep
 
-!/raw/
 !/raw/.gitkeep
-!/raw/VM_files/
 !/raw/VM_files/.gitkeep
-!/raw/disk_images/
 !/raw/disk_images/.gitkeep
-!/raw/memory/
 !/raw/memory/.gitkeep
-!/raw/mobile/
 !/raw/mobile/.gitkeep
-!/raw/logs/
 !/raw/logs/.gitkeep
-!/raw/logs/winevt/
 !/raw/logs/winevt/.gitkeep
-!/raw/filesystem/
 !/raw/filesystem/.gitkeep
 !/raw/filesystem/documents/
 !/raw/filesystem/documents/.gitkeep
-!/raw/other_raw_data/
 !/raw/other_raw_data/.gitkeep
-!/raw/other_raw_data/sql/
 !/raw/other_raw_data/sql/.gitkeep
-!/raw/pcaps/
 !/raw/pcaps/.gitkeep
