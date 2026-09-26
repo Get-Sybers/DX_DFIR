@@ -1,0 +1,10 @@
+# a minimal self-orchestrating (non-multi-tool) contract, for the scenario's
+# strictness negatives only — no such image exists
+tool: molecule-plain
+image: get-sybers/molecule-plain:latest
+env:
+  PLAIN_OK: {required: false, default: ""}
+mounts:
+  - {name: input, path: /input, mode: ro, required: false}
+  - {name: output, path: /output, mode: rw, required: false}
+exit_codes: {0: success}

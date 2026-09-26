@@ -107,3 +107,16 @@ env-file write:
   the image's non-root uid (2000) and write into their bind-mounted output.
 - In check mode the containers are skipped, so the gates on their output
   are too.
+
+## Testing
+
+The **Molecule** scenario needs no fixture and no daemon: it runs the
+build step (`tasks_from: build`) against the real gowindowlicker contract
+at the submodule pin — the positives assert the built argv (sub-tool
+dispatch, env rendering, the `/work` tmpfs), the negatives assert each
+refusal by name (undeclared variables under both contract kinds, a missing
+and an unknown sub-tool):
+
+```bash
+molecule test
+```

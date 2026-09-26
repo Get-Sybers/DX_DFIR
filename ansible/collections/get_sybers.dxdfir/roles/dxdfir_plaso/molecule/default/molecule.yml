@@ -1,4 +1,9 @@
 ---
+# offline by design: the galaxy dep is the git submodule, resolved via roles_path
+prerun: false
+dependency:
+  name: galaxy
+  enabled: false
 driver:
   name: default            # delegated — the role runs the Plaso container itself
 platforms:
@@ -8,7 +13,7 @@ provisioner:
   env:
     # resolve the role under test from the collection's roles/ dir (molecule no
     # longer adds the role's parent to the roles path by itself)
-    ANSIBLE_ROLES_PATH: ${MOLECULE_PROJECT_DIRECTORY}/..
+    ANSIBLE_ROLES_PATH: ${MOLECULE_PROJECT_DIRECTORY}/..:${MOLECULE_PROJECT_DIRECTORY}/../../../../../docker/GoDFIR-toolz/roles
   inventory:
     host_vars:
       localhost:

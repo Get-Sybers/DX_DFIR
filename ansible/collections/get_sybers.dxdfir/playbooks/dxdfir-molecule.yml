@@ -11,6 +11,7 @@
     dxdfir_molecule_repo_root: "{{ playbook_dir | dirname | dirname | dirname | dirname }}"
     dxdfir_molecule_image: get-sybers/molecule:latest
     dxdfir_molecule_roles:
+      - dxdfir_lane
       - dxdfir_signatures
       - dxdfir_zeek
       - dxdfir_evtx
