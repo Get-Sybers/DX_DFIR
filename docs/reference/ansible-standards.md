@@ -45,7 +45,10 @@ local connection, wired in `ansible.cfg`; the Go front-end passes the equivalent
 rather than hard-coding hosts, and remote/fleet targets join the inventory and
 are selected per run with `-e dxdfir_hosts=<pattern>`. The Go front-end passes
 `ANSIBLE_ROLES_PATH` so roles resolve from the in-tree collection without being
-Galaxy-installed, and role defaults derive `repo_root` so `data_store/` paths resolve.
+Galaxy-installed — the same entries as `ansible.cfg`'s `roles_path`, in the same
+order (the variable replaces the config value, so it carries the GoDFIR-toolz
+build galaxy too; a Go test keeps the two identical) — and role defaults derive
+`repo_root` so `data_store/` paths resolve.
 
 **Shared identities live in the inventory layer, not per-role.** Values more than
 one role must agree on — the Elastic backend's version pin, network and volume

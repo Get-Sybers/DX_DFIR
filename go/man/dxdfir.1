@@ -403,8 +403,13 @@ directory, then from the dxdfir binary's own location.
 .B ANSIBLE_ROLES_PATH
 Set by every verb that drives
 .BR ansible-playbook (1)
-to the collection's roles directory so the roles resolve without installing the
-collection.
+to the checkout's roles, the same entries as
+.IR ansible.cfg 's
+.B roles_path
+(the collection's roles, the GoDFIR-toolz build galaxy in place from the
+submodule, the degraded galaxy-import path last) so the roles resolve without
+installing either galaxy. The variable replaces the config file's value, which
+is why it carries every entry.
 .SH EXIT STATUS
 .B dxdfir
 exits

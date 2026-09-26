@@ -54,6 +54,15 @@ is `0`, anything may change without notice.
   macOS yet).
 
 ### Fixed (fresh-host setup)
+- **`dxdfir build-docker` finds `godfir_build` again.** The front-end
+  exported `ANSIBLE_ROLES_PATH` with the collection's roles only, and the
+  variable replaces `ansible.cfg`'s `roles_path` rather than extending it,
+  so every play run through `dxdfir` (the image build, each lane's image
+  preflight) lost the GoDFIR-toolz build galaxy the config file resolves in
+  place from the submodule: `the role 'godfir_build' was not found`. The
+  variable now carries the same three entries in the same order, and a Go
+  test keeps it identical to `ansible.cfg` (CI drove the build through a
+  bare `ansible-playbook`, which is why it never saw the failure).
 - **Nothing under `/opt/dxdfir` any more.** The pinned Ansible collections
   were the prefix's last tenant; they install into the checkout's own
   `.ansible/collections` now (gitignored, as the invoking user, the first

@@ -66,10 +66,29 @@ func (r *Repo) Path(parts ...string) string {
 // CollectionDir is the collection root beneath the repo.
 func (r *Repo) CollectionDir() string { return r.Path(CollectionPath) }
 
+// ToolzPath is the GoDFIR-toolz submodule: the build galaxy's roles
+// (godfir_build) resolve in place from its roles/ at the gitlink pin.
+const ToolzPath = "docker/GoDFIR-toolz"
+
+// ToolzGalaxyRolesPath is where scripts/setup-environment.sh imports the build
+// galaxy on a checkout WITHOUT the submodule (the degraded path, last).
+const ToolzGalaxyRolesPath = ".ansible/collections/ansible_collections/get_sybers/godfir_toolz/roles"
+
 // RolesPath is the value for ANSIBLE_ROLES_PATH so a play resolves the roles
 // without the collection being installed (the contract the retired Python CLI
-// established).
-func (r *Repo) RolesPath() string { return r.Path(CollectionPath, "roles") }
+// established). The variable REPLACES ansible.cfg's roles_path rather than
+// extending it, so it carries the same entries in the same order: the deploy
+// roles, the build galaxy in place from the submodule, the degraded
+// galaxy-import path last (docs/reference/repository-map.md) — a play
+// including godfir_build (dxdfir build-docker, every lane's image preflight)
+// finds it through dxdfir exactly as through a bare ansible-playbook.
+func (r *Repo) RolesPath() string {
+	return strings.Join([]string{
+		r.Path(CollectionPath, "roles"),
+		r.Path(ToolzPath, "roles"),
+		r.Path(ToolzGalaxyRolesPath),
+	}, string(os.PathListSeparator))
+}
 
 // ProcessPlaybook returns the per-source process playbook path.
 func (r *Repo) ProcessPlaybook(source string) string {
