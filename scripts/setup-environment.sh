@@ -292,6 +292,12 @@ section "Repository ownership + permissions"
 step "Setting ownership to $RUN_USER:docker and permissions on the repository ..."
 detail "Recursive over the whole checkout; a populated data_store/ makes this a"
 detail "large walk that can take a while — live progress is shown below."
+# On a fresh host the docker group does not exist yet (docker itself is
+# installed by the bootstrap playbook, step 5) — pre-create the group so this
+# chown can reference it; daemon + membership stay the playbook's job.
+getent group docker >/dev/null 2>&1 \
+    || $SUDO groupadd --system docker \
+    || warn "Could not pre-create the docker group — ownership will skip the group"
 if [[ -d "$REPO_ROOT_DIR" ]]; then
     run_with_progress "   -> ownership  ($RUN_USER:docker)" \
         $SUDO chown -R "$RUN_USER:docker" "$REPO_ROOT_DIR" \
@@ -471,7 +477,11 @@ ok "Collections installed: $("$DXDFIR_VENV/bin/ansible-galaxy" collection list -
 ################################################################################
 section "Docker engine (ansible)"
 step "Ensuring the Docker engine, daemon and group (dxdfir-bootstrap.yml) ..."
-( cd "$REPO_ROOT_DIR" && $SUDO ansible-playbook \
+# the venv binary by ABSOLUTE path (as the collections step above): the
+# profile.d drop-in only reaches NEW shells, and sudo's secure_path never
+# carries the venv — a bare `sudo ansible-playbook` is command-not-found on
+# exactly the fresh host this bootstrap exists for
+( cd "$REPO_ROOT_DIR" && $SUDO "$DXDFIR_VENV/bin/ansible-playbook" \
     ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-bootstrap.yml ) \
     || die "Docker engine bootstrap failed (dxdfir-bootstrap.yml)."
 ok "Docker engine present, daemon running, group membership ensured."

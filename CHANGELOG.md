@@ -7,6 +7,18 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Fixed (fresh-host setup)
+- **`setup-environment.sh` completes on a brand-new machine again.** The
+  Docker engine bootstrap invoked a bare `sudo ansible-playbook`, which is
+  command-not-found on exactly the fresh host it exists for (the profile.d
+  PATH drop-in only reaches new shells, and sudo's `secure_path` never
+  carries the venv) — it now calls the venv binary by absolute path, like
+  the collections step always did. The ownership pass chowned to the
+  `docker` group before anything had created it (docker only arrives via
+  the bootstrap playbook, a later step): the group is now pre-created when
+  absent, daemon and membership staying the playbook's job. The setup-flow
+  doc's step table is rewritten to match the script's actual plan.
+
 ### Removed (the host-python package — byakugan owns the engine, GoDFIR-toolz the detections)
 - **`python/` is gone entirely** (~4,000 lines: the `get_sybers_dxdfir`
   package, its tests and packaging). The STIX/CTI exchange already lives in
