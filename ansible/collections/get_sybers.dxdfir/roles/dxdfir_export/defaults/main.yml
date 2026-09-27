@@ -20,7 +20,7 @@ dxdfir_export_trees: []
 # what counts as an image inside a tree: every container gomount reads, by
 # extension. ansible.builtin.find applies a regex with re.match — anchored at
 # the start — so the pattern must consume the stem.
-dxdfir_export_image_regex: '(?i).*\.(e01|ex01|raw|dd|img|vmdk|vhd|vhdx|qcow2|qcow|vdi|aff4|001|bin)$'
+dxdfir_export_image_regex: '(?i).*\.(e01|ex01|raw|dd|img|vmdk|vhd|vhdx|qcow2|qcow|vdi|dmg|sparseimage|aff4|001|bin)$'
 # the parts of ANOTHER item, never items themselves: a VMDK's flat extent or
 # split (-sNNN) extents belong to their descriptor, an EWF set's continuation
 # segments (.E02…, .EAA…) to its first

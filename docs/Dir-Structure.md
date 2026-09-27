@@ -52,8 +52,8 @@ tool's contract; no host python).
             │   └── <subtool>/<host>/<item>/          # goevtx/, gore/, gomft/, goprefetch/, goese/, … one <subtool>.jsonl per item
             │
             └── daemonhunter/[<collection>/]          # the Linux daemon parsers (godaemonhunter lane)
-            │   └── knowledge/<host>/                 # Layer 1: gohost / gousers / gonetwork
-            │   └── <subtool>/<host>/<item>/          # Layer 2: gojournal/, goauditd/, gosyslog/, gounit/, gocron/, …
+            │   └── knowledge/<host>/<item>/          # Layer 1: gohost / gousers / gonetwork (a Mac: gomachost / gomacusers)
+            │   └── <subtool>/<host>/<item>/          # Layer 2: gojournal/, goauditd/, gosyslog/, gounit/, gocron/, golaunchd/, …
             │
             └── anamnesis/[<collection>/]<image>/     # anamnesis (MemProcFS) JSONL per plugin + car.db
             │

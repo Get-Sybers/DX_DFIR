@@ -88,7 +88,7 @@ func init() {
 // is a VM's descriptor or archive, never a disk the lanes open).
 func imageExts() []string {
 	return dotset(".e01", ".ex01", ".raw", ".dd", ".img", ".vmdk", ".vhd",
-		".vhdx", ".qcow2", ".qcow", ".vdi", ".aff4", ".001", ".bin")
+		".vhdx", ".qcow2", ".qcow", ".vdi", ".dmg", ".sparseimage", ".aff4", ".001", ".bin")
 }
 
 // imagePart matches the parts of ANOTHER image item — a VMDK's flat or split

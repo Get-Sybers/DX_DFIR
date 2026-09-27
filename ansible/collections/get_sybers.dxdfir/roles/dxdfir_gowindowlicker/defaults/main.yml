@@ -39,7 +39,7 @@ dxdfir_gowindowlicker_work_dir: >-
 # by extension (find anchors its regex at the start, so the stem is consumed);
 # a VMDK's -flat/-sNNN extents and an EWF set's .E02… segments belong to
 # their item and are never hosts themselves
-dxdfir_gowindowlicker_image_regex: '(?i).*\.(e01|ex01|raw|dd|img|vmdk|vhd|vhdx|qcow2|qcow|vdi|aff4|001|bin)$'
+dxdfir_gowindowlicker_image_regex: '(?i).*\.(e01|ex01|raw|dd|img|vmdk|vhd|vhdx|qcow2|qcow|vdi|dmg|sparseimage|aff4|001|bin)$'
 dxdfir_gowindowlicker_exclude_regex: '(?i).*(-flat\.vmdk|-s[0-9]{3,}\.vmdk|\.e(0[2-9]|[1-9][0-9]|[a-z]{2}))$'
 
 # the contract the lane is driven from; every parser is a sub-tool of the one image

@@ -37,15 +37,26 @@ dxdfir_godaemonhunter_work_dir: >-
   ('/' ~ dxdfir_godaemonhunter_collection) if dxdfir_godaemonhunter_collection | length > 0 else '' }}
 
 # what counts as a disk image inside a tree (see dxdfir_gowindowlicker)
-dxdfir_godaemonhunter_image_regex: '(?i).*\.(e01|ex01|raw|dd|img|vmdk|vhd|vhdx|qcow2|qcow|vdi|aff4|001|bin)$'
+dxdfir_godaemonhunter_image_regex: '(?i).*\.(e01|ex01|raw|dd|img|vmdk|vhd|vhdx|qcow2|qcow|vdi|dmg|sparseimage|aff4|001|bin)$'
 dxdfir_godaemonhunter_exclude_regex: '(?i).*(-flat\.vmdk|-s[0-9]{3,}\.vmdk|\.e(0[2-9]|[1-9][0-9]|[a-z]{2}))$'
 
 # the contract the lane is driven from; every parser is a sub-tool of the one image
 dxdfir_godaemonhunter_contract: "{{ dxdfir_godaemonhunter_repo_root }}/docker/GoDFIR-toolz/godaemonhunter/contract.yml"
 # empty = the contract's image; set to pin a digest
 dxdfir_godaemonhunter_image: ""
-# Layer 1 builds the host's knowledge store (identity, accounts, network);
-# Layer 2 are the daemon parsers, run with that store mounted for enrichment
-dxdfir_godaemonhunter_layer1: [gohost, gousers, gonetwork]
-dxdfir_godaemonhunter_layer2: [gojournal, goauditd, gowtmp, gosyslog, gounit, gocron, goshell, gotrash, goctl]
+# The layers come from the contract (its layer1/layer2 keys — the registry
+# hunt runs): Layer 1 builds the host's knowledge store (identity, accounts,
+# network; gomachost and gomacusers are the Mac's), Layer 2 are the daemon
+# parsers run with that store mounted. A new parser in the image needs no
+# change here. The literal lists below are only the fallback for a contract
+# that predates the keys. A parser that finds nothing on a host exits 1 by
+# design; the lists are the whole matrix, not per OS.
+dxdfir_godaemonhunter_contract_data: >-
+  {{ (lookup('file', dxdfir_godaemonhunter_contract, errors='ignore') | default('', true) | from_yaml) or {} }}
+dxdfir_godaemonhunter_layer1: >-
+  {{ dxdfir_godaemonhunter_contract_data.layer1
+  | default(['gohost', 'gousers', 'gonetwork', 'gomachost', 'gomacusers'], true) }}
+dxdfir_godaemonhunter_layer2: >-
+  {{ dxdfir_godaemonhunter_contract_data.layer2
+  | default(['gojournal', 'goauditd', 'gowtmp', 'gosyslog', 'gounit', 'gocron', 'goshell', 'gotrash', 'goctl', 'golaunchd'], true) }}
 dxdfir_godaemonhunter_force: false

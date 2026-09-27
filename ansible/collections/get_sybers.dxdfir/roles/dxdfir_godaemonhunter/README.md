@@ -27,17 +27,24 @@ A host is either
 
 ## Runs and output
 
-Per host, **Layer 1** (`gohost`, `gousers`, `gonetwork`) builds the knowledge
-store, then **Layer 2** (`gojournal`, `goauditd`, `gowtmp`, `gosyslog`,
-`gounit`, `gocron`, `goshell`, `gotrash`, `goctl`) runs with that store
-mounted read-only at `/knowledge` — every record enriched with the host's
-identity, accounts and network as the tool documents. Each run is one
+Per host, **Layer 1** (`gohost`, `gousers`, `gonetwork`, and the Mac's
+`gomachost`, `gomacusers`) builds the knowledge store, then **Layer 2**
+(`gojournal`, `goauditd`, `gowtmp`, `gosyslog`, `gounit`, `gocron`,
+`goshell`, `gotrash`, `goctl`, `golaunchd`) runs with that store mounted
+read-only at `/knowledge` — every record enriched with the host's identity,
+accounts and network as the tool documents. A Mac is the same matrix: its
+disk image (APFS or HFS+) resolves to the Data volume, the System volume is
+pulled in a second pass for the OS version and Apple's launchd jobs, and a
+staged Mac root tree under the loose lane is parsed by the same lists. The
+lists are the contract's own `layer1`/`layer2` keys, read from the pinned
+GoDFIR-toolz — a new parser in the image needs no change here — and a
+parser that finds nothing on a host exits 1 by design. Each run is one
 batch-mode sub-tool of the image (`godaemonhunter <subtool>`, its own
 `<SUBTOOL>_*` env block), `/input` the host's tree, `/output` its own folder:
 
 ```
 data_store/processed/daemonhunter/[<collection>/]
-   knowledge/<host>/<item>/{gohost,gousers,gonetwork}.jsonl   Layer 1
+   knowledge/<host>/<item>/{gohost,gousers,gonetwork,gomachost,gomacusers}.jsonl   Layer 1
    <subtool>/<host>/<item>/<subtool>.jsonl                    Layer 2
 ```
 

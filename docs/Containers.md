@@ -21,7 +21,7 @@ ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-im
 | `get-sybers/plaso` | Plaso timelining + `image_export` (dfVFS) | GIFT stable PPA (`docker/GoDFIR-toolz/plaso/`) |
 | `get-sybers/gowindowlicker` | the Windows artefact matrix — every parser (goevtx, gomft, gore, goprefetch, …) a sub-tool of one binary | static Go, FROM scratch (`docker/GoDFIR-toolz/gowindowlicker/`) |
 | `get-sybers/godaemonhunter` | the Linux daemon-parser matrix (`hunt`: Layer-1 knowledge store → enriched daemon parsers) | static Go, FROM scratch (repo-root context) |
-| `get-sybers/gomount` | disk-image reader (E01/Ex01, raw, VMDK, VHDX, VHD, QCOW2, VDI; NTFS + the Linux filesystems, LVM2) — the signatures disk scan, the hayabusa export (`materialise`), and baked into the two host-lane images so their parsers run on the image | static Go (`docker/GoDFIR-toolz/gomount/`) |
+| `get-sybers/gomount` | disk-image reader (E01/Ex01, raw, VMDK, VHDX, VHD, QCOW2, VDI, DMG, sparseimage — a sparsebundle directory is readable by gomount itself but is not a lane item; NTFS, the Linux filesystems, APFS, HFS+, LVM2) — the signatures disk scan, the hayabusa export (`materialise`), and baked into the two host-lane images so their parsers run on the image | static Go (`docker/GoDFIR-toolz/gomount/`) |
 
 The `dxdfir_images` role builds each one and **verifies the minimal-posture
 contract** per build — the static image config plus a shell-free
