@@ -53,6 +53,16 @@ is `0`, anything may change without notice.
   per host; `sort` and the collection skeleton create them; no lane reads
   macOS yet).
 
+### Changed (gomount reads HFS+)
+- **GoDFIR-toolz ca0a669 (#83): gomount reads HFS+/HFSX** — the Mac
+  filesystem before APFS, and what Time Machine drives, older media and most
+  DMGs carry: the volume header (also through the classic HFS wrapper), the
+  catalog, extents-overflow and attributes B-trees, hard links, symlinks,
+  xattrs and decmpfs content; the partition layer reads the Apple Partition
+  Map. `--volume 0` prefers an HFS+ volume holding `SystemVersion.plist`
+  ahead of the Linux rule. Both Mac backends are tested against volumes
+  Apple's own tools wrote. No lane change.
+
 ### Changed (gomount reads APFS)
 - **GoDFIR-toolz 6daad2b (#82): gomount reads APFS.** Every volume of a
   container is addressed as `<partition>/apfsN` (`identify` lists name, role,
