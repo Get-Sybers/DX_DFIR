@@ -56,7 +56,9 @@ argument_specs:
       dxdfir_signatures_disk_dir:
         type: str
         required: false
-        description: "Disk images (default data_store/raw/disk_images): every image is a hayabusa host (its event logs pulled by the baked gomount) and a scan item (streamed through goyara)."
+        description: >-
+          Disk images (default data_store/raw/disk_images): every image is a hayabusa host (its event logs pulled by the baked gomount) and a scan
+          item (streamed through goyara).
       dxdfir_signatures_vm_dir:
         type: str
         required: false

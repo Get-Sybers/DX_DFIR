@@ -48,7 +48,9 @@ argument_specs:
       dxdfir_gowindowlicker_work_dir:
         type: str
         required: false
-        description: "Disk-backed scratch bound at /work per image (default data_store/processed/_scratch/windowlicker[/<collection>]); the artefact sets pulled off an image live there only while its parsers run."
+        description: >-
+          Disk-backed scratch bound at /work per image (default data_store/processed/_scratch/windowlicker[/<collection>]); the artefact sets pulled
+          off an image live there only while its parsers run.
       dxdfir_gowindowlicker_image_regex:
         type: str
         required: false

@@ -52,7 +52,9 @@ argument_specs:
       dxdfir_godaemonhunter_work_dir:
         type: str
         required: false
-        description: "Disk-backed scratch bound at /work per image (default data_store/processed/_scratch/daemonhunter[/<collection>]); the linux-core surface pulled off an image lives there only while its parsers run."
+        description: >-
+          Disk-backed scratch bound at /work per image (default data_store/processed/_scratch/daemonhunter[/<collection>]); the linux-core surface
+          pulled off an image lives there only while its parsers run.
       dxdfir_godaemonhunter_image_regex:
         type: str
         required: false
