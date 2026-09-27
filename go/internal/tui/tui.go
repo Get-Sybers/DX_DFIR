@@ -144,10 +144,12 @@ func sanitize(s string) string {
 			// drop
 		case r < 128:
 			b.WriteRune(r)
-		case asciiFold[r] != 0:
-			b.WriteByte(asciiFold[r])
 		default:
-			b.WriteByte('?')
+			if a, ok := asciiFold[r]; ok {
+				b.WriteByte(a)
+			} else {
+				b.WriteByte('?')
+			}
 		}
 	}
 	return strings.ReplaceAll(b.String(), "](", "] (")

@@ -314,7 +314,7 @@ func (v *processView) buildDetail(w int) {
 		return
 	}
 	if act.Kind == model.KindGauge {
-		pct := laneGaugePct(*act)
+		pct := clampPct(laneGaugePct(*act)) // detailG is a Gauge widget: needs 0..100
 		v.detailG.Title = truncRight(fmt.Sprintf("%s  running %s", act.Title, fmtDur(sinceStart(act))), w-2)
 		v.detailG.Percent = pct
 		v.detailG.BarColor = colBlue
@@ -385,15 +385,17 @@ func stateToken(s model.State) (string, ui.Color) {
 // lane is still Running. A gauge lane's per-item outputs all land on disk before
 // its ansible-playbook exits, so Percent() can hit 100 while the lane is still
 // running; showing a full bar then reads as "done" while the clock keeps ticking.
+// A negative Percent() (spinner/heartbeat/unknown total) is passed through so
+// asciiBar renders a blank bar rather than an all-'.' 0% one that implies progress.
 func laneGaugePct(l model.Lane) int {
 	p := l.Percent()
 	if p < 0 {
-		return 0
+		return p
 	}
 	if l.State == model.Running && p >= 100 {
 		p = 99
 	}
-	return clampPct(p)
+	return p
 }
 
 func laneItems(l model.Lane) string {

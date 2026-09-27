@@ -40,6 +40,22 @@ func TestRunningGaugeHeldBelowFull(t *testing.T) {
 	}
 }
 
+// A lane with no meaningful percentage (spinner / heartbeat / unknown total)
+// must yield a negative fill so asciiBar renders a blank bar, not an all-'.' 0%
+// bar that implies zero progress.
+func TestLaneGaugePctBlankForUnknown(t *testing.T) {
+	for _, k := range []model.Kind{model.KindSpinner, model.KindHeartbeat} {
+		l := model.Lane{Kind: k, State: model.Running}
+		if got := laneGaugePct(l); got >= 0 {
+			t.Errorf("kind %v: laneGaugePct = %d, want < 0 (blank bar)", k, got)
+		}
+	}
+	// A gauge lane with an unknown total is likewise blank.
+	if got := laneGaugePct(model.Lane{Kind: model.KindGauge, State: model.Running, Total: 0}); got >= 0 {
+		t.Errorf("unknown-total gauge: laneGaugePct = %d, want < 0", got)
+	}
+}
+
 // The typographic punctuation the dashboard's own strings use must fold to ASCII,
 // not the generic '?' that looked like a decode error (the middle-dot separator
 // and the em dash in the "done — press q" dismiss hint).
@@ -83,9 +99,16 @@ func TestHeaderClockFreezesOnDone(t *testing.T) {
 	if v.end.IsZero() {
 		t.Fatal("end not recorded on Done update")
 	}
-	frozen := humanSpan(v.start, v.end)
-	time.Sleep(1100 * time.Millisecond)
-	if again := humanSpan(v.start, v.end); again != frozen {
-		t.Errorf("clock advanced after done: %q -> %q", frozen, again)
+	// The freeze lives entirely in humanSpan: once end is set it returns end-start
+	// and never consults the wall clock, so a start/end pair far in the past reads
+	// as its own span, not the (large) time elapsed since start.
+	start := time.Now().Add(-90 * time.Second)
+	end := start.Add(5 * time.Second)
+	if got := humanSpan(start, end); got != "00:00:05" {
+		t.Errorf("frozen span = %q, want 00:00:05 (clock not frozen)", got)
+	}
+	// While running (end zero) it does track the wall clock.
+	if got := humanSpan(start, time.Time{}); got == "00:00:05" {
+		t.Errorf("running span = %q, expected to track wall clock", got)
 	}
 }
