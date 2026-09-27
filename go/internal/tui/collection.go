@@ -21,13 +21,15 @@ type collectionView struct {
 	tally     *widgets.List
 	footer    *widgets.Paragraph
 
-	snap  model.Snapshot
-	start time.Time
-	w, h  int
-	draw  []ui.Drawable
+	snap    model.Snapshot
+	version string
+	start   time.Time
+	end     time.Time // job completion time; zero while running (freezes the header clock)
+	w, h    int
+	draw    []ui.Drawable
 }
 
-func newCollectionView() *collectionView {
+func newCollectionView(version string) *collectionView {
 	ensureTheme() // apply the Sunset theme before these widgets copy ui.Theme
 	v := &collectionView{
 		header:    widgets.NewParagraph(),
@@ -36,6 +38,7 @@ func newCollectionView() *collectionView {
 		tally:     widgets.NewList(),
 		footer:    widgets.NewParagraph(),
 	}
+	v.version = version
 	v.header.Border = false
 	v.footer.Border = false
 	v.decisions.WrapText = false
@@ -54,6 +57,9 @@ func (v *collectionView) hint(s string) { v.footer.Text = sanitize(s) }
 func (v *collectionView) apply(u model.Update) {
 	if v.start.IsZero() {
 		v.start = time.Now()
+	}
+	if u.Done && v.end.IsZero() {
+		v.end = time.Now() // freeze the header clock on the final update
 	}
 	if u.Snapshot != nil {
 		v.snap = *u.Snapshot
@@ -111,9 +117,15 @@ func (v *collectionView) refresh() {
 		title = "collection"
 	}
 	v.header.Text = sanitize(truncRight(
-		fmt.Sprintf("dxdfir  %s   elapsed %s   |  phase: %s", title, humanElapsed(v.start), phase), w))
+		fmt.Sprintf("dxdfir %s   %s   elapsed %s   |  phase: %s", v.version, title, humanSpan(v.start, v.end), phase), w))
 
 	pct := v.snap.Overall.Pct
+	// Hold the bar below 100% until the job reports Done, so a phase whose byte
+	// gauge fills before the run actually finishes doesn't read "100%" while the
+	// header clock is still ticking.
+	if v.end.IsZero() && pct >= 100 {
+		pct = 99
+	}
 	v.gauge.Percent = clampPct(pct)
 	v.gauge.Title = phase
 	v.gauge.Label = sanitize(truncRight(v.snap.Overall.Detail, w-4))

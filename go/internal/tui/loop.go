@@ -48,8 +48,20 @@ func run(v view, updates <-chan model.Update, onAbort func()) (retErr error) {
 		closeUI()
 		return ErrNoTTY // too small for the dashboard — stream plain instead
 	}
+
+	// render clears the back buffer before drawing. termui's Render only paints
+	// the cells of the drawables it is handed, so a pane that drops out of the
+	// layout (an active-lane detail panel when its lane finishes, the log/exception
+	// panes) would otherwise leave a ghost of its last frame on screen. Clear()
+	// resets the back buffer without flushing, so this stays a single, flicker-free
+	// frame with Render's trailing Flush.
+	render := func() {
+		ui.Clear()
+		ui.Render(v.drawables()...)
+	}
+
 	v.layout(w, h)
-	ui.Render(v.drawables()...)
+	render()
 
 	events := ui.PollEvents()
 	ticker := time.NewTicker(100 * time.Millisecond)
@@ -72,12 +84,10 @@ func run(v view, updates <-chan model.Update, onAbort func()) (retErr error) {
 			case "<Resize>":
 				if r, ok := e.Payload.(ui.Resize); ok {
 					v.layout(r.Width, r.Height)
-					ui.Clear()
-					ui.Render(v.drawables()...)
+					render()
 				}
 			case "<C-l>":
-				ui.Clear()
-				ui.Render(v.drawables()...)
+				render()
 			}
 		case u, ok := <-updates:
 			if !ok {
@@ -92,13 +102,13 @@ func run(v view, updates <-chan model.Update, onAbort func()) (retErr error) {
 			}
 		case <-ticker.C:
 			if dirty {
-				ui.Render(v.drawables()...)
+				render()
 				dirty = false
 			}
 		}
 	}
 
-	ui.Render(v.drawables()...) // final frame
+	render() // final frame
 
 	// Hold the completed dashboard until the operator dismisses it — a fast job
 	// (e.g. a lane with nothing to process) otherwise flashes and vanishes before
@@ -108,7 +118,7 @@ func run(v view, updates <-chan model.Update, onAbort func()) (retErr error) {
 		const dismiss = "done — press q, enter or esc to close"
 		if hv, ok := v.(hinter); ok {
 			hv.hint(dismiss)
-			ui.Render(v.drawables()...)
+			render()
 		}
 		for held := true; held; {
 			switch e := <-events; e.ID {
@@ -120,12 +130,10 @@ func run(v view, updates <-chan model.Update, onAbort func()) (retErr error) {
 					if hv, ok := v.(hinter); ok {
 						hv.hint(dismiss)
 					}
-					ui.Clear()
-					ui.Render(v.drawables()...)
+					render()
 				}
 			case "<C-l>":
-				ui.Clear()
-				ui.Render(v.drawables()...)
+				render()
 			}
 		}
 	}
@@ -143,23 +151,25 @@ func run(v view, updates <-chan model.Update, onAbort func()) (retErr error) {
 type hinter interface{ hint(string) }
 
 // ProcessPresenter renders the `process` dashboard.
-type ProcessPresenter struct{}
+type ProcessPresenter struct{ version string }
 
 // NewProcess returns the process dashboard presenter.
-func NewProcess() *ProcessPresenter { return &ProcessPresenter{} }
+func NewProcess(version string) *ProcessPresenter { return &ProcessPresenter{version: version} }
 
 // Run implements model.Presenter.
 func (p *ProcessPresenter) Run(updates <-chan model.Update, onAbort func()) error {
-	return run(newProcessView(), updates, onAbort)
+	return run(newProcessView(p.version), updates, onAbort)
 }
 
 // CollectionPresenter renders the collection-creation dashboard.
-type CollectionPresenter struct{}
+type CollectionPresenter struct{ version string }
 
 // NewCollection returns the collection dashboard presenter.
-func NewCollection() *CollectionPresenter { return &CollectionPresenter{} }
+func NewCollection(version string) *CollectionPresenter {
+	return &CollectionPresenter{version: version}
+}
 
 // Run implements model.Presenter.
 func (p *CollectionPresenter) Run(updates <-chan model.Update, onAbort func()) error {
-	return run(newCollectionView(), updates, onAbort)
+	return run(newCollectionView(p.version), updates, onAbort)
 }

@@ -20,13 +20,15 @@ type processView struct {
 	exc     *widgets.List
 	footer  *widgets.Paragraph
 
-	snap  model.Snapshot
-	start time.Time
-	w, h  int
-	draw  []ui.Drawable
+	snap    model.Snapshot
+	version string
+	start   time.Time
+	end     time.Time // job completion time; zero while running (freezes the header clock)
+	w, h    int
+	draw    []ui.Drawable
 }
 
-func newProcessView() *processView {
+func newProcessView(version string) *processView {
 	ensureTheme() // apply the Sunset theme before these widgets copy ui.Theme
 	v := &processView{
 		header:  widgets.NewParagraph(),
@@ -38,6 +40,7 @@ func newProcessView() *processView {
 		exc:     widgets.NewList(),
 		footer:  widgets.NewParagraph(),
 	}
+	v.version = version
 	v.header.Border = false
 	v.footer.Border = false
 	v.gauge.Title = "pipeline"
@@ -62,6 +65,9 @@ func (v *processView) hint(s string) { v.footer.Text = sanitize(s) }
 func (v *processView) apply(u model.Update) {
 	if v.start.IsZero() {
 		v.start = time.Now()
+	}
+	if u.Done && v.end.IsZero() {
+		v.end = time.Now() // freeze the header clock on the final update
 	}
 	if u.Snapshot != nil {
 		v.snap = *u.Snapshot
@@ -191,8 +197,8 @@ func (v *processView) refresh() {
 	if title == "" {
 		title = "process"
 	}
-	head := fmt.Sprintf("dxdfir  %s   elapsed %s   |  %d done  %d running  %d failed  %d queued",
-		title, humanElapsed(v.start), done, running, failed, queued)
+	head := fmt.Sprintf("dxdfir %s   %s   elapsed %s   |  %d done  %d running  %d failed  %d queued",
+		v.version, title, humanSpan(v.start, v.end), done, running, failed, queued)
 	v.header.Text = sanitize(truncRight(head, w))
 
 	// overall gauge: lane-equal with partial credit for running gauge lanes
@@ -217,6 +223,13 @@ func (v *processView) refresh() {
 		pct = int(100 * (float64(settled) + partial) / float64(eligible))
 	}
 	v.gauge.Percent = clampPct(pct)
+	// A gauge lane's output files all land on disk before ansible finishes tearing
+	// the container down, so partial credit can reach the full total while the lane
+	// is still Running. Hold the bar below 100% until every lane has actually
+	// settled, so it never reads "100%" while the clock is still ticking.
+	if running > 0 && v.gauge.Percent >= 100 {
+		v.gauge.Percent = 99
+	}
 	label := fmt.Sprintf("%d%%   %d/%d lanes finished (%d failed)", v.gauge.Percent, settled, eligible, failed)
 	if act := v.activeLane(); act != nil {
 		label += "  + " + laneShort(*act)
@@ -284,7 +297,7 @@ func (v *processView) buildTable(w int) {
 		det := sanitize(laneDetail(l))
 		var row []string
 		if withBar {
-			row = []string{tok, l.Title, asciiBar(l.Percent(), cols[2]), items, el, det}
+			row = []string{tok, l.Title, asciiBar(laneGaugePct(l), cols[2]), items, el, det}
 		} else {
 			row = []string{tok, l.Title, items, el, det}
 		}
@@ -301,11 +314,12 @@ func (v *processView) buildDetail(w int) {
 		return
 	}
 	if act.Kind == model.KindGauge {
+		pct := laneGaugePct(*act)
 		v.detailG.Title = truncRight(fmt.Sprintf("%s  running %s", act.Title, fmtDur(sinceStart(act))), w-2)
-		v.detailG.Percent = clampPct(act.Percent())
+		v.detailG.Percent = pct
 		v.detailG.BarColor = colBlue
 		v.detailG.Label = sanitize(truncRight(fmt.Sprintf("%d/%d  %d%%   %s",
-			act.Done, act.Total, clampPct(act.Percent()), act.Detail), w-4))
+			act.Done, act.Total, pct, act.Detail), w-4))
 		return
 	}
 	// heartbeat / spinner
@@ -365,6 +379,21 @@ func stateToken(s model.State) (string, ui.Color) {
 	default:
 		return "WAIT", colGrey
 	}
+}
+
+// laneGaugePct is a lane's fill for a gauge/bar widget, held below 100 while the
+// lane is still Running. A gauge lane's per-item outputs all land on disk before
+// its ansible-playbook exits, so Percent() can hit 100 while the lane is still
+// running; showing a full bar then reads as "done" while the clock keeps ticking.
+func laneGaugePct(l model.Lane) int {
+	p := l.Percent()
+	if p < 0 {
+		return 0
+	}
+	if l.State == model.Running && p >= 100 {
+		p = 99
+	}
+	return clampPct(p)
 }
 
 func laneItems(l model.Lane) string {
