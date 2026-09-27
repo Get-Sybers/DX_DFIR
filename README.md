@@ -124,7 +124,8 @@ log folder) and the tool's own items under that:
 | YARA / Suricata / Hayabusa / disk scan | `process signatures` | `detections/{yara,suricata,hayabusa}/[<collection>/]<host>/` (JSONL) |
 
 The host lanes run their parsers **on** the disk image — E01/Ex01, raw, VMDK,
-VHDX, VHD, QCOW2, VDI — through the gomount baked into each image: the
+VHDX, VHD, QCOW2, VDI, holding NTFS, ext2/3/4, XFS, vfat or APFS volumes —
+through the gomount baked into each image: the
 artefact sets are pulled out of the OS volume into a scratch while the parsers
 run, nothing is mounted and nothing is exported — hayabusa and the disk scan
 included. `dxdfir_export` (`gomount materialise` into
