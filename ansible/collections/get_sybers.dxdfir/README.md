@@ -23,7 +23,7 @@ summary line.
 |---|---|---|
 | `dxdfir_zeek` | PCAPs → Zeek JSON | `get-sybers/zeek` |
 | `dxdfir_gowindowlicker` | Windows hosts — event logs (`logs/winevt/<host>/`) and disk images / VMs → the Windows artefact parse, one run per parser and host | `get-sybers/gowindowlicker` (goevtx, gore, gomft, goprefetch, goese, … as sub-tools; + `dxdfir_export`) |
-| `dxdfir_godaemonhunter` | Linux hosts — logs / root trees (`logs/linux/<host>/`) and disk images / VMs → the daemon parsers, knowledge-enriched, one run per parser and host | `get-sybers/godaemonhunter` (gohost, gousers, gonetwork; gojournal, goauditd, … as sub-tools; + `dxdfir_export`) |
+| `dxdfir_godaemonhunter` | Linux and macOS hosts — logs / root trees (`logs/linux/<host>/`) and disk images / VMs → the daemon parsers, knowledge-enriched, one run per parser and host | `get-sybers/godaemonhunter` (gohost, gousers, gonetwork, gomachost, gomacusers; gojournal, goauditd, golaunchd, … as sub-tools) |
 | `dxdfir_anamnesis` | Memory images → per-plugin JSONL (anamnesis / MemProcFS) | `get-sybers/anamnesis` |
 | `dxdfir_plaso` | Disk images / VM exports → `<host>.plaso` + Plaso JSON Lines, side by side | `get-sybers/plaso` (`log2timeline`, `psort`) |
 | `dxdfir_export` | The disk-image artefact export, a utility no lane includes (`processed/_extracted/`); every lane runs on the image instead | `get-sybers/gomount` (`materialise`) |

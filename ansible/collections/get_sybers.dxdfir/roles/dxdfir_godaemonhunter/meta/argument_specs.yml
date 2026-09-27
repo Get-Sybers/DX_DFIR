@@ -15,7 +15,8 @@ argument_specs:
         dxdfir_godaemonhunter_vm_dir (E01/Ex01, raw, VMDK, VHDX, VHD, QCOW2,
         VDI), which the parsers run ON: one layered hunt run per image
         (GODAEMONHUNTER_IMAGE), the image's baked-in gomount pulling the
-        linux-core surface out of the root volume into /work — bound to
+        linux-core and macos-core surfaces (and, beside a Mac's System volume,
+        macos-system) out of the OS volume into /work — bound to
         dxdfir_godaemonhunter_work_dir — while the layers run; nothing is
         exported. Either way the tree is host-centric:
         <out_dir>/<subtool>/<host>/<item>/<subtool>.jsonl and
@@ -40,7 +41,7 @@ argument_specs:
       dxdfir_godaemonhunter_input_dir:
         type: str
         required: false
-        description: "Disk-image tree (E01/Ex01, raw/dd/img, VMDK, VHDX, VHD, QCOW2, VDI), recursed; every image a host the parsers run on."
+        description: "Disk-image tree (E01/Ex01, raw/dd/img, VMDK, VHDX, VHD, QCOW2, VDI, DMG, sparseimage), recursed; every image a host the parsers run on."
       dxdfir_godaemonhunter_vm_dir:
         type: str
         required: false
@@ -67,12 +68,12 @@ argument_specs:
         type: list
         elements: str
         required: false
-        description: "The knowledge-store parsers run first per host (default gohost, gousers, gonetwork)."
+        description: "The knowledge-store parsers run first per host (default: the contract's layer1 — gohost, gousers, gonetwork, gomachost, gomacusers)."
       dxdfir_godaemonhunter_layer2:
         type: list
         elements: str
         required: false
-        description: "The daemon parsers run per host with the store mounted (default every Layer-2 parser)."
+        description: "The daemon parsers run per host with the store mounted (default: the contract's layer2 — every Layer-2 parser)."
       dxdfir_godaemonhunter_contract:
         type: str
         required: false

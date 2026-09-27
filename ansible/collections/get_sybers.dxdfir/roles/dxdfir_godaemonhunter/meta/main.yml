@@ -4,12 +4,13 @@ galaxy_info:
   namespace: get_sybers
   author: Get-Sybers
   description: >-
-    The Linux daemon lane: godaemonhunter's layered matrix (Layer 1 gohost,
-    gousers, gonetwork into a per-host knowledge store; Layer 2 gojournal,
-    goauditd, gowtmp, gosyslog, gounit, gocron, goshell, gotrash, goctl
-    enriched by it) over every host — loose log folders and the artefact
-    export of every disk image — one confined run per parser and host, from
-    the one image's contract; processed/daemonhunter/[<collection>/]<subtool>/<host>/<item>/.
+    The Linux and macOS daemon lane: godaemonhunter's layered matrix (Layer 1
+    gohost, gousers, gonetwork — gomachost, gomacusers for a Mac — into a
+    per-host knowledge store; Layer 2 gojournal, goauditd, gowtmp, gosyslog,
+    gounit, gocron, goshell, gotrash, goctl, golaunchd enriched by it) over
+    every host — loose root trees and every disk image, run ON the image —
+    one confined run per parser and host, from the one image's contract;
+    processed/daemonhunter/[<collection>/]<subtool>/<host>/<item>/.
   company: Get-Sybers
   license: MIT
   min_ansible_version: "2.15"

@@ -53,6 +53,29 @@ is `0`, anything may change without notice.
   per host; `sort` and the collection skeleton create them; no lane reads
   macOS yet).
 
+### Changed (godaemonhunter hunts a Mac; the contract declares the layers)
+- **GoDFIR-toolz: godaemonhunter 0.3.0 hunts a Mac** (#85): the same
+  layered run over a macOS image — `gomachost`/`gomacusers` build the
+  knowledge store from the property lists, `golaunchd` feeds the service
+  stream, the Linux parsers read the macOS shapes of their artefacts, the
+  image pull stages the Data volume with the manifest (every record from
+  an image now carries `Origin`) and pulls the sealed System volume in a
+  second pass for the OS version and Apple's launchd jobs; staged files
+  keep the volume's mtime. Verified by `dxdfir process LS24
+  godaemonhunter`: the Mac E01 yields the OS, 721 Apple jobs and
+  knowledge-enriched records; the Linux images are unchanged. gosyslog's
+  line host is now `Hostname`.
+- **gomount reads Apple disk images** (#84): DMG (UDIF — zero, raw, ADC,
+  zlib, bzip2, LZFSE chunks; LZMA refused), `.sparseimage` and
+  `.sparsebundle`. The lane tables, the roles' image regexes and the
+  taxonomy-backed lanes take `.dmg` and `.sparseimage` as image items.
+- **The daemonhunter role reads the layers from the contract.** Its
+  `dxdfir_godaemonhunter_layer1`/`_layer2` defaults are the pinned
+  contract's `layer1`/`layer2` keys (the registry `hunt` runs), so a new
+  parser in the image needs no role change; the literal lists remain only
+  as the fallback for a contract without the keys. Disk images never
+  needed it: the lane runs `hunt`, which runs every sub-tool.
+
 ### Changed (gomount reads HFS+/HFSX)
 - **GoDFIR-toolz ca0a669 (#83): gomount reads HFS+/HFSX** — the Mac
   filesystem before APFS, and what Time Machine drives, older media and most
