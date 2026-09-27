@@ -53,6 +53,54 @@ is `0`, anything may change without notice.
   per host; `sort` and the collection skeleton create them; no lane reads
   macOS yet).
 
+### Changed (the host lanes run ON the disk image; gomount reads VM disks)
+- **`dxdfir process <collection> gowindowlicker|godaemonhunter` run their
+  parsers on the image.** No export step any more: each lane declares one
+  sweep run per disk image (`GOWINDOWLICKER_IMAGE` / `GODAEMONHUNTER_IMAGE`,
+  the tree bound read-only at `/input`, a disk-backed scratch at `/work` —
+  `processed/_scratch/<lane>/[<collection>/]<host>/`), and the image's baked-in
+  gomount pulls the parsers' artefact sets out of the OS volume while they
+  run; the sweep writes `<subtool>/<host>/<item>/` itself, the hunt its
+  `knowledge/<host>/` too. GoDFIR-toolz 0.4.0 (#80): gomount decodes VMDK (sparse,
+  streamOptimized, descriptor + flat/split extents, snapshot chains), VHDX,
+  VHD, QCOW2 and VDI besides E01 and raw, `materialise` speaks the batch
+  contract and gains the `winevt`, `prefetch`, `mft`, `recent`, `recyclebin`
+  and `windows-core` sets. The plaso-based export is gone from these lanes;
+  its `dxdfir_<lane>_plaso_*` / `_vss` / `_stage_dir` / `_subtools`
+  variables with it, `_work_dir`, `_image_regex` and `_exclude_regex` in
+  their place. The `process` denominator counts a multi-file image once
+  (a VMDK's `-flat`/`-sNNN` extents and an EWF set's later segments are
+  parts, not items) and knows `.qcow2`/`.vdi`.
+- **`dxdfir process <collection> signatures` reads the images too.** hayabusa
+  takes every disk image under `disk_images/` and `VM_files/` as a host — the
+  signatures image's baked gomount pulls its event logs into the disk-backed
+  `/work` (`processed/_scratch/signatures/…`) while hayabusa runs — and the
+  disk scan streams the same trees (VMDK, VHDX, VHD, QCOW2, VDI besides E01
+  and raw) through gomount into goyara. `dxdfir_signatures_vm_dir` and
+  `_work_dir` come; `_evtx_stage_dir` and the export step go.
+- **`dxdfir_export` runs on gomount, as a utility.** No lane includes it now;
+  the stage `processed/_extracted/[<collection>/]<image>/export/` is written
+  by `gomount materialise --set windows-core --set linux-core`, once per
+  image, `materialise.jsonl` (the origin manifest) its done marker, for an
+  operator who wants the artefact set on disk. The plaso `image_export`
+  filter file and the `dxdfir_export_plaso_*` / `_vss` / `_volumes` variables
+  go, `dxdfir_export_sets`, `_gomount_contract`, `_gomount_image` and
+  `_exclude_regex` come.
+
+### Fixed (the host lanes over a collection's disk images)
+- **The disk-image export matched nothing.** `ansible.builtin.find` +
+  `use_regex` anchors its match at the start of the name, so the export
+  role's `\.(e01|vmdk|…)$` never matched an image and every lane that read
+  the stage saw "no exported disk image" — a green `0/N done`. The pattern
+  now consumes the stem (the same rule in the host lanes' discovery).
+- **`dxdfir cleanup processed|car` keeps the whole tracked skeleton.** The
+  wipe removed every top-level entry but the root `.gitkeep`, so each tool
+  leaf (`processed/zeek/`, `processed/detections/yara/`, …) went with its
+  own tracked `.gitkeep`, the next lane run recreated the leaf without it
+  and `git status` showed thirteen deletions. It now keeps every
+  `.gitkeep` at any depth and the directories that lead to one, with
+  native modules only so `--dry-run` (`--check`) lists exactly what goes.
+
 ### Fixed (fresh-host setup)
 - **`dxdfir deploy-stack` (and every verb) runs the modules under the venv's
   python.** `ansible/inventory/hosts.yml` pinned `ansible_python_interpreter`

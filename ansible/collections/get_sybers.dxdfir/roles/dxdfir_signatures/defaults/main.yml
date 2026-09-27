@@ -31,14 +31,19 @@ dxdfir_signatures_disk_dir: >-
   {{ dxdfir_signatures_repo_root }}/data_store/raw/{{
   ((lookup('file', dxdfir_signatures_repo_root ~ '/evidence-taxonomy/disk_images.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('disk_images', true) }}
+dxdfir_signatures_vm_dir: >-
+  {{ dxdfir_signatures_repo_root }}/data_store/raw/{{
+  ((lookup('file', dxdfir_signatures_repo_root ~ '/evidence-taxonomy/vm_files.yml',
+  errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('VM_files', true) }}
 dxdfir_signatures_evtx_dir: >-
   {{ dxdfir_signatures_repo_root }}/data_store/raw/{{
   ((lookup('file', dxdfir_signatures_repo_root ~ '/evidence-taxonomy/logs_winevt.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('logs/winevt', true) }}
-# the shared disk-image export (dxdfir_export): exported once for every lane
-# that reads it; one <image>/export tree per image = one hayabusa host each
-dxdfir_signatures_evtx_stage_dir: >-
-  {{ dxdfir_signatures_repo_root }}/data_store/processed/_extracted{{ dxdfir_signatures_scope }}
+# the disk-backed scratch bound at /work for the image-reading runs (hayabusa
+# and scan over the disk-image and VM trees): hayabusa pulls an image's event
+# logs there through the baked gomount while it runs — nothing is exported
+dxdfir_signatures_work_dir: >-
+  {{ dxdfir_signatures_repo_root }}/data_store/processed/_scratch/signatures{{ dxdfir_signatures_scope }}
 
 # operator rulesets, mounted ro; empty = the baked set (docs/Signature-Rules.md)
 dxdfir_signatures_yara_rules: ""        # a rules file or compiled index (yara + scan)

@@ -63,7 +63,8 @@ tool's contract; no host python).
             │   └── yara/ suricata/ hayabusa/         # [<collection>/]<host>/ — detection JSONL (YARA + the disk scan / Suricata EVE / Hayabusa Sigma)
             │   └── byakugan/                         # reserved for the engine's own detections
             │
-            └── _extracted/[<collection>/]<image>/    # the shared disk-image artefact export (staging: never a source, never shipped)
+            ├── _extracted/[<collection>/]<image>/    # the disk-image artefact export, a utility (staging: never a source, never shipped)
+            └── _scratch/<lane>/[<collection>/]<host>/ # the host lanes' per-image /work while they run ON an image (emptied after each)
             │
             └── byakugan/
             │   └── <source>/                         # the materialised CAR: car_<object>.jsonl (+ car_relationships.jsonl)

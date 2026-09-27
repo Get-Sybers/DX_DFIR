@@ -12,11 +12,18 @@ A host is either
   a staged root filesystem or a pile of its logs (the parsers content-detect
   either); a file dropped at the tree root belongs to no host and is
   reported, not parsed;
-- a disk image under `raw/disk_images/` or `raw/VM_files/`, first exported
-  once by [`dxdfir_export`](../dxdfir_export/README.md) into the shared stage
-  `processed/_extracted/[<collection>/]<image>/export/` (the artefact set
-  carries the Linux core: `/etc`, `/var/log`, journals, units, cron, shell
-  histories, trash). The image's item folder is the host name.
+- a disk image under `raw/disk_images/` or `raw/VM_files/` — E01/Ex01,
+  raw/dd/img, VMDK (monolithic, split, streamOptimized, snapshot chains),
+  VHDX, VHD, QCOW2, VDI — which the parsers run **on**: one layered hunt run
+  per image (`GODAEMONHUNTER_IMAGE`), the image's baked-in
+  [gomount](../../../../../docker/GoDFIR-toolz/gomount) pulling the
+  `linux-core` surface (`/etc`, `/var/log`, journals, units, cron, shell
+  histories, trash — docs/linux §5.4) out of the root volume (LVM2 peeled)
+  into a disk-backed `/work` scratch (`dxdfir_godaemonhunter_work_dir`) while
+  the layers run — nothing is exported, nothing is mounted. The image's item
+  name (its path relative to the tree, separators folded to `_`) is the host
+  name; a VMDK's `-flat`/`-sNNN` extents and an EWF set's `.E02…` segments
+  belong to their item.
 
 ## Runs and output
 

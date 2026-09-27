@@ -120,12 +120,12 @@ pass "$n_fix Sysmon .evtx fixtures present and verified"
 
 # =============================================================================
 section "Process fixtures through the real gowindowlicker lane (dxdfir_gowindowlicker -> goevtx per host)"
-# no disk images: the export declares no run and the plaso image is never needed
+# no disk images: no per-image sweep run is declared, only the loose host's goevtx
 if ! ansible-playbook "$PLAYBOOKS/dxdfir-process-gowindowlicker.yml" \
         -e "dxdfir_gowindowlicker_winevt_dir=$WINEVT_DIR" \
         -e "dxdfir_gowindowlicker_input_dir=$OUT_DIR/no-images" -e "dxdfir_gowindowlicker_vm_dir=" \
         -e "dxdfir_gowindowlicker_out_dir=$OUT_DIR/windowlicker" \
-        -e "dxdfir_gowindowlicker_stage_dir=$OUT_DIR/_extracted" \
+        -e "dxdfir_gowindowlicker_work_dir=$OUT_DIR/_scratch" \
         >"$LOG_DIR/gowindowlicker.out" 2>&1; then
     tail -40 "$LOG_DIR/gowindowlicker.out" >&2
     die "the gowindowlicker lane failed (see the play output above)"

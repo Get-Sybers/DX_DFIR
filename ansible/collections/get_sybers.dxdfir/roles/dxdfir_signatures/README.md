@@ -14,14 +14,14 @@ sub-tool name and nothing else. No host-side processor.
 |---|---|---|
 | `yara` | loose files under `raw/other_raw_data/` (every immediate child is a target); memory images under `raw/memory/` (scanned directly) | `yara/[<collection>/]<item>/yara.jsonl` |
 | `suricata` | every `*.pcap`/`*.pcapng`/`*.cap` under `raw/pcaps/` | `suricata/<item>/eve.json` (+ suricata's logs, `suricata.jsonl` index) |
-| `hayabusa` | every event-log host: `raw/logs/winevt/<host>/` and every disk image's artefact export in the shared stage (`processed/_extracted/[<collection>/]<image>/`, exported by `dxdfir_export` when no other lane did) | `hayabusa/[<collection>/]<host>/timeline.jsonl` (+ `hayabusa.jsonl` index) |
-| `scan` | every disk image under `raw/disk_images/`, streamed by gomount through goyara in userspace — no `/dev/fuse`, nothing mounted on the host | `yara/[<collection>/]<image>/scan.jsonl` |
+| `hayabusa` | every event-log host: `raw/logs/winevt/<host>/`, and every disk image under `raw/disk_images/` and `raw/VM_files/` **run on directly** — the baked gomount pulls its event logs into a disk-backed `/work` while hayabusa runs, nothing is exported | `hayabusa/[<collection>/]<host>/timeline.jsonl` (+ `hayabusa.jsonl` index) |
+| `scan` | every disk image under `raw/disk_images/` and `raw/VM_files/` (E01/Ex01, raw, VMDK, VHDX, VHD, QCOW2, VDI), streamed by gomount through goyara in userspace — no `/dev/fuse`, nothing mounted on the host | `yara/[<collection>/]<image>/scan.jsonl` |
 
 > **Standalone and reuse-aware.** No processor run is needed first: each
 > sub-tool reads raw evidence directly. Disk-image event logs reach hayabusa
-> through the evtx lane's one canonical export, so an image is exported once for
-> both lanes. `<item>` is the input path relative to the tree with separators
-> folded to `_`.
+> off the image itself — the baked gomount pulls them into `/work` while
+> hayabusa runs, nothing is exported. `<item>` is the input path relative to
+> the tree with separators folded to `_`.
 
 ## Rules
 The image bakes its rulesets: the DetectRaptor YARA merge (yara + scan), the ET
@@ -41,8 +41,9 @@ mounted read-only and named to the sub-tool by its `*_RULES` variable
 | `dxdfir_signatures_memory_dir` | `<repo>/data_store/raw/memory` | Memory images for yara. |
 | `dxdfir_signatures_pcap_dir` | `<repo>/data_store/raw/pcaps` | Captures for suricata. |
 | `dxdfir_signatures_evtx_dir` | `<repo>/data_store/raw/logs/winevt` | Loose `.evtx` for hayabusa. |
-| `dxdfir_signatures_evtx_stage_dir` | `<repo>/data_store/processed/_extracted[/<collection>]` | The shared disk-image export (`dxdfir_export`), one hayabusa host per image. |
-| `dxdfir_signatures_disk_dir` | `<repo>/data_store/raw/disk_images` | Disk images for scan. |
+| `dxdfir_signatures_vm_dir` | `<repo>/data_store/raw/VM_files` | VM disks for hayabusa and scan. |
+| `dxdfir_signatures_work_dir` | `<repo>/data_store/processed/_scratch/signatures[/<collection>]` | Disk-backed `/work` for the image-reading runs. |
+| `dxdfir_signatures_disk_dir` | `<repo>/data_store/raw/disk_images` | Disk images for hayabusa and scan. |
 | `dxdfir_signatures_yara_rules` | `""` (baked) | Operator YARA ruleset file (yara + scan). |
 | `dxdfir_signatures_suricata_rules` | `""` (baked) | Operator `suricata.rules` file. |
 | `dxdfir_signatures_hayabusa_rules` | `""` (baked) | Operator Sigma rules directory. |

@@ -42,10 +42,10 @@ var LANES = []Lane{
 	{"anamnesis", []string{"memory"}, []string{"dxdfir_anamnesis_memory_dir"}},
 	{"plaso", []string{"disk_images", "VM_files"},
 		[]string{"dxdfir_plaso_input_dir", "dxdfir_plaso_vm_dir"}},
-	{"signatures", []string{"pcaps", "disk_images", "memory", "logs/winevt", "other_raw_data"},
+	{"signatures", []string{"pcaps", "disk_images", "VM_files", "memory", "logs/winevt", "other_raw_data"},
 		[]string{"dxdfir_signatures_pcap_dir", "dxdfir_signatures_disk_dir",
-			"dxdfir_signatures_memory_dir", "dxdfir_signatures_evtx_dir",
-			"dxdfir_signatures_files_dir"}},
+			"dxdfir_signatures_vm_dir", "dxdfir_signatures_memory_dir",
+			"dxdfir_signatures_evtx_dir", "dxdfir_signatures_files_dir"}},
 }
 
 // evidenceSubdirs returns the canonical lane subdirs a collection materialises,

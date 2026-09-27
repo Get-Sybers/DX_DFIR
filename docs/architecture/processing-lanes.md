@@ -33,7 +33,10 @@ staged as `logs/<os>/<host>/` — and the tool's own items under that.
 `gowindowlicker` + `godaemonhunter`. Disk images are exported once into the shared
 stage `processed/_extracted/[<collection>/]<image>/export/` — the artefact set
 (registry hives + transaction logs, Amcache, jump lists, `$MFT`, Prefetch, SRUM,
-the event logs, the Linux core) in one filter — by whichever consuming lane runs
+the event logs, the Linux core: gomount's `windows-core` + `linux-core` sets) —
+is a utility no lane includes: gowindowlicker, godaemonhunter and signatures
+(hayabusa and the scan) all run **on** the image through the gomount baked
+into each and export nothing. An operator's playbook can still write the stage
 first; the others find every image done and skip. The stage is `_`-prefixed:
 never a CAR source, never shipped.
 

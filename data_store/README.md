@@ -37,7 +37,8 @@ data_store/
        ├── log2timeline/[<collection>/]<host>/                   # <host>.plaso (reusable by Timesketch) + timeline.jsonl, side by side
        ├── detections/{yara,suricata,hayabusa}/[<collection>/]<host>/  # detection JSONL (the disk scan lands under yara/)
        ├── detections/byakugan/                                  # reserved for the engine's own detections
-       ├── _extracted/[<collection>/]<image>/export/             # the shared disk-image artefact export (staging, never shipped)
+       ├── _extracted/[<collection>/]<image>/export/             # the disk-image artefact export (a utility; staging, never shipped)
+       ├── _scratch/<lane>/[<collection>/]<host>/                # the host lanes' /work while they run ON an image (emptied after each)
        ├── byakugan/<source>/                                    # the materialised CAR: car_<object>.jsonl (+ car_relationships.jsonl)
        ├── byakugan-load/                                        # `load-car` state
        └── exchange/                                             # the STIX/CTI exchange's bundles

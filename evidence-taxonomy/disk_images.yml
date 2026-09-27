@@ -4,7 +4,7 @@
 # formats (EWF/E01, QCOW) win by magic regardless of a mislabelled name.
 name: disk_images
 subdir: disk_images
-ext: [.e01, .ex01, .aff, .aff4, .dd, .img, .001, .raw, .iso, .dmg, .toast]
+ext: [.e01, .ex01, .aff, .aff4, .dd, .img, .001, .raw, .qcow2, .qcow, .iso, .dmg, .toast]
 signatures:
   - {hex: "45 56 46 09 0D 0A FF 00", offset: 0, ext: e01, desc: "EWF/Expert Witness (E01)"}
   - {hex: "45 56 46 32 0D 0A 81 00", offset: 0, ext: ex01, desc: "EWF2 (Ex01)"}

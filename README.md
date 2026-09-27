@@ -123,11 +123,14 @@ log folder) and the tool's own items under that:
 | Disk images / VM exports (Plaso) | `process plaso` | `log2timeline/[<collection>/]<host>/` (`<host>.plaso` + `timeline.jsonl`, Plaso `json_line`, side by side) |
 | YARA / Suricata / Hayabusa / disk scan | `process signatures` | `detections/{yara,suricata,hayabusa}/[<collection>/]<host>/` (JSONL) |
 
-Disk images are exported once into the shared stage
-`processed/_extracted/[<collection>/]<image>/export/` (the artefact set:
-registry hives, event logs, the Linux core, …) by whichever of the three
-consuming lanes runs first. The older lane names still work as aliases
-(`evtx`, `memory`, `godfir-toolz`).
+The host lanes run their parsers **on** the disk image — E01/Ex01, raw, VMDK,
+VHDX, VHD, QCOW2, VDI — through the gomount baked into each image: the
+artefact sets are pulled out of the OS volume into a scratch while the parsers
+run, nothing is mounted and nothing is exported — hayabusa and the disk scan
+included. `dxdfir_export` (`gomount materialise` into
+`processed/_extracted/[<collection>/]<image>/export/`) stays as a utility for an
+operator who wants the artefact set on disk. The older lane names still work
+as aliases (`evtx`, `memory`, `godfir-toolz`).
 
 The **CAR layer is materialised**: the [Byakugan](https://github.com/Get-Sybers/byakugan)
 engine normalises each processed source into finished
