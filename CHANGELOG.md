@@ -53,7 +53,7 @@ is `0`, anything may change without notice.
   per host; `sort` and the collection skeleton create them; no lane reads
   macOS yet).
 
-### Changed (gomount reads HFS+)
+### Changed (gomount reads HFS+/HFSX)
 - **GoDFIR-toolz ca0a669 (#83): gomount reads HFS+/HFSX** — the Mac
   filesystem before APFS, and what Time Machine drives, older media and most
   DMGs carry: the volume header (also through the classic HFS wrapper), the
