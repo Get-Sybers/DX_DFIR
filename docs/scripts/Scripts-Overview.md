@@ -40,8 +40,8 @@ image, with operator rulesets mounted in their place — see
 |---|---|---|
 | `yara` | **loose files** under `raw/other_raw_data/` and **memory images** under `raw/memory/` (scanned directly) | one hit record per rule match (rule, target, offsets/strings). |
 | `suricata` | every capture under `raw/pcaps/` | Suricata EVE JSON per capture. |
-| `hayabusa` | every event-log host: `raw/logs/winevt/<host>/` and every disk image's artefact export in the shared stage (`processed/_extracted/[<collection>/]<image>/`) | Hayabusa Sigma detection timeline (native binary, `verbose` profile). |
-| `scan` | every disk image under `raw/disk_images/`, streamed by gomount through goyara in **userspace** — no `/dev/fuse`, nothing mounted on the host | goyara hit records per image. |
+| `hayabusa` | every event-log host: `raw/logs/winevt/<host>/`, and every disk image under `raw/disk_images/` and `raw/VM_files/` read **on the image** (the baked gomount pulls its event logs into `/work` while hayabusa runs) | Hayabusa Sigma detection timeline (native binary, `verbose` profile). |
+| `scan` | every disk image under `raw/disk_images/` and `raw/VM_files/` (E01/Ex01, raw, VMDK, VHDX, VHD, QCOW2, VDI), streamed by gomount through goyara in **userspace** — no `/dev/fuse`, nothing mounted on the host | goyara hit records per image. |
 
 > Disk-image event logs reach Hayabusa off the image itself: the signatures
 > image's baked gomount pulls them into `/work` while hayabusa runs (it needs
