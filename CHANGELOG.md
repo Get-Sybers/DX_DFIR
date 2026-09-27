@@ -53,6 +53,15 @@ is `0`, anything may change without notice.
   per host; `sort` and the collection skeleton create them; no lane reads
   macOS yet).
 
+### Changed (gomount reads APFS)
+- **GoDFIR-toolz 6daad2b (#82): gomount reads APFS.** Every volume of a
+  container is addressed as `<partition>/apfsN` (`identify` lists name, role,
+  UUID and the sealed/FileVault flags; `--volume 0` prefers the Data volume),
+  the sealed System volume's tree reads, and decmpfs content (zlib, LZVN,
+  LZFSE) decodes transparently — so a Mac E01 resolves like a Windows or
+  Linux one. FileVault content, snapshots and Fusion containers are out of
+  scope. No lane change: the macOS parsers come next.
+
 ### Changed (the host lanes run ON the disk image; gomount reads VM disks)
 - **`dxdfir process <collection> gowindowlicker|godaemonhunter` run their
   parsers on the image.** No export step any more: each lane declares one
