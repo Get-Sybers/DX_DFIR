@@ -7,26 +7,28 @@ argument_specs:
         Runs the get-sybers/gowindowlicker image's parsers over every HOST from
         the image's contract. A host is a folder of loose event logs directly
         under dxdfir_gowindowlicker_winevt_dir (logs/winevt/<host>/*.evtx —
-        goevtx only) or a disk image under dxdfir_gowindowlicker_input_dir /
-        dxdfir_gowindowlicker_vm_dir, first exported once by dxdfir_export into
-        the shared stage (every parser in dxdfir_gowindowlicker_subtools). One
-        confined run per (parser, host) writes
-        <out_dir>/<subtool>/<host>/<item>/<subtool>.jsonl — the item the
-        artefact's path relative to the host, separators folded to _ — so the
+        goevtx only, one confined run per host) or a disk image under
+        dxdfir_gowindowlicker_input_dir / dxdfir_gowindowlicker_vm_dir (E01/Ex01,
+        raw, VMDK, VHDX, VHD, QCOW2, VDI), which the parsers run ON: one sweep
+        run per image (GOWINDOWLICKER_IMAGE), the image's baked-in gomount
+        pulling every parser's artefact set out of the OS volume into /work —
+        bound to dxdfir_gowindowlicker_work_dir — while they run; nothing is
+        exported. The sweep writes <out_dir>/<subtool>/<host>/<item>/<subtool>.jsonl
+        — the item the artefact's volume path, separators folded to _ — so the
         tree is host-centric. Idempotent per item: a parser skips an item with
         valid output unless dxdfir_gowindowlicker_force. A parser with nothing
         to parse or a failed item is tolerated; the gate is "some parser
         produced output, or no artefacts".
       - >-
-        With dxdfir_gowindowlicker_collection set, the output and the export
-        stage land one level below their leaves
-        (processed/windowlicker/<collection>/, processed/_extracted/<collection>/).
+        With dxdfir_gowindowlicker_collection set, the output and the scratch
+        land one level below their leaves
+        (processed/windowlicker/<collection>/, processed/_scratch/windowlicker/<collection>/).
     options:
       dxdfir_gowindowlicker_collection:
         type: str
         required: false
         default: ""
-        description: "The collection this run is scoped to (the CLI passes it); scopes the output and stage paths."
+        description: "The collection this run is scoped to (the CLI passes it); scopes the output and scratch paths."
       dxdfir_gowindowlicker_winevt_dir:
         type: str
         required: false
@@ -34,24 +36,27 @@ argument_specs:
       dxdfir_gowindowlicker_input_dir:
         type: str
         required: false
-        description: "Disk-image tree (E01/raw/img/dd/vmdk/vhd/vhdx/aff), recursed; exported by dxdfir_export."
+        description: "Disk-image tree (E01/Ex01, raw/dd/img, VMDK, VHDX, VHD, QCOW2, VDI), recursed; every image a host the parsers run on."
       dxdfir_gowindowlicker_vm_dir:
         type: str
         required: false
-        description: "VM export folders (one sub-folder per VM); optional — exported when the directory exists."
+        description: "VM export folders (one sub-folder per VM); optional — read when the directory exists."
       dxdfir_gowindowlicker_out_dir:
         type: str
         required: false
         description: "Output dir (default data_store/processed/windowlicker[/<collection>]); <subtool>/<host>/<item>/ beneath it."
-      dxdfir_gowindowlicker_stage_dir:
+      dxdfir_gowindowlicker_work_dir:
         type: str
         required: false
-        description: "The shared export stage (default data_store/processed/_extracted[/<collection>]); one folder per image."
-      dxdfir_gowindowlicker_subtools:
-        type: list
-        elements: str
+        description: "Disk-backed scratch bound at /work per image (default data_store/processed/_scratch/windowlicker[/<collection>]); the artefact sets pulled off an image live there only while its parsers run."
+      dxdfir_gowindowlicker_image_regex:
+        type: str
         required: false
-        description: "The parsers run per exported image (default: every gowindowlicker parser); loose event-log hosts always get goevtx only."
+        description: "What counts as a disk image inside a tree (a case-insensitive regex over the whole name)."
+      dxdfir_gowindowlicker_exclude_regex:
+        type: str
+        required: false
+        description: "The parts of another item, never hosts (a VMDK's -flat/-sNNN extents, an EWF set's .E02… segments)."
       dxdfir_gowindowlicker_contract:
         type: str
         required: false
@@ -61,22 +66,8 @@ argument_specs:
         required: false
         default: ""
         description: "Image ref overriding the contract's (get-sybers/gowindowlicker:latest); e.g. a digest pin."
-      dxdfir_gowindowlicker_plaso_contract:
-        type: str
-        required: false
-        description: "The plaso contract.yml the export runs are built from (default docker/GoDFIR-toolz/plaso/contract.yml)."
-      dxdfir_gowindowlicker_plaso_image:
-        type: str
-        required: false
-        default: ""
-        description: "Image ref overriding the plaso contract's (get-sybers/plaso:latest) for the export."
-      dxdfir_gowindowlicker_vss:
-        type: bool
-        required: false
-        default: false
-        description: "Also export from Volume Shadow Copies (PLASO_IMAGE_EXPORT_VSS)."
       dxdfir_gowindowlicker_force:
         type: bool
         required: false
         default: false
-        description: "Re-export images and reparse items that already have output."
+        description: "Reparse items that already have output."

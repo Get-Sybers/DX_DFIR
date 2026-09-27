@@ -8,6 +8,7 @@ package lanes
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -65,7 +66,7 @@ var Specs = []Spec{
 		InputSubdirs: []string{"disk_images", "VM_files"}, Exts: imageExts(),
 		Summary: "disk images/VMs -> super timeline"},
 	{Name: "signatures", Title: "signatures", Kind: model.KindSpinner, OutLeaf: "detections",
-		InputSubdirs: []string{"pcaps", "disk_images", "memory"}, Exts: nil,
+		InputSubdirs: []string{"pcaps", "disk_images", "VM_files", "memory"}, Exts: nil,
 		Summary: "yara/suricata/hayabusa over the staged evidence"},
 }
 
@@ -81,10 +82,17 @@ func init() {
 	Groups["all"] = AllNames()
 }
 
+// imageExts lists every disk-image container the lanes read — what gomount
+// decodes: EWF, raw, VMware, Hyper-V, QEMU and VirtualBox disks.
 func imageExts() []string {
 	return dotset(".e01", ".ex01", ".dd", ".raw", ".img", ".vmdk", ".vhd",
-		".vhdx", ".001", ".aff4", ".vmx", ".ova")
+		".vhdx", ".qcow2", ".qcow", ".vdi", ".001", ".aff4", ".vmx", ".ova")
 }
+
+// imagePart matches the parts of ANOTHER image item — a VMDK's flat or split
+// (-sNNN) extents, an EWF set's continuation segments — so a denominator
+// counts a multi-file image once, the way the lanes' roles take it.
+var imagePart = regexp.MustCompile(`(?i)(-flat\.vmdk|-s[0-9]{3,}\.vmdk|\.e(0[2-9]|[1-9][0-9]|[a-z]{2}))$`)
 
 // SpecByName returns the lane spec for a lane name or one of its aliases, or
 // ok=false.
@@ -180,6 +188,9 @@ func (s Spec) countInputs(dirs []string) int {
 func (s Spec) matchExt(path string) bool {
 	if len(s.Exts) == 0 {
 		return true
+	}
+	if imagePart.MatchString(path) {
+		return false
 	}
 	ext := strings.ToLower(filepath.Ext(path))
 	for _, e := range s.Exts {

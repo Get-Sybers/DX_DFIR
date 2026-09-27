@@ -7,7 +7,7 @@
 name: vm_files
 subdir: VM_files
 set_marker: [.vmx]
-ext: [.vmdk, .vhd, .vhdx, .vmx, .ova]
+ext: [.vmdk, .vhd, .vhdx, .vdi, .vmx, .ova]
 signatures:
   - {hex: "4B 44 4D 56", offset: 0, ext: vmdk, desc: "VMDK monolithic sparse (KDMV)"}
   - hex: "23 20 44 69 73 6B 20 44 65 73 63 72 69 70 74 6F 72 46 69 6C 65"

@@ -43,10 +43,10 @@ image, with operator rulesets mounted in their place — see
 | `hayabusa` | every event-log host: `raw/logs/winevt/<host>/` and every disk image's artefact export in the shared stage (`processed/_extracted/[<collection>/]<image>/`) | Hayabusa Sigma detection timeline (native binary, `verbose` profile). |
 | `scan` | every disk image under `raw/disk_images/`, streamed by gomount through goyara in **userspace** — no `/dev/fuse`, nothing mounted on the host | goyara hit records per image. |
 
-> Disk-image event logs reach Hayabusa through the one shared artefact export
-> (`dxdfir_export`: registry hives, event logs, the Linux core in one filter),
-> so an image is exported once for every lane that reads it. Hayabusa needs
-> real `.evtx` input — its `-J` JSON input does not detect.
+> Disk-image event logs reach Hayabusa off the image itself: the signatures
+> image's baked gomount pulls them into `/work` while hayabusa runs (it needs
+> real `.evtx` input — its `-J` JSON input does not detect). Nothing is
+> exported; `dxdfir_export` remains a utility.
 
 ---
 

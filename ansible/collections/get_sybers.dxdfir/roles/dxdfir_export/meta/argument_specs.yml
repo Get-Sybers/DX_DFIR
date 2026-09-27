@@ -1,18 +1,25 @@
 ---
 argument_specs:
   main:
-    short_description: "disk images -> the shared artefact export (processed/_extracted)."
+    short_description: "disk images -> the shared artefact export (processed/_extracted), by gomount."
     description:
       - >-
-        For every tree in dxdfir_export_trees that exists and holds a disk image,
-        runs the plaso image's image_export sub-tool with the role's ONE filter
-        file (Windows artefacts + transaction logs, event logs, the Linux core)
-        into dxdfir_export_stage_dir — one folder per image holding export/ and
-        image_export.jsonl, the done marker. Idempotent per image: one already
-        exported is not re-pulled unless dxdfir_export_force. A tree with no
-        image declares no run, so a host without images never needs the plaso
-        image. On exit dxdfir_export_hosts lists every exported image
-        ({name, export}) — the <host> level the parsing lanes fan out over.
+        For every disk image under the trees in dxdfir_export_trees (every
+        container gomount reads: E01/Ex01, raw, VMDK, VHDX, VHD, QCOW2, VDI —
+        a VMDK's extents and an EWF set's continuation segments belong to their
+        item), runs gomount's materialise verb with the artefact sets in
+        dxdfir_export_sets (windows-core + linux-core: every artefact the go*
+        parsers and hayabusa read) into dxdfir_export_stage_dir — one folder
+        per image holding export/ with materialise.jsonl, the origin manifest
+        and done marker, at its root. No mount, no FUSE, no privilege: the OS
+        volume is read in-process. Idempotent per image: one already exported
+        is not re-pulled unless dxdfir_export_force. A tree with no image
+        declares no run. On exit dxdfir_export_hosts lists every exported
+        image ({name, export}) — the <host> level a consumer fans out over.
+      - >-
+        No lane includes this role any more — gowindowlicker, godaemonhunter
+        and signatures run ON the image through their baked gomount. It is a
+        utility for an operator who wants the artefact set on disk.
     options:
       dxdfir_export_trees:
         type: list
@@ -32,25 +39,26 @@ argument_specs:
       dxdfir_export_image_regex:
         type: str
         required: false
-        description: "What counts as a disk image inside a tree (a case-insensitive extension regex)."
-      dxdfir_export_filter_file:
+        description: "What counts as a disk image inside a tree (a case-insensitive regex over the whole name; find anchors it at the start)."
+      dxdfir_export_exclude_regex:
         type: str
         required: false
-        description: "The image_export filter file (plaso yaml_filter_file format) declaring the artefact set."
-      dxdfir_export_plaso_contract:
+        description: "The parts of another item, never items (a VMDK's -flat/-sNNN extents, an EWF set's .E02… segments)."
+      dxdfir_export_sets:
+        type: list
+        elements: str
+        required: false
+        default: [windows-core, linux-core]
+        description: "The gomount artefact sets materialised out of each image (gomount/materialise-sets.yml)."
+      dxdfir_export_gomount_contract:
         type: str
         required: false
-        description: "The plaso contract.yml the export runs are built from."
-      dxdfir_export_plaso_image:
+        description: "The gomount contract.yml the export runs are built from."
+      dxdfir_export_gomount_image:
         type: str
         required: false
         default: ""
-        description: "Image ref overriding the plaso contract's (get-sybers/plaso:latest)."
-      dxdfir_export_vss:
-        type: bool
-        required: false
-        default: false
-        description: "Also export from Volume Shadow Copies (PLASO_IMAGE_EXPORT_VSS)."
+        description: "Image ref overriding the gomount contract's (get-sybers/gomount:latest)."
       dxdfir_export_force:
         type: bool
         required: false

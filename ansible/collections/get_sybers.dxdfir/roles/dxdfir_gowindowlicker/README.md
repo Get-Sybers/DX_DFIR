@@ -12,13 +12,19 @@ A host is either
 - a folder directly under `data_store/raw/logs/winevt/` — `logs/winevt/<host>/*.evtx`,
   loose event logs; only `goevtx` runs over it. A log dropped at the tree
   root belongs to no host and is reported, not parsed;
-- a disk image under `raw/disk_images/` or `raw/VM_files/`, first exported
-  once by [`dxdfir_export`](../dxdfir_export/README.md) into the shared stage
-  `processed/_extracted/[<collection>/]<image>/export/` (registry hives with
-  their transaction logs, Amcache, jump lists and `.lnk`, Recycle Bin `$I`,
-  the Windows Timeline and SRUM databases, Prefetch, `$MFT`, the event logs).
-  Every parser in `dxdfir_gowindowlicker_subtools` runs over it. The image's
-  item folder is the host name.
+- a disk image under `raw/disk_images/` or `raw/VM_files/` — E01/Ex01,
+  raw/dd/img, VMDK (monolithic, split, streamOptimized, snapshot chains),
+  VHDX, VHD, QCOW2, VDI — which the parsers run **on**: one sweep run per
+  image (`GOWINDOWLICKER_IMAGE`), the image's baked-in
+  [gomount](../../../../../docker/GoDFIR-toolz/gomount) pulling every
+  parser's artefact set (registry hives with their transaction logs, Amcache,
+  jump lists and `.lnk`, Recycle Bin `$I`, the Windows Timeline and SRUM
+  databases, Prefetch, `$MFT`, the event logs) out of the OS volume into a
+  disk-backed `/work` scratch (`dxdfir_gowindowlicker_work_dir`) while they
+  run — nothing is exported, nothing is mounted. The image's item name (its
+  path relative to the tree, separators folded to `_`) is the host name; a
+  VMDK's `-flat`/`-sNNN` extents and an EWF set's `.E02…` segments belong to
+  their item.
 
 ## Runs and output
 

@@ -1,4 +1,11 @@
 ---
+# dxdfir_export: the disk-image artefact export, a utility — gomount's
+# materialise verb pulls the Windows and Linux artefact sets out of every disk
+# image the caller's trees hold, once per image, into the one canonical stage.
+# No lane includes it (every lane runs ON the image); an operator's own
+# playbook can. No mount, no FUSE, no privilege: gomount decodes
+# the image (E01/Ex01, raw, VMDK, VHDX, VHD, QCOW2, VDI) and reads the OS
+# volume's filesystem (NTFS, ext2/3/4, XFS, vfat; LVM2 peeled) in-process.
 
 dxdfir_export_repo_root: "{{ role_path }}/../../../../.."
 
@@ -6,26 +13,38 @@ dxdfir_export_repo_root: "{{ role_path }}/../../../../.."
 dxdfir_export_collection: ""
 
 # the evidence trees to export from — every entry that exists AND holds a disk
-# image gets one image_export run; the caller lists them (its disk-image and
-# VM-export trees). Empty or absent trees are skipped silently, so a lane
-# with no images never needs the plaso image at all.
+# image gets one materialise run per image; the caller lists them (its
+# disk-image and VM-export trees). Empty or absent trees are skipped silently.
 dxdfir_export_trees: []
-# what counts as an image inside a tree (the plaso contract's item rule)
-dxdfir_export_image_regex: '(?i)\.(e01|ex01|raw|dd|img|vmdk|vhd|vhdx|qcow2|aff4|001|bin)$'
+
+# what counts as an image inside a tree: every container gomount reads, by
+# extension. ansible.builtin.find applies a regex with re.match — anchored at
+# the start — so the pattern must consume the stem.
+dxdfir_export_image_regex: '(?i).*\.(e01|ex01|raw|dd|img|vmdk|vhd|vhdx|qcow2|qcow|vdi|aff4|001|bin)$'
+# the parts of ANOTHER item, never items themselves: a VMDK's flat extent or
+# split (-sNNN) extents belong to their descriptor, an EWF set's continuation
+# segments (.E02…, .EAA…) to its first
+dxdfir_export_exclude_regex: '(?i).*(-flat\.vmdk|-s[0-9]{3,}\.vmdk|\.e(0[2-9]|[1-9][0-9]|[a-z]{2}))$'
 
 # ONE canonical stage shared by every lane that reads an export
 # (gowindowlicker, godaemonhunter, signatures' hayabusa): one folder per image
-# item, export/ + image_export.jsonl (the done marker) inside it. An image
-# already exported is not re-pulled unless force.
+# item, export/ inside it with materialise.jsonl (the done marker + origin
+# manifest) at its root. An image already exported is not re-pulled unless force.
 dxdfir_export_stage_dir: >-
   {{ dxdfir_export_repo_root }}/data_store/processed/_extracted{{
   ('/' ~ dxdfir_export_collection) if dxdfir_export_collection | length > 0 else '' }}
 
-# the artefact set, ONE filter for every consumer (plaso yaml_filter_file format)
-dxdfir_export_filter_file: "{{ role_path }}/files/image-export-filter.yaml"
-dxdfir_export_plaso_contract: "{{ dxdfir_export_repo_root }}/docker/GoDFIR-toolz/plaso/contract.yml"
-# empty = the contract's image; set to pin a digest
-dxdfir_export_plaso_image: ""
-# also export from Volume Shadow Copies
-dxdfir_export_vss: false
+# the artefact sets gomount materialises out of each image — ONE list for every
+# consumer: windows-core is every Windows set the go* parsers read (hives with
+# their transaction logs, Amcache, NTUSER/UsrClass, SRUM, SUM, the Timeline
+# database, the event logs, Prefetch, $MFT, Recent/jump lists, Recycle Bin);
+# linux-core is docs/linux §5.4's daemon-parser surface. A set that matches
+# nothing on a volume pulls nothing and is not an error.
+dxdfir_export_sets: [windows-core, linux-core]
+
+# the contract the export runs are built from, and an image ref overriding
+# the contract's (empty = the contract's image; set to pin a digest)
+dxdfir_export_gomount_contract: "{{ dxdfir_export_repo_root }}/docker/GoDFIR-toolz/gomount/contract.yml"
+dxdfir_export_gomount_image: ""
+
 dxdfir_export_force: false

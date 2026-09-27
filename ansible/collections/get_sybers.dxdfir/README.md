@@ -26,7 +26,7 @@ summary line.
 | `dxdfir_godaemonhunter` | Linux hosts — logs / root trees (`logs/linux/<host>/`) and disk images / VMs → the daemon parsers, knowledge-enriched, one run per parser and host | `get-sybers/godaemonhunter` (gohost, gousers, gonetwork; gojournal, goauditd, … as sub-tools; + `dxdfir_export`) |
 | `dxdfir_anamnesis` | Memory images → per-plugin JSONL (anamnesis / MemProcFS) | `get-sybers/anamnesis` |
 | `dxdfir_plaso` | Disk images / VM exports → `<host>.plaso` + Plaso JSON Lines, side by side | `get-sybers/plaso` (`log2timeline`, `psort`) |
-| `dxdfir_export` | The shared disk-image artefact export the three lanes above and hayabusa read (`processed/_extracted/`) | `get-sybers/plaso` (`image_export`) |
+| `dxdfir_export` | The disk-image artefact export, a utility no lane includes (`processed/_extracted/`); every lane runs on the image instead | `get-sybers/gomount` (`materialise`) |
 | `dxdfir_signatures` | YARA / Suricata / Hayabusa / disk-scan detections | `get-sybers/signatures` (`yara`, `suricata`, `hayabusa`, `scan`) |
 | `dxdfir_byakugan` | Processed tree → materialised MITRE CAR (build / verify / timeline) | `get-sybers/byakugan` (`build`, `timeline`) |
 | `dxdfir_exchange` | The STIX/CTI exchange with OpenCTI (export / behaviour / pull / sightings) | `get-sybers/byakugan` (`stix-export`, `stix-behaviour`, `cti-pull`, `cti-sightings`) |

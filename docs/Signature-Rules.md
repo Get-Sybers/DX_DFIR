@@ -156,8 +156,9 @@ explicitly the same way when it should differ.
 ## Hayabusa (Sigma over Windows Event Logs)
 
 The `hayabusa` sub-tool scans every event-log host — the loose logs under
-`data_store/raw/logs/winevt/<host>/` and every disk image's artefact export in the
-shared stage `processed/_extracted/[<collection>/]<image>/` — with the image's
+`data_store/raw/logs/winevt/<host>/` and every disk image under
+`raw/disk_images/` and `raw/VM_files/`, read on the image itself (the baked
+gomount pulls its event logs into `/work` while hayabusa runs) — with the image's
 default Sigma set.
 An operator rules directory (`dxdfir_signatures_hayabusa_rules`) is mounted at
 `/rules/hayabusa` and passed as `SIGNATURES_HAYABUSA_RULES`; the output profile

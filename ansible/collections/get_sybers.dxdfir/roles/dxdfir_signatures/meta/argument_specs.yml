@@ -53,18 +53,18 @@ argument_specs:
         type: str
         required: false
         description: "Loose .evtx tree the hayabusa sub-tool scans (default data_store/raw/logs/winevt)."
-      dxdfir_signatures_evtx_stage_dir:
-        type: str
-        required: false
-        description: >-
-          The shared disk-image artefact export (default
-          data_store/processed/_extracted[/<collection>], dxdfir_export's stage —
-          exported here when no other lane did it yet); every image's export is
-          one hayabusa host.
       dxdfir_signatures_disk_dir:
         type: str
         required: false
-        description: "Disk images the scan sub-tool streams through goyara (default data_store/raw/disk_images)."
+        description: "Disk images (default data_store/raw/disk_images): every image is a hayabusa host (its event logs pulled by the baked gomount) and a scan item (streamed through goyara)."
+      dxdfir_signatures_vm_dir:
+        type: str
+        required: false
+        description: "VM exports (default data_store/raw/VM_files): VMDK/VHDX/VHD/QCOW2/VDI disks, read like the disk images."
+      dxdfir_signatures_work_dir:
+        type: str
+        required: false
+        description: "Disk-backed scratch bound at /work for the image-reading runs (default data_store/processed/_scratch/signatures[/<collection>])."
       dxdfir_signatures_yara_rules:
         type: str
         required: false
