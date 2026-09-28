@@ -272,7 +272,7 @@ func runRegister(env *Env, name, fromExplicit string, doHash bool) error {
 	defer cancel()
 	runner := &collect.Runner{Repo: r, Title: title}
 	updates := runner.Register(ctx, name, fromPath, doHash)
-	return exitFromErr(present(env, tui.NewCollection(), updates, cancel))
+	return exitFromErr(present(env, tui.NewCollection(env.Version), updates, cancel))
 }
 
 // ---- unregister ----
@@ -408,7 +408,7 @@ func runSort(env *Env, name string, o sortOpts) error {
 	defer cancel()
 	runner := &collect.Runner{Repo: r, Title: title}
 	updates := runner.Sort(ctx, name, o.dryRun, !o.noHash)
-	return exitFromErr(present(env, tui.NewCollection(), updates, cancel))
+	return exitFromErr(present(env, tui.NewCollection(env.Version), updates, cancel))
 }
 
 // ---- shared resolution ----

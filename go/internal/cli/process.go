@@ -167,7 +167,7 @@ func runProcess(env *Env, source, collection string, force, noRegister bool, ext
 		ExtraVars: extraVars, Runs: runs, Title: title,
 	}
 	updates := job.Execute(ctx)
-	return exitFromErr(present(env, tui.NewProcess(), updates, cancel))
+	return exitFromErr(present(env, tui.NewProcess(env.Version), updates, cancel))
 }
 
 // laneHelp renders the lane table for `process -h`: every lane with its

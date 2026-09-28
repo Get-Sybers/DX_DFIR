@@ -7,6 +7,32 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Added
+- **The dashboards show the running build version** in the top header
+  (`dxdfir 0.6.0 (<rev>, dirty)`). The revision and dirty flag come from
+  the VCS metadata `go build` embeds, so a rebuilt binary is distinguishable
+  from a stale one at a glance — a plain semantic version is identical across
+  rebuilds and can't tell a fresh build from an old one still on `PATH`.
+
+### Fixed
+- **Dashboard panes no longer leave a ghost when the layout shrinks.** termui
+  only paints the cells of the drawables it is handed, and the render loop
+  never cleared the back buffer before a normal or final frame, so a pane that
+  dropped out of the layout (the active-lane detail panel when its lane
+  finished) left its last frame on screen — a finished job showed a stale
+  "lane running HH:MM:SS" panel under a header that already said DONE. Every
+  frame now clears first; termui's `Clear()` does not flush, so this stays a
+  single, flicker-free frame.
+- **The pipeline gauge no longer reads 100% while a lane is still running.**
+  Progress is reconstructed from output files landing on disk, which fill up
+  before ansible tears the container down and exits; the bar is now held below
+  100% until every lane has actually settled, then flips to 100%.
+- **The header elapsed clock freezes on completion** instead of ticking on past
+  the final update.
+- **Middle dots and dashes in dashboard text render as ASCII**, not `?` — the
+  `·` separator and the `—` in the "done — press q" hint were being folded to
+  the generic non-ASCII placeholder.
+
 ### Changed (the lanes are the tools; the processed tree is per collection, per host)
 - **`dxdfir process` lists `gowindowlicker` and `godaemonhunter`.** The
   lanes are named after the tool that drives them — `zeek`,

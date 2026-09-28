@@ -23,8 +23,9 @@ import (
 // Env holds the persistent, cross-verb flags.
 type Env struct {
 	RepoRoot   string
-	ForcePlain bool // --no-tui
-	ForceTUI   bool // --tui
+	ForcePlain bool   // --no-tui
+	ForceTUI   bool   // --tui
+	Version    string // build version string, shown atop the dashboards
 }
 
 // ExitError carries a specific process exit code up to main, preserving the
@@ -85,7 +86,7 @@ func nounGroup(use, short, long string) *cobra.Command {
 
 // NewRootCmd builds the full dxdfir command tree.
 func NewRootCmd(version string) *cobra.Command {
-	env := &Env{}
+	env := &Env{Version: version}
 
 	root := &cobra.Command{
 		Use:   "dxdfir",

@@ -6,10 +6,20 @@ import (
 )
 
 func humanElapsed(start time.Time) string {
+	return humanSpan(start, time.Time{})
+}
+
+// humanSpan formats the elapsed time since start, freezing at end once end is
+// set. Dashboards pass the job's completion time as end so the header clock
+// settles on the final duration instead of ticking on past "done".
+func humanSpan(start, end time.Time) string {
 	if start.IsZero() {
 		return "00:00:00"
 	}
-	return fmtDur(time.Since(start))
+	if end.IsZero() {
+		return fmtDur(time.Since(start))
+	}
+	return fmtDur(end.Sub(start))
 }
 
 // fmtDur formats a duration as hh:mm:ss.

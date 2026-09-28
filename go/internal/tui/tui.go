@@ -120,12 +120,19 @@ func styleFg(c ui.Color) ui.Style   { return ui.NewStyle(c) }
 func styleBold(c ui.Color) ui.Style { return ui.NewStyle(c, ui.ColorClear, ui.ModifierBold) }
 
 // sanitize makes a dynamic string safe for a termui widget: strip control runes,
-// map EVERY non-ASCII rune to '?', and break the "](" adjacency that termui's
-// [text](style) markup parser keys on. Mapping all non-ASCII to a single-byte
-// '?' keeps byte length == column count, so the byte-slicing truncRight/truncLeft/
+// map EVERY non-ASCII rune to a single byte, and break the "](" adjacency that
+// termui's [text](style) markup parser keys on. Mapping all non-ASCII to one byte
+// keeps byte length == column count, so the byte-slicing truncRight/truncLeft/
 // padRight below can never split a multi-byte rune or miscompute a width. ASCII
 // stays verbatim (forensic fidelity for paths/hashes); the full non-ASCII name
 // survives in the plain summary / on-disk logs.
+//
+// Common typographic punctuation the UI and producers emit — dashes, the middle
+// dot separator ("scanning · 1m28s"), curly quotes, ellipsis — folds to a single
+// ASCII byte via asciiFold rather than the generic '?', which looked like a decode
+// error in the dashboard (e.g. the "done — press q" dismiss hint rendered as
+// "done ? press q"). The plain presenter prints the real glyphs — it never routes
+// through here.
 func sanitize(s string) string {
 	var b strings.Builder
 	b.Grow(len(s))
@@ -138,10 +145,27 @@ func sanitize(s string) string {
 		case r < 128:
 			b.WriteRune(r)
 		default:
-			b.WriteByte('?')
+			if a, ok := asciiFold[r]; ok {
+				b.WriteByte(a)
+			} else {
+				b.WriteByte('?')
+			}
 		}
 	}
 	return strings.ReplaceAll(b.String(), "](", "] (")
+}
+
+// asciiFold maps the non-ASCII punctuation the dashboard's own strings use to a
+// single ASCII byte, preserving sanitize's one-byte-per-column invariant.
+var asciiFold = map[rune]byte{
+	'·': '-',  // · middle dot (field separator)
+	'–': '-',  // – en dash
+	'—': '-',  // — em dash
+	'‘': '\'', // ' left single quote
+	'’': '\'', // ' right single quote / apostrophe
+	'“': '"',  // " left double quote
+	'”': '"',  // " right double quote
+	'…': '.',  // … ellipsis (single dot keeps one byte per column)
 }
 
 // truncRight cuts a string to width, appending ".." when cut.
