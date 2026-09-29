@@ -1,6 +1,6 @@
 // Package repogate holds the repository's cross-cutting gates as Go tests,
-// run by `go test ./...` in CI like any other package. They are the direct
-// port of the retired host-python test suite's two enforcement files:
+// run by `go test ./...` in CI like any other package. It carries one
+// enforcement file (ported from the retired host-python test suite):
 //
 //   - boundary_test.go — DX_DFIR must not house what Byakugan owns: the
 //     engine's reference docs stay in the Byakugan repo, everything the

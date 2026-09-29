@@ -1,6 +1,6 @@
 ---
 # Registers dxdfir_evidence_images ([{tree, rel, name}], one per disk image found
-# under dxdfir_evidence_trees) and dxdfir_evidence_hosts ([{name, path}], one per
+# under dxdfir_evidence_trees) and dxdfir_evidence_hosts ([{name, export}], one per
 # immediate subfolder of dxdfir_evidence_host_dir). Read-only; both default to [].
 - name: "evidence | start from empty result lists"
   ansible.builtin.set_fact:
