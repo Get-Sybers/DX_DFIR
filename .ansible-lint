@@ -6,9 +6,9 @@ exclude_paths:
   - .ansible/
   - .claude/
   - data_store/
-  # the submodule lints in ITS repo
-  - docker/GoDFIR-toolz/
   - ansible/collections/get_sybers.dxdfir/.ansible/
+  # shipped tool contracts are data (an image's contract.yml), not ansible
+  - ansible/collections/get_sybers.dxdfir/roles/*/files/contract.yml
   # rule DATA, not ansible — the rules have their own gate (rules_loader + tests)
   - python/get_sybers_dxdfir/detect/rules/
   # setuptools copies package-data into python/build/lib — generated, or CI lints the copies
@@ -24,7 +24,9 @@ mock_modules:
   - community.docker.docker_container_info
   - community.docker.docker_host_info
   - community.docker.docker_image
+  - community.docker.docker_image_export
   - community.docker.docker_image_info
+  - community.docker.docker_image_load
   - community.docker.docker_network
   - community.docker.docker_prune
   - community.docker.docker_volume

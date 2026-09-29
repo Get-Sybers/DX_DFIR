@@ -2,6 +2,10 @@ name: smoke
 
 # The real pipeline, asserted for CORRECTNESS (what `checks` deliberately
 # does not cover) — docs/reference/build-and-test.md "Smoke".
+#
+# The tool images are PULLED from the registry (ghcr.io/get-sybers/<tool>) via
+# get_sybers.godfir_run.godfir_images; they must be published there for this to
+# pass. Building + publishing images is the GoDFIR-toolz repo's concern.
 
 on:
   workflow_dispatch:
@@ -10,22 +14,19 @@ on:
     - cron: "0 6 * * *"
   pull_request:
     paths:
-      # the lanes the smoke test drives, and the shared skeleton
-      - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_lane/**"
+      # the lanes the smoke test drives, and the shared discovery/engine wiring
+      - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_evidence/**"
       - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_export/**"
       - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_gowindowlicker/**"
       - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_byakugan/**"
+      - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_images/**"
       - "ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-process-gowindowlicker.yml"
       - "ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-car.yml"
       - "ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-verify-car.yml"
+      # a new godfir_run pin (the imported galaxy) re-runs this
       - "ansible/collections/get_sybers.dxdfir/requirements.yml"
       - "ansible.cfg"
       - "requirements.txt"
-      # the submodule supplies the manifest + build galaxy: a gitlink bump re-runs this
-      - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_images/**"
-      - "docker/GoDFIR-toolz"
-      # engine pins are ARG defaults in the submodule, so an engine bump rides the gitlink path above
-      - ".gitmodules"
       - ".github/tests/smoke-test.sh"
       - "dev-scripts/fetch-samples.sh"
       - "dev-scripts/samples-manifest.tsv"
@@ -40,30 +41,27 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-        with:
-          # recursive: every build context and contract comes from the submodule
-          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # the repo lock brings ansible-core + the docker SDK the collection's modules import
+      # the repo lock brings ansible-core + the docker SDK the collection's
+      # modules import; requirements.yml imports get_sybers.godfir_run by URL
       - name: Install the dxdfir package and the collection's dependencies
         run: |
           python -m pip install --quiet -r requirements.txt
-          # galaxy.ansible.com resets connections now and then: three attempts
+          # galaxy.ansible.com / github resets connections now and then: three attempts
           for attempt in 1 2 3; do
             ansible-galaxy collection install -r ansible/collections/get_sybers.dxdfir/requirements.yml && break
             [ "$attempt" -lt 3 ] || exit 1
-            echo "galaxy install failed (attempt $attempt) — retrying in 15s"; sleep 15
+            echo "collection install failed (attempt $attempt) — retrying in 15s"; sleep 15
           done
-          # the build galaxy resolves in place from the submodule (roles_path)
 
-      # built exactly as `dxdfir build-docker` builds them (stamps + hardening asserts);
-      # only the two pipeline images here — the `images` job builds the full manifest
-      - name: Build the gowindowlicker + byakugan images (the images role, hardening asserted)
+      # pulled exactly as `dxdfir build-docker` provisions them (godfir_images
+      # registry pull + hardening verify); only the two the smoke test drives
+      - name: Pull the gowindowlicker + byakugan images (registry pull, hardening verified)
         run: |
           ansible-playbook \
             ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml \
@@ -71,38 +69,3 @@ jobs:
 
       - name: Run the pipeline smoke test
         run: ./.github/tests/smoke-test.sh
-
-  # the whole manifest builds, hardening asserted — nothing rots unbuilt between releases
-  images:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      # two dozen images need more scratch than a stock runner keeps free
-      - name: Free runner disk
-        run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/hostedtoolcache/CodeQL
-
-      - name: Install the dxdfir package and the collection's dependencies
-        run: |
-          python -m pip install --quiet -r requirements.txt
-          # galaxy.ansible.com resets connections now and then: three attempts
-          for attempt in 1 2 3; do
-            ansible-galaxy collection install -r ansible/collections/get_sybers.dxdfir/requirements.yml && break
-            [ "$attempt" -lt 3 ] || exit 1
-            echo "galaxy install failed (attempt $attempt) — retrying in 15s"; sleep 15
-          done
-          # the build galaxy resolves in place from the submodule (roles_path)
-
-      # no dxdfir_images_set: the default is EVERY manifest image
-      - name: Build the full GoDFIR-toolz manifest (every image, hardening asserted)
-        run: |
-          ansible-playbook \
-            ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml

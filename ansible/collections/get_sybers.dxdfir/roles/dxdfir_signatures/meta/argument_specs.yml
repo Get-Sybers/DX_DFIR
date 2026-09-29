@@ -97,10 +97,6 @@ argument_specs:
         required: false
         default: ""
         description: "scan: gomount --filter glob over the volume paths (SIGNATURES_SCAN_FILTER); empty = every file."
-      dxdfir_signatures_contract:
-        type: str
-        required: false
-        description: "The signatures contract.yml the runs are built from (default docker/GoDFIR-toolz/signatures/contract.yml)."
       dxdfir_signatures_image:
         type: str
         required: false

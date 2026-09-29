@@ -74,10 +74,6 @@ argument_specs:
         elements: str
         required: false
         description: "The daemon parsers run per host with the store mounted (default: the contract's layer2 — every Layer-2 parser)."
-      dxdfir_godaemonhunter_contract:
-        type: str
-        required: false
-        description: "The contract.yml the runs are built from (default docker/GoDFIR-toolz/godaemonhunter/contract.yml)."
       dxdfir_godaemonhunter_image:
         type: str
         required: false

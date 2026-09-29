@@ -59,10 +59,6 @@ argument_specs:
         type: str
         required: false
         description: "The parts of another item, never hosts (a VMDK's -flat/-sNNN extents, an EWF set's .E02… segments)."
-      dxdfir_gowindowlicker_contract:
-        type: str
-        required: false
-        description: "The contract.yml the runs are built from (default docker/GoDFIR-toolz/gowindowlicker/contract.yml)."
       dxdfir_gowindowlicker_image:
         type: str
         required: false

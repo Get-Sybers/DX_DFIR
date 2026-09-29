@@ -16,7 +16,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -178,25 +177,5 @@ func TestEngineOutDirDefaultsStayUnderTheIgnoredStore(t *testing.T) {
 		if !strings.Contains(value, "/data_store/processed/") {
 			t.Errorf("%s defaults outside data_store/processed/ (%s) — the engine would write commit-able files into the repo", varName, value)
 		}
-	}
-}
-
-func TestThePinnedDockerfilePinsTheByakuganEngine(t *testing.T) {
-	// The reference to Byakugan must not be silently dropped or loosened: the
-	// engine pin lives as the BYAKUGAN_REF ARG default in the byakugan
-	// Dockerfile the GoDFIR-toolz submodule pin carries, and it is always a
-	// reproducible full-sha commit.
-	root := repoRoot(t)
-	dockerfile := filepath.Join(root, "docker", "GoDFIR-toolz", "byakugan", "Dockerfile")
-	raw, err := os.ReadFile(dockerfile)
-	if err != nil {
-		t.Fatal("the GoDFIR-toolz submodule is not checked out — run `git submodule update --init --recursive docker/GoDFIR-toolz`")
-	}
-	m := regexp.MustCompile(`(?m)^ARG BYAKUGAN_REF=(\S+)$`).FindStringSubmatch(string(raw))
-	if m == nil {
-		t.Fatal("the byakugan Dockerfile must default ARG BYAKUGAN_REF (the engine pin)")
-	}
-	if !regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(m[1]) {
-		t.Fatalf("BYAKUGAN_REF must default to a full 40-hex commit sha (never a branch or tag, so the engine pin is reproducible), got %q", m[1])
 	}
 }

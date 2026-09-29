@@ -17,14 +17,6 @@ dxdfir_export_collection: ""
 # disk-image and VM-export trees). Empty or absent trees are skipped silently.
 dxdfir_export_trees: []
 
-# what counts as an image inside a tree: every container gomount reads, by
-# extension. ansible.builtin.find applies a regex with re.match — anchored at
-# the start — so the pattern must consume the stem.
-dxdfir_export_image_regex: '(?i).*\.(e01|ex01|raw|dd|img|vmdk|vhd|vhdx|qcow2|qcow|vdi|dmg|sparseimage|aff4|001|bin)$'
-# the parts of ANOTHER item, never items themselves: a VMDK's flat extent or
-# split (-sNNN) extents belong to their descriptor, an EWF set's continuation
-# segments (.E02…, .EAA…) to its first
-dxdfir_export_exclude_regex: '(?i).*(-flat\.vmdk|-s[0-9]{3,}\.vmdk|\.e(0[2-9]|[1-9][0-9]|[a-z]{2}))$'
 
 # ONE canonical stage shared by every lane that reads an export
 # (gowindowlicker, godaemonhunter, signatures' hayabusa): one folder per image
@@ -44,7 +36,9 @@ dxdfir_export_sets: [windows-core, linux-core]
 
 # the contract the export runs are built from, and an image ref overriding
 # the contract's (empty = the contract's image; set to pin a digest)
-dxdfir_export_gomount_contract: "{{ dxdfir_export_repo_root }}/docker/GoDFIR-toolz/gomount/contract.yml"
+# gomount has no godfir_run lane; ship its contract with this role (a copy of
+# the GoDFIR-toolz gomount/contract.yml). A godfir_gomount lane would supersede this.
+dxdfir_export_gomount_contract: "{{ role_path }}/files/contract.yml"
 dxdfir_export_gomount_image: ""
 
 dxdfir_export_force: false

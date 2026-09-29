@@ -23,10 +23,6 @@ argument_specs:
         type: str
         required: false
         description: "Output dir (default data_store/processed/zeek[/<collection>]); override to send output to a custom location."
-      dxdfir_zeek_contract:
-        type: str
-        required: false
-        description: "The zeek contract.yml the lane is driven from (default docker/GoDFIR-toolz/zeek/contract.yml)."
       dxdfir_zeek_image:
         type: str
         required: false

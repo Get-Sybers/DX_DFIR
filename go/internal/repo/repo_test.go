@@ -116,17 +116,16 @@ func TestAnsiblePlaybookMissingNamesTheVenv(t *testing.T) {
 	}
 }
 
-// TestRolesPathCarriesTheBuildGalaxy pins the ANSIBLE_ROLES_PATH the front-end
-// exports: it overrides ansible.cfg's roles_path, so a play including
-// godfir_build (dxdfir build-docker, the lanes' image preflight) resolves the
-// submodule's roles only if the variable carries them itself.
-func TestRolesPathCarriesTheBuildGalaxy(t *testing.T) {
+// TestRolesPathIsCollectionRolesOnly pins the ANSIBLE_ROLES_PATH the front-end
+// exports: it overrides ansible.cfg's roles_path with this repo's own deploy
+// roles only. The container-interaction galaxy (get_sybers.godfir_run) is
+// imported by URL into .ansible/collections and resolves via collections_path,
+// not roles_path — no submodule, no galaxy-import fallback.
+func TestRolesPathIsCollectionRolesOnly(t *testing.T) {
 	r := fakeRepo(t, false)
 	got := strings.Split(r.RolesPath(), string(os.PathListSeparator))
 	want := []string{
 		filepath.Join(r.Root, "ansible", "collections", "get_sybers.dxdfir", "roles"),
-		filepath.Join(r.Root, "docker", "GoDFIR-toolz", "roles"),
-		filepath.Join(r.Root, ".ansible", "collections", "ansible_collections", "get_sybers", "godfir_toolz", "roles"),
 	}
 	if len(got) != len(want) {
 		t.Fatalf("RolesPath = %v, want %v", got, want)

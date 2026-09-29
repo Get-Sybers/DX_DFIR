@@ -1,3 +1,0 @@
-[submodule "docker/GoDFIR-toolz"]
-	path = docker/GoDFIR-toolz
-	url = https://github.com/Get-Sybers/GoDFIR-toolz.git

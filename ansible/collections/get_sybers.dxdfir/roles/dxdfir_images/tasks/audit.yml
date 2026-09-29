@@ -1,23 +1,12 @@
 ---
-# The namespace audit: freeze the submodule root (the lazy include_role-vars
-# trap — tasks/main.yml), delegate to the build galaxy's audit entry.
-
-- name: "images-audit | stat the submodule inventory"
-  ansible.builtin.stat:
-    path: "{{ dxdfir_images_context }}/images.yml"
-  register: dxdfir_images_context_stat
-
-- name: "images-audit | resolve the deploy-side values to concrete strings"
-  ansible.builtin.set_fact:
-    # empty when the submodule is absent — godfir_build then falls back to its own (imported) tree
-    dxdfir_images_context_resolved: >-
-      {{ dxdfir_images_context if dxdfir_images_context_stat.stat.exists else '' }}
-
-- name: "images-audit | audit through the GoDFIR-toolz build galaxy"
+# The namespace inventory audit: delegate to godfir_images' audit, driven by the
+# manifest shipped in the installed collection.
+- name: "images-audit | audit through godfir_images"
   ansible.builtin.include_role:
-    name: godfir_build
+    name: get_sybers.godfir_run.godfir_images
     tasks_from: audit
   vars:
-    godfir_build_root: "{{ dxdfir_images_context_resolved }}"
-    godfir_build_uid: "{{ dxdfir_images_uid }}"
-    godfir_build_gid: "{{ dxdfir_images_gid }}"
+    godfir_images_namespace: "{{ dxdfir_images_namespace }}"
+    godfir_images_uid: "{{ dxdfir_images_uid }}"
+    godfir_images_gid: "{{ dxdfir_images_gid }}"
+    godfir_images_manifest_path: "{{ dxdfir_images_manifest_path }}"

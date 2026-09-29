@@ -1,30 +1,13 @@
 ---
-# The deploy galaxy's face of the tool images: building DELEGATES to the
-# build galaxy over the submodule tree. The freeze below is load-bearing —
-# include_role vars template lazily INSIDE the included role (README:
-# "Calling from another role" in the build galaxy) — and an empty frozen
-# root is the degraded-path signal (godfir_build falls back to its own,
-# galaxy-imported tree).
-- name: "images | stat the submodule inventory"
-  ansible.builtin.stat:
-    path: "{{ dxdfir_images_context }}/images.yml"
-  register: dxdfir_images_context_stat
-  tags: [always]
-
-- name: "images | resolve the deploy-side decisions to concrete values"
-  ansible.builtin.set_fact:
-    dxdfir_images_context_resolved: >-
-      {{ dxdfir_images_context if dxdfir_images_context_stat.stat.exists else '' }}
-    dxdfir_images_set_resolved: "{{ dxdfir_images_set }}"
-  tags: [always]
-
-# tasks and content are one checkout at one pin (roles_path resolves the role from the same tree it builds)
-- name: "images | build + verify through the GoDFIR-toolz build galaxy"
+# Deploy-side image provisioning is a REGISTRY PULL now: delegate to
+# get_sybers.godfir_run.godfir_images (imported by URL), which pulls
+# ghcr.io/get-sybers/<tool>:<tag> for every requested ref and tags it to the
+# local get-sybers/<tool>:latest name. Building lives in get_sybers.godfir_build.
+- name: "images | pull the tool images"
   ansible.builtin.include_role:
-    name: godfir_build
+    name: get_sybers.godfir_run.godfir_images
+    tasks_from: ensure_present
   vars:
-    godfir_build_root: "{{ dxdfir_images_context_resolved }}"
-    godfir_build_set: "{{ dxdfir_images_set_resolved }}"
-    godfir_build_force: "{{ dxdfir_images_force }}"
-    godfir_build_uid: "{{ dxdfir_images_uid }}"
-    godfir_build_gid: "{{ dxdfir_images_gid }}"
+    godfir_images_required: "{{ dxdfir_images_refs }}"
+    godfir_images_force: "{{ dxdfir_images_force }}"
+    godfir_images_namespace: "{{ dxdfir_images_namespace }}"

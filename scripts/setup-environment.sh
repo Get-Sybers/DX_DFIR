@@ -266,35 +266,16 @@ fi
 # Present user with what this script will do
 section "Setup plan"
 ok   "1. Install required userland tools"
-step "2. Initialise the git submodules (recursively)"
-step "3. Set ownership and permissions on the DX_DFIR repository"
-step "4. Install the pinned Ansible layer (repo-local .venv) and the pinned collections"
-step "5. Ensure the Docker engine, daemon and group via ansible (dxdfir-bootstrap.yml)"
-detail "the Byakugan CAR engine is no longer a host checkout — it is built into"
-detail "the get-sybers/byakugan image by 'dxdfir build-docker'"
+step "2. Set ownership and permissions on the DX_DFIR repository"
+step "3. Install the pinned Ansible layer (repo-local .venv) and the pinned collections"
+detail "get_sybers.godfir_run is imported by URL into .ansible/collections from"
+detail "requirements.yml (no submodule)"
+step "4. Ensure the Docker engine, daemon and group via ansible (dxdfir-bootstrap.yml)"
+detail "the Byakugan CAR engine and every tool image are pulled from the registry"
+detail "(ghcr.io/get-sybers/<tool>) by 'dxdfir build-docker'"
 echo
 
 confirm "Do you wish to proceed?" || { info "Setup cancelled."; exit 1; }
-
-################################################################################
-# Pull the git submodules — recursively, on principle (a nesting submodule
-# checks out complete instead of silently empty); before the chown/chmod so
-# fresh files inherit them.
-section "Git submodules"
-if [[ -f "$REPO_ROOT_DIR/.gitmodules" ]]; then
-    step "Initialising git submodules (recursive) ..."
-    # safe.directory is scoped to THIS invocation with `-c` (the repo may be owned
-    # by a different user until the chown below); git_safe_flags trusts the repo
-    # root — and, on git >= 2.46, only the paths beneath it.
-    git_safe_flags "$REPO_ROOT_DIR"
-    GIT_SAFE=("${GIT_SAFE_FLAGS[@]}")
-    git "${GIT_SAFE[@]}" -C "$REPO_ROOT_DIR" submodule sync --recursive >/dev/null 2>&1 || true
-    git "${GIT_SAFE[@]}" -C "$REPO_ROOT_DIR" submodule update --init --recursive \
-        || die "Failed to initialise git submodules recursively (need network + git access)."
-    ok "Submodules checked out (docker/GoDFIR-toolz)."
-else
-    info "No .gitmodules found — skipping submodule init."
-fi
 
 ################################################################################
 # Ownership and permissions: u=rwX,g=rX — capital X keeps dirs traversable
@@ -523,27 +504,10 @@ step "Installing pinned Ansible collections into $DXDFIR_COLLECTIONS ..."
     -p "$DXDFIR_COLLECTIONS" --force \
     || die "Failed to install the pinned Ansible collections (requirements.yml)."
 
-# The build galaxy: the gitlink is the pin, the primary path installs
-# NOTHING (roles_path resolves the submodule); only an absent submodule gets
-# the galaxy imported from the .gitmodules source (docs: Design decisions).
-TOOLZ_PATH="docker/GoDFIR-toolz"
-if [[ -f "$REPO_ROOT_DIR/$TOOLZ_PATH/galaxy.yml" ]]; then
-    ok "GoDFIR-toolz build galaxy resolves in place from the submodule (nothing installed)"
-else
-    TOOLZ_URL=$(git config -f "$REPO_ROOT_DIR/.gitmodules" "submodule.$TOOLZ_PATH.url" 2>/dev/null) \
-        || die "GoDFIR-toolz is neither checked out at $TOOLZ_PATH nor declared in .gitmodules — cannot import the build galaxy."
-    TOOLZ_SRC="git+${TOOLZ_URL}"
-    if TOOLZ_SHA=$(git -C "$REPO_ROOT_DIR" rev-parse "HEAD:$TOOLZ_PATH" 2>/dev/null); then
-        TOOLZ_SRC="${TOOLZ_SRC},${TOOLZ_SHA}"
-        step "Importing the GoDFIR-toolz build galaxy from $TOOLZ_URL at the gitlink pin ${TOOLZ_SHA:0:12} ..."
-    else
-        warn "No git metadata to read the gitlink pin — importing the build galaxy from $TOOLZ_URL (default branch)."
-    fi
-    "$DXDFIR_VENV/bin/ansible-galaxy" collection install "$TOOLZ_SRC" \
-        -p "$DXDFIR_COLLECTIONS" --force --no-deps \
-        || die "Failed to import the GoDFIR-toolz build galaxy from $TOOLZ_URL."
-fi
-ok "Collections installed: $("$DXDFIR_VENV/bin/ansible-galaxy" collection list -p "$DXDFIR_COLLECTIONS" 2>/dev/null | grep -cE '^[a-z]' || echo '?') pinned"
+# The container-interaction galaxy (get_sybers.godfir_run) is pinned in
+# requirements.yml as a git-URL collection and was installed by the step above,
+# straight into .ansible/collections — no submodule, no separate import.
+ok "Collections installed: $("$DXDFIR_VENV/bin/ansible-galaxy" collection list -p "$DXDFIR_COLLECTIONS" 2>/dev/null | grep -cE '^[a-z]' || echo '?') pinned (incl. get_sybers.godfir_run from its git URL)"
 # the retired prefix, once its last tenant (the collections) has moved in-tree
 if [[ -d /opt/dxdfir ]]; then
     $SUDO rm -rf /opt/dxdfir && detail "Retired legacy prefix /opt/dxdfir (nothing of the pipeline lives there any more)"

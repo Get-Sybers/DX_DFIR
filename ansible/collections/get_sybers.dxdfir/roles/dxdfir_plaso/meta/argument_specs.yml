@@ -41,10 +41,6 @@ argument_specs:
           Output dir (default data_store/processed/log2timeline[/<collection>]): ONE
           <host>/ folder per image holding <host>.plaso + log2timeline.log
           (log2timeline) and timeline.jsonl + psort.log (psort, rendered beside it).
-      dxdfir_plaso_contract:
-        type: str
-        required: false
-        description: "The plaso contract.yml the runs are built from (default docker/GoDFIR-toolz/plaso/contract.yml)."
       dxdfir_plaso_image:
         type: str
         required: false

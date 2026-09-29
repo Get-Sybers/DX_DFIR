@@ -10,8 +10,9 @@ import (
 )
 
 // newBuildDockerCmd — `dxdfir build-docker` → dxdfir-build-images.yml
-// (dxdfir_images role): build each get-sybers/* image from its ansible-hardened
-// Dockerfile, then assert the hardening contract on the result.
+// (dxdfir_images role): pull each get-sybers/* image from the registry and
+// verify the hardening contract on the result. (Building lives upstream in the
+// get_sybers.godfir_build collection; here the images are pulled, not built.)
 func newBuildDockerCmd(env *Env) *cobra.Command {
 	var (
 		images    []string
@@ -20,13 +21,13 @@ func newBuildDockerCmd(env *Env) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "build-docker",
-		Short: "Build (and hardening-verify) the get-sybers/* tool images from the in-repo Dockerfiles.",
-		Long: "Build (and hardening-verify) the get-sybers/* tool images.\n\n" +
+		Short: "Pull (and hardening-verify) the get-sybers/* tool images from the registry.",
+		Long: "Provision the get-sybers/* tool images by REGISTRY PULL.\n\n" +
 			"Fronts playbooks/dxdfir-build-images.yml: the images role delegates to the\n" +
-			"GoDFIR-toolz build galaxy (godfir_build, over the submodule's images.yml\n" +
-			"manifest), which builds each image and asserts the hardening contract on the\n" +
-			"result (fixed non-root USER, com.get-sybers.hardened label, no package\n" +
-			"managers, and whatever each image's /etc/dfir-hardened declaration rules out).",
+			"get_sybers.godfir_run.godfir_images role (imported by URL), which pulls\n" +
+			"ghcr.io/get-sybers/<tool>:<tag> and tags it to the local get-sybers/<tool>:latest\n" +
+			"name. Building images lives upstream in get_sybers.godfir_build; the hardening\n" +
+			"contract (non-root USER, com.get-sybers.hardened) is verified by godfir_images.",
 		GroupID: groupSetup,
 		Args:    cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {

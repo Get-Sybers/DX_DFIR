@@ -10,20 +10,12 @@
   vars:
     dxdfir_molecule_repo_root: "{{ playbook_dir | dirname | dirname | dirname | dirname }}"
     dxdfir_molecule_image: get-sybers/molecule:latest
+    # The per-tool lane scenarios moved upstream with the run machinery: the
+    # get_sybers.godfir_run lanes are molecule-tested in that collection, and the
+    # DX_DFIR roles are thin discovery+delegate wrappers over them. What remains
+    # DX_DFIR-specific is evidence discovery, tested offline here.
     dxdfir_molecule_roles:
-      - dxdfir_lane
-      - dxdfir_exchange
-      - dxdfir_signatures
-      - dxdfir_zeek
-      - dxdfir_gowindowlicker
-      - dxdfir_godaemonhunter
-      - dxdfir_plaso
-      - dxdfir_anamnesis
-    # operator-supplied fixtures (binary, not shipped); empty skips the scenario
-    dxdfir_molecule_sample_evtx: ""
-    dxdfir_molecule_sample_linux: ""
-    dxdfir_molecule_sample_image: ""
-    dxdfir_molecule_sample_memory: ""
+      - dxdfir_evidence
   tasks:
     - name: "dxdfir-molecule | the runner image exists (built once, cached)"
       community.docker.docker_image:
@@ -43,11 +35,9 @@
                'fixture': (dxdfir_molecule_fixtures[item] | default({'value': 'n/a'})).value | default('n/a'),
              }] }}
       vars:
-        dxdfir_molecule_fixtures:
-          dxdfir_gowindowlicker: {var: molecule_sample_evtx, value: "{{ dxdfir_molecule_sample_evtx }}"}
-          dxdfir_godaemonhunter: {var: molecule_sample_linux, value: "{{ dxdfir_molecule_sample_linux }}"}
-          dxdfir_plaso: {var: molecule_sample_image, value: "{{ dxdfir_molecule_sample_image }}"}
-          dxdfir_anamnesis: {var: molecule_sample_memory, value: "{{ dxdfir_molecule_sample_memory }}"}
+        # no role needs an operator-supplied binary fixture any more (the lanes
+        # that did are tested upstream); dxdfir_evidence ships its own tree fixture
+        dxdfir_molecule_fixtures: {}
       loop: "{{ dxdfir_molecule_roles }}"
 
     - name: "dxdfir-molecule | note every skipped scenario (fixture not provided)"

@@ -1,17 +1,14 @@
 ---
-# THE offline image mechanism, save half: every analysis image to one
-# tarball each under dxdfir_images_tar_dir, carried to the offline host and
-# loaded there (tasks/load.yml). Built get-sybers/* images must already
-# exist (they are never pulled — that is the supply chain); the Elastic
-# stack images are pulled at the inventory's pin, then saved. An existing
-# archive is rewritten only when the module cannot verify it already holds
-# the right image — a fresh save on unchanged images is largely a no-op.
-
+# THE offline image mechanism, save half: every analysis image to one tarball
+# each under dxdfir_images_tar_dir, carried to the offline host and loaded there
+# (tasks/load.yml). In the pull model the get-sybers/* tool images are pulled
+# from the registry (via godfir_images) then exported; the Elastic stack images
+# are pulled at the inventory's pin and exported too.
 - name: "images-save | the offline image sets"
   ansible.builtin.debug:
     msg:
-      - "built (images.yml -> dxdfir-build-images.yml; never pulled): {{ dxdfir_images_built_refs | join(', ') }}"
-      - "pulled (the Elastic stack, inventory dxdfir_elastic_images): {{ dxdfir_images_elastic_images.values() | list | join(', ') }}"
+      - "tool images (pulled from the registry): {{ dxdfir_images_refs | join(', ') }}"
+      - "elastic stack (inventory dxdfir_elastic_images): {{ dxdfir_images_elastic_images.values() | list | join(', ') }}"
       - "tar dir: {{ dxdfir_images_tar_dir }}"
 
 - name: "images-save | save both sets"
@@ -23,8 +20,8 @@
           - dxdfir_images_elastic_images | length > 0
         fail_msg: >-
           dxdfir_elastic_images is empty — the inventory layer
-          (playbooks/group_vars/all.yml) defines the Elastic stack's image
-          set; run through the playbooks, or set it when using the role bare.
+          (playbooks/group_vars/all.yml) defines the Elastic stack's image set;
+          run through the playbooks, or set it when using the role bare.
         quiet: true
 
     - name: "images-save | the tar dir exists"
@@ -33,32 +30,19 @@
         state: directory
         mode: "0755"
 
-    - name: "images-save | which built images exist locally"
-      community.docker.docker_image_info:
-        name: "{{ dxdfir_images_built_refs }}"
-      register: dxdfir_images_save_local
-
-    - name: "images-save | every built image is present (never pulled)"
+    - name: "images-save | pull the tool images from the registry"
+      ansible.builtin.include_role:
+        name: get_sybers.godfir_run.godfir_images
+        tasks_from: ensure_present
       vars:
-        _local_tags: >-
-          {{ (dxdfir_images_save_local.images | default([]))
-             | map(attribute='RepoTags') | flatten | select('string') | list }}
-        _missing: "{{ dxdfir_images_built_refs | difference(_local_tags) }}"
-      ansible.builtin.assert:
-        that:
-          - _missing | length == 0
-        fail_msg: >-
-          not built: {{ _missing | join(', ') }} — run
-          `ansible-playbook .../dxdfir-build-images.yml` (or
-          scripts/save-docker-images.sh --build) first; built images are
-          never pulled.
-        quiet: true
+        godfir_images_required: "{{ dxdfir_images_refs }}"
+        godfir_images_namespace: "{{ dxdfir_images_namespace }}"
 
-    - name: "images-save | export the built images"
+    - name: "images-save | export the tool images"
       community.docker.docker_image_export:
         names: ["{{ item }}"]
         path: "{{ dxdfir_images_tar_dir }}/{{ item | regex_replace('[/:]', '_') }}.tar"
-      loop: "{{ dxdfir_images_built_refs }}"
+      loop: "{{ dxdfir_images_refs }}"
 
     - name: "images-save | pull the elastic stack images at the pin"
       community.docker.docker_image:

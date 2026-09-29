@@ -1,0 +1,80 @@
+# gomount/contract.yml — the single source of truth for how DX_DFIR drives this tool.
+tool: gomount
+image: get-sybers/gomount:latest
+entrypoint: argv
+description: >
+  Standalone volume reader for disk images — E01/Ex01, raw/dd/img, VMDK
+  (sparse, streamOptimized, descriptor + flat/split extents, snapshot
+  chains), VHDX, VHD, QCOW2, VDI, and Apple's DMG (UDIF: zero/raw/ADC/
+  zlib/bzip2/LZFSE chunks; LZMA refused), .sparseimage and .sparsebundle,
+  detected by content — reading NTFS, the Linux filesystems (ext2/3/4,
+  XFS v5, vfat), APFS (every volume of a container, sealed System
+  volumes, decmpfs zlib/LZVN/LZFSE content;
+  FileVault content excluded) and HFS+/HFSX (the wrapper too; hard links,
+  xattrs, decmpfs) through one resolved volume stack: partitions (MBR,
+  GPT, Apple Partition Map), LVM2 volume groups (--lv vg/lv), the volumes
+  of an APFS container (<partition>/apfsN), or a bare whole-disk
+  filesystem (docs/linux §5). A declared argv deviation: its
+  verbs are streaming and interactive (stream a tar of every file to
+  stdout for a consuming tool, materialise artefact sets into a directory
+  — windows-core, linux-core and macos-core included, with the origin-record manifest
+  and --residue staging of §5.4/§5.5 — identify the stack as one JSON
+  document, timeline one JSONL row per (file, timestamp kind) with
+  allocation state, ls/cat/stat/tree/browse, or mount an NTFS volume
+  read-only over FUSE + ntfs-3g), so it is driven by argv, not by an
+  env-var batch loop. materialise alone also speaks the batch contract:
+  ONE JSON summary line on stdout and the 0/1/2/3 exit table, so a lane
+  can run it per image like any dispatcher. The same binary is baked into
+  get-sybers/signatures for its scan sub-tool. The VMDK/VHD/VHDX/QCOW2/VDI
+  decoders are ported from VMkatz (github.com/nikaiw/VMkatz, MIT); the
+  LZVN/LZFSE decoders from Apple's lzfse (github.com/lzfse/lzfse, BSD-3);
+  the DMG/sparse readers are clean-room.
+
+env: {}
+
+mounts:
+  - {name: evidence, path: /evidence, mode: ro, required: true,  desc: 'the disk image(s) named in argv'}
+  - {name: output,   path: /output,   mode: rw, required: true,  desc: 'the --out directory of materialise (unused by the streaming and read verbs)'}
+  - {name: fuse,     path: /dev/fuse, mode: rw, required: false, desc: 'device the mount verb needs (--device /dev/fuse); the userspace verbs need none'}
+  - {name: mnt,      path: /mnt/ntfs, mode: rw, required: false, desc: "the mount verb's default mount point"}
+
+network: none
+# materialise follows the batch table (0 ok, 1 nothing pulled, 2 config
+# error, 3 partial — the image or some of its files failed); every other verb
+# exits 0 on success and 1 on a usage or fatal error.
+exit_codes: {0: success, 1: nothing_produced (materialise) / usage or fatal error (other verbs), 2: config_error (materialise), 3: partial (materialise)}
+
+summary_schema:
+  required: [tool, subtool, version, status, inputs, processed, skipped, failed, records, outputs, exit, started, duration_s]
+  note: >
+    materialise prints exactly ONE summary line on stdout (inputs is always
+    1, the image; records = files pulled; on partial failed is 1, processed 1
+    when part of it landed, and failures names the image with its error) and,
+    with --manifest, writes <out>/materialise.jsonl —
+    each row an ORIGIN RECORD (docs/linux §5.4): path/size/mtime plus image,
+    volume (p1 | vg/lv | disk), fsuuid, label, inode/mftid, a staged path when
+    it differs, a skip reason for files held back (--max-file-size), and the
+    residue kind/detail for --residue rows. The other verbs print no summary:
+    stream writes the tar (or, with --jsonl, one JSON object per file) to
+    stdout; identify prints one JSON document; timeline prints JSONL rows and
+    one stderr summary line.
+
+outputs:
+  stream: "stdout: a tar archive, one regular-file entry per volume file (entry name = the file's volume path), or one JSON object per file with --jsonl"
+  materialise: "<out>/<volume-path> at mode 0400 per pulled file (+ named siblings with --siblings), residue/<kind>/<id>/<volume-path> with --residue, <out>/materialise.jsonl with --manifest (the done marker a lane gates on); stdout: the one summary line"
+  identify: "stdout: ONE JSON document — image, partitions, LVM findings, every volume's fstype/UUID/label/OS guess, snapshot inventory (P3, empty until then)"
+  timeline: "stdout: one JSONL row per (file, timestamp kind) with allocation state (--residue adds recovered rows, --hash content digests); stderr: one summary line"
+  mount: "a read-only NTFS mount at --mount-point (default /mnt/ntfs) held in the foreground until umount"
+
+hardening:
+  declared: {shell: true, python: false, static_binary: false}
+  justification: "the runtime is debian:trixie-slim with ntfs-3g + fuse3 (the mount verb execs the distro ntfs-3g and fusermount3, never links libntfs-3g); sh stays with it, python and the package manager are removed and every setuid bit is stripped; the Go binary itself is static"
+
+argv_passthrough: >
+  gomount stream [--jsonl] [--filter GLOB] [--volume N | --lv vg/lv] <image> |
+  gomount materialise --out DIR [--set NAME]... [--select GLOB]... [--siblings] [--manifest] [--max-file-size N] [--residue] [--volume N | --lv vg/lv] <image> |
+  gomount identify <image> |
+  gomount timeline [--volume N | --lv vg/lv] [--residue] [--hash] <image> |
+  gomount ls|cat|stat|tree|browse [--volume N | --lv vg/lv] <image> [path] |
+  gomount mount [--read-only] [--mount-point PATH] [--volume N] [--work PATH] [--no-self-unshare] [--foreground] <image> |
+  gomount umount [--mount-point PATH] [--work PATH]

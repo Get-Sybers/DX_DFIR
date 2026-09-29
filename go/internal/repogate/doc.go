@@ -9,8 +9,7 @@
 //     stay under data_store/processed/, the engine pin stays a full sha —
 //     and the host-python package itself stays retired.
 //
-//   - contractfit_test.go — lane roles must fit the pinned GoDFIR-toolz
-//     tool contracts: every env key a role sets and every container path it
-//     mounts exists at the submodule pin, and every required mount is
-//     bound. A role and the submodule gitlink can only move together.
+// Contract-fit (a lane's run spec matching its tool contract) is now the
+// get_sybers.godfir_run collection's concern — it ships each contract and
+// validates the run spec against it, covered by that collection's own tests.
 package repogate

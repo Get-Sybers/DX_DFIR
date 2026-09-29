@@ -32,10 +32,6 @@ argument_specs:
         type: str
         required: false
         description: "The materialised CAR tree the build writes and verify/timeline read (default data_store/processed/byakugan)."
-      dxdfir_byakugan_contract:
-        type: str
-        required: false
-        description: "The byakugan contract.yml the runs are built from (default docker/GoDFIR-toolz/byakugan/contract.yml)."
       dxdfir_byakugan_image:
         type: str
         required: false

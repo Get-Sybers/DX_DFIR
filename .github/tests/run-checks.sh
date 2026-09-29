@@ -56,9 +56,20 @@ problems = []
 pinned = {}
 for entry in (reqs or {}).get("collections", []):
     name, ver = entry.get("name"), str(entry.get("version", ""))
-    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", ver):
-        problems.append(f"{name}: version '{ver}' is not an exact X.Y.Z pin")
-    pinned[name] = ver
+    is_git = entry.get("type") == "git" or str(name).startswith(("http", "git+"))
+    if is_git:
+        # a git-URL collection (imported by URL): the version must be a reproducible
+        # ref — a vX.Y.Z tag or a full 40-hex sha, never a bare branch
+        if not (re.fullmatch(r"v?[0-9]+\.[0-9]+\.[0-9]+", ver) or re.fullmatch(r"[0-9a-f]{40}", ver)):
+            problems.append(f"{name}: git version '{ver}' is not a tag (vX.Y.Z) or full-sha pin")
+        # the FQCN it supplies is the #/ansible_collections/<ns>/<name> fragment
+        m = re.search(r"#.*/ansible_collections/([^/]+)/([^/,]+)", str(name))
+        if m:
+            pinned[f"{m.group(1)}.{m.group(2)}"] = ver
+    else:
+        if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", ver):
+            problems.append(f"{name}: version '{ver}' is not an exact X.Y.Z pin")
+        pinned[name] = ver
 # a dep may instead be SUPPLIED BY A SUBMODULE: a declared submodule whose galaxy.yml carries the FQCN covers it
 import os
 gitlinked = {}
@@ -92,15 +103,15 @@ PY
     else
         fail "setup-environment.sh does not install requirements.yml"
     fi
-    if grep -q "GoDFIR-toolz build galaxy" scripts/setup-environment.sh; then
-        pass "setup-environment.sh handles the build galaxy (in-place, with the materialise fallback)"
+    if grep -Eq 'GoDFIR-toolz\.git#.*/godfir_run' "$REQS"; then
+        pass "requirements.yml imports get_sybers.godfir_run by URL (no submodule)"
     else
-        fail "setup-environment.sh does not handle the GoDFIR-toolz build galaxy"
+        fail "requirements.yml does not import get_sybers.godfir_run by its git URL"
     fi
-    if grep -Eq '^roles_path *=.*docker/GoDFIR-toolz/roles' ansible.cfg; then
-        pass "build galaxy resolves in place (docker/GoDFIR-toolz/roles on roles_path, no installed copy)"
+    if grep -Eq '^roles_path *=.*docker/GoDFIR-toolz' ansible.cfg; then
+        fail "ansible.cfg roles_path still carries the docker/GoDFIR-toolz submodule — it is retired"
     else
-        fail "ansible.cfg roles_path does not carry docker/GoDFIR-toolz/roles — the build galaxy would need an installed copy"
+        pass "ansible.cfg roles_path carries no submodule (godfir_run resolves via collections_path)"
     fi
 else
     fail "missing $REQS"

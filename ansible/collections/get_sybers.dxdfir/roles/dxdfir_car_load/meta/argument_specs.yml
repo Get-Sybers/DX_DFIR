@@ -44,7 +44,9 @@ argument_specs:
       dxdfir_car_load_contract:
         type: str
         required: false
-        description: "The byakugan contract.yml the run is built from (default docker/GoDFIR-toolz/byakugan/contract.yml)."
+        description: >-
+          The byakugan contract.yml the run is built from (default: the copy
+          shipped in the installed get_sybers.godfir_run collection).
       dxdfir_car_load_image:
         type: str
         required: false

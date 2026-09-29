@@ -20,8 +20,6 @@ jobs:
         with:
           # git check-ignore needs real git metadata, not a tarball export
           fetch-depth: 1
-          # the link checker follows docs into the submodule
-          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -57,7 +55,7 @@ jobs:
             [ "$attempt" -lt 3 ] || exit 1
             echo "galaxy install failed (attempt $attempt) — retrying in 15s"; sleep 15
           done
-          # the build galaxy resolves in place from the submodule (roles_path);
+          # get_sybers.godfir_run is imported by URL from requirements.yml above;
           # the pinned ansible layer installs from the repo lock
           python -m pip install --quiet -r requirements.txt
 
