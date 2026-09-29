@@ -2,7 +2,9 @@
 
 The Linux daemon lane — `get-sybers/godaemonhunter`'s layered matrix over
 every **host**, one confined run per (parser, host), from the one image's
-`contract.yml`. Delegates every run to [`dxdfir_lane`](../dxdfir_lane/README.md).
+`contract.yml`. Discovers the hosts + disk images (via `dxdfir_evidence`) and
+delegates each run to the `get_sybers.godfir_run.godfir_godaemonhunter` lane,
+imported by URL.
 
 ## Hosts
 
@@ -16,7 +18,7 @@ A host is either
   raw/dd/img, VMDK (monolithic, split, streamOptimized, snapshot chains),
   VHDX, VHD, QCOW2, VDI — which the parsers run **on**: one layered hunt run
   per image (`GODAEMONHUNTER_IMAGE`), the image's baked-in
-  [gomount](../../../../../docker/GoDFIR-toolz/gomount) pulling the
+  [gomount](https://github.com/Get-Sybers/GoDFIR-toolz/tree/main/gomount) pulling the
   `linux-core` surface (`/etc`, `/var/log`, journals, units, cron, shell
   histories, trash — docs/linux §5.4) out of the root volume (LVM2 peeled)
   into a disk-backed `/work` scratch (`dxdfir_godaemonhunter_work_dir`) while

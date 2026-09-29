@@ -2,8 +2,9 @@
 
 The Windows artefact lane — `get-sybers/gowindowlicker`'s parsers over every
 **host**, one confined run per (parser, host), from the one image's
-`contract.yml`. Delegates every run to [`dxdfir_lane`](../dxdfir_lane/README.md).
-It succeeds the `evtx` and `godfir-toolz` lanes: goevtx is one of its parsers.
+`contract.yml`. Discovers the hosts + disk images (via `dxdfir_evidence`) and
+delegates each run to the `get_sybers.godfir_run.godfir_gowindowlicker` lane,
+imported by URL. goevtx is one of its parsers.
 
 ## Hosts
 
@@ -16,7 +17,7 @@ A host is either
   raw/dd/img, VMDK (monolithic, split, streamOptimized, snapshot chains),
   VHDX, VHD, QCOW2, VDI — which the parsers run **on**: one sweep run per
   image (`GOWINDOWLICKER_IMAGE`), the image's baked-in
-  [gomount](../../../../../docker/GoDFIR-toolz/gomount) pulling every
+  [gomount](https://github.com/Get-Sybers/GoDFIR-toolz/tree/main/gomount) pulling every
   parser's artefact set (registry hives with their transaction logs, Amcache,
   jump lists and `.lnk`, Recycle Bin `$I`, the Windows Timeline and SRUM
   databases, Prefetch, `$MFT`, the event logs) out of the OS volume into a

@@ -4,7 +4,7 @@ The disk-image artefact export, kept as a utility. Not a lane, and no lane
 includes it any more — every lane that reads a disk image runs its tool ON
 the image (the images' `<TOOL>_IMAGE`, the same gomount baked into each) —
 it is here for an operator who wants the artefact set on disk to look at or
-to hand to another tool: [gomount](../../../../../docker/GoDFIR-toolz/gomount)'s
+to hand to another tool: [gomount](https://github.com/Get-Sybers/GoDFIR-toolz/tree/main/gomount)'s
 `materialise` verb pulls the artefact sets in `dxdfir_export_sets`
 (`windows-core`: the registry hives with their transaction logs, Amcache,
 NTUSER/UsrClass, SRUM, SUM, the Timeline database, the event logs, Prefetch,
