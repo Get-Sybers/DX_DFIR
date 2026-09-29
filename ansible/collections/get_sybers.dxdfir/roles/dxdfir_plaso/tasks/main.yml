@@ -1,89 +1,25 @@
 ---
-# Disk images / VM exports / loose trees -> Plaso JSON Lines, delegated to
-# dxdfir_lane (semantics: README.md). Per-image failures tolerated — the gate
-# is "some timeline was produced, or there were no sources".
-
+# dxdfir_plaso: discover the source trees (disk images / VM exports / loose) and
+# delegate the log2timeline+psort run to get_sybers.godfir_run.godfir_plaso.
 - name: "plaso | assert inputs"
   ansible.builtin.assert:
     that:
       - dxdfir_plaso_input_dir | length > 0
-    fail_msg: >-
-      dxdfir_plaso needs a non-empty
-      dxdfir_plaso_input_dir.
+    fail_msg: "dxdfir_plaso needs a non-empty dxdfir_plaso_input_dir."
     quiet: true
   tags: [always]
 
-# optional trees: a run is declared for each that exists
-- name: "plaso | stat the optional source trees"
-  ansible.builtin.stat:
-    path: "{{ item }}"
-  loop:
-    - "{{ dxdfir_plaso_vm_dir }}"
-    - "{{ dxdfir_plaso_loose_dir }}"
-  when: item | length > 0
-  register: dxdfir_plaso_optional
-  tags: [always]
-
-# facts persist for the whole play, so the run list is reset before accumulating
-- name: "plaso | start from an empty run list"
-  ansible.builtin.set_fact:
-    dxdfir_plaso_runs: []
-  tags: [always]
-
-- name: "plaso | one log2timeline run per source tree"
-  ansible.builtin.set_fact:
-    dxdfir_plaso_runs: >-
-      {{ dxdfir_plaso_runs + [{
-           'name': 'log2timeline:' ~ (item | basename),
-           'contract': dxdfir_plaso_contract,
-           'image': dxdfir_plaso_image,
-           'subtool': 'log2timeline',
-           'env': {'PLASO_LOG2TIMELINE_FORCE': dxdfir_plaso_force,
-                   'PLASO_LOG2TIMELINE_VSS': dxdfir_plaso_vss,
-                   'PLASO_LOG2TIMELINE_PARSERS': dxdfir_plaso_parsers},
-           'mounts': [{'host': item, 'path': '/input', 'mode': 'ro'},
-                      {'host': dxdfir_plaso_out_dir, 'path': '/output', 'mode': 'rw'}],
-         }] }}
-  loop: >-
-    {{ [dxdfir_plaso_input_dir]
-       + (dxdfir_plaso_optional.results | default([])
-          | selectattr('stat', 'defined') | selectattr('stat.isdir', 'defined')
-          | selectattr('stat.isdir') | map(attribute='item') | list) }}
-  tags: [always]
-
-# psort renders every storage file; it runs last, over the SAME tree it writes
-# into: its item is the storage file's folder, so timeline.jsonl lands beside
-# <host>.plaso in the one <host>/ folder
-- name: "plaso | the psort run over the storage tree"
-  ansible.builtin.set_fact:
-    dxdfir_plaso_runs: >-
-      {{ dxdfir_plaso_runs + [{
-           'name': 'psort',
-           'contract': dxdfir_plaso_contract,
-           'image': dxdfir_plaso_image,
-           'subtool': 'psort',
-           'env': {'PLASO_PSORT_FORCE': dxdfir_plaso_force,
-                   'PLASO_PSORT_OUTPUT_FORMAT': dxdfir_plaso_output_format},
-           'mounts': [{'host': dxdfir_plaso_out_dir, 'path': '/input', 'mode': 'ro'},
-                      {'host': dxdfir_plaso_out_dir, 'path': '/output', 'mode': 'rw'}],
-         }] }}
-  tags: [always]
-
-# the output tree pre-exists (container-writable) so psort's ro-mount check passes on a fresh host
-- name: "plaso | ensure the output tree exists"
-  ansible.builtin.file:
-    path: "{{ dxdfir_plaso_out_dir }}"
-    state: directory
-    mode: "0777"
-  tags: [always]
-
-- name: "plaso | run the shared tool-lane skeleton"
+- name: "plaso | run the get-sybers plaso lane"
   ansible.builtin.include_role:
-    name: dxdfir_lane
+    name: get_sybers.godfir_run.godfir_plaso
   vars:
-    dxdfir_lane_name: plaso
-    dxdfir_lane_runs: "{{ dxdfir_plaso_runs }}"
-    dxdfir_lane_verify_dir: "{{ dxdfir_plaso_out_dir }}"
-    dxdfir_lane_verify_glob: "timeline.jsonl"
-    dxdfir_lane_require_no_failures: false
+    godfir_plaso_input_dir: "{{ dxdfir_plaso_input_dir }}"
+    godfir_plaso_vm_dir: "{{ dxdfir_plaso_vm_dir }}"
+    godfir_plaso_loose_dir: "{{ dxdfir_plaso_loose_dir }}"
+    godfir_plaso_out_dir: "{{ dxdfir_plaso_out_dir }}"
+    godfir_plaso_image: "{{ dxdfir_plaso_image }}"
+    godfir_plaso_vss: "{{ dxdfir_plaso_vss }}"
+    godfir_plaso_parsers: "{{ dxdfir_plaso_parsers }}"
+    godfir_plaso_output_format: "{{ dxdfir_plaso_output_format }}"
+    godfir_plaso_force: "{{ dxdfir_plaso_force }}"
   tags: [always]

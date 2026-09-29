@@ -1,23 +1,15 @@
 ---
-
+# Discovery only — the per-sub-tool run assembly + present-tree gating live in
+# get_sybers.godfir_run.godfir_signatures. This role resolves the evidence trees
+# (data_store/raw + evidence-taxonomy) and the output/scratch roots, and delegates.
 dxdfir_signatures_repo_root: "{{ role_path }}/../../../../.."
 
-# a collection-scoped run lands one level below each sub-tool's leaf:
-# processed/detections/<sub-tool>/<collection>/
 dxdfir_signatures_collection: ""
-# processed/detections/<sub-tool>/[<collection>/]<item>/ — every yara-family
-# run (files, memory, the disk scan) under yara/, suricata under suricata/,
-# hayabusa under hayabusa/ (one <host>/ per event-log host)
-dxdfir_signatures_out_dir: "{{ dxdfir_signatures_repo_root }}/data_store/processed/detections"
 dxdfir_signatures_scope: "{{ ('/' ~ dxdfir_signatures_collection) if dxdfir_signatures_collection | length > 0 else '' }}"
+dxdfir_signatures_out_dir: "{{ dxdfir_signatures_repo_root }}/data_store/processed/detections{{ dxdfir_signatures_scope }}"
+dxdfir_signatures_work_dir: "{{ dxdfir_signatures_repo_root }}/data_store/processed/_scratch/signatures{{ dxdfir_signatures_scope }}"
 
-# empty = all four sub-tools (yara / suricata / hayabusa / scan — README.md)
-dxdfir_signatures_lanes: []
-# yara sources: files and/or memory (disk images are the scan sub-tool)
-dxdfir_signatures_yara_sources: [files, memory]
-
-# subdirs come from the shared evidence taxonomy (evidence-taxonomy/);
-# a directory that does not exist is skipped — its run is not declared
+# evidence trees (a tree that does not exist is skipped by the lane)
 dxdfir_signatures_files_dir: "{{ dxdfir_signatures_repo_root }}/data_store/raw/other_raw_data"
 dxdfir_signatures_memory_dir: >-
   {{ dxdfir_signatures_repo_root }}/data_store/raw/{{
@@ -39,25 +31,15 @@ dxdfir_signatures_evtx_dir: >-
   {{ dxdfir_signatures_repo_root }}/data_store/raw/{{
   ((lookup('file', dxdfir_signatures_repo_root ~ '/evidence-taxonomy/logs_winevt.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('logs/winevt', true) }}
-# the disk-backed scratch bound at /work for the image-reading runs (hayabusa
-# and scan over the disk-image and VM trees): hayabusa pulls an image's event
-# logs there through the baked gomount while it runs — nothing is exported
-dxdfir_signatures_work_dir: >-
-  {{ dxdfir_signatures_repo_root }}/data_store/processed/_scratch/signatures{{ dxdfir_signatures_scope }}
 
-# operator rulesets, mounted ro; empty = the baked set (docs/Signature-Rules.md)
-dxdfir_signatures_yara_rules: ""        # a rules file or compiled index (yara + scan)
-dxdfir_signatures_suricata_rules: ""    # a suricata.rules file
-dxdfir_signatures_hayabusa_rules: ""    # a Sigma rules directory
-# --set entries, e.g. "vars.address-groups.HOME_NET=[10.0.0.0/8]"
+# sub-tool selection + operator rulesets, passed straight through
+dxdfir_signatures_lanes: []
+dxdfir_signatures_yara_sources: [files, memory]
+dxdfir_signatures_yara_rules: ""
+dxdfir_signatures_suricata_rules: ""
+dxdfir_signatures_hayabusa_rules: ""
 dxdfir_signatures_suricata_set: ""
-# empty = the contract's default profile (verbose carries the MITRE columns)
 dxdfir_signatures_hayabusa_profile: ""
-# gomount --filter glob; empty = every file
 dxdfir_signatures_scan_filter: ""
-
-# the contract the lane is driven from
-dxdfir_signatures_contract: "{{ dxdfir_signatures_repo_root }}/docker/GoDFIR-toolz/signatures/contract.yml"
-# empty = the contract's image; set to pin a digest
 dxdfir_signatures_image: ""
 dxdfir_signatures_force: false

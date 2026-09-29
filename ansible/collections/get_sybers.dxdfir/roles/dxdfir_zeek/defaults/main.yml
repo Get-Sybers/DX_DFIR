@@ -1,5 +1,7 @@
 ---
-
+# Discovery only — the run spec, contract and confinement live in the
+# get_sybers.godfir_run.godfir_zeek lane (imported by URL). This role resolves
+# WHERE the evidence is (data_store + evidence-taxonomy) and delegates.
 dxdfir_zeek_repo_root: "{{ role_path }}/../../../../.."
 
 # subdir from the shared evidence taxonomy (evidence-taxonomy/)
@@ -10,13 +12,10 @@ dxdfir_zeek_pcap_lane: >-
 dxdfir_zeek_pcap_dir: "{{ dxdfir_zeek_repo_root }}/data_store/raw/{{ dxdfir_zeek_pcap_lane }}"
 # a collection-scoped run lands one level below the leaf: processed/zeek/<collection>/
 dxdfir_zeek_collection: ""
-# processed/zeek/[<collection>/]<capture>/ — one folder per capture
 dxdfir_zeek_out_dir: >-
   {{ dxdfir_zeek_repo_root }}/data_store/processed/zeek{{
   ('/' ~ dxdfir_zeek_collection) if dxdfir_zeek_collection | length > 0 else '' }}
-# the contract the lane is driven from
-dxdfir_zeek_contract: "{{ dxdfir_zeek_repo_root }}/docker/GoDFIR-toolz/zeek/contract.yml"
-# empty = the contract's image; set to pin a digest
+# empty = the lane's contract image; set to pin a digest
 dxdfir_zeek_image: ""
 # extra argv after -C -r <capture>; empty = zeek's default script set
 dxdfir_zeek_scripts: ""

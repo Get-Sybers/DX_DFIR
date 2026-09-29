@@ -1,38 +1,22 @@
 ---
-# dxdfir_zeek: PCAPs -> Zeek JSON. The role GROUPS; the playbook DECIDES. The
-# lane runs the self-orchestrating get-sybers/zeek image directly from its
-# contract (docker/GoDFIR-toolz/zeek/contract.yml): zeek-run discovers every
-# capture under /input, parses each into its own /output folder and skips a
-# capture that already has valid output unless ZEEK_FORCE. A first run that
-# processes new captures is legitimately changed=true; a second immediate run is
-# changed=false. This role asserts its own input rules and declares the run, then
-# delegates the shared build + preflight + process skeleton to dxdfir_lane.
-
+# dxdfir_zeek: discover the pcap tree (data_store/raw + evidence-taxonomy) and
+# delegate the confined run to get_sybers.godfir_run.godfir_zeek (imported by URL
+# into .ansible/collections). The role GROUPS; the playbook DECIDES.
 - name: "zeek | assert inputs"
   ansible.builtin.assert:
     that:
       - dxdfir_zeek_pcap_dir | length > 0
-    fail_msg: >-
-      dxdfir_zeek needs a non-empty
-      dxdfir_zeek_pcap_dir.
+    fail_msg: "dxdfir_zeek needs a non-empty dxdfir_zeek_pcap_dir."
     quiet: true
   tags: [always]
 
-- name: "zeek | run the shared tool-lane skeleton"
+- name: "zeek | run the get-sybers zeek lane"
   ansible.builtin.include_role:
-    name: dxdfir_lane
+    name: get_sybers.godfir_run.godfir_zeek
   vars:
-    dxdfir_lane_name: zeek
-    dxdfir_lane_runs:
-      - name: zeek
-        contract: "{{ dxdfir_zeek_contract }}"
-        image: "{{ dxdfir_zeek_image }}"
-        env:
-          ZEEK_FORCE: "{{ dxdfir_zeek_force }}"
-          ZEEK_SCRIPTS: "{{ dxdfir_zeek_scripts }}"
-        mounts:
-          - {host: "{{ dxdfir_zeek_pcap_dir }}", path: /input, mode: ro}
-          - {host: "{{ dxdfir_zeek_out_dir }}", path: /output, mode: rw}
-    dxdfir_lane_verify_dir: "{{ dxdfir_zeek_out_dir }}"
-    dxdfir_lane_verify_glob: "*.json"
+    godfir_zeek_pcap_dir: "{{ dxdfir_zeek_pcap_dir }}"
+    godfir_zeek_out_dir: "{{ dxdfir_zeek_out_dir }}"
+    godfir_zeek_image: "{{ dxdfir_zeek_image }}"
+    godfir_zeek_scripts: "{{ dxdfir_zeek_scripts }}"
+    godfir_zeek_force: "{{ dxdfir_zeek_force }}"
   tags: [always]

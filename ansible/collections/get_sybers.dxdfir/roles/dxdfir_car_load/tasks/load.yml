@@ -31,10 +31,10 @@
 # 3. the lane skeleton drives `load`; the password rides secret_env, the contract defaults match the mounts
 - name: "car-load | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
-    name: dxdfir_lane
+    name: get_sybers.godfir_run.godfir_run
   vars:
-    dxdfir_lane_name: car-load
-    dxdfir_lane_runs:
+    godfir_run_name: car-load
+    godfir_run_runs:
       - name: load
         contract: "{{ dxdfir_car_load_contract }}"
         image: "{{ dxdfir_car_load_image }}"
@@ -56,6 +56,6 @@
           - {host: "{{ dxdfir_car_load_out_dir }}", path: /output, mode: rw}
           - {host: "{{ dxdfir_car_load_certs_dir }}", path: /certs, mode: ro}
         network: "{{ dxdfir_car_load_network }}"
-    dxdfir_lane_verify_dir: "{{ dxdfir_car_load_out_dir }}"
-    dxdfir_lane_verify_glob: "manifest.json"
-    dxdfir_lane_require_no_failures: false
+    godfir_run_verify_dir: "{{ dxdfir_car_load_out_dir }}"
+    godfir_run_verify_glob: "manifest.json"
+    godfir_run_require_no_failures: false

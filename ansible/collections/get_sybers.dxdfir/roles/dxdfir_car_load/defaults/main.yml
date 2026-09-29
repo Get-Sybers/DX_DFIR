@@ -9,7 +9,12 @@ dxdfir_car_load_dir: "{{ dxdfir_car_load_repo_root }}/data_store/processed/byaku
 dxdfir_car_load_out_dir: "{{ dxdfir_car_load_repo_root }}/data_store/processed/byakugan-load"
 
 # the same contract as dxdfir_byakugan, a different declared sub-tool
-dxdfir_car_load_contract: "{{ dxdfir_car_load_repo_root }}/docker/GoDFIR-toolz/byakugan/contract.yml"
+dxdfir_car_load_contract: >-
+  {{ lookup('ansible.builtin.first_found', {
+       'files': ['contract.yml'],
+       'paths': lookup('ansible.builtin.config', 'COLLECTIONS_PATHS')
+                | map('regex_replace', '$', '/ansible_collections/get_sybers/godfir_run/roles/godfir_byakugan/files')
+                | list }) }}
 # empty = the contract's image; set to pin a digest
 dxdfir_car_load_image: ""
 

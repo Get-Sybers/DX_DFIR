@@ -1,0 +1,32 @@
+---
+- name: Converge
+  hosts: localhost
+  gather_facts: false
+  vars:
+    fx: "{{ lookup('env', 'MOLECULE_SCENARIO_DIRECTORY') }}/files/fixture"
+  tasks:
+    - name: "converge | discover images + hosts"
+      ansible.builtin.include_role:
+        name: dxdfir_evidence
+      vars:
+        dxdfir_evidence_trees: ["{{ fx }}/disk_images"]
+        dxdfir_evidence_host_dir: "{{ fx }}/winevt"
+
+    - name: "converge | the disk image is found, its extent excluded"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_evidence_images | length == 1
+          - dxdfir_evidence_images[0].rel == 'case.e01'
+          - dxdfir_evidence_images[0].name == 'case.e01'
+          - dxdfir_evidence_images[0].tree == fx ~ '/disk_images'
+        fail_msg: "images: {{ dxdfir_evidence_images }}"
+        quiet: true
+
+    - name: "converge | both hosts are enumerated as {name, export}"
+      ansible.builtin.assert:
+        that:
+          - dxdfir_evidence_hosts | length == 2
+          - (dxdfir_evidence_hosts | map(attribute='name') | sort) == ['HOST1', 'HOST2']
+          - dxdfir_evidence_hosts | map(attribute='export') | select('search', '/winevt/HOST1$') | list | length == 1
+        fail_msg: "hosts: {{ dxdfir_evidence_hosts }}"
+        quiet: true

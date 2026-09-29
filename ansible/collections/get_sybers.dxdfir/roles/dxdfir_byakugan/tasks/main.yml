@@ -1,23 +1,34 @@
 ---
-# dxdfir_byakugan: materialise/verify/timeline the CAR. The role GROUPS; the playbook
-# DECIDES the action. Every action is one confined run of the multi-tool
-# get-sybers/byakugan image, driven from its contract
-# (docker/GoDFIR-toolz/byakugan/contract.yml) by the shared dxdfir_lane skeleton;
-# the engine's own idempotence (a source whose car_relationships.jsonl exists
-# is skipped unless BYAKUGAN_BUILD_FORCE) lives in the engine, not a task's
-# `when:`.
-
+# dxdfir_byakugan: resolve the processed + CAR trees and delegate the chosen CAR
+# action to get_sybers.godfir_run.godfir_byakugan (imported by URL). The role
+# GROUPS; the playbook DECIDES the action.
 - name: "car | assert inputs"
   ansible.builtin.assert:
     that:
       - dxdfir_byakugan_action in ['build', 'verify', 'timeline']
       - dxdfir_byakugan_dir | length > 0
     fail_msg: >-
-      dxdfir_byakugan needs dxdfir_byakugan_action (build|verify|timeline) and a non-empty
-      dxdfir_byakugan_dir.
+      dxdfir_byakugan needs dxdfir_byakugan_action (build|verify|timeline) and a
+      non-empty dxdfir_byakugan_dir.
     quiet: true
   tags: [always]
 
-- name: "car | run the CAR action | {{ dxdfir_byakugan_action }}"
-  ansible.builtin.include_tasks: "{{ dxdfir_byakugan_action }}.yml"
+- name: "car | run the get-sybers byakugan lane | {{ dxdfir_byakugan_action }}"
+  ansible.builtin.include_role:
+    name: get_sybers.godfir_run.godfir_byakugan
+  vars:
+    godfir_byakugan_action: "{{ dxdfir_byakugan_action }}"
+    godfir_byakugan_processed_dir: "{{ dxdfir_byakugan_processed_dir }}"
+    godfir_byakugan_dir: "{{ dxdfir_byakugan_dir }}"
+    godfir_byakugan_image: "{{ dxdfir_byakugan_image }}"
+    godfir_byakugan_rebuild: "{{ dxdfir_byakugan_rebuild }}"
+    godfir_byakugan_derive: "{{ dxdfir_byakugan_derive }}"
+    godfir_byakugan_stix: "{{ dxdfir_byakugan_stix }}"
+    godfir_byakugan_timeline_dir: "{{ dxdfir_byakugan_timeline_dir }}"
+    godfir_byakugan_timeline_out_dir: "{{ dxdfir_byakugan_timeline_out_dir }}"
+    godfir_byakugan_timeline_force: "{{ dxdfir_byakugan_timeline_force }}"
+    godfir_byakugan_timeline_host: "{{ dxdfir_byakugan_timeline_host }}"
+    godfir_byakugan_timeline_after: "{{ dxdfir_byakugan_timeline_after }}"
+    godfir_byakugan_timeline_before: "{{ dxdfir_byakugan_timeline_before }}"
+    godfir_byakugan_verify_out_dir: "{{ dxdfir_byakugan_verify_out_dir }}"
   tags: [always]

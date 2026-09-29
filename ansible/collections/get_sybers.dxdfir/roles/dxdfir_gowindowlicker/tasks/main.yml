@@ -1,14 +1,7 @@
 ---
-# The Windows artefact lane: gowindowlicker's parsers (goevtx, gore, gomft,
-# goprefetch, …) over every HOST — a loose event-log folder
-# (logs/winevt/<host>/, goevtx only, one run per host) or a disk image, run ON
-# directly: one sweep run per image (GOWINDOWLICKER_IMAGE), the image's
-# baked-in gomount pulling the parsers' artefact sets out of the OS volume
-# into /work while they run — nothing is exported. The output tree is
-# host-centric: <out_dir>/<subtool>/<host>/<item>/<subtool>.jsonl. All
-# contract-driven runs delegated to dxdfir_lane (semantics: README.md).
-# Content decides; exits 1/3 tolerated.
-
+# dxdfir_gowindowlicker: discover the loose event-log hosts and the disk images
+# (shared dxdfir_evidence), then delegate the run to
+# get_sybers.godfir_run.godfir_gowindowlicker (imported by URL).
 - name: "gowindowlicker | assert inputs"
   ansible.builtin.assert:
     that:
@@ -19,161 +12,24 @@
     quiet: true
   tags: [always]
 
-# 1. the disk images: every image under the disk-image and VM trees is a host
-#    (a VMDK's extents and an EWF set's later segments belong to their item)
-- name: "gowindowlicker | stat each disk-image tree"
-  ansible.builtin.stat:
-    path: "{{ item }}"
-  loop: "{{ [dxdfir_gowindowlicker_input_dir, dxdfir_gowindowlicker_vm_dir] | reject('equalto', '') | list }}"
-  register: dxdfir_gowindowlicker_tree_stats
-  tags: [always]
-
-- name: "gowindowlicker | look for disk images in each present tree"
-  ansible.builtin.find:
-    paths: "{{ item.item }}"
-    use_regex: true
-    patterns: ["{{ dxdfir_gowindowlicker_image_regex }}"]
-    excludes: ["{{ dxdfir_gowindowlicker_exclude_regex }}"]
-    recurse: true
-    file_type: file
-  loop: "{{ dxdfir_gowindowlicker_tree_stats.results | selectattr('stat.isdir', 'defined') | selectattr('stat.isdir') | list }}"
-  loop_control:
-    label: "{{ item.item }}"
-  register: dxdfir_gowindowlicker_tree_images
-  tags: [always]
-
-- name: "gowindowlicker | start from an empty image list"
-  ansible.builtin.set_fact:
-    dxdfir_gowindowlicker_images: []
-  tags: [always]
-
-# the host name is the image's path relative to its tree, separators and
-# whitespace folded to _ — the batch runtime's own item-naming rule
-- name: "gowindowlicker | one host per disk image"
-  ansible.builtin.set_fact:
-    dxdfir_gowindowlicker_images: >-
-      {{ dxdfir_gowindowlicker_images + [{
-           'tree': item.0.item.item,
-           'rel': item.1.path | relpath(item.0.item.item),
-           'name': (item.1.path | relpath(item.0.item.item)) | regex_replace('[/\\:\s]+', '_'),
-         }] }}
-  loop: >-
-    {{ dxdfir_gowindowlicker_tree_images.results | default([])
-       | selectattr('files', 'defined') | subelements('files') }}
-  loop_control:
-    label: "{{ item.1.path }}"
-  tags: [always]
-
-# 2. the loose event logs: one folder per host under logs/winevt/
-- name: "gowindowlicker | stat the loose event-log tree"
-  ansible.builtin.stat:
-    path: "{{ dxdfir_gowindowlicker_winevt_dir }}"
-  when: dxdfir_gowindowlicker_winevt_dir | length > 0
-  register: dxdfir_gowindowlicker_winevt_stat
-  tags: [always]
-
-- name: "gowindowlicker | the loose hosts: every folder directly under the event-log tree"
-  ansible.builtin.find:
-    paths: "{{ dxdfir_gowindowlicker_winevt_dir }}"
-    file_type: directory
-    recurse: false
-  when: (dxdfir_gowindowlicker_winevt_stat.stat | default({})).isdir | default(false)
-  register: dxdfir_gowindowlicker_loose_hosts
-  tags: [always]
-
-# a log dropped at the tree root belongs to no host: say so loudly instead of
-# guessing one (goevtx recurses, so a root run would re-parse every host too)
-- name: "gowindowlicker | event logs at the tree root, outside any host folder"
-  ansible.builtin.find:
-    paths: "{{ dxdfir_gowindowlicker_winevt_dir }}"
-    patterns: ["*.evtx", "*.EVTX"]
-    recurse: false
-    file_type: file
-  when: (dxdfir_gowindowlicker_winevt_stat.stat | default({})).isdir | default(false)
-  register: dxdfir_gowindowlicker_loose_root
-  tags: [always]
-
-- name: "gowindowlicker | WARN — event logs outside a host folder are not parsed"
-  ansible.builtin.debug:
-    msg: >-
-      gowindowlicker: {{ dxdfir_gowindowlicker_loose_root.matched }} .evtx sit directly
-      under {{ dxdfir_gowindowlicker_winevt_dir }} — stage each host's logs in its own
-      folder (logs/winevt/<host>/*.evtx) to have them parsed:
-      {{ dxdfir_gowindowlicker_loose_root.files | map(attribute='path') | map('basename') | list }}
-  when: (dxdfir_gowindowlicker_loose_root.matched | default(0)) | int > 0
-  tags: [always]
-
-# facts persist for the whole play, so the run list is reset before accumulating
-- name: "gowindowlicker | start from an empty run list"
-  ansible.builtin.set_fact:
-    dxdfir_gowindowlicker_runs: []
-  tags: [always]
-
-# one goevtx run per loose host: <out_dir>/goevtx/<host>/<log>/goevtx.jsonl
-- name: "gowindowlicker | goevtx over each loose event-log host"
-  ansible.builtin.set_fact:
-    dxdfir_gowindowlicker_runs: >-
-      {{ dxdfir_gowindowlicker_runs + [{
-           'name': 'goevtx:' ~ (item.path | basename),
-           'contract': dxdfir_gowindowlicker_contract,
-           'image': dxdfir_gowindowlicker_image,
-           'subtool': 'goevtx',
-           'env': {'GOEVTX_FORCE': dxdfir_gowindowlicker_force | bool | ternary('1', '0')},
-           'mounts': [{'host': item.path, 'path': '/input', 'mode': 'ro'},
-                      {'host': dxdfir_gowindowlicker_out_dir ~ '/goevtx/' ~ (item.path | basename), 'path': '/output', 'mode': 'rw'}],
-         }] }}
-  loop: "{{ (dxdfir_gowindowlicker_loose_hosts.files | default([])) | sort(attribute='path') }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
-  tags: [always]
-
-# one sweep run per disk image, ON the image: the tree read-only at /input
-# (a multi-file image finds its parts), the lane's output root at /output —
-# the sweep writes <out_dir>/<subtool>/<host>/<item>/<subtool>.jsonl itself —
-# and a disk-backed scratch at /work for the artefact sets it pulls
-- name: "gowindowlicker | every parser ON each disk image"
-  ansible.builtin.set_fact:
-    dxdfir_gowindowlicker_runs: >-
-      {{ dxdfir_gowindowlicker_runs + [{
-           'name': 'lick:' ~ item.name,
-           'contract': dxdfir_gowindowlicker_contract,
-           'image': dxdfir_gowindowlicker_image,
-           'subtool': 'lick',
-           'env': {'GOWINDOWLICKER_IMAGE': item.rel,
-                   'GOWINDOWLICKER_FORCE': dxdfir_gowindowlicker_force | bool | ternary('1', '0')},
-           'mounts': [{'host': item.tree, 'path': '/input', 'mode': 'ro'},
-                      {'host': dxdfir_gowindowlicker_out_dir, 'path': '/output', 'mode': 'rw'},
-                      {'host': dxdfir_gowindowlicker_work_dir ~ '/' ~ item.name, 'path': '/work', 'mode': 'rw'}],
-         }] }}
-  loop: "{{ dxdfir_gowindowlicker_images | sort(attribute='name') }}"
-  loop_control:
-    label: "lick:{{ item.name }}"
-  tags: [always]
-
-- name: "gowindowlicker | note when there is no host to parse"
-  ansible.builtin.debug:
-    msg: >-
-      gowindowlicker: no event-log host under {{ dxdfir_gowindowlicker_winevt_dir }}
-      and no disk image under {{ dxdfir_gowindowlicker_input_dir }} or
-      {{ dxdfir_gowindowlicker_vm_dir }} — nothing to parse.
-  when: dxdfir_gowindowlicker_runs | length == 0
-  tags: [always]
-
-# resolved HERE: role_path templated inside dxdfir_lane would name that role
-- name: "gowindowlicker | resolve lane-specific task paths"
-  ansible.builtin.set_fact:
-    dxdfir_gowindowlicker_gate_extra: "{{ role_path }}/tasks/gate_extra.yml"
-  tags: [always]
-
-- name: "gowindowlicker | run the shared tool-lane skeleton"
+- name: "gowindowlicker | discover disk images + loose event-log hosts"
   ansible.builtin.include_role:
-    name: dxdfir_lane
+    name: dxdfir_evidence
   vars:
-    dxdfir_lane_name: gowindowlicker
-    dxdfir_lane_runs: "{{ dxdfir_gowindowlicker_runs }}"
-    dxdfir_lane_verify_dir: "{{ dxdfir_gowindowlicker_out_dir }}"
-    dxdfir_lane_verify_glob: "*.jsonl"
-    dxdfir_lane_require_no_failures: false
-    dxdfir_lane_gate_extra: "{{ dxdfir_gowindowlicker_gate_extra }}"
-  when: dxdfir_gowindowlicker_runs | length > 0
+    dxdfir_evidence_trees:
+      - "{{ dxdfir_gowindowlicker_input_dir }}"
+      - "{{ dxdfir_gowindowlicker_vm_dir }}"
+    dxdfir_evidence_host_dir: "{{ dxdfir_gowindowlicker_winevt_dir }}"
+  tags: [always]
+
+- name: "gowindowlicker | run the get-sybers gowindowlicker lane"
+  ansible.builtin.include_role:
+    name: get_sybers.godfir_run.godfir_gowindowlicker
+  vars:
+    godfir_gowindowlicker_images: "{{ dxdfir_evidence_images }}"
+    godfir_gowindowlicker_winevt_hosts: "{{ dxdfir_evidence_hosts | map(attribute='export') | list }}"
+    godfir_gowindowlicker_out_dir: "{{ dxdfir_gowindowlicker_out_dir }}"
+    godfir_gowindowlicker_work_dir: "{{ dxdfir_gowindowlicker_work_dir }}"
+    godfir_gowindowlicker_image: "{{ dxdfir_gowindowlicker_image }}"
+    godfir_gowindowlicker_force: "{{ dxdfir_gowindowlicker_force }}"
   tags: [always]

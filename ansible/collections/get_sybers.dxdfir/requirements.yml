@@ -1,6 +1,15 @@
 ---
-# pinned — never :latest, never a bare branch (ansible-standards infra galaxy §2)
+# pinned — never :latest, never a bare branch (ansible-standards infra galaxy §2).
+# Installed into $DX_DFIR/.ansible/collections (ansible.cfg home=.ansible,
+# collections_path leads with .ansible/collections) by scripts/setup-environment.sh.
 collections:
+  # the container-interaction galaxy, imported BY URL from the GoDFIR-toolz repo at
+  # its release tag (replaces the former docker/GoDFIR-toolz git submodule). It
+  # ships the godfir_run engine, godfir_images (registry pull + verify/audit) and
+  # the per-image lanes; the pipeline + evidence roles delegate to it.
+  - name: https://github.com/Get-Sybers/GoDFIR-toolz.git#/ansible_collections/get_sybers/godfir_run
+    type: git
+    version: v0.1.0
   - name: community.docker
     version: "3.10.3"
   # ansible.cfg enables its profile_tasks callback — a runtime dependency
@@ -9,5 +18,3 @@ collections:
   # dxdfir_stack's host-side TLS generation
   - name: community.crypto
     version: "2.26.9"
-  # NOT here: the build galaxy — its pin is the GITLINK, resolved in place via
-  # roles_path (docs/reference/repository-map.md); its dep range is satisfied by the pins above

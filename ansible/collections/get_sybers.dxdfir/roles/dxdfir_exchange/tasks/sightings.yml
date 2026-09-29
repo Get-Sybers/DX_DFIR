@@ -19,10 +19,10 @@
 
 - name: "exchange-sightings | run the shared tool-lane skeleton"
   ansible.builtin.include_role:
-    name: dxdfir_lane
+    name: get_sybers.godfir_run.godfir_run
   vars:
-    dxdfir_lane_name: exchange-sightings
-    dxdfir_lane_runs:
+    godfir_run_name: exchange-sightings
+    godfir_run_runs:
       - name: cti-sightings
         contract: "{{ dxdfir_exchange_contract }}"
         image: "{{ dxdfir_exchange_image }}"
@@ -39,5 +39,5 @@
           - {host: "{{ dxdfir_exchange_alerts_dir }}", path: /input, mode: ro}
           - {host: "{{ dxdfir_exchange_out_dir }}", path: /output, mode: rw}
         network: "{{ dxdfir_exchange_network if dxdfir_exchange_push | bool else '' }}"
-    dxdfir_lane_verify_dir: "{{ dxdfir_exchange_out_dir }}"
-    dxdfir_lane_verify_glob: "sightings.json"
+    godfir_run_verify_dir: "{{ dxdfir_exchange_out_dir }}"
+    godfir_run_verify_glob: "sightings.json"

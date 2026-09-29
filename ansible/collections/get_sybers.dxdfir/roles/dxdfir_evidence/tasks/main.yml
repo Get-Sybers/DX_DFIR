@@ -1,0 +1,78 @@
+---
+# Registers dxdfir_evidence_images ([{tree, rel, name}], one per disk image found
+# under dxdfir_evidence_trees) and dxdfir_evidence_hosts ([{name, path}], one per
+# immediate subfolder of dxdfir_evidence_host_dir). Read-only; both default to [].
+- name: "evidence | start from empty result lists"
+  ansible.builtin.set_fact:
+    dxdfir_evidence_images: []
+    dxdfir_evidence_hosts: []
+  tags: [always]
+
+# ---- disk images ------------------------------------------------------------
+- name: "evidence | which of the image trees exist"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ dxdfir_evidence_trees | reject('equalto', '') | list }}"
+  register: dxdfir_evidence_tree_stats
+  tags: [always]
+
+- name: "evidence | find disk images in each present tree"
+  ansible.builtin.find:
+    paths: "{{ item.item }}"
+    use_regex: true
+    patterns: ["{{ dxdfir_evidence_image_regex }}"]
+    excludes: ["{{ dxdfir_evidence_exclude_regex }}"]
+    recurse: true
+    file_type: file
+  loop: "{{ dxdfir_evidence_tree_stats.results | selectattr('stat.isdir', 'defined') | selectattr('stat.isdir') | list }}"
+  loop_control:
+    label: "{{ item.item }}"
+  register: dxdfir_evidence_tree_images
+  tags: [always]
+
+# the item name is the image's path relative to its tree, separators and
+# whitespace folded to _ (the batch runtime's own item-naming rule)
+- name: "evidence | one item per disk image ({tree, rel, name})"
+  ansible.builtin.set_fact:
+    dxdfir_evidence_images: >-
+      {{ dxdfir_evidence_images + [{
+           'tree': item.0.item.item,
+           'rel': item.1.path | relpath(item.0.item.item),
+           'name': (item.1.path | relpath(item.0.item.item)) | regex_replace('[/\\:\s]+', '_'),
+         }] }}
+  loop: >-
+    {{ dxdfir_evidence_tree_images.results | default([])
+       | selectattr('files', 'defined') | subelements('files') }}
+  loop_control:
+    label: "{{ item.1.path }}"
+  tags: [always]
+
+# ---- loose hosts ------------------------------------------------------------
+- name: "evidence | stat the loose-host tree"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_evidence_host_dir }}"
+  when: dxdfir_evidence_host_dir | length > 0
+  register: dxdfir_evidence_host_stat
+  tags: [always]
+
+- name: "evidence | the loose hosts: every folder directly under the host tree"
+  ansible.builtin.find:
+    paths: "{{ dxdfir_evidence_host_dir }}"
+    file_type: directory
+    recurse: false
+  when: (dxdfir_evidence_host_stat.stat | default({})).isdir | default(false)
+  register: dxdfir_evidence_host_find
+  tags: [always]
+
+# canonical shape {name, export}: gowindowlicker reads .export as its host dirs,
+# godaemonhunter takes the {name, export} dicts directly
+- name: "evidence | one item per loose host ({name, export})"
+  ansible.builtin.set_fact:
+    dxdfir_evidence_hosts: >-
+      {%- set h = [] -%}
+      {%- for f in (dxdfir_evidence_host_find.files | default([])) | sort(attribute='path') -%}
+        {%- set _ = h.append({'name': f.path | basename, 'export': f.path}) -%}
+      {%- endfor -%}
+      {{ h }}
+  when: dxdfir_evidence_host_find is not skipped
+  tags: [always]

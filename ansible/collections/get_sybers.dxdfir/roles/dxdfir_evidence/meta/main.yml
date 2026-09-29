@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  role_name: dxdfir_evidence
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    Shared evidence discovery for the DX_DFIR pipeline: find the disk images
+    under a set of raw trees (one {tree, rel, name} item each, the multi-file
+    extents/segments of an image excluded) and enumerate the loose hosts under a
+    tree ({name, export}). Folded out of the per-tool lanes so the disk-image
+    find + regex lives once; the lanes pass the results to the godfir_run lanes.
+  company: Get-Sybers
+  license: MIT
+  min_ansible_version: "2.16"
+  galaxy_tags: [dfir, forensics, discovery]
+dependencies: []

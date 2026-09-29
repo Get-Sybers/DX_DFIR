@@ -1,18 +1,16 @@
 ---
-
+# Discovery only — the goevtx/lick run assembly + gate live in
+# get_sybers.godfir_run.godfir_gowindowlicker. This role resolves the loose
+# event-log tree and the disk-image trees (data_store/raw + evidence-taxonomy),
+# runs the shared dxdfir_evidence discovery, and delegates the item lists.
 dxdfir_gowindowlicker_repo_root: "{{ role_path }}/../../../../.."
-
-# a collection-scoped run lands one level below the leaf: processed/windowlicker/<collection>/
 dxdfir_gowindowlicker_collection: ""
 
-# subdirs from the shared evidence taxonomy (evidence-taxonomy/)
-# loose Windows event logs, one folder per host: logs/winevt/<host>/*.evtx
 dxdfir_gowindowlicker_winevt_lane: >-
   {{ ((lookup('file', dxdfir_gowindowlicker_repo_root ~ '/evidence-taxonomy/logs_winevt.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir
   | default('logs/winevt', true) }}
 dxdfir_gowindowlicker_winevt_dir: "{{ dxdfir_gowindowlicker_repo_root }}/data_store/raw/{{ dxdfir_gowindowlicker_winevt_lane }}"
-# the disk-image family: every image is a host the parsers run ON (no export)
 dxdfir_gowindowlicker_input_lane: >-
   {{ ((lookup('file', dxdfir_gowindowlicker_repo_root ~ '/evidence-taxonomy/disk_images.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir
@@ -24,29 +22,11 @@ dxdfir_gowindowlicker_vm_lane: >-
   | default('VM_files', true) }}
 dxdfir_gowindowlicker_vm_dir: "{{ dxdfir_gowindowlicker_repo_root }}/data_store/raw/{{ dxdfir_gowindowlicker_vm_lane }}"
 
-# processed/windowlicker/[<collection>/]<subtool>/<host>/<item>/<subtool>.jsonl
 dxdfir_gowindowlicker_out_dir: >-
   {{ dxdfir_gowindowlicker_repo_root }}/data_store/processed/windowlicker{{
   ('/' ~ dxdfir_gowindowlicker_collection) if dxdfir_gowindowlicker_collection | length > 0 else '' }}
-# the disk-backed scratch bound at /work per image: the sweep pulls the
-# parsers' artefact sets there while it runs and removes them after (the
-# container's own tmpfs is 1 GiB — an event-log set alone can exceed it)
 dxdfir_gowindowlicker_work_dir: >-
   {{ dxdfir_gowindowlicker_repo_root }}/data_store/processed/_scratch/windowlicker{{
   ('/' ~ dxdfir_gowindowlicker_collection) if dxdfir_gowindowlicker_collection | length > 0 else '' }}
-
-# what counts as a disk image inside a tree: every container gomount reads,
-# by extension (find anchors its regex at the start, so the stem is consumed);
-# a VMDK's -flat/-sNNN extents and an EWF set's .E02… segments belong to
-# their item and are never hosts themselves
-dxdfir_gowindowlicker_image_regex: '(?i).*\.(e01|ex01|raw|dd|img|vmdk|vhd|vhdx|qcow2|qcow|vdi|dmg|sparseimage|aff4|001|bin)$'
-dxdfir_gowindowlicker_exclude_regex: '(?i).*(-flat\.vmdk|-s[0-9]{3,}\.vmdk|\.e(0[2-9]|[1-9][0-9]|[a-z]{2}))$'
-
-# the contract the lane is driven from; every parser is a sub-tool of the one image
-dxdfir_gowindowlicker_contract: "{{ dxdfir_gowindowlicker_repo_root }}/docker/GoDFIR-toolz/gowindowlicker/contract.yml"
-# empty = the contract's image; set to pin a digest
 dxdfir_gowindowlicker_image: ""
-# every parser runs over each disk image (the image's sweep, one run per
-# image); loose event-log hosts get goevtx only
-
 dxdfir_gowindowlicker_force: false

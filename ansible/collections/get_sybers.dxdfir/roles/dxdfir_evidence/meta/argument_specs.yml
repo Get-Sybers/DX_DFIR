@@ -1,0 +1,29 @@
+---
+argument_specs:
+  main:
+    short_description: "Discover disk images and loose hosts under the raw evidence trees."
+    description:
+      - >-
+        Registers dxdfir_evidence_images ([{tree, rel, name}], one per disk image
+        found by recursing dxdfir_evidence_trees, image extents/segments excluded)
+        and dxdfir_evidence_hosts ([{name, export}], one per immediate subfolder of
+        dxdfir_evidence_host_dir). Read-only; unset inputs yield empty lists.
+    options:
+      dxdfir_evidence_trees:
+        type: list
+        elements: str
+        required: false
+        default: []
+        description: "Raw trees to recurse for disk images; empty = no image discovery."
+      dxdfir_evidence_host_dir:
+        type: str
+        required: false
+        description: "A tree whose immediate subfolders are hosts; empty = no host discovery."
+      dxdfir_evidence_image_regex:
+        type: str
+        required: false
+        description: "Regex for what counts as a disk image (default: the get-sybers image family)."
+      dxdfir_evidence_exclude_regex:
+        type: str
+        required: false
+        description: "Regex for parts that belong to another item (VMDK extents, EWF segments)."

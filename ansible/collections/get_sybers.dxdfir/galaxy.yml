@@ -22,9 +22,9 @@ dependencies:
   community.docker: ">=3.10.3,<4.0.0"
   ansible.posix: ">=2.1.0,<3.0.0"
   community.crypto: ">=2.26.9,<3.0.0"
-  # the BUILD galaxy: pinned by the GITLINK, resolved in place via roles_path
-  # (no requirements.yml entry); this range serves galaxy-mode consumers
-  get_sybers.godfir_toolz: ">=0.1.0,<1.0.0"
+  # the container-interaction galaxy: imported by URL (requirements.yml pins the
+  # exact tag); the pipeline + evidence roles delegate to its godfir_run lanes
+  get_sybers.godfir_run: ">=0.1.0,<1.0.0"
 build_ignore:
   - "roles/*/molecule"
   - "*.pyc"

@@ -1,8 +1,6 @@
 ---
-
+# Discovery only — the log2timeline+psort run-list lives in get_sybers.godfir_run.godfir_plaso.
 dxdfir_plaso_repo_root: "{{ role_path }}/../../../../.."
-
-# subdirs from the shared evidence taxonomy (evidence-taxonomy/)
 dxdfir_plaso_input_lane: >-
   {{ ((lookup('file', dxdfir_plaso_repo_root ~ '/evidence-taxonomy/disk_images.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir
@@ -12,27 +10,14 @@ dxdfir_plaso_vm_lane: >-
   {{ ((lookup('file', dxdfir_plaso_repo_root ~ '/evidence-taxonomy/vm_files.yml',
   errors='ignore') | default('', true) | from_yaml) or {}).subdir
   | default('VM_files', true) }}
-# optional: processed when the directory exists
 dxdfir_plaso_vm_dir: "{{ dxdfir_plaso_repo_root }}/data_store/raw/{{ dxdfir_plaso_vm_lane }}"
-# loose-artefact trees, opt-in (they can be very large); empty = none
 dxdfir_plaso_loose_dir: ""
-# a collection-scoped run lands one level below the leaf: processed/log2timeline/<collection>/
 dxdfir_plaso_collection: ""
-# processed/log2timeline/[<collection>/]<host>/ — ONE folder per image holding
-# the durable <host>.plaso (reusable by Timesketch) + log2timeline.log, and
-# psort's timeline.jsonl + psort.log rendered beside it
 dxdfir_plaso_out_dir: >-
   {{ dxdfir_plaso_repo_root }}/data_store/processed/log2timeline{{
   ('/' ~ dxdfir_plaso_collection) if dxdfir_plaso_collection | length > 0 else '' }}
-
-# the contract the lane is driven from
-dxdfir_plaso_contract: "{{ dxdfir_plaso_repo_root }}/docker/GoDFIR-toolz/plaso/contract.yml"
-# empty = the contract's image; set to pin a digest
 dxdfir_plaso_image: ""
-# process every VSS store of an image
 dxdfir_plaso_vss: true
-# parser preset/list; empty = plaso's default
 dxdfir_plaso_parsers: ""
-# json_line renders one event per line
 dxdfir_plaso_output_format: json_line
 dxdfir_plaso_force: false
