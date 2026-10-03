@@ -43,3 +43,25 @@ PyYAML==6.0.3
 requests==2.34.2
 resolvelib==1.2.1
 urllib3==2.8.0
+
+# The molecule runner's layer (2026-10-04, same interpreter contract):
+# molecule itself and its transitive closure, resolved against the pins
+# above so .github/tests/molecule-runner.Dockerfile's `pip install -c`
+# floats nothing (ansible-standards §2).
+ansible-compat==26.9.0
+attrs==26.1.0
+bracex==3.0.1
+click==8.5.0
+enrich==1.2.7
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+markdown-it-py==4.2.0
+mdurl==0.1.2
+molecule==26.9.0
+pluggy==1.6.0
+Pygments==2.21.0
+referencing==0.37.0
+rich==15.0.0
+rpds-py==2026.6.3
+subprocess-tee==0.4.2
+wcmatch==11.0.1
