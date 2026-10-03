@@ -1,0 +1,24 @@
+---
+# dxdfir_car_load: bulk-load the materialised CAR into logs-car.*. The role
+# GROUPS; the playbook DECIDES the action. One confined run of the multi-tool
+# get-sybers/byakugan image (its `load` sub-tool), driven from its contract
+# (docker/GoDFIR-toolz/byakugan/contract.yml) by the shared dxdfir_lane
+# skeleton, behind the stack's ensure_running gate; the engine's own
+# idempotence (a manifest/load report that already show the run complete is
+# skipped unless BYAKUGAN_LOAD_FORCE) lives in the engine, not a task's `when:`.
+
+- name: "car-load | assert inputs"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_car_load_action in ['load']
+      - dxdfir_car_load_dir | length > 0
+      - dxdfir_car_load_out_dir | length > 0
+    fail_msg: >-
+      dxdfir_car_load needs dxdfir_car_load_action (load) and a non-empty
+      dxdfir_car_load_dir / dxdfir_car_load_out_dir.
+    quiet: true
+  tags: [always]
+
+- name: "car-load | run the CAR-load action | {{ dxdfir_car_load_action }}"
+  ansible.builtin.include_tasks: "{{ dxdfir_car_load_action }}.yml"
+  tags: [always]

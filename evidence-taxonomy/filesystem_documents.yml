@@ -1,0 +1,23 @@
+# Documents and loose filesystem artefacts. Lane subdir: filesystem/documents/
+#
+# OOXML (docx/xlsx/pptx) is a ZIP; the special detector confirms it by the
+# central-directory member [Content_Types].xml so a bare archive is not misfiled.
+name: filesystem_documents
+subdir: filesystem/documents
+ext: [.pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx, .rtf, .txt]
+signatures:
+  - {hex: "25 50 44 46", offset: 0, ext: pdf, desc: "PDF (%PDF)"}
+  - {hex: "D0 CF 11 E0 A1 B1 1A E1", offset: 0, ext: doc, desc: "OLE2 compound (legacy Office/.doc/.xls/.ppt)"}
+  - {hex: "50 4B 03 04", offset: 0, kind: "special:ooxml", ext: docx, desc: "OOXML Office (ZIP with [Content_Types].xml)"}
+  - {hex: "50 4B 03 04", offset: 0, kind: "special:odf", ext: odt, desc: "OpenDocument (ZIP with a vnd.oasis.opendocument mimetype)"}
+  - {hex: "7B 5C 72 74 66 31", offset: 0, ext: rtf, desc: "Rich Text Format ({\\rtf1)"}
+  - {hex: "89 50 4E 47 0D 0A 1A 0A", offset: 0, ext: png, desc: "Image encoded in the Portable Network Graphics format"}
+  - {hex: "FF D8 FF DB", offset: 0, ext: jpg, desc: "JPEG raw or in the JFIF or Exif file format"}
+  - {hex: "FF D8 FF E0 nn nn 4A 46 49 46 00 01", offset: 0, ext: jpg, desc: "JPEG raw or in the JFIF or Exif file format"}
+  - {hex: "FF D8 FF E1 nn nn 45 78 69 66 00 00", offset: 0, ext: jpg, desc: "JPEG raw or in the JFIF or Exif file format"}
+  - {hex: "47 49 46 38 37 61", offset: 0, ext: gif, desc: "Image file encoded in the Graphics Interchange Format (GIF87a)"}
+  - {hex: "47 49 46 38 39 61", offset: 0, ext: gif, desc: "Image file encoded in the Graphics Interchange Format (GIF89a)"}
+  - {hex: "49 49 2A 00", offset: 0, ext: tif, desc: "Tagged Image File Format (little endian format)"}
+  - {hex: "4D 4D 00 2A", offset: 0, ext: tif, desc: "Tagged Image File Format (big endian format)"}
+  - {hex: "42 4D", offset: 0, ext: bmp, desc: "BMP file, a bitmap format used mostly in the Windows world"}
+  - {hex: "52 49 46 46 nn nn nn nn 57 45 42 50", offset: 0, ext: webp, desc: "Google WebP image file"}

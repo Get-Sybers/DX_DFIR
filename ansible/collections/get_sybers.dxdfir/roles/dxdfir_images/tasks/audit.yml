@@ -1,0 +1,12 @@
+---
+# The namespace inventory audit: delegate to godfir_images' audit, driven by the
+# manifest shipped in the installed collection.
+- name: "images-audit | audit through godfir_images"
+  ansible.builtin.include_role:
+    name: get_sybers.godfir_run.godfir_images
+    tasks_from: audit
+  vars:
+    godfir_images_namespace: "{{ dxdfir_images_namespace }}"
+    godfir_images_uid: "{{ dxdfir_images_uid }}"
+    godfir_images_gid: "{{ dxdfir_images_gid }}"
+    godfir_images_manifest_path: "{{ dxdfir_images_manifest_path }}"

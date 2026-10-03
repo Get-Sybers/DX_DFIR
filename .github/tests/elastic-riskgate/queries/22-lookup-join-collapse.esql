@@ -1,0 +1,15 @@
+// Byakugan risk gate — proof 2, check 2.6: FAN-OUT semantics. LOOKUP JOIN
+// emits one output row per matching lookup row, so a guid hit by two
+// detections yields two stamped lines (check 2.4 shows both). When one row per
+// CAR event is wanted, STATS ... BY event.id collapses them — the contract's
+// documented collapse. Expected: the wevtutil process guid counts 2 detections
+// from 2 rules, the Security.evtx file guid 1 from 1.
+//
+// The trailing KEEP/SORT is proof-only (fixes the table expected/ pins).
+FROM logs-car.*-riskgate METADATA _id, _index, _version
+| LOOKUP JOIN car-detections-riskgate ON event.id
+| WHERE detection.id IS NOT NULL
+| STATS detections = COUNT(*), rules = COUNT_DISTINCT(detection.id) BY event.id
+| KEEP event.id, detections, rules
+| SORT event.id ASC
+| LIMIT 100

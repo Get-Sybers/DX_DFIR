@@ -1,0 +1,83 @@
+---
+# Remove everything under dxdfir_cleanup_wipe_dir EXCEPT the tracked skeleton:
+# every .gitkeep at any depth AND the directories that lead to one, so the
+# tree comes back to exactly what git ships.
+#
+# The previous revision removed every top-level entry except the root
+# .gitkeep. That took each tool leaf (processed/zeek/, processed/detections/
+# yara/, …) away WITH its own tracked .gitkeep; the next lane run recreated
+# the leaf without it and `git status` showed thirteen deleted files.
+#
+# Native modules only: the front-end's dry run is ansible --check, which
+# skips a command/shell task (or, with check_mode: false, runs it for real).
+# find and file honour check mode, so the dry run prints exactly the removals.
+
+- name: "cleanup-wipe | stat the target tree"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_cleanup_wipe_dir }}"
+  register: dxdfir_cleanup_wipe_stat
+
+# the normalised root — find reports paths under the path it was given, so the
+# skeleton set and the removal candidates must be built from the same spelling
+- name: "cleanup-wipe | resolve the target tree"
+  ansible.builtin.set_fact:
+    dxdfir_cleanup_wipe_root: "{{ dxdfir_cleanup_wipe_dir | realpath }}"
+    dxdfir_cleanup_wipe_present: "{{ dxdfir_cleanup_wipe_stat.stat.isdir | default(false) }}"
+
+# the skeleton files: every .gitkeep below the target, at any depth
+- name: "cleanup-wipe | find the skeleton (.gitkeep at any depth)"
+  ansible.builtin.find:
+    paths: "{{ dxdfir_cleanup_wipe_root }}"
+    patterns: [".gitkeep"]
+    hidden: true
+    recurse: true
+    file_type: file
+  register: dxdfir_cleanup_wipe_keeps
+  when: dxdfir_cleanup_wipe_present
+
+# the skeleton directories: the target itself plus every ancestor of a
+# .gitkeep — the only directories the wipe descends into rather than removes
+- name: "cleanup-wipe | the skeleton directories (every ancestor of a .gitkeep)"
+  ansible.builtin.set_fact:
+    dxdfir_cleanup_wipe_keep_files: >-
+      {{ dxdfir_cleanup_wipe_keeps.files | default([]) | map(attribute='path') | list }}
+    dxdfir_cleanup_wipe_keep_dirs: >-
+      {%- set root = dxdfir_cleanup_wipe_root -%}
+      {%- set ns = namespace(dirs=[root]) -%}
+      {%- for keep in dxdfir_cleanup_wipe_keeps.files | default([]) | map(attribute='path') -%}
+        {%- set rel = keep | dirname | relpath(root) -%}
+        {%- if rel != '.' -%}
+          {%- set parts = rel.split('/') -%}
+          {%- for i in range(parts | length) -%}
+            {%- set d = root ~ '/' ~ (parts[:i + 1] | join('/')) -%}
+            {%- if d not in ns.dirs -%}{%- set ns.dirs = ns.dirs + [d] -%}{%- endif -%}
+          {%- endfor -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ ns.dirs }}
+  when: dxdfir_cleanup_wipe_present
+
+# the direct contents of each skeleton directory are the removal candidates;
+# anything deeper sits under a non-skeleton entry and goes with it
+- name: "cleanup-wipe | list the direct contents of each skeleton directory"
+  ansible.builtin.find:
+    paths: "{{ item }}"
+    recurse: false
+    file_type: any
+    hidden: true
+  loop: "{{ dxdfir_cleanup_wipe_keep_dirs | default([]) }}"
+  register: dxdfir_cleanup_wipe_found
+  when: dxdfir_cleanup_wipe_present
+
+- name: "cleanup-wipe | remove everything that is not skeleton"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: >-
+    {{ dxdfir_cleanup_wipe_found.results | default([])
+       | selectattr('files', 'defined') | map(attribute='files') | flatten
+       | map(attribute='path')
+       | reject('in', dxdfir_cleanup_wipe_keep_dirs | default([]))
+       | reject('in', dxdfir_cleanup_wipe_keep_files | default([]))
+       | list }}
+  when: dxdfir_cleanup_wipe_present

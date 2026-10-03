@@ -1,0 +1,15 @@
+---
+# Shared evidence discovery, folded out of the per-tool lanes (the disk-image
+# find + regex lived verbatim in gowindowlicker/godaemonhunter/export). A caller
+# sets the inputs it needs and reads the facts this role registers.
+
+# disk-image discovery: the trees to search (each recursed); empty = skip
+dxdfir_evidence_trees: []
+# what counts as a disk image inside a tree, and what belongs to another item
+# (a VMDK's -flat/-sNNN extents, an EWF set's .E02… segments) — never a host itself
+dxdfir_evidence_image_regex: '(?i).*\.(e01|ex01|raw|dd|img|vmdk|vhd|vhdx|qcow2|qcow|vdi|dmg|sparseimage|aff4|001|bin)$'
+dxdfir_evidence_exclude_regex: '(?i).*(-flat\.vmdk|-s[0-9]{3,}\.vmdk|\.e(0[2-9]|[1-9][0-9]|[a-z]{2}))$'
+
+# loose-host discovery: the directory whose immediate subfolders are hosts
+# (logs/winevt/<host>/, logs/linux/<host>/); empty = skip
+dxdfir_evidence_host_dir: ""

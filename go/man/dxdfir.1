@@ -1,0 +1,483 @@
+.TH DXDFIR 1 "2026-09-17" "dxdfir 0.6.0" "DX_DFIR Manual"
+.SH NAME
+dxdfir \- DX_DFIR forensic processing pipeline front-end
+.SH SYNOPSIS
+.B dxdfir
+.RI [ --version ]
+.I COMMAND
+.RI [ ARGS ...]
+.br
+.B dxdfir process
+.RI [ COLLECTION ]
+.RI [ LANE ]
+.RB [ --force ]
+.RB [ --repo-root
+.IR PATH ]
+.RB [ --extra-var
+.IR KEY=VALUE ]...
+.br
+.B dxdfir build-car
+.RI [ PROCESSED_DIR ]
+.RB [ --out
+.IR DIR ]
+.RB [ --rebuild ]
+.RB [ --derive ]
+.RB [ --stix ]
+.br
+.B dxdfir verify-car
+.RB [ --car-dir
+.IR DIR ]
+.br
+.B dxdfir build-timeline
+.I CAR_DIR
+.RB [ --out-dir
+.IR DIR ]
+.RB [ --force ]
+.br
+.B dxdfir validate
+.br
+.B dxdfir verify-images
+.br
+.B dxdfir build-docker
+.RB [ --image
+.IR NAME ]...
+.RB [ --force ]
+.RB [ --repo-root
+.IR PATH ]
+.RB [ --extra-var
+.IR KEY=VALUE ]...
+.br
+.B dxdfir list
+.RB [ lanes | raw | processed | collections ]
+.br
+.B dxdfir register
+.RB [ collection ]
+.RI [ NAME ]
+.RB [ --from
+.IR PATH ]
+.RB [ --no-hash ]
+.br
+.B dxdfir unregister
+.RB [ collection ]
+.I NAME
+.br
+.B dxdfir select
+.RB [ collection ]
+.I NAME
+.br
+.B dxdfir unselect
+.RB [ collection ]
+.br
+.B dxdfir sort
+.RB [ collection ]
+.RI [ NAME ]
+.RB [ --dry-run ]
+.RB [ --no-register ]
+.RB [ --no-hash ]
+.br
+.BR "dxdfir deploy" | destroy | start | stop | status " " stack
+.br
+.B dxdfir cleanup
+.BR processed | car | docker
+.RB [ --dry-run ]
+.RB [ -y ]
+.br
+.B dxdfir stix
+.BR export | behaviour | pull | sightings
+.SH DESCRIPTION
+.B dxdfir
+is the user-facing front-end of the DX_DFIR pipeline \(em an offline,
+container-based digital-forensics workflow that turns raw evidence (packet
+captures, disk images, memory, Windows event logs) into normalised JSON,
+materialised MITRE CAR and detection events for the Elastic-native analysis
+backend.
+.PP
+It is the top of a three-layer design: this command holds the verbs, the
+.B get_sybers.dxdfir
+Ansible collection holds the orchestration (one role per source, one action per
+task), and the GoDFIR-toolz tool containers do the processing \(em each driven
+purely by its
+.IR contract.yml ,
+the role building the confined
+.B docker run
+from the tool's environment variables and mounts.
+.PP
+.B dxdfir process
+drives a source's role with
+.BR ansible-playbook (1)
+\(em build the run from the contract, preflight, process, verify \(em and the
+container discovers, batches and skips its own inputs.
+.BR build-car ", " verify-car " and " build-timeline
+drive the CAR lane the same way (the
+.B dxdfir_byakugan
+role over the external Byakugan engine, run inside the hardened
+.B get-sybers/byakugan
+image \(em cloned + built at the
+.I sources.yml
+pin by
+.BR "dxdfir build-docker" ,
+so the lane only runs the image \(em including the engine's own verify gate),
+while
+.B validate
+fronts the repository's check harness
+.RB ( .github/tests/run-checks.sh ).
+The analysis backend itself (the Elastic stack) is deployed with
+.B deploy stack
+(the
+.B dxdfir_stack
+role, from inventory data — secrets generated into
+.IR ansible/inventory/secrets/ ,
+vault-overridable); see docs/architecture/the-stack.md.
+.SH COMMANDS
+Commands read verb first \(em \fBregister collection\fR \fINAME\fR,
+\fBdeploy stack\fR, \fBlist collections\fR. The collection verbs also take a
+bare \fINAME\fR in place of the noun: \fBregister\fR \fINAME\fR is
+\fBregister collection\fR \fINAME\fR. The former noun-first spellings
+(\fBcollection register\fR, \fBstack deploy\fR) still run, hidden, and print
+the verb-first form to use.
+.TP
+.BI "process " [COLLECTION] " " [LANE]
+Process evidence with a lane, named after the tool that drives it. \fILANE\fR is one of
+.BR zeek ", " gowindowlicker ", " godaemonhunter ", " anamnesis ", " plaso ", " signatures ", " all
+(the default when a collection is given), or an alias (\fBevtx\fR, \fBwindowlicker\fR,
+\fBlick\fR for gowindowlicker; \fBdaemonhunter\fR, \fBhunt\fR; \fBmemory\fR;
+\fBlog2timeline\fR; \fBgodfir-toolz\fR runs both host lanes); \fICOLLECTION\fR scopes the
+run to one registered collection (else the active one, if set): its inputs come from
+.IR data_store/raw/collections/<name>/ ,
+its output lands in
+.IR data_store/processed/<tool>/<name>/<host>/... .
+The two positionals may be given in either order \(em a lane name is the lane,
+anything else the collection.
+Idempotent: inputs that already have output are skipped (use
+.B --force
+to reprocess).
+.TP
+.BI "build-car " [PROCESSED_DIR]
+Build the per-source CAR stores (one
+.IR car_<object>.jsonl
+per populated object, plus
+.IR car_relationships.jsonl
+always written \(em the done/skip marker; also
+.IR car_inferred.jsonl
+with
+.BR --derive )
+from every source under the processed tree. A source whose store already
+exists is left alone unless
+.B --rebuild
+is given.
+.TP
+.B verify-car
+The CAR correctness gate over the materialised CAR
+.RI ( data_store/processed/byakugan
+by default, or
+.BR --car-dir ):
+each exercised object populated, values sane (IPs, ports, SIDs,
+.I car_action
+in the engine model's vocabulary), every row traceable to one artefact, the
+relationship edges naming real endpoints. Run the pipeline first
+(process, then build-car).
+.TP
+.BI "build-timeline " CAR_DIR
+Build one property-rich, time-ordered CAR timeline JSONL from a source's
+.IR car_<object>.jsonl " + " car_relationships.jsonl
+(or aggregate a whole tree), beside the stores unless
+.BR --out-dir .
+Alias:
+.BR car-timeline .
+.TP
+.B validate
+Run the repository check harness (fronts
+.IR .github/tests/run-checks.sh ).
+.TP
+.B verify-images
+Audit the hardened
+.I get-sybers/*
+tool-image inventory: every expected image present and hardened, nothing
+unexpected in the namespace.
+.TP
+.B build-docker
+Build (and hardening-verify) the
+.I get-sybers/*
+tool images from the in-repo Dockerfiles. Fronts
+.I playbooks/dxdfir-build-images.yml
+(the
+.B dxdfir_images
+role): each image is built from its ansible-hardened Dockerfile under
+.IR docker/ ,
+then the hardening contract is asserted on the result (fixed non-root
+.BR USER ,
+.B com.get-sybers.hardened
+label, no
+.BR apt-get / dpkg / sudo / pip /ansible;
+shell + python absent from the tool-only images). Restrict the set with
+.B --image
+(repeatable); rebuild existing images with
+.BR --force .
+Run once per host before first processing, and again after changing anything
+under
+.IR docker/ .
+.TP
+.BI "list " [VIEW]
+Inventory the staged evidence, or the collections. \fIVIEW\fR is
+.B lanes
+(the default: for each lane that
+.B process
+reads, the input directory and how many evidence files are present),
+.B raw
+or
+.B processed
+(a directory view of that tree's top-level subdirs), or
+.B collections
+(registered, detected and dropzone-candidate collections; the active one is
+starred).
+.TP
+.BI "register [collection] " [NAME]
+Register a collection: promote \fIdata_store/raw/sort/NAME/\fR if it exists
+(loose files auto-classified into lane subdirs), else create an empty
+collection \(em or, with
+.BI --from " PATH" ,
+symlink an external directory in (\fINAME\fR defaults to its basename). Adds
+the SQLite registry row and SHA-1s the evidence into
+.I .collection.hashes
+unless
+.BR --no-hash .
+.TP
+.BI "unregister [collection] " NAME
+Drop the registry row and marker; evidence and log are preserved.
+.TP
+.BI "select [collection] " NAME
+Mark a collection as the active target for later commands
+.RB ( process ", " sort ).
+.TP
+.B unselect [collection]
+Clear the active collection.
+.TP
+.BI "sort [collection] " [NAME]
+Sort the dropzone into the collection's lanes by magic-byte type (content beats
+extension). With no \fINAME\fR the active collection is used, or the only one.
+.B --dry-run
+shows what would move.
+.TP
+.BR "deploy stack" ", " "destroy stack" ", " "start stack" ", " "stop stack" ", " "status stack"
+The analysis-stack lifecycle (the
+.B dxdfir_stack
+role, from inventory data):
+install docker when the host has none, generate secrets and TLS material,
+bring the stack up in order and verify it; stop and remove its
+containers and networks
+.RB ( --volumes
+also wipes the named volumes, i.e. the ingested data); start the existing
+stopped containers; stop them but keep them; show their status. The noun is
+required \(em a bare verb lists its targets.
+.TP
+\fBcleanup processed\fR|\fBcar\fR|\fBdocker\fR
+Wipe
+.I data_store/processed/
+(every lane and the CAR), the materialised CAR tree only, or the built
+.I get-sybers/*
+tool images (the
+.B dxdfir_cleanup
+role). Each prompts unless
+.B -y
+is given;
+.B --dry-run
+maps to
+.BR "ansible-playbook --check" .
+.TP
+.B stix \fRexport | behaviour | pull | sightings\fP
+The STIX 2.1 / OpenCTI exchange, run engine-side (the byakugan image's own
+exchange sub-tools) via the dxdfir_exchange role: detection hits to a bundle,
+the detection lanes joined to CAR entities, OpenCTI indicators into the
+cti-* copy, indicator-match alerts back as sightings. The OpenCTI wire rides
+the environment (DXDFIR_OPENCTI_URL / _TOKEN / _CONNECTOR_ID \(em the token
+never rides argv); a push or live pull also needs \fB--network\fP. See
+.BR "dxdfir stix -h" .
+.SH OPTIONS
+.SS Global
+.TP
+.B --version
+Print the version and exit.
+.TP
+.BR --help ", " -h
+Show help and exit. Accepted at every level, e.g.\&
+.BR "dxdfir -h" " or " "dxdfir " \fICOMMAND\fR " -h" .
+Each level shows its own options.
+.SS process
+.TP
+.B --force
+Reprocess inputs that already have output.
+.TP
+.BI --repo-root " PATH"
+DX_DFIR repository root. Auto-detected otherwise (see
+.BR ENVIRONMENT ).
+.TP
+.BR --extra-var ", " -e " " \fIKEY=VALUE\fR
+Pass an extra Ansible variable through to the role; repeatable. Use it to override
+a role default, e.g.
+.RB \(lq -e\  dxdfir_zeek_pcap_dir=/evidence/pcaps \(rq
+or
+.RB \(lq -e\  \(aq{\(dqdxdfir_signatures_lanes\(dq:[\(dqyara\(dq]}\(aq \(rq.
+.SS register
+.TP
+.BR --from ", " -f " " \fIPATH\fR
+Source: a dropzone subfolder or an external directory to symlink in.
+.TP
+.B --no-hash
+Skip SHA-1 hashing the evidence into
+.IR .collection.hashes .
+.SS sort
+.TP
+.B --dry-run
+Show what would move; move nothing.
+.TP
+.B --no-register
+Sort an unregistered collection without registering it.
+.TP
+.B --no-hash
+Skip the hash-manifest refresh after sorting.
+.SS build-car
+.TP
+.BI --out " DIR"
+The CAR tree to write. Default:
+.IR <repo>/data_store/processed/byakugan .
+.TP
+.B --rebuild
+Rebuild CAR stores that already exist (after a map/coverage change).
+.TP
+.B --derive
+Also run the derived relationship pass into car_inferred.jsonl.
+.TP
+.B --stix
+Also derive the STIX 2.1 bundle from the finished stores.
+.SS build-timeline
+.TP
+.BI --out-dir " DIR"
+Directory timeline.jsonl is written to. Default: CAR_DIR itself.
+.TP
+.B --force
+Rewrite an existing timeline.jsonl.
+.TP
+.BI --host " HOST" ", " --after " ISO" ", " --before " ISO"
+Only events whose source_host matches / at or after / at or before the timestamp.
+.SS verify-car
+.TP
+.BI --car-dir " DIR"
+The materialised CAR tree to check. Default:
+.IR <repo>/data_store/processed/byakugan .
+.SS build-docker
+.TP
+.BR --image ", " -i " " \fINAME\fR
+Build only this image (e.g.\&
+.BR yara ,
+.BR zeek ,
+.BR anamnesis );
+repeatable. Default: every get-sybers/* tool image.
+.TP
+.B --force
+Rebuild even when the image already exists (docker layer cache still applies).
+.TP
+.BI --repo-root " PATH"
+DX_DFIR repository root. Auto-detected otherwise (see
+.BR ENVIRONMENT ).
+.TP
+.BR --extra-var ", " -e " " \fIKEY=VALUE\fR
+Pass an extra Ansible variable through to the
+.B dxdfir_images
+role; repeatable (e.g.\&
+.RB \(lq -e\  dxdfir_runtime_uid=3000 \(rq).
+.SS destroy stack
+.TP
+.B --volumes
+Also remove the named volumes (wipes the ingested data).
+.TP
+.BR --yes ", " -y
+Do not prompt.
+.SH ENVIRONMENT
+.TP
+.B DFIR_REPO_ROOT
+Repository root, used when
+.B --repo-root
+is not given. If neither is set, the repo is found by walking up from the current
+directory, then from the dxdfir binary's own location.
+.TP
+.B ANSIBLE_ROLES_PATH
+Set by every verb that drives
+.BR ansible-playbook (1)
+to the checkout's roles, the same entries as
+.IR ansible.cfg 's
+.B roles_path
+(the collection's roles, the GoDFIR-toolz build galaxy in place from the
+submodule, the degraded galaxy-import path last) so the roles resolve without
+installing either galaxy. The variable replaces the config file's value, which
+is why it carries every entry.
+.SH EXIT STATUS
+.B dxdfir
+exits
+.B 0
+on success and propagates the exit status of the underlying
+.BR ansible-playbook (1)
+run or tool on failure;
+.B 1
+for a usage error (an unknown verb, flag or argument count);
+.B 2
+for a lookup error (e.g. the repo or a playbook could not be found, or no
+materialised CAR to verify) and
+.B 127
+if a required tool is not on
+.BR PATH .
+.SH EXAMPLES
+.TP
+Build every hardened tool image (first-run setup, or after touching docker/):
+.B dxdfir build-docker
+.TP
+Rebuild just the YARA image:
+.B dxdfir build-docker --image yara --force
+.TP
+Process packet captures with the zeek lane:
+.B dxdfir process zeek
+.TP
+Reprocess memory images, overriding the input directory:
+.B dxdfir process anamnesis --force -e dxdfir_anamnesis_memory_dir=/evidence/mem
+.TP
+Run only the YARA signature lane:
+.B dxdfir process signatures -e \(aq{\(dqdxdfir_signatures_lanes\(dq:[\(dqyara\(dq]}\(aq
+.TP
+Register the dropzone folder data_store/raw/sort/case-a as a tracked collection, sort it, make it active, process it:
+.B dxdfir register case-a && dxdfir sort case-a && dxdfir select case-a && dxdfir process case-a
+.TP
+Bring the analysis stack up, then show what is running:
+.B dxdfir deploy stack && dxdfir status stack
+.TP
+Normalise everything processed into CAR, then gate it:
+.B dxdfir build-car && dxdfir verify-car
+.TP
+One timeline across every source:
+.B dxdfir build-timeline data_store/processed/byakugan --out-dir /tmp
+.SH FILES
+.TP
+.I ansible/collections/get_sybers.dxdfir/
+The Ansible collection driven by
+.BR "dxdfir process" .
+.TP
+.I docker/GoDFIR-toolz/<tool>/contract.yml
+The contract each lane's
+.B docker run
+is built from (the tool's environment variables, mounts and summary line).
+.TP
+.I data_store/
+Raw evidence and processed output (gitignored); the materialised CAR lands under
+.IR data_store/processed/byakugan/ .
+.TP
+.I ansible/inventory/secrets/
+The stack's per-host secret store: generated credentials, TLS material and
+the elastic.env handoff (gitignored).
+.SH SEE ALSO
+.BR ansible-playbook (1),
+.BR docker (1).
+Each lane's playbook runs standalone as
+.RB \(lq ansible-playbook\ ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-process- SOURCE .yml\(rq.
+.SH AUTHOR
+Get-Sybers.
+.SH LICENSE
+Apache-2.0 (the repository licence; the Go front-end declares no subtree licence
+of its own). The Python package and the Ansible collection it drives are MIT.

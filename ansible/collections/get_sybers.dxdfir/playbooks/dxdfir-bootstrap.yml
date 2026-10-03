@@ -1,0 +1,21 @@
+---
+# The playbook holds the decisions; the role groups, the tasks act.
+# Host bootstrap for the docker engine: the dxdfir_stack role's docker_ensure
+# entry point with the install/start decisions ON — Docker's apt repository
+# (Debian/Ubuntu families), engine + plugins, a running daemon, the docker
+# group and the sudo'ing operator's membership, all as idempotent state
+# tasks. scripts/setup-environment.sh runs this once ansible exists, instead
+# of carrying its own shell copy of the same provisioning; rerun it any time
+# — a healthy host is a no-op.
+- name: "DFIR | bootstrap the docker engine"
+  hosts: "{{ dxdfir_hosts | default('localhost') }}"
+  connection: "{{ dxdfir_connection | default('local') }}"
+  gather_facts: true
+  tasks:
+    - name: "dxdfir-bootstrap | ensure the docker engine (install/start on)"
+      ansible.builtin.include_role:
+        name: dxdfir_stack
+        tasks_from: docker_ensure
+      vars:
+        dxdfir_stack_install_docker: true
+        dxdfir_stack_start_docker: true

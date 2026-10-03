@@ -1,0 +1,14 @@
+{
+  "_comment": "Check 2.5 — queries/21-lookup-join-cascade.esql (LOOKUP JOIN ON process.entity_id): the two process-level detections of the wevtutil guid land on the process row AND on the Security.evtx file row it owns (four lines); the file-level lookup row (no process.entity_id) joins nothing. car.guid is the row the stamp landed on, event.id the guid it cascaded from.",
+  "columns": ["@timestamp", "car.guid", "car.object", "process.entity_id", "event.id", "detection.id", "rule.id"],
+  "rows": [
+    ["2019-04-12T13:37:00.000Z", "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}", "process", "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}",
+     "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}", "riskgate-wevtutil-clear", "riskgate-wevtutil-clear"],
+    ["2019-04-12T13:37:00.000Z", "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}", "process", "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}",
+     "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}", "win-eventlog-cleared", "win-eventlog-cleared"],
+    ["2019-04-12T13:37:05.000Z", "WS01-filestat-000ef2a1", "file", "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}",
+     "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}", "riskgate-wevtutil-clear", "riskgate-wevtutil-clear"],
+    ["2019-04-12T13:37:05.000Z", "WS01-filestat-000ef2a1", "file", "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}",
+     "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}", "win-eventlog-cleared", "win-eventlog-cleared"]
+  ]
+}

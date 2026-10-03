@@ -1,0 +1,75 @@
+---
+argument_specs:
+  main:
+    short_description: "Pull the hardened get-sybers/* tool images from the registry."
+    description:
+      - >-
+        The deploy galaxy's face of the tool images. Provisioning is a REGISTRY
+        PULL, delegated to get_sybers.godfir_run.godfir_images (imported by URL):
+        it pulls ghcr.io/get-sybers/GoDFIR-toolz/<tool>:<tag> for every requested ref and tags
+        it to the local get-sybers/<tool>:latest name the contracts use. Building
+        is not here — that is get_sybers.godfir_build. This role keeps the
+        deploy-shaped decisions: the set to pull, the run-as uid/gid, the
+        verify/audit gates and the offline save/load packaging.
+    options:
+      dxdfir_images_set:
+        type: list
+        elements: str
+        required: false
+        description:
+          - "Bare image names to pull; each maps to get-sybers/<name>:latest.
+            Default: every image in the manifest shipped with godfir_images."
+      dxdfir_images_force:
+        type: bool
+        required: false
+        default: false
+        description: "Re-pull images that are already present."
+  verify:
+    short_description: "The runtime supply-chain gate (membership + posture), via godfir_images."
+    description:
+      - >-
+        Every namespace ref in dxdfir_images_verify_images must be a known manifest
+        image and still carry the hardened contract on this host — delegated to
+        get_sybers.godfir_run.godfir_images (tasks_from=verify).
+    options:
+      dxdfir_images_verify_images:
+        type: list
+        elements: str
+        required: false
+        default: []
+        description: "The image refs the caller is about to run."
+  audit:
+    short_description: "The full namespace inventory audit, via godfir_images."
+    description:
+      - >-
+        Every manifest image present and hardened, no unexpected get-sybers/* image
+        on the host — delegated to get_sybers.godfir_run.godfir_images
+        (tasks_from=audit). Driven by dxdfir-verify-images.yml.
+    options: {}
+  save:
+    short_description: "Save the analysis images as tarballs for an offline host."
+    description:
+      - >-
+        The offline mechanism's save half: the get-sybers/* tool images (pulled
+        from the registry) and the Elastic stack images (inventory
+        dxdfir_elastic_images, pulled at the pin) exported one tarball each into
+        dxdfir_images_tar_dir.
+    options:
+      dxdfir_images_tar_dir:
+        type: str
+        required: false
+        description: "The tarball directory (default data_store/docker_images)."
+      dxdfir_images_list_only:
+        type: bool
+        required: false
+        default: false
+        description: "Only print the image sets and the tar dir, then stop."
+  load:
+    short_description: "Load every image tarball from the offline dir."
+    description:
+      - "Every *.tar in dxdfir_images_tar_dir loaded into the local daemon."
+    options:
+      dxdfir_images_tar_dir:
+        type: str
+        required: false
+        description: "The tarball directory (default data_store/docker_images)."

@@ -1,0 +1,9 @@
+{
+  "_comment": "Check 1.4 — queries/10-manual-detection-window.esql over the 2019-04-12 evidence window: exactly the wevtutil row, stamped. Rows are compared order-insensitively; columns must match the query's KEEP.",
+  "columns": ["@timestamp", "event.id", "host.name", "process.name", "process.command_line",
+              "rule.id", "rule.name", "event.risk_score", "threat.tactic.id", "threat.technique.id"],
+  "rows": [
+    ["2019-04-12T13:37:00.000Z", "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}", "WS01", "wevtutil.exe", "wevtutil cl Security",
+     "riskgate-wevtutil-clear", "wevtutil clearing an event log", 73.0, "TA0005", "T1070.001"]
+  ]
+}

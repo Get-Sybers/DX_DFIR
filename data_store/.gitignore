@@ -1,0 +1,81 @@
+# ==============================================================================
+# 🛑 Evidence safety — deny by default
+# ==============================================================================
+#
+# data_store/ holds real forensic evidence. This file denies everything and
+# re-includes only the directory skeleton and documentation.
+#
+# It used to be an extension blocklist. A blocklist fails silently on any format
+# nobody thought to add, and that had already happened: VMware exports
+# (.vmdk, -flat.vmdk, .vmx, .ovf, .ova, .vmsd, .vmxf) were fully committable,
+# because VM support was added to the pipeline without updating the list —
+# and data_store/raw/VM_files/ is the documented place to put them.
+#
+# Deny-by-default means the next format nobody thought of is covered too.
+#
+# STRUCTURE. Every re-include below is ANCHORED to an exact path, including the
+# skeleton DIRECTORIES: a directory that is ignored and has no negation inside
+# is pruned — git never descends into it. The old `!*/` form re-enabled descent
+# into EVERY directory, so `git status` walked the entire evidence tree
+# (terabytes, tens of seconds) on each run. It also means an evidence dir can
+# never smuggle a file in via a name-based re-include: nothing inside a corpus
+# directory is even looked at. Adding a new skeleton file = add its directory
+# chain and the file here, tracked and reviewed like any other change.
+#
+# This is a safety net, not a guarantee. Check `git status` before committing.
+
+# Ignore everything under data_store/ ...
+*
+
+# ... and re-include ONLY the exact skeleton, directory chains first.
+#
+# This file only (anchored) — NOT a bare `!.gitignore`, which un-ignores every
+# nested .gitignore in the evidence (imaged filesystems carry hundreds). The
+# same goes for `!.gitkeep` / `!README.md`: only the exact skeleton paths are
+# re-included, never names.
+!/.gitignore
+!/README.md
+
+!/dependencies/.gitkeep
+!/dependencies/hayabusa/.gitkeep
+!/dependencies/suricata-rules/.gitkeep
+!/dependencies/memprocfs-symbols/.gitkeep
+!/dependencies/yara-rules/.gitkeep
+# NOTE: /dependencies/hayabusa/ (fetched tool cache, embeds a git repo under
+# rules/) needs no special rule any more — like every other unlisted directory
+# it is ignored and pruned outright.
+
+!/docker_images/.gitkeep
+
+!/processed/.gitkeep
+!/processed/byakugan/.gitkeep
+!/processed/byakugan-load/.gitkeep
+!/processed/exchange/.gitkeep
+!/processed/detections/.gitkeep
+!/processed/detections/byakugan/.gitkeep
+!/processed/detections/yara/.gitkeep
+!/processed/detections/suricata/.gitkeep
+!/processed/detections/hayabusa/.gitkeep
+# one leaf per tool: processed/<tool>/[<collection>/]<host>/…
+!/processed/anamnesis/.gitkeep
+!/processed/daemonhunter/.gitkeep
+!/processed/log2timeline/.gitkeep
+!/processed/windowlicker/.gitkeep
+!/processed/zeek/.gitkeep
+
+!/raw/.gitkeep
+!/raw/VM_files/.gitkeep
+!/raw/disk_images/.gitkeep
+!/raw/memory/.gitkeep
+!/raw/mobile/.gitkeep
+!/raw/logs/.gitkeep
+!/raw/logs/winevt/.gitkeep
+!/raw/logs/linux/.gitkeep
+!/raw/logs/macOS/.gitkeep
+!/raw/filesystem/.gitkeep
+!/raw/filesystem/documents/
+!/raw/filesystem/documents/.gitkeep
+!/raw/other_raw_data/.gitkeep
+!/raw/other_raw_data/sql/.gitkeep
+!/raw/pcaps/.gitkeep
+!/raw/collections/.gitkeep

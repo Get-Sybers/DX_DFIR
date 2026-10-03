@@ -1,0 +1,13 @@
+---
+# The runtime supply-chain gate: delegate to godfir_images' membership + posture
+# verify, driven by the manifest shipped in the installed collection.
+- name: "images-verify | gate through godfir_images"
+  ansible.builtin.include_role:
+    name: get_sybers.godfir_run.godfir_images
+    tasks_from: verify
+  vars:
+    godfir_images_verify_images: "{{ dxdfir_images_verify_images }}"
+    godfir_images_namespace: "{{ dxdfir_images_namespace }}"
+    godfir_images_uid: "{{ dxdfir_images_uid }}"
+    godfir_images_gid: "{{ dxdfir_images_gid }}"
+    godfir_images_manifest_path: "{{ dxdfir_images_manifest_path }}"

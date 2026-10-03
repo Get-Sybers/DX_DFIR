@@ -1,0 +1,123 @@
+# dxdfir_images
+
+Build **every runtime tool container from source, hardened** — and verify it.
+No third-party tool image is pulled at runtime. Every image builds from the
+**[GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) submodule**
+(`docker/GoDFIR-toolz/`), one directory per image:
+
+- **The pipeline images** (`<name>/Dockerfile` against the submodule-root
+  context): byakugan, plaso, signatures, zeek — plus **anamnesis** (memory,
+  cloned from [anamnesis](https://github.com/Get-Sybers/Anamnesis) at its
+  Dockerfile's `ANAMNESIS_REF` pin).
+- **The Windows-artefact matrix, `gowindowlicker`** — ONE
+  **static-Go `FROM scratch`** image (no
+  shell, no python, just the binary) whose sub-tools substitute the whole
+  family: `goevtx` (.evtx), `gomft` ($MFT),
+  `goamcache`/`goappcompat` (Amcache/AppCompatCache), `gore`/`gosbe`
+  (registry batch / ShellBags, with dirty-hive `.LOG` replay), `gole`/`gojle`
+  (`.lnk` / jump lists), `gorb` (Recycle Bin), `gowxt` (Windows Timeline), plus
+  the two artefact families that had no Linux-viable parser at all before the
+  Go ports — `goprefetch` (XP→Win11 `.pf`,
+  MAM-compressed included) and `goese` (SRUDB.dat / SUM
+  `Current.mdb`). Every parser keeps its tool name and env block as a
+  sub-tool of the one binary. Nothing .NET remains in the inventory.
+
+The image inventory — names + per-image build context / dockerfile / args — is SUPPLIED by
+the GoDFIR-toolz submodule: its root **`images.yml`** (read at the gitlink pin) is
+the single source of truth this role reads — and the runtime `verify`/`audit`
+gates read the same file through the build galaxy; DX_DFIR carries no image
+list of its own.
+Add or change an image there, in one place — retired names (the `.NET`
+per-tool lane: `sqlecmd`, `bstrings`, …) refuse via the manifest's
+`unbuildable` map instead of turning into unknown tools.
+
+Every image runs as uid 2000 (the single `dxdfir_runtime_uid` knob). The
+build + hardening verification themselves are the **build galaxy's**: this
+role delegates to its `godfir_build` role (resolved straight from the
+submodule checkout — `docker/GoDFIR-toolz/roles` is on the repo-root
+`roles_path` — so the gitlink stays the only pin and nothing is installed) and keeps
+the deploy-shaped parts — the set decision, the uid knob, the offline
+save/load packaging and the `ensure_built` lane gate.
+
+## Hardening: minimal, attack-surface-reduction posture
+
+Chosen for the strongest resistance to container escape AND to a
+supply-chain-compromised tool: each image is **stripped to the tool itself** and
+every run is confined hard. ansible does the hardening *at build time* and is
+then **removed from the final image** — it never ships at runtime. The hardening
+playbook has ONE canonical home,
+[`docker/GoDFIR-toolz/hardening/harden.yml`](https://github.com/Get-Sybers/GoDFIR-toolz/-/blob/main/hardening/harden.yml):
+every image builds from the submodule, so each Dockerfile `COPY`s it straight
+from the shared context — nothing is synced or generated.
+
+- the tool is the image **ENTRYPOINT**; no ansible, no run-role, no
+  orchestration in the runtime image
+- **uid 0 renamed `ansible`** and locked; **sudo/su/pkexec** and the
+  account-manipulation suite removed; every setuid/setgid bit stripped
+- **no package manager, no pip** (nothing installable at runtime)
+- **no shell and no python** except where the tool needs them: `get-sybers/yara`
+  keeps `sh` (its scan loop is a shell script), `get-sybers/anamnesis` and
+  `get-sybers/plaso` keep python (the tools are python); `get-sybers/zeek`,
+  `get-sybers/suricata`, and the GoDFIR Go tools carry neither
+- the tool runs as **uid 2000**
+
+The role verifies this twice per image: the static image config (USER, hardened
+label) and a shell-free `docker export | tar -t` scan proving the removed
+binaries — and, for the tool-only images, the shell and python — are absent.
+
+Runtime confinement is what actually contains both threats (an attacker with
+code execution does not need an on-image shell): every processor `docker run`
+carries `--cap-drop ALL --security-opt no-new-privileges --read-only --tmpfs
+/tmp --pids-limit 512 --network none` (anamnesis's PDB symbols are baked into
+the image at build time; byakugan's Elastic push is the one network opt-in).
+
+## What is removed vs. what remains (and why)
+
+Verify any image with a shell-free filesystem scan:
+`cid=$(docker create get-sybers/<tool>:latest); docker export "$cid" | tar -t | grep -E 'apt-get|dpkg|sudo|/pip|/sh$|python3'; docker rm -f "$cid"`.
+
+**Removed** (every image): package managers (`apt`/`apt-get`/`dpkg`), `pip`,
+`sudo`/`su`/`pkexec`, the account-manipulation suite, every setuid/setgid bit,
+and **ansible itself** (build-time only). The uid-0 account is renamed `ansible`
+and locked; the tool runs as uid 2000.
+
+**Kept only where the tool needs it**: `get-sybers/yara` keeps `sh` (its per-file
+scan loop is a shell script — the image ENTRYPOINT); `get-sybers/anamnesis` and
+`get-sybers/plaso` keep `python3` (the tools *are* python). `get-sybers/zeek`,
+`get-sybers/suricata` and the GoDFIR Go tools (goevtx/gomft/…) carry **no shell and no python** at all.
+
+Why not strip the shell from *every* image on instinct? Removing it does not
+stop an attacker who already has code execution — the premise of a compromised
+tool — because they issue syscalls directly; and a compromised *allowed* tool
+is executed regardless of any in-container policing. So the design minimises
+what is present (fewer packages = smaller supply-chain surface) and confines
+what runs at the boundary (`--cap-drop ALL --security-opt no-new-privileges
+--read-only --network none`), rather than shipping an orchestrator to guard a
+large image from inside. An escape or exfiltration then needs a defect in the
+tool plus the kernel/runtime, against dropped capabilities and no network —
+not a convenient interpreter.
+
+## What is not built here
+
+The analysis backend is not a tool image: the Elastic stack under
+the analysis stack (Elasticsearch, Kibana, Fleet Server, Filebeat — the official
+Elastic images, version-pinned) is deployed by the `dxdfir_stack` role, published on
+`127.0.0.1` only, with security on. No other third-party image is pulled at
+runtime (the stock .NET runtime image is used only by the evtx lane's
+operator-supplied mode).
+
+## Role variables
+| Variable | Default | Description |
+|---|---|---|
+| `dxdfir_images_namespace` | `get-sybers` | Image namespace — every image is tagged `<namespace>/<name>:latest`. |
+| `dxdfir_images_context` | `<repo>/docker/GoDFIR-toolz` | The GoDFIR-toolz submodule root — the default build context for every image; holds `<name>/Dockerfile` dirs + the canonical `hardening/harden.yml`. |
+| `dxdfir_runtime_uid` / `dxdfir_runtime_gid` | `2000` | Single run-as uid/gid, passed to every build as `DFIR_UID`/`DFIR_GID` and asserted in the contract. |
+| `dxdfir_images_set` | all eighteen | Images to build. |
+| `dxdfir_images_force` | `false` | Rebuild existing images (layer cache applies). |
+
+## Usage
+```bash
+ansible-playbook playbooks/dxdfir-build-images.yml
+# one image:
+ansible-playbook playbooks/dxdfir-build-images.yml -e '{"dxdfir_images_set":["yara"]}'
+```

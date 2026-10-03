@@ -1,0 +1,155 @@
+---
+# The inventory-layer wiring of the Elastic analysis backend — the one
+# definition every role references (roles keep bare-run fallbacks; inventory
+# wins; host_vars/vault beat this file; -e beats everything). Playbook-adjacent
+# so it loads for every run whatever inventory is passed (the CLI's
+# `-i localhost,` included). Semantics: roles/dxdfir_stack/README.md.
+
+# in-tree execution is the supported layout (docs/reference/ansible-standards.md)
+# The ONE path anchor. The collection lives at
+# <repo>/ansible/collections/get_sybers.dxdfir, so the repo root is exactly
+# four levels above playbooks/ — that layout constant is resolved once HERE,
+# canonicalized, and everything else derives from this variable.
+dxdfir_repo_root: "{{ (playbook_dir ~ '/../../../..') | realpath }}"
+
+# ---- identity
+dxdfir_elastic_stack_name: byakugan
+dxdfir_elastic_label_key: com.get-sybers.stack
+dxdfir_elastic_legacy_project: byakugan
+
+# ---- images and topology
+# the ONE Elastic pin; every stack image rides it
+dxdfir_elastic_version: "9.4.3"
+dxdfir_elastic_images:
+  elasticsearch: "docker.elastic.co/elasticsearch/elasticsearch:{{ dxdfir_elastic_version }}"
+  kibana: "docker.elastic.co/kibana/kibana:{{ dxdfir_elastic_version }}"
+  fleet-server: "docker.elastic.co/elastic-agent/elastic-agent:{{ dxdfir_elastic_version }}"
+  filebeat: "docker.elastic.co/beats/filebeat:{{ dxdfir_elastic_version }}"
+dxdfir_elastic_network: byakugan_default
+dxdfir_elastic_volumes:
+  certs: byakugan_certs
+  esdata: byakugan_esdata
+  kibanadata: byakugan_kibanadata
+  fleetdata: byakugan_fleetdata
+  filebeatdata: byakugan_filebeatdata
+dxdfir_elastic_bind: 127.0.0.1
+dxdfir_elastic_es_port: 9200
+dxdfir_elastic_kibana_port: 5601
+dxdfir_elastic_fleet_port: 8220
+dxdfir_elastic_es_heap: 1g
+dxdfir_elastic_namespace: default
+dxdfir_elastic_ingest_dir: "{{ dxdfir_repo_root }}/data_store/processed"
+
+# ---- secrets: file-backed, generated once, operator-overridable (rotation: stack README)
+dxdfir_elastic_secrets_dir: "{{ dxdfir_repo_root }}/ansible/inventory/secrets/{{ inventory_hostname }}"
+dxdfir_elastic_password: >-
+  {{ lookup('ansible.builtin.password',
+            dxdfir_elastic_secrets_dir ~ '/elastic_password length=24 chars=ascii_letters,digits') }}
+dxdfir_elastic_kibana_system_password: >-
+  {{ lookup('ansible.builtin.password',
+            dxdfir_elastic_secrets_dir ~ '/kibana_system_password length=24 chars=ascii_letters,digits') }}
+dxdfir_elastic_byakugan_loader_password: >-
+  {{ lookup('ansible.builtin.password',
+            dxdfir_elastic_secrets_dir ~ '/byakugan_loader_password length=24 chars=ascii_letters,digits') }}
+# Kibana encryption keys (>= 32 chars; Fleet needs the saved-objects one)
+dxdfir_elastic_kibana_saved_objects_key: >-
+  {{ lookup('ansible.builtin.password',
+            dxdfir_elastic_secrets_dir ~ '/kibana_saved_objects_key length=64 chars=ascii_letters,digits') }}
+dxdfir_elastic_kibana_security_key: >-
+  {{ lookup('ansible.builtin.password',
+            dxdfir_elastic_secrets_dir ~ '/kibana_security_key length=64 chars=ascii_letters,digits') }}
+dxdfir_elastic_kibana_reporting_key: >-
+  {{ lookup('ansible.builtin.password',
+            dxdfir_elastic_secrets_dir ~ '/kibana_reporting_key length=64 chars=ascii_letters,digits') }}
+# empty = fleet-server requests one from Kibana with the elastic credentials on first boot
+dxdfir_elastic_fleet_service_token: ""
+
+# ---- deploy artifacts (the contract for tools outside ansible)
+dxdfir_elastic_env_file: "{{ dxdfir_elastic_secrets_dir }}/elastic.env"
+dxdfir_elastic_certs_dir: "{{ dxdfir_elastic_secrets_dir }}/certs"
+dxdfir_elastic_ca_file: "{{ dxdfir_elastic_certs_dir }}/ca/ca.crt"
+# the compose-era operator .env: read once by deploy to import secrets, never written, never required
+dxdfir_elastic_legacy_env_file: "{{ dxdfir_repo_root }}/docker/elastic/.env"
+
+# ---- evidence geography: the one home for where DX_DFIR keeps evidence.
+#      Raw lanes are taxonomy-driven — each subdir comes from
+#      evidence-taxonomy/<lane>.yml (subdir:), with the documented fallback —
+#      and everything below (the godfir lanes included) references these.
+dxdfir_raw_dir: "{{ dxdfir_repo_root }}/data_store/raw"
+dxdfir_processed_dir: "{{ dxdfir_repo_root }}/data_store/processed"
+dxdfir_scratch_dir: "{{ dxdfir_processed_dir }}/_scratch"
+dxdfir_memory_dir: >-
+  {{ dxdfir_raw_dir }}/{{ ((lookup('file', dxdfir_repo_root ~ '/evidence-taxonomy/memory.yml',
+     errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('memory', true) }}
+dxdfir_pcap_dir: >-
+  {{ dxdfir_raw_dir }}/{{ ((lookup('file', dxdfir_repo_root ~ '/evidence-taxonomy/pcaps.yml',
+     errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('pcaps', true) }}
+dxdfir_disk_dir: >-
+  {{ dxdfir_raw_dir }}/{{ ((lookup('file', dxdfir_repo_root ~ '/evidence-taxonomy/disk_images.yml',
+     errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('disk_images', true) }}
+dxdfir_vm_dir: >-
+  {{ dxdfir_raw_dir }}/{{ ((lookup('file', dxdfir_repo_root ~ '/evidence-taxonomy/vm_files.yml',
+     errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('VM_files', true) }}
+dxdfir_winevt_dir: >-
+  {{ dxdfir_raw_dir }}/{{ ((lookup('file', dxdfir_repo_root ~ '/evidence-taxonomy/logs_winevt.yml',
+     errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('logs/winevt', true) }}
+dxdfir_linux_dir: >-
+  {{ dxdfir_raw_dir }}/{{ ((lookup('file', dxdfir_repo_root ~ '/evidence-taxonomy/logs_linux.yml',
+     errors='ignore') | default('', true) | from_yaml) or {}).subdir | default('logs/linux', true) }}
+dxdfir_files_dir: "{{ dxdfir_raw_dir }}/other_raw_data"
+
+# optional collection scope: every lane's out_dir/work_dir gains /<collection>
+# when set (the dxdfir CLI passes it with -e when processing one collection)
+dxdfir_collection: ""
+dxdfir_scope: "{{ ('/' ~ dxdfir_collection) if dxdfir_collection | length > 0 else '' }}"
+
+# ---- the godfir_run lanes. The imported get_sybers.godfir_run roles read
+#      these variables DIRECTLY (their own defaults documented in each role);
+#      this block extends those defaults with DX_DFIR's geography, the same
+#      way the elastic block above wires dxdfir_stack. No wrapper roles, no
+#      second variable namespace: -e / host_vars override these as usual.
+
+# zeek — PCAPs to Zeek JSON
+godfir_zeek_pcap_dir: "{{ dxdfir_pcap_dir }}"
+godfir_zeek_out_dir: "{{ dxdfir_processed_dir }}/zeek{{ dxdfir_scope }}"
+
+# anamnesis — memory images (MemProcFS); the symbol cache is a persistent
+# repo dependency, never inside processed/
+godfir_anamnesis_memory_dir: "{{ dxdfir_memory_dir }}"
+godfir_anamnesis_out_dir: "{{ dxdfir_processed_dir }}/anamnesis{{ dxdfir_scope }}"
+godfir_anamnesis_symbols_dir: "{{ dxdfir_repo_root }}/data_store/dependencies/memprocfs-symbols"
+
+# plaso — disk images / VM exports to log2timeline storage + timeline
+godfir_plaso_input_dir: "{{ dxdfir_disk_dir }}"
+godfir_plaso_vm_dir: "{{ dxdfir_vm_dir }}"
+godfir_plaso_out_dir: "{{ dxdfir_processed_dir }}/log2timeline{{ dxdfir_scope }}"
+
+# signatures — the detection lane over every present evidence tree
+godfir_signatures_files_dir: "{{ dxdfir_files_dir }}"
+godfir_signatures_memory_dir: "{{ dxdfir_memory_dir }}"
+godfir_signatures_pcap_dir: "{{ dxdfir_pcap_dir }}"
+godfir_signatures_disk_dir: "{{ dxdfir_disk_dir }}"
+godfir_signatures_vm_dir: "{{ dxdfir_vm_dir }}"
+godfir_signatures_evtx_dir: "{{ dxdfir_winevt_dir }}"
+godfir_signatures_out_dir: "{{ dxdfir_processed_dir }}/detections{{ dxdfir_scope }}"
+godfir_signatures_work_dir: "{{ dxdfir_scratch_dir }}/signatures{{ dxdfir_scope }}"
+
+# gowindowlicker / godaemonhunter — their item lists come from the
+# dxdfir_evidence discovery facts (the process playbooks run discovery first);
+# the trees discovery walks are the standing disk-image geography
+dxdfir_evidence_trees:
+  - "{{ dxdfir_disk_dir }}"
+  - "{{ dxdfir_vm_dir }}"
+godfir_gowindowlicker_images: "{{ dxdfir_evidence_images | default([]) }}"
+godfir_gowindowlicker_winevt_hosts: >-
+  {{ dxdfir_evidence_hosts | default([]) | map(attribute='export') | list }}
+godfir_gowindowlicker_out_dir: "{{ dxdfir_processed_dir }}/windowlicker{{ dxdfir_scope }}"
+godfir_gowindowlicker_work_dir: "{{ dxdfir_scratch_dir }}/windowlicker{{ dxdfir_scope }}"
+godfir_godaemonhunter_images: "{{ dxdfir_evidence_images | default([]) }}"
+godfir_godaemonhunter_hosts: "{{ dxdfir_evidence_hosts | default([]) }}"
+godfir_godaemonhunter_out_dir: "{{ dxdfir_processed_dir }}/daemonhunter{{ dxdfir_scope }}"
+godfir_godaemonhunter_work_dir: "{{ dxdfir_scratch_dir }}/daemonhunter{{ dxdfir_scope }}"
+
+# byakugan — the CAR engine over the processed tree
+godfir_byakugan_processed_dir: "{{ dxdfir_processed_dir }}"
+godfir_byakugan_dir: "{{ dxdfir_processed_dir }}/byakugan"

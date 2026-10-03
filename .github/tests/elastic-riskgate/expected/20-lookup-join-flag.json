@@ -1,0 +1,13 @@
+{
+  "_comment": "Check 2.4 — queries/20-lookup-join-flag.esql (LOOKUP JOIN ON event.id): three stamped lines out of four CAR rows — the wevtutil process guid twice (two detections), the Security.evtx file guid once; notepad.exe and notes.txt are not flagged. @timestamp is the 2019 evidence time and the file line keeps its owning process (the wevtutil guid) — the stash/restore held.",
+  "columns": ["@timestamp", "event.id", "car.object", "host.name", "process.entity_id",
+              "detection.id", "detection.severity", "detection.join_via", "rule.id", "threat.technique.id"],
+  "rows": [
+    ["2019-04-12T13:37:00.000Z", "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}", "process", "WS01", "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}",
+     "riskgate-wevtutil-clear", "high", "direct", "riskgate-wevtutil-clear", "T1070.001"],
+    ["2019-04-12T13:37:00.000Z", "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}", "process", "WS01", "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}",
+     "win-eventlog-cleared", "high", "provenance", "win-eventlog-cleared", "T1070.001"],
+    ["2019-04-12T13:37:05.000Z", "WS01-filestat-000ef2a1", "file", "WS01", "{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}",
+     "riskgate-evtx-modified", "medium", "direct", "riskgate-evtx-modified", "T1070.001"]
+  ]
+}

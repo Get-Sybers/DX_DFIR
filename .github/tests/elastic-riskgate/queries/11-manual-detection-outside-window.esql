@@ -1,0 +1,23 @@
+// Byakugan risk gate — proof 1, check 1.5: the window is HONOURED. The same
+// rule as 10-manual-detection-window.esql with the window moved to the last
+// 24 hours (the shape a scheduled Detection Engine rule runs with). The fixture
+// is dated 2019, so this must return NO rows: the hit in check 1.4 came from the
+// evidence-time window, and nothing was re-stamped to ingest time on the way in
+// (a document re-stamped to NOW() would surface here).
+FROM logs-car.process-riskgate METADATA _id, _index, _version
+| WHERE @timestamp >= NOW() - 1 day
+    AND event.action == "create"
+    AND TO_LOWER(process.name) == "wevtutil.exe"
+    AND TO_LOWER(process.command_line) LIKE "* cl *"
+| EVAL rule.id = "riskgate-wevtutil-clear",
+       rule.name = "wevtutil clearing an event log",
+       event.risk_score = 73.0,
+       threat.framework = "MITRE ATT&CK",
+       threat.tactic.id = "TA0005",
+       threat.tactic.name = "Defense Evasion",
+       threat.technique.id = "T1070.001",
+       threat.technique.name = "Indicator Removal: Clear Windows Event Logs"
+| KEEP @timestamp, event.id, host.name, process.name, process.command_line,
+       rule.id, rule.name, event.risk_score, threat.tactic.id, threat.technique.id
+| SORT @timestamp ASC
+| LIMIT 100

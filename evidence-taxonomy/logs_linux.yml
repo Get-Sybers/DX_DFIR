@@ -1,0 +1,16 @@
+# Linux logs and staged root trees, one folder per host. Lane subdir: logs/linux/
+#
+# Read by the godaemonhunter lane (logs/linux/<host>/ is one host: a staged
+# root filesystem or a pile of its logs — the parsers content-detect either).
+# Most Linux logs are plain text with no magic, so this lane is name- and
+# extension-led: the journal's file magic (LPKSHHRH) and the archived-journal
+# suffix are the content signals; the classic /var/log names and their
+# rotations are claimed by full name. `.log` alone is deliberately NOT claimed
+# (too generic).
+name: logs_linux
+subdir: logs/linux
+ext: [.journal, .journal~, syslog, messages, auth.log, secure, kern.log, daemon.log, cron.log,
+      mail.log, user.log, audit.log, wtmp, btmp, utmp, lastlog, dpkg.log, yum.log, dnf.log,
+      .bash_history, .zsh_history, .sh_history]
+signatures:
+  - {hex: "4C 50 4B 53 48 48 52 48", offset: 0, ext: journal, desc: "systemd journal file (LPKSHHRH)"}

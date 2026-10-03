@@ -1,0 +1,16 @@
+# The single source of truth for the raw/ evidence lanes — schema and
+# consumers: README.md. `order` is the classifier's precedence walk.
+
+catch_all_subdir: other_raw_data
+
+order:
+  - pcaps
+  - logs_winevt
+  - logs_linux
+  - logs_macos
+  - disk_images
+  - vm_files
+  - memory
+  - filesystem_documents
+  - other_raw_data_sql
+  - mobile

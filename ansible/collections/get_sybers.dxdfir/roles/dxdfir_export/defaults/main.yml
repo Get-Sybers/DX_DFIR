@@ -1,0 +1,44 @@
+---
+# dxdfir_export: the disk-image artefact export, a utility — gomount's
+# materialise verb pulls the Windows and Linux artefact sets out of every disk
+# image the caller's trees hold, once per image, into the one canonical stage.
+# No lane includes it (every lane runs ON the image); an operator's own
+# playbook can. No mount, no FUSE, no privilege: gomount decodes
+# the image (E01/Ex01, raw, VMDK, VHDX, VHD, QCOW2, VDI) and reads the OS
+# volume's filesystem (NTFS, ext2/3/4, XFS, vfat; LVM2 peeled) in-process.
+
+dxdfir_export_repo_root: "{{ role_path }}/../../../../.."
+
+# a collection-scoped run lands one level below the leaf: processed/_extracted/<collection>/
+dxdfir_export_collection: ""
+
+# the evidence trees to export from — every entry that exists AND holds a disk
+# image gets one materialise run per image; the caller lists them (its
+# disk-image and VM-export trees). Empty or absent trees are skipped silently.
+dxdfir_export_trees: []
+
+
+# ONE canonical stage shared by every lane that reads an export
+# (gowindowlicker, godaemonhunter, signatures' hayabusa): one folder per image
+# item, export/ inside it with materialise.jsonl (the done marker + origin
+# manifest) at its root. An image already exported is not re-pulled unless force.
+dxdfir_export_stage_dir: >-
+  {{ dxdfir_export_repo_root }}/data_store/processed/_extracted{{
+  ('/' ~ dxdfir_export_collection) if dxdfir_export_collection | length > 0 else '' }}
+
+# the artefact sets gomount materialises out of each image — ONE list for every
+# consumer: windows-core is every Windows set the go* parsers read (hives with
+# their transaction logs, Amcache, NTUSER/UsrClass, SRUM, SUM, the Timeline
+# database, the event logs, Prefetch, $MFT, Recent/jump lists, Recycle Bin);
+# linux-core is docs/linux §5.4's daemon-parser surface. A set that matches
+# nothing on a volume pulls nothing and is not an error.
+dxdfir_export_sets: [windows-core, linux-core]
+
+# the contract the export runs are built from, and an image ref overriding
+# the contract's (empty = the contract's image; set to pin a digest)
+# gomount has no godfir_run lane; ship its contract with this role (a copy of
+# the GoDFIR-toolz gomount/contract.yml). A godfir_gomount lane would supersede this.
+dxdfir_export_gomount_contract: "{{ role_path }}/files/contract.yml"
+dxdfir_export_gomount_image: ""
+
+dxdfir_export_force: false

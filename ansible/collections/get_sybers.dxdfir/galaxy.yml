@@ -1,0 +1,30 @@
+---
+namespace: get_sybers
+name: dxdfir
+version: 0.6.0
+readme: README.md
+repository: https://github.com/Get-Sybers/DX_DFIR
+issues: https://github.com/Get-Sybers/DX_DFIR/-/issues
+authors:
+  - Get-Sybers
+description: >-
+  DX_DFIR forensic processing pipeline as Ansible roles. Each role invokes the
+  hardened tool containers from their contracts as single actions; the playbook decides
+  which roles run.
+license:
+  - MIT
+tags:
+  - dfir
+  - forensics
+  - security
+dependencies:
+  # bounded below the next major; requirements.yml pins the exact tested version
+  community.docker: ">=3.10.3,<4.0.0"
+  ansible.posix: ">=2.1.0,<3.0.0"
+  community.crypto: ">=2.26.9,<3.0.0"
+  # the container-interaction galaxy: imported by URL (requirements.yml pins the
+  # exact tag); the pipeline + evidence roles delegate to its godfir_run lanes
+  get_sybers.godfir_run: ">=0.1.0,<1.0.0"
+build_ignore:
+  - "roles/*/molecule"
+  - "*.pyc"

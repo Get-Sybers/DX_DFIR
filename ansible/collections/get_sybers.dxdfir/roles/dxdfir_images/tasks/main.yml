@@ -1,0 +1,13 @@
+---
+# Deploy-side image provisioning is a REGISTRY PULL now: delegate to
+# get_sybers.godfir_run.godfir_images (imported by URL), which pulls
+# ghcr.io/get-sybers/GoDFIR-toolz/<tool>:<tag> for every requested ref and tags it to the
+# local get-sybers/<tool>:latest name. Building lives in get_sybers.godfir_build.
+- name: "images | pull the tool images"
+  ansible.builtin.include_role:
+    name: get_sybers.godfir_run.godfir_images
+    tasks_from: ensure_present
+  vars:
+    godfir_images_required: "{{ dxdfir_images_refs }}"
+    godfir_images_force: "{{ dxdfir_images_force }}"
+    godfir_images_namespace: "{{ dxdfir_images_namespace }}"

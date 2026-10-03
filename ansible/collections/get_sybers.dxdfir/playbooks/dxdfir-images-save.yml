@@ -1,0 +1,15 @@
+---
+# The playbook holds the decisions; the role groups, the tasks act.
+# Save the analysis images as tarballs for an offline host (the built
+# get-sybers/* set must exist — dxdfir-build-images.yml — and the Elastic
+# set is pulled at the inventory pin). Fronted by
+# scripts/save-docker-images.sh, which is only a launcher.
+- name: "DFIR | save the analysis images for offline use"
+  hosts: "{{ dxdfir_hosts | default('localhost') }}"
+  connection: "{{ dxdfir_connection | default('local') }}"
+  gather_facts: true
+  tasks:
+    - name: "dxdfir-images-save | run the images role (save)"
+      ansible.builtin.include_role:
+        name: dxdfir_images
+        tasks_from: save

@@ -1,0 +1,47 @@
+# Byakugan shipper: /ingest (<type>/**/*.json[l]) straight into
+# logs-dxdfir.<type>-<namespace> data streams; no Logstash.
+
+filebeat.inputs:
+  - type: filestream
+    id: byakugan-evidence
+    enabled: true
+    paths:
+      - /ingest/*/**/*.json
+      - /ingest/*/**/*.jsonl
+    # CAR already lands ECS-projected in logs-car.* via `byakugan load` —
+    # re-ingesting the raw stores here would compete with that projection;
+    # the loader's own output is working state, not evidence. (filestream's
+    # scanner option, not the removed log-input exclude_files.)
+    prospector.scanner.exclude_files:
+      - '^/ingest/byakugan/.*'
+      - '^/ingest/byakugan-load/.*'
+      # a lane's staging (the raw image exports the tools parse) is evidence,
+      # not output: `_`-prefixed — processed/_extracted, and the older
+      # windows_logs/_extracted_evtx and godfir-toolz/_extracted
+      - '^/ingest/_[^/]*/.*'
+      - '^/ingest/[^/]+/_extracted[^/]*/.*'
+    parsers:
+      - ndjson:
+          target: ""
+          add_error_key: true
+          overwrite_keys: true
+          expand_keys: true
+    processors:
+      # the first directory under /ingest is the evidence type; it routes the data stream
+      - dissect:
+          tokenizer: "/ingest/%{labels.type}/%{?rest}"
+          field: log.file.path
+          target_prefix: ""
+
+# the built-in logs-*-* template creates the streams; Filebeat manages neither templates nor ILM
+setup.template.enabled: false
+setup.ilm.enabled: false
+
+output.elasticsearch:
+  hosts: ["${ELASTICSEARCH_HOSTS:https://elasticsearch:9200}"]
+  username: "${ELASTICSEARCH_USERNAME:elastic}"
+  password: "${ELASTICSEARCH_PASSWORD}"
+  ssl.certificate_authorities: ["/certs/ca/ca.crt"]
+  index: "logs-dxdfir.%{[labels.type]:misc}-${DFIR_NAMESPACE:default}"
+
+logging.level: info

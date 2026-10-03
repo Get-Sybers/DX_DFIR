@@ -1,0 +1,24 @@
+# Byakugan Elasticsearch — single node, security ON, Basic licence.
+# Mounted read-only over the image's elasticsearch.yml (so network.host is set
+# here explicitly). Certificates are generated host-side by the dxdfir_stack
+# role (tasks/certs.yml) and bind-mounted read-only at config/certs.
+cluster.name: byakugan
+node.name: es01
+network.host: 0.0.0.0
+discovery.type: single-node
+bootstrap.memory_lock: true
+
+# Self-generated Basic licence — no trial features assumed anywhere in Byakugan.
+xpack.license.self_generated.type: basic
+
+# Security ON: authentication + RBAC, TLS on both the HTTP and transport layers.
+xpack.security.enabled: true
+xpack.security.http.ssl.enabled: true
+xpack.security.http.ssl.key: certs/es01/es01.key
+xpack.security.http.ssl.certificate: certs/es01/es01.crt
+xpack.security.http.ssl.certificate_authorities: certs/ca/ca.crt
+xpack.security.transport.ssl.enabled: true
+xpack.security.transport.ssl.key: certs/es01/es01.key
+xpack.security.transport.ssl.certificate: certs/es01/es01.crt
+xpack.security.transport.ssl.certificate_authorities: certs/ca/ca.crt
+xpack.security.transport.ssl.verification_mode: certificate

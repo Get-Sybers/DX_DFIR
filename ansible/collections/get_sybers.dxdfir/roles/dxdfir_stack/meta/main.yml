@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: dxdfir_stack
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    Lifecycle for the ansible-native Elastic analysis backend:
+    deploy/destroy/start/stop/status from inventory data — docker network,
+    named volumes and one container per service, secrets and TLS material
+    in the inventory's per-host secret store.
+  company: Get-Sybers
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [dfir, stack, elastic, docker]
+
+dependencies: []

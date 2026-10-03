@@ -1,0 +1,40 @@
+---
+dxdfir_images_repo_root: "{{ role_path }}/../../../../.."
+
+# one knob renames the whole image family
+dxdfir_images_namespace: get-sybers
+
+# dxdfir_runtime_uid/gid is the single run-as knob (verify asserts the USER)
+dxdfir_images_uid: "{{ dxdfir_runtime_uid | default(2000) }}"
+dxdfir_images_gid: "{{ dxdfir_runtime_gid | default(dxdfir_runtime_uid | default(2000)) }}"
+
+# The image inventory ships inside the installed godfir_images role (imported by
+# URL into .ansible/collections) — resolved off COLLECTIONS_PATHS, not a submodule.
+dxdfir_images_manifest_path: >-
+  {{ lookup('ansible.builtin.first_found', {
+       'files': ['images.yml'],
+       'paths': lookup('ansible.builtin.config', 'COLLECTIONS_PATHS')
+                | map('regex_replace', '$', '/ansible_collections/get_sybers/godfir_run/roles/godfir_images/files')
+                | list,
+       'skip': true }) | default('', true) }}
+dxdfir_images_manifest: >-
+  {{ ((lookup('file', dxdfir_images_manifest_path, errors='ignore') | default('', true) | from_yaml) or {})
+     if dxdfir_images_manifest_path | length > 0 else {} }}
+# names to pull; empty default = every manifest image, in manifest order
+dxdfir_images_set: "{{ (dxdfir_images_manifest.images | default([])) | map(attribute='name') | list }}"
+# local refs (pulled from the registry then tagged to these names)
+dxdfir_images_refs: >-
+  {{ dxdfir_images_set
+     | map('regex_replace', '^', dxdfir_images_namespace ~ '/')
+     | map('regex_replace', '$', ':latest') | list }}
+
+# re-pull even when present
+dxdfir_images_force: false
+
+# offline save/load: the tool refs + the inventory layer's stack images
+dxdfir_images_tar_dir: "{{ dxdfir_images_repo_root }}/data_store/docker_images"
+dxdfir_images_elastic_images: "{{ dxdfir_elastic_images | default({}) }}"
+dxdfir_images_list_only: false
+
+# verify: refs about to RUN — delegated to godfir_images' membership + posture gate
+dxdfir_images_verify_images: []

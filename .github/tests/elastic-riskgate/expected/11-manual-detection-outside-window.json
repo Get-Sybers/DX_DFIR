@@ -1,0 +1,6 @@
+{
+  "_comment": "Check 1.5 — queries/11-manual-detection-outside-window.esql (same rule, window = last 24 h): no rows. The 2019 evidence is outside the window and nothing was re-stamped to ingest time.",
+  "columns": ["@timestamp", "event.id", "host.name", "process.name", "process.command_line",
+              "rule.id", "rule.name", "event.risk_score", "threat.tactic.id", "threat.technique.id"],
+  "rows": []
+}

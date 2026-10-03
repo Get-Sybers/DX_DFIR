@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  role_name: dxdfir_export
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    The disk-image artefact export, a utility no lane includes: gomount's
+    materialise verb pulls the requested artefact sets out of every
+    discovered image into processed/_extracted/[<collection>/]<image>, for
+    an operator who wants the artefact set on disk (the lanes run ON the
+    image instead). Runs the get-sybers/gomount image from its contract.
+  company: Get-Sybers
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [dfir, plaso, export, forensics]
+
+dependencies: []

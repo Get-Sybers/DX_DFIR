@@ -1,0 +1,8 @@
+{
+  "_comment": "Check 2.6 — queries/22-lookup-join-collapse.esql: STATS ... BY event.id collapses the fan-out of check 2.4 to one row per CAR guid — wevtutil: 2 detections from 2 rules; Security.evtx: 1 from 1.",
+  "columns": ["event.id", "detections", "rules"],
+  "rows": [
+    ["WS01-filestat-000ef2a1", 1, 1],
+    ["{6f2a4c1e-8b3d-5cb0-0000-00105a7e3c01}", 2, 2]
+  ]
+}

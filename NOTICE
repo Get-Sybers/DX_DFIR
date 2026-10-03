@@ -1,0 +1,26 @@
+DX_DFIR Pipeline
+Copyright 2025-2026 Get-Sybers
+
+This product includes software developed by third parties, redistributed
+under the terms of their respective licenses. Full details, including the
+provenance of every vendored component and of the components vendored by
+earlier releases (splunk-ansible playbook code, Splunk Security Content
+lookups), are in .github/THIRD_PARTY_NOTICES.md. Formerly vendored components remain
+in this repository's git history, and their attributions continue to apply to
+anyone working from an older commit.
+
+The get_sybers_dxdfir Python package (python/) and the get_sybers.dxdfir Ansible
+collection (ansible/collections/) are licensed MIT, as declared in their
+pyproject.toml, galaxy.yml and role meta/main.yml files. The repository root is
+otherwise Apache-2.0 (see LICENSE).
+
+--------------------------------------------------------------------------------
+MITRE Cyber Analytics Repository (CAR)
+--------------------------------------------------------------------------------
+Copyright The MITRE Corporation.
+Licensed under the Apache License, Version 2.0.
+Source: https://github.com/mitre-attack/car
+
+The MITRE CAR data model is redistributed via the get-sybers/byakugan image
+(docker/GoDFIR-toolz/byakugan/Dockerfile), which bakes in MITRE's car repo at the sources.yml
+pin with its upstream LICENSE/NOTICE intact. See .github/THIRD_PARTY_NOTICES.md.

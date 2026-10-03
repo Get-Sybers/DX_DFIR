@@ -1,0 +1,36 @@
+---
+profile: production
+
+# the whole repo lints; caches, evidence, the submodule and build output are excluded
+exclude_paths:
+  - .ansible/
+  - .claude/
+  - data_store/
+  - ansible/collections/get_sybers.dxdfir/.ansible/
+  # shipped tool contracts are data (an image's contract.yml), not ansible
+  - ansible/collections/get_sybers.dxdfir/roles/*/files/contract.yml
+  # rule DATA, not ansible — the rules have their own gate (rules_loader + tests)
+  - python/get_sybers_dxdfir/detect/rules/
+  # setuptools copies package-data into python/build/lib — generated, or CI lints the copies
+  - python/build/
+
+# house task-name prefix "<role>-<stage> | lowercase description"
+skip_list:
+  - name[casing]
+
+# runtime deps (requirements.yml); the lint env is ansible-core only
+mock_modules:
+  - community.docker.docker_container
+  - community.docker.docker_container_info
+  - community.docker.docker_host_info
+  - community.docker.docker_image
+  - community.docker.docker_image_export
+  - community.docker.docker_image_info
+  - community.docker.docker_image_load
+  - community.docker.docker_network
+  - community.docker.docker_prune
+  - community.docker.docker_volume
+  - community.docker.docker_volume_info
+  - community.crypto.openssl_privatekey
+  - community.crypto.openssl_csr
+  - community.crypto.x509_certificate

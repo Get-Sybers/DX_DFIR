@@ -1,0 +1,71 @@
+name: checks
+
+# Everything verifiable without Docker or evidence; the pipeline itself is
+# the smoke workflow's job — docs/reference/build-and-test.md "Checks".
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # git check-ignore needs real git metadata, not a tarball export
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # go/ is covered by run-checks.sh's Go group (guarded on `go` being present)
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: go/go.sum
+
+      - name: Install check dependencies
+        run: |
+          set -euo pipefail
+          # an if-block deliberately: `command -v x || a && b` parses as `(x || a) && b`
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq shellcheck
+          fi
+          python -m pip install --quiet --upgrade pip
+          # lint resolution needs the pinned deps on the configured collections
+          # path — the checkout's own .ansible/collections (gitignored), the first
+          # entry of ansible.cfg's collections_path, where setup-environment.sh
+          # installs them too. galaxy.ansible.com resets connections now and then:
+          # three attempts before the step is allowed to fail.
+          python -m pip install --quiet ansible-lint
+          for attempt in 1 2 3; do
+            ansible-galaxy collection install --force \
+              -r ansible/collections/get_sybers.dxdfir/requirements.yml \
+              -p .ansible/collections && break
+            [ "$attempt" -lt 3 ] || exit 1
+            echo "galaxy install failed (attempt $attempt) — retrying in 15s"; sleep 15
+          done
+          # get_sybers.godfir_run is imported by URL from requirements.yml above;
+          # the pinned ansible layer installs from the repo lock
+          python -m pip install --quiet -r requirements.txt
+
+      - name: Report tool versions
+        run: |
+          echo "bash        $(bash --version | head -1)"
+          echo "shellcheck  $(shellcheck --version | grep version: | head -1)"
+          echo "python      $(python --version)"
+          echo "ansible-lint $(ansible-lint --version | head -1)"
+          echo "go          $(go version 2>&1 | head -1)"
+
+      - name: Run repository checks
+        run: ./.github/tests/run-checks.sh -v

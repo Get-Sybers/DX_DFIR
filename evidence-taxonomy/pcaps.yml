@@ -1,0 +1,14 @@
+# Network packet captures. Lane subdir: pcaps/
+#
+# Signature fields: hex (space-separated bytes; `nn` = wildcard), offset (int or
+# "any"), optional kind ("special:<name>" => Go logic), optional ext/desc (from
+# the gist, informational).
+name: pcaps
+subdir: pcaps
+ext: [.pcap, .pcapng, .cap]
+signatures:
+  - {hex: "A1 B2 C3 D4", offset: 0, ext: pcap, desc: "libpcap (big-endian, us)"}
+  - {hex: "D4 C3 B2 A1", offset: 0, ext: pcap, desc: "libpcap (little-endian, us)"}
+  - {hex: "A1 B2 3C 4D", offset: 0, ext: pcap, desc: "libpcap (big-endian, ns)"}
+  - {hex: "4D 3C B2 A1", offset: 0, ext: pcap, desc: "libpcap (little-endian, ns)"}
+  - {hex: "0A 0D 0D 0A", offset: 0, ext: pcapng, desc: "pcapng section header block"}

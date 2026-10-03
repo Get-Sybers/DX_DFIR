@@ -1,0 +1,12 @@
+---
+# dxdfir_cleanup: teardown. The role GROUPS; the playbook DECIDES the action.
+- name: "cleanup | assert inputs"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_cleanup_action in ['processed', 'car', 'docker']
+    fail_msg: "dxdfir_cleanup needs dxdfir_cleanup_action (processed|car|docker)."
+    quiet: true
+  tags: [always]
+
+- name: "cleanup | run the cleanup action | {{ dxdfir_cleanup_action }}"
+  ansible.builtin.include_tasks: "{{ dxdfir_cleanup_action }}.yml"

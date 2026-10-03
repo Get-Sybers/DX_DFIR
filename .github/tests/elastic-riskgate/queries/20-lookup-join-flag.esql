@@ -1,0 +1,26 @@
+// Byakugan risk gate — proof 2, check 2.4: the DIRECT join. Every logs-car.*
+// row whose event.id (the CAR guid) has a row in the car-detections lookup
+// index comes back stamped with detection.* / rule.* / threat.* — the
+// tagged-evidence-line model of the baked rules-as-code (GoDFIR-toolz byakugan/rules/)
+// car-detections/join-keys.yml, applied to the riskgate namespace.
+//
+// Stash / restore: LOOKUP JOIN replaces every source field that the lookup
+// index ALSO maps with the lookup row's value. On this contract that is the
+// join key (same value, harmless), the intended stamps — and two fields that
+// must NOT change: @timestamp (the lookup row carries the detection time) and
+// process.entity_id (the owning process; a file-level lookup row does not
+// carry it at all). They are renamed aside before the join and restored after
+// it, so the flagged line keeps its evidence time and its owner link. Query
+// 29 probes what the naive shape does on this cluster.
+//
+// The trailing KEEP/SORT is proof-only (fixes the table expected/ pins).
+FROM logs-car.*-riskgate METADATA _id, _index, _version
+| RENAME @timestamp AS car.timestamp, process.entity_id AS car.owning_guid
+| LOOKUP JOIN car-detections-riskgate ON event.id
+| WHERE detection.id IS NOT NULL
+| DROP @timestamp, process.entity_id
+| RENAME car.timestamp AS @timestamp, car.owning_guid AS process.entity_id
+| KEEP @timestamp, event.id, car.object, host.name, process.entity_id,
+       detection.id, detection.severity, detection.join_via, rule.id, threat.technique.id
+| SORT @timestamp ASC, detection.id ASC
+| LIMIT 100

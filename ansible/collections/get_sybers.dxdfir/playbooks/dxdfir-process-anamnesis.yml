@@ -1,0 +1,12 @@
+---
+# The playbook holds the decisions; the imported get_sybers.godfir_run lane
+# reads its godfir_* inputs straight from group_vars (evidence geography) —
+# no wrapper role, no second variable namespace.
+- name: "DFIR | process memory images with anamnesis (MemProcFS)"
+  hosts: "{{ dxdfir_hosts | default('localhost') }}"
+  connection: "{{ dxdfir_connection | default('local') }}"
+  gather_facts: true
+  tasks:
+    - name: "dxdfir-process-anamnesis | run the anamnesis lane"
+      ansible.builtin.include_role:
+        name: get_sybers.godfir_run.godfir_anamnesis

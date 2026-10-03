@@ -1,0 +1,15 @@
+---
+# The playbook holds the decisions; the role groups, the tasks act.
+# Audit the hardened get-sybers/* tool-image inventory: every manifest image
+# present and still hardened, and no unexpected get-sybers/* image on the
+# host — the build galaxy's audit entry behind the dxdfir_images face
+# (ansible end to end; the python guard is retired).
+- name: "DFIR | audit the hardened get-sybers/* tool-image inventory"
+  hosts: "{{ dxdfir_hosts | default('localhost') }}"
+  connection: "{{ dxdfir_connection | default('local') }}"
+  gather_facts: false
+  tasks:
+    - name: "dxdfir-verify-images | audit the inventory"
+      ansible.builtin.include_role:
+        name: dxdfir_images
+        tasks_from: audit

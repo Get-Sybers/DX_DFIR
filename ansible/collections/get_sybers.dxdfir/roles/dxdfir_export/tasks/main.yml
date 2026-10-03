@@ -1,0 +1,96 @@
+---
+# The shared disk-image artefact export: gomount's materialise verb pulls the
+# artefact sets (dxdfir_export_sets — windows-core + linux-core) out of every disk
+# image under the caller's trees into the canonical stage,
+# processed/_extracted/[<collection>/]<image>/export/, once per image. A utility
+# for an operator who wants the artefact set on disk (no lane includes it — the
+# lanes run ON the image). Discovery is shared (dxdfir_evidence); the confined
+# run is delegated to get_sybers.godfir_run.godfir_run with gomount's argv.
+- name: "export | discover the disk images"
+  ansible.builtin.include_role:
+    name: dxdfir_evidence
+  vars:
+    dxdfir_evidence_trees: "{{ dxdfir_export_trees }}"
+  tags: [always]
+
+# already exported (the manifest is the done marker) is skipped unless force
+- name: "export | stat each item's done marker"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_export_stage_dir }}/{{ item.name }}/export/materialise.jsonl"
+  loop: "{{ dxdfir_evidence_images }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: dxdfir_export_marker_stats
+  tags: [always]
+
+- name: "export | start from an empty run list"
+  ansible.builtin.set_fact:
+    dxdfir_export_runs: []
+  tags: [always]
+
+# one materialise run per image: the tree read-only at /evidence, the item's
+# export/ read-write at /output; gomount writes the manifest last
+- name: "export | one materialise run per image to (re)export"
+  ansible.builtin.set_fact:
+    dxdfir_export_runs: >-
+      {{ dxdfir_export_runs + [{
+           'name': 'materialise:' ~ item.item.name,
+           'contract': dxdfir_export_gomount_contract,
+           'image': dxdfir_export_gomount_image,
+           'args': ['materialise', '--out', '/output', '--manifest']
+                   + (['--set'] | product(dxdfir_export_sets) | flatten)
+                   + ['/evidence/' ~ item.item.rel],
+           'mounts': [{'host': item.item.tree, 'path': '/evidence', 'mode': 'ro'},
+                      {'host': dxdfir_export_stage_dir ~ '/' ~ item.item.name ~ '/export', 'path': '/output', 'mode': 'rw'}],
+         }] }}
+  loop: "{{ dxdfir_export_marker_stats.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: dxdfir_export_force | bool or not (item.stat.exists | default(false))
+  tags: [always]
+
+# the stage pre-exists (container-writable) so a consumer's ro-mount passes on a fresh host
+- name: "export | ensure the stage exists"
+  ansible.builtin.file:
+    path: "{{ dxdfir_export_stage_dir }}"
+    state: directory
+    mode: "0777"
+  tags: [always]
+
+- name: "export | run the get-sybers run engine (gomount materialise)"
+  ansible.builtin.include_role:
+    name: get_sybers.godfir_run.godfir_run
+  vars:
+    godfir_run_name: export
+    godfir_run_runs: "{{ dxdfir_export_runs }}"
+    godfir_run_verify_dir: "{{ dxdfir_export_stage_dir }}"
+    godfir_run_verify_glob: "materialise.jsonl"
+    godfir_run_require_no_failures: false
+  when: dxdfir_export_runs | length > 0
+  tags: [always]
+
+# the exported images: every <image>/export/ under the stage carrying the manifest
+- name: "export | list the exported images"
+  ansible.builtin.find:
+    paths: "{{ dxdfir_export_stage_dir }}"
+    patterns: ["materialise.jsonl"]
+    recurse: true
+    depth: 3
+    file_type: file
+  register: dxdfir_export_markers
+  tags: [always]
+
+- name: "export | start from an empty host list"
+  ansible.builtin.set_fact:
+    dxdfir_export_hosts: []
+  tags: [always]
+
+- name: "export | the <host> level: one entry per exported image"
+  ansible.builtin.set_fact:
+    dxdfir_export_hosts: >-
+      {{ dxdfir_export_hosts + [{'name': item | dirname | dirname | basename,
+                                 'export': item | dirname}] }}
+  loop: "{{ dxdfir_export_markers.files | map(attribute='path') | select('search', '/export/materialise\\.jsonl$') | sort }}"
+  loop_control:
+    label: "{{ item | dirname | dirname | basename }}"
+  tags: [always]

@@ -1,0 +1,9 @@
+---
+# Stop every stack container — this role's and compose-era ones alike — but
+# keep them (and everything else) in place.
+- name: "stack-stop | stop every stack container"
+  community.docker.docker_container:
+    name: "{{ item }}"
+    state: stopped
+    container_default_behavior: no_defaults
+  loop: "{{ (dxdfir_stack_owned_containers + dxdfir_stack_legacy_containers) | unique }}"

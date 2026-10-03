@@ -1,0 +1,32 @@
+---
+# THE offline image mechanism, load half: every tarball in
+# dxdfir_images_tar_dir back into the local daemon — the offline host's side
+# of tasks/save.yml. Verification stays where it lives:
+# dxdfir-verify-images.yml (the wrapper's --verify runs it after this).
+
+- name: "images-load | find the tarballs"
+  ansible.builtin.find:
+    paths: "{{ dxdfir_images_tar_dir }}"
+    patterns: ["*.tar"]
+  register: dxdfir_images_load_tars
+
+- name: "images-load | there is something to load"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_images_load_tars.files | length > 0
+    fail_msg: "No tarballs found in {{ dxdfir_images_tar_dir }}"
+    quiet: true
+
+- name: "images-load | load every tarball"
+  community.docker.docker_image_load:
+    path: "{{ item.path }}"
+  loop: "{{ dxdfir_images_load_tars.files | sort(attribute='path') }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  register: dxdfir_images_loaded
+
+- name: "images-load | what landed"
+  ansible.builtin.debug:
+    msg: >-
+      loaded {{ dxdfir_images_loaded.results
+                | map(attribute='image_names') | flatten | unique | sort | join(', ') }}

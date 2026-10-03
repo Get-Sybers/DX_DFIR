@@ -1,0 +1,73 @@
+### AL ###
+#Template for AL projects for Dynamics 365 Business Central
+#launch.json folder
+.vscode/
+.code-workspace
+.claude
+CLAUDE.md
+
+# Zone Identifier
+# Windows
+**Thumbs.db
+**ehthumbs.db
+**Desktop.ini
+**$RECYCLE.BIN/
+
+# macOS
+**.DS_Store
+**.AppleDouble
+
+# Cred files
+*.pem
+*.key
+*.crt
+*.License
+
+# Junk
+**.ZoneIdentifier
+**:ZoneIdentifier
+**_ZoneIdentifier
+**.DS_Store
+**.spl
+**.tar.gz
+**.zip
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Tool caches (never depend on pytest's courtesy self-ignore)
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+
+# Packaging / build output
+build/
+dist/
+*.egg-info/
+
+# Ansible / editor droppings
+*.retry
+*.swp
+*~
+
+# Build / runtime artefacts
+err.log
+# ansible log_path target: keep the dir, ignore its contents
+logs/*
+!logs/.gitkeep
+# in-tree ansible import targets (lint cache + CI requirements install) — never source
+.ansible/
+# the per-host secret store — never committed; the dir stays via its README
+ansible/inventory/secrets/*
+!ansible/inventory/secrets/README.md
+
+# CI working dirs: Go module cache, pip cache
+/.go/
+/.cache/

@@ -1,0 +1,24 @@
+// Byakugan risk gate — proof 2, check 2.5: the CASCADE join, the contract's
+// second join key. A process-level detection row carries the process guid as
+// process.entity_id; the rows that process owns (file, module, thread, socket
+// ... via owning_guid) carry the same guid under the same name, so joining ON
+// process.entity_id stamps the detection onto the process row AND its children
+// in one pass. Lookup rows without process.entity_id (file-level detections)
+// join nothing here — a null key never matches.
+//
+// Stash / restore (see 20-lookup-join-flag.esql): besides @timestamp, the
+// lookup row's event.id (the DETECTED process guid) would replace the child
+// row's own event.id, so the row identity is kept aside as car.guid. After the
+// join, event.id is the guid the detection cascaded FROM, car.guid the row it
+// landed ON.
+//
+// The trailing KEEP/SORT is proof-only (fixes the table expected/ pins).
+FROM logs-car.*-riskgate METADATA _id, _index, _version
+| RENAME @timestamp AS car.timestamp, event.id AS car.guid
+| LOOKUP JOIN car-detections-riskgate ON process.entity_id
+| WHERE detection.id IS NOT NULL
+| DROP @timestamp
+| RENAME car.timestamp AS @timestamp
+| KEEP @timestamp, car.guid, car.object, process.entity_id, event.id, detection.id, rule.id
+| SORT @timestamp ASC, detection.id ASC
+| LIMIT 100

@@ -1,0 +1,44 @@
+---
+# semantics and the setup-vs-loader identity story: README.md; variables: meta/argument_specs.yml
+dxdfir_car_load_action: load
+
+dxdfir_car_load_repo_root: "{{ role_path }}/../../../../.."
+
+# output is a SIBLING of byakugan/, never inside it (gitignore + filebeat exclusion chains)
+dxdfir_car_load_dir: "{{ dxdfir_car_load_repo_root }}/data_store/processed/byakugan"
+dxdfir_car_load_out_dir: "{{ dxdfir_car_load_repo_root }}/data_store/processed/byakugan-load"
+
+# the same contract as godfir_byakugan, a different declared sub-tool
+dxdfir_car_load_contract: >-
+  {{ lookup('ansible.builtin.first_found', {
+       'files': ['contract.yml'],
+       'paths': lookup('ansible.builtin.config', 'COLLECTIONS_PATHS')
+                | map('regex_replace', '$', '/ansible_collections/get_sybers/godfir_run/roles/godfir_byakugan/files')
+                | list }) }}
+# empty = the contract's image; set to pin a digest
+dxdfir_car_load_image: ""
+
+# stack credentials BY REFERENCE from the inventory layer; empty fallbacks fail the non-empty assert
+dxdfir_car_load_elastic_password: "{{ dxdfir_elastic_password | default('') }}"
+dxdfir_car_load_byakugan_loader_password: "{{ dxdfir_elastic_byakugan_loader_password | default('') }}"
+
+# push mode always: the service's network alias on the stack network below
+dxdfir_car_load_es_url: "https://elasticsearch:9200"
+# one namespace per case, the same convention as the raw logs-dxdfir.* streams
+dxdfir_car_load_namespace: default
+
+# default ON (first-run-friendly); false also drops to the least-privilege loader identity (README)
+dxdfir_car_load_setup: true
+
+dxdfir_car_load_force: false
+# sent only when setup is ALSO true (the contract requires it); a separately-opted-in extra
+dxdfir_car_load_kibana_import: false
+dxdfir_car_load_kibana_url: "http://kibana:5601"
+
+# credentials ride dxdfir_lane's secret_env; setup runs as elastic, steady-state as byakugan_loader (README)
+dxdfir_car_load_elastic_user: elastic
+dxdfir_car_load_loader_user: byakugan_loader
+
+# mounted ro at /certs; the contract's CA default already matches the tree layout
+dxdfir_car_load_certs_dir: "{{ dxdfir_elastic_certs_dir | default(dxdfir_car_load_repo_root ~ '/ansible/inventory/secrets/' ~ inventory_hostname ~ '/certs') }}"
+dxdfir_car_load_network: "{{ dxdfir_elastic_network | default('byakugan_default') }}"

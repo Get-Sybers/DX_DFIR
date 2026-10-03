@@ -1,0 +1,12 @@
+---
+# The playbook holds the decisions; the role groups, the tasks act.
+- name: "DFIR | copy OpenCTI's indicators into the cti-* Elastic bulk shape"
+  hosts: "{{ dxdfir_hosts | default('localhost') }}"
+  connection: "{{ dxdfir_connection | default('local') }}"
+  gather_facts: true
+  tasks:
+    - name: "dxdfir-exchange-pull | run the exchange role (pull)"
+      ansible.builtin.include_role:
+        name: dxdfir_exchange
+      vars:
+        dxdfir_exchange_action: pull

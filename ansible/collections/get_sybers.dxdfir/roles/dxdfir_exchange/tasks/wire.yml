@@ -1,0 +1,17 @@
+---
+# The OpenCTI wire, asserted once by any action that opted into it: endpoint
+# and token from the environment, and a docker network NAME — the lane's
+# default is --network none, which no push or live pull can cross.
+- name: "exchange | the OpenCTI wire is complete"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_exchange_opencti_url | length > 0
+      - dxdfir_exchange_opencti_token | length > 0
+      - dxdfir_exchange_network | length > 0
+    fail_msg: >-
+      this run opted into the OpenCTI wire: set DXDFIR_OPENCTI_URL and
+      DXDFIR_OPENCTI_TOKEN in the environment (the token rides the lane's
+      secret_env 0600 env-file, never argv) and name the docker network to
+      attach with dxdfir_exchange_network — the confined default is
+      --network none.
+    quiet: true

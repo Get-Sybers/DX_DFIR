@@ -1,0 +1,17 @@
+// Byakugan risk gate — PROBE (informational, not gated): what the NAIVE join
+// shape — the contract's reference query, no stash/restore — does to the two
+// source fields the lookup index also maps but must not change. The runner
+// reads the result and reports, per flagged line:
+//   @timestamp          evidence time (2019) kept, or replaced by the lookup
+//                       row's @timestamp (the detection time, 2026)?
+//   process.entity_id   on the Security.evtx file line, whose lookup row has NO
+//                       process.entity_id: owner link kept, or nulled?
+// The answer on this cluster decides whether every joining query needs the
+// stash/restore of 20-lookup-join-flag.esql, or only the writer needs to stop
+// setting @timestamp on lookup rows (docs/riskgate.md, "if it fails").
+FROM logs-car.*-riskgate METADATA _id, _index, _version
+| LOOKUP JOIN car-detections-riskgate ON event.id
+| WHERE detection.id IS NOT NULL
+| KEEP event.id, car.object, @timestamp, process.entity_id, detection.id, detection.detected_at
+| SORT event.id ASC, detection.id ASC
+| LIMIT 100

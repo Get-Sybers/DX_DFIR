@@ -1,0 +1,61 @@
+---
+# the load flow, step by step: README.md "How a load runs"
+
+# 1. the stack must be running first (ensure_running via include_role, so its own defaults resolve)
+- name: "car-load | the elastic stack is up before anything ingests"
+  ansible.builtin.include_role:
+    name: dxdfir_stack
+    tasks_from: ensure_running
+
+# 2. credentials by reference; setup runs as elastic, steady-state as the scoped loader (README)
+- name: "car-load | resolve the identity this run authenticates as"
+  no_log: true
+  ansible.builtin.set_fact:
+    dxdfir_car_load_es_user_resolved: >-
+      {{ dxdfir_car_load_elastic_user if dxdfir_car_load_setup | bool else dxdfir_car_load_loader_user }}
+    dxdfir_car_load_es_password_resolved: >-
+      {{ dxdfir_car_load_elastic_password if dxdfir_car_load_setup | bool
+         else dxdfir_car_load_byakugan_loader_password }}
+
+- name: "car-load | the resolved credential is non-empty"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_car_load_es_password_resolved | length > 0
+    fail_msg: >-
+      {{ 'dxdfir_elastic_password' if dxdfir_car_load_setup | bool
+         else 'dxdfir_elastic_byakugan_loader_password' }}
+      is empty — the inventory layer (playbooks/group_vars/all.yml) defines
+      it; run through the playbooks, or set it when using the role bare.
+    quiet: true
+
+# 3. the lane skeleton drives `load`; the password rides secret_env, the contract defaults match the mounts
+- name: "car-load | run the shared tool-lane skeleton"
+  ansible.builtin.include_role:
+    name: get_sybers.godfir_run.godfir_run
+  vars:
+    godfir_run_name: car-load
+    godfir_run_runs:
+      - name: load
+        contract: "{{ dxdfir_car_load_contract }}"
+        image: "{{ dxdfir_car_load_image }}"
+        subtool: load
+        env:
+          BYAKUGAN_LOAD_ES_URL: "{{ dxdfir_car_load_es_url }}"
+          BYAKUGAN_LOAD_NAMESPACE: "{{ dxdfir_car_load_namespace }}"
+          BYAKUGAN_LOAD_SETUP: "{{ dxdfir_car_load_setup }}"
+          BYAKUGAN_LOAD_FORCE: "{{ dxdfir_car_load_force }}"
+          BYAKUGAN_LOAD_KIBANA_URL: >-
+            {{ dxdfir_car_load_kibana_url
+               if (dxdfir_car_load_setup | bool and dxdfir_car_load_kibana_import | bool)
+               else '' }}
+          BYAKUGAN_LOAD_ES_USER: "{{ dxdfir_car_load_es_user_resolved }}"
+        secret_env:
+          BYAKUGAN_LOAD_ES_PASSWORD: "{{ dxdfir_car_load_es_password_resolved }}"
+        mounts:
+          - {host: "{{ dxdfir_car_load_dir }}", path: /input, mode: ro}
+          - {host: "{{ dxdfir_car_load_out_dir }}", path: /output, mode: rw}
+          - {host: "{{ dxdfir_car_load_certs_dir }}", path: /certs, mode: ro}
+        network: "{{ dxdfir_car_load_network }}"
+    godfir_run_verify_dir: "{{ dxdfir_car_load_out_dir }}"
+    godfir_run_verify_glob: "manifest.json"
+    godfir_run_require_no_failures: false

@@ -1,0 +1,72 @@
+name: smoke
+
+# The real pipeline, asserted for CORRECTNESS (what `checks` deliberately
+# does not cover) — docs/reference/build-and-test.md "Smoke".
+#
+# The tool images are PULLED from the registry (ghcr.io/get-sybers/<tool>) via
+# get_sybers.godfir_run.godfir_images; they must be published there for this to
+# pass. Building + publishing images is the GoDFIR-toolz repo's concern.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # nightly regression signal
+    - cron: "0 6 * * *"
+  pull_request:
+    paths:
+      # the lanes the smoke test drives, and the shared discovery/engine wiring
+      - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_evidence/**"
+      - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_export/**"
+      # the godfir_* lane wiring lives in group_vars now (the lane roles come
+      # from the imported get_sybers.godfir_run collection, not this repo)
+      - "ansible/collections/get_sybers.dxdfir/playbooks/group_vars/all.yml"
+      - "ansible/collections/get_sybers.dxdfir/roles/dxdfir_images/**"
+      - "ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-process-gowindowlicker.yml"
+      - "ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-car.yml"
+      - "ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-verify-car.yml"
+      # a new godfir_run pin (the imported galaxy) re-runs this
+      - "ansible/collections/get_sybers.dxdfir/requirements.yml"
+      - "ansible.cfg"
+      - "requirements.txt"
+      - ".github/tests/smoke-test.sh"
+      - "dev-scripts/fetch-samples.sh"
+      - "dev-scripts/samples-manifest.tsv"
+      - ".github/workflows/smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # the repo lock brings ansible-core + the docker SDK the collection's
+      # modules import; requirements.yml imports get_sybers.godfir_run by URL
+      - name: Install the dxdfir package and the collection's dependencies
+        run: |
+          python -m pip install --quiet -r requirements.txt
+          # galaxy.ansible.com / github resets connections now and then: three attempts
+          for attempt in 1 2 3; do
+            ansible-galaxy collection install -r ansible/collections/get_sybers.dxdfir/requirements.yml && break
+            [ "$attempt" -lt 3 ] || exit 1
+            echo "collection install failed (attempt $attempt) — retrying in 15s"; sleep 15
+          done
+
+      # pulled exactly as `dxdfir build-docker` provisions them (godfir_images
+      # registry pull + hardening verify); only the two the smoke test drives
+      - name: Pull the gowindowlicker + byakugan images (registry pull, hardening verified)
+        run: |
+          ansible-playbook \
+            ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml \
+            -e '{"dxdfir_images_set": ["gowindowlicker", "byakugan"]}'
+
+      - name: Run the pipeline smoke test
+        run: ./.github/tests/smoke-test.sh

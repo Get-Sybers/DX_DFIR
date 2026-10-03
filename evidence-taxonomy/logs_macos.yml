@@ -1,0 +1,12 @@
+# macOS logs, one folder per host. Lane subdir: logs/macOS/
+#
+# Staged here by `dxdfir sort` and the collection skeleton; no processing lane
+# reads this subdir yet. The unified log's tracev3 segments and the Apple
+# System Log databases carry magic; a .logarchive bundle is claimed by
+# extension (a directory — its files sort by their own content).
+name: logs_macos
+subdir: logs/macOS
+ext: [.tracev3, .asl, .logarchive, .timesync, .uuidtext]
+signatures:
+  - {hex: "41 53 4C 20 44 42 00 00", offset: 0, ext: asl, desc: "Apple System Log database (ASL DB)"}
+  - {hex: "00 10 00 00 11 00 00 00", offset: 0, ext: tracev3, desc: "macOS unified log segment (tracev3)"}

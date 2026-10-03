@@ -1,0 +1,58 @@
+---
+argument_specs:
+  main:
+    short_description: "disk images -> the shared artefact export (processed/_extracted), by gomount."
+    description:
+      - >-
+        For every disk image under the trees in dxdfir_export_trees (every
+        container gomount reads: E01/Ex01, raw, VMDK, VHDX, VHD, QCOW2, VDI —
+        a VMDK's extents and an EWF set's continuation segments belong to their
+        item), runs gomount's materialise verb with the artefact sets in
+        dxdfir_export_sets (windows-core + linux-core: every artefact the go*
+        parsers and hayabusa read) into dxdfir_export_stage_dir — one folder
+        per image holding export/ with materialise.jsonl, the origin manifest
+        and done marker, at its root. No mount, no FUSE, no privilege: the OS
+        volume is read in-process. Idempotent per image: one already exported
+        is not re-pulled unless dxdfir_export_force. A tree with no image
+        declares no run. On exit dxdfir_export_hosts lists every exported
+        image ({name, export}) — the <host> level a consumer fans out over.
+      - >-
+        No lane includes this role any more — gowindowlicker, godaemonhunter
+        and signatures run ON the image through their baked gomount. It is a
+        utility for an operator who wants the artefact set on disk.
+    options:
+      dxdfir_export_trees:
+        type: list
+        elements: str
+        required: false
+        default: []
+        description: "The evidence trees to export from (disk images, VM exports); missing or image-less entries are skipped."
+      dxdfir_export_collection:
+        type: str
+        required: false
+        default: ""
+        description: "The collection this run is scoped to; the stage lands one level down, processed/_extracted/<collection>/."
+      dxdfir_export_stage_dir:
+        type: str
+        required: false
+        description: "Where the exports land (default data_store/processed/_extracted[/<collection>]); one folder per image."
+      dxdfir_export_sets:
+        type: list
+        elements: str
+        required: false
+        default: [windows-core, linux-core]
+        description: "The gomount artefact sets materialised out of each image (gomount/materialise-sets.yml)."
+      dxdfir_export_gomount_contract:
+        type: str
+        required: false
+        description: "The gomount contract.yml the export runs are built from."
+      dxdfir_export_gomount_image:
+        type: str
+        required: false
+        default: ""
+        description: "Image ref overriding the gomount contract's (get-sybers/gomount:latest)."
+      dxdfir_export_force:
+        type: bool
+        required: false
+        default: false
+        description: "Re-export images that already have an export."

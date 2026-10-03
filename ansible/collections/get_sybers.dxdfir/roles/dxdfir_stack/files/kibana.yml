@@ -1,0 +1,40 @@
+# Byakugan Kibana — talks to Elasticsearch over TLS as kibana_system and hosts
+# Fleet. ${VAR} references are resolved from the container environment (set
+# by the dxdfir_stack role from the inventory's secret store).
+server.name: byakugan-kibana
+server.host: "0.0.0.0"
+server.publicBaseUrl: "http://127.0.0.1:5601"
+telemetry.optIn: false
+
+elasticsearch.hosts: ["https://elasticsearch:9200"]
+elasticsearch.username: kibana_system
+elasticsearch.password: "${KIBANA_SYSTEM_PASSWORD}"
+elasticsearch.ssl.certificateAuthorities: ["/usr/share/kibana/config/certs/ca/ca.crt"]
+
+# Each key >= 32 chars (openssl rand -hex 32). Fleet refuses to start without the
+# encryptedSavedObjects key; the security key keeps sessions valid across restarts.
+xpack.encryptedSavedObjects.encryptionKey: "${KIBANA_ENCRYPTED_SAVED_OBJECTS_KEY}"
+xpack.security.encryptionKey: "${KIBANA_SECURITY_ENCRYPTION_KEY}"
+xpack.reporting.encryptionKey: "${KIBANA_REPORTING_ENCRYPTION_KEY}"
+
+# Fleet — preconfigured so the fleet-server container can enrol itself on first
+# boot. Agents reach Fleet Server and Elasticsearch by their network-alias
+# names; the CA path is on the AGENT's filesystem (the shared certs volume).
+xpack.fleet.agents.fleet_server.hosts: ["https://fleet-server:8220"]
+xpack.fleet.outputs:
+  - id: byakugan-elasticsearch
+    name: Byakugan Elasticsearch
+    type: elasticsearch
+    hosts: ["https://elasticsearch:9200"]
+    is_default: true
+    is_default_monitoring: true
+    config:
+      ssl.certificate_authorities: ["/certs/ca/ca.crt"]
+xpack.fleet.agentPolicies:
+  - name: Fleet Server policy
+    id: fleet-server-policy
+    namespace: default
+    package_policies:
+      - name: fleet_server-1
+        package:
+          name: fleet_server
