@@ -9,10 +9,12 @@
   gather_facts: false
   vars:
     dxdfir_molecule_repo_root: "{{ playbook_dir | dirname | dirname | dirname | dirname }}"
-    # versioned with the molecule pin in requirements.txt (bump together):
-    # a lock bump changes the tag, so `state: present` rebuilds instead of
-    # reusing a stale cached runner — never :latest (standards §31)
-    dxdfir_molecule_image: get-sybers/molecule:26.9.0
+    # versioned with the molecule pin in requirements.txt plus a runner
+    # revision (bump the -rN suffix when molecule-runner.Dockerfile changes
+    # without a molecule bump): any change renames the tag, so
+    # `state: present` rebuilds instead of reusing a stale cached runner —
+    # never :latest (standards §31)
+    dxdfir_molecule_image: get-sybers/molecule:26.9.0-r2
     # The per-tool lane scenarios moved upstream with the run machinery: the
     # get_sybers.godfir_run lanes are molecule-tested in that collection and the
     # playbooks include them DIRECTLY (group_vars wires their godfir_* inputs).
