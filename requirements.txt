@@ -23,12 +23,12 @@
 #     && /tmp/lock/bin/pip freeze > requirements.txt
 #
 # Generated 2026-09-03, pruned 2026-09-11, regenerated 2026-09-12 on Python
-# 3.11 (the CI interpreter): ansible-core 2.19.x installs on 3.11 through
-# 3.13 (>= 2.20 declares requires-python >= 3.12). Relocated from
+# 3.13 (the CI interpreter): ansible-core 2.21.x installs on 3.12 through
+# 3.13 (2.21 declares requires-python >= 3.12). Relocated from
 # python/constraints.txt 2026-09-26 when the host-python package retired;
 # pins unchanged.
 
-ansible-core==2.19.13
+ansible-core==2.21.4
 certifi==2026.7.22
 cffi==2.1.1
 charset-normalizer==3.5.2
