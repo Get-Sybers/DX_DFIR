@@ -9,12 +9,12 @@ collections:
   # the per-image lanes; the pipeline + evidence roles delegate to it.
   - name: https://github.com/Get-Sybers/GoDFIR-toolz.git#/ansible_collections/get_sybers/godfir_run
     type: git
-    version: v0.1.0
+    version: v0.2.1
   - name: community.docker
-    version: "3.10.3"
+    version: "3.13.10"
   # ansible.cfg enables its profile_tasks callback — a runtime dependency
   - name: ansible.posix
-    version: "2.1.0"
+    version: "2.2.2"
   # dxdfir_stack's host-side TLS generation
   - name: community.crypto
     version: "2.26.9"

@@ -362,8 +362,8 @@ export PATH="$DXDFIR_VENV/bin:$PATH"
 # refuses auto-upgrades (docs: Design decisions).
 ################################################################################
 section "Go toolchain + dxdfir front-end"
-GO_VERSION="${GO_VERSION:-1.24.7}"
-GO_MIN_MINOR=24
+GO_VERSION="1.27.1"
+GO_MIN_MINOR=27
 # a real file on a directory every default PATH already carries (sudo's
 # secure_path included) — no shim, no drop-in, nothing to re-login for
 DXDFIR_BIN_DIR="${DXDFIR_BIN_DIR:-/usr/local/bin}"
