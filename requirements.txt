@@ -31,15 +31,37 @@
 ansible-core==2.19.13
 certifi==2026.7.22
 cffi==2.1.1
-charset-normalizer==3.5.1
-cryptography==50.0.1
+charset-normalizer==3.5.2
+cryptography==50.0.2
 docker==7.2.0
-idna==3.19
+idna==3.20
 Jinja2==3.1.6
-MarkupSafe==3.0.3
+MarkupSafe==3.0.4
 packaging==26.3
 pycparser==3.0
 PyYAML==6.0.3
 requests==2.34.2
 resolvelib==1.2.1
-urllib3==2.7.0
+urllib3==2.8.0
+
+# The molecule runner's layer (2026-10-04, same interpreter contract):
+# molecule itself and its transitive closure, resolved against the pins
+# above so .github/tests/molecule-runner.Dockerfile's `pip install -c`
+# floats nothing (ansible-standards §2).
+ansible-compat==26.9.0
+attrs==26.1.0
+bracex==3.0.1
+click==8.5.0
+enrich==1.2.7
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+markdown-it-py==4.2.0
+mdurl==0.1.2
+molecule==26.9.0
+pluggy==1.6.0
+Pygments==2.21.0
+referencing==0.37.0
+rich==15.0.0
+rpds-py==2026.6.3
+subprocess-tee==0.4.2
+wcmatch==11.0.1

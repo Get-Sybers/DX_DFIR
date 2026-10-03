@@ -22,7 +22,7 @@ dxdfir_stack_install_docker: false
 dxdfir_stack_start_docker: false
 
 # ---- images and topology (inventory: dxdfir_elastic_*)
-dxdfir_stack_elastic_version: "{{ dxdfir_elastic_version | default('9.4.3') }}"
+dxdfir_stack_elastic_version: "{{ dxdfir_elastic_version | default('9.5.4') }}"
 dxdfir_stack_network: "{{ dxdfir_elastic_network | default('byakugan_default') }}"
 dxdfir_stack_volumes:
   certs: "{{ (dxdfir_elastic_volumes | default({})).certs | default('byakugan_certs') }}"
