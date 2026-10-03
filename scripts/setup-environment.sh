@@ -362,8 +362,11 @@ export PATH="$DXDFIR_VENV/bin:$PATH"
 # refuses auto-upgrades (docs: Design decisions).
 ################################################################################
 section "Go toolchain + dxdfir front-end"
-GO_VERSION="1.27.1"
-GO_MIN_MINOR=27
+# The ONE source of the Go toolchain version is go/go.mod's `go` directive
+# (standards §2: scripts read the tracked pin, never carry their own copy).
+GO_VERSION="$(grep -E '^go [0-9]+\.[0-9]+(\.[0-9]+)?$' "$REPO_ROOT_DIR/go/go.mod" | awk '{print $2}')"
+[[ -n "$GO_VERSION" ]] || die "could not read the go directive from go/go.mod"
+GO_MIN_MINOR="$(cut -d. -f2 <<<"$GO_VERSION")"
 # a real file on a directory every default PATH already carries (sudo's
 # secure_path included) — no shim, no drop-in, nothing to re-login for
 DXDFIR_BIN_DIR="${DXDFIR_BIN_DIR:-/usr/local/bin}"
