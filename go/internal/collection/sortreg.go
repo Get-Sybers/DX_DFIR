@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/Get-Sybers/DX_DFIR/go/internal/fsx"
 	"github.com/Get-Sybers/DX_DFIR/go/internal/identify"
@@ -156,6 +157,18 @@ func SortInto(repoRoot, name string, dryRun bool, onItem ItemFn) (SortResult, er
 		return nil
 	})
 
+	// Inherit the collection root's group on new lane subdirectories so that
+	// the godfir_run --group-add mechanism (which stats the mount directory)
+	// picks up the same GID as the evidence files.
+	rootGID := -1
+	if !dryRun {
+		if fi, err := os.Stat(destRoot); err == nil {
+			if st, ok := fi.Sys().(*syscall.Stat_t); ok {
+				rootGID = int(st.Gid)
+			}
+		}
+	}
+
 	// Phase 2 — execute: whole evidence sets first, then loose files.
 	for _, s := range sets {
 		dest, derr := safeLaneDest(destRoot, s.subdir, s.dirName)
@@ -170,7 +183,7 @@ func SortInto(repoRoot, name string, dryRun bool, onItem ItemFn) (SortResult, er
 			continue
 		}
 		if !dryRun {
-			if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+			if err := mkdirInheritGroup(filepath.Dir(dest), rootGID); err != nil {
 				return res, err
 			}
 			if err := fsx.Move(s.abs, dest); err != nil {
@@ -195,7 +208,7 @@ func SortInto(repoRoot, name string, dryRun bool, onItem ItemFn) (SortResult, er
 			continue
 		}
 		if !dryRun {
-			if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+			if err := mkdirInheritGroup(filepath.Dir(dest), rootGID); err != nil {
 				return res, err
 			}
 			if err := fsx.Move(fm.abs, dest); err != nil {
@@ -554,6 +567,21 @@ func resolvePath(p string) string {
 		return rp
 	}
 	return p
+}
+
+// mkdirInheritGroup creates dir (and parents) with mode 0755, then chowns the
+// leaf to gid when gid >= 0 so the container --group-add picks up the evidence
+// group rather than the caller's default. Best-effort: a chown failure (e.g.
+// the caller isn't the dir owner) is silently ignored — MkdirAll succeeding is
+// enough to continue.
+func mkdirInheritGroup(dir string, gid int) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	if gid >= 0 {
+		_ = os.Chown(dir, -1, gid)
+	}
+	return nil
 }
 
 // moveFile/pathExists/isSymlink/isDir/isRegularFile moved to internal/fsx
