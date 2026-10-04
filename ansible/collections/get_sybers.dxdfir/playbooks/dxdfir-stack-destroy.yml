@@ -4,6 +4,8 @@
 - name: "DFIR | stack destroy"
   hosts: "{{ dxdfir_hosts | default('localhost') }}"
   connection: "{{ dxdfir_connection | default('local') }}"
+  become: true
+  become_method: ansible.builtin.sudo
   gather_facts: true
   tasks:
     - name: "dxdfir-stack-destroy | run the stack role (destroy)"

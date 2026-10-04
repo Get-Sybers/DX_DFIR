@@ -1,0 +1,17 @@
+---
+# Vault-encrypted become password for privilege escalation.
+# Copy this file to vault.yml (gitignored) and encrypt the value:
+#
+#   ansible-vault encrypt_string 'your-sudo-password' \
+#     --name 'ansible_become_password' \
+#     >> group_vars/all/vault.yml
+#
+# Pass the vault key at runtime:
+#   ansible-playbook ... --vault-password-file ~/.ansible-vault-key
+# or set ANSIBLE_VAULT_PASSWORD_FILE in the environment.
+#
+# NEVER store the plaintext password here. NEVER commit vault.yml.
+
+ansible_become_password: !vault |
+  $ANSIBLE_VAULT;1.1;AES256
+  <encrypt with: ansible-vault encrypt_string 'your-sudo-password' --name ansible_become_password>

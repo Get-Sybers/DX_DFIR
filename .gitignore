@@ -67,6 +67,8 @@ logs/*
 # the per-host secret store — never committed; the dir stays via its README
 ansible/inventory/secrets/*
 !ansible/inventory/secrets/README.md
+# vault file holding ansible_become_password — never committed; see vault.yml.example
+ansible/collections/get_sybers.dxdfir/playbooks/group_vars/all/vault.yml
 
 # CI working dirs: Go module cache, pip cache
 /.go/
