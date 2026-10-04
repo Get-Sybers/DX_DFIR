@@ -103,6 +103,12 @@ func runProcess(env *Env, source, collection string, force, noRegister bool, ext
 		if err := resolveCollection(r, collection, noRegister); err != nil {
 			return err
 		}
+		// Sort the collection's evidence into canonical lane subdirs before
+		// counting — idempotent, so already-filed files are skipped.
+		if sr, err := coll.SortInto(r.Root, collection, false, nil); err == nil && sr.MovedCount() > 0 {
+			fmt.Fprintf(os.Stderr, "%s sorted %d file(s) into lane subdirs for '%s'\n",
+				style.Green(style.GlyphOK), sr.MovedCount(), collection)
+		}
 		cl, ok := coll.ListLanes(r.Root, collection)
 		if !ok {
 			return Fail(2, "invalid collection name %q", collection)
