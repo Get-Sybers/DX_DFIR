@@ -48,11 +48,10 @@
 #     /etc/profile.d drop-in — which login shells read and nothing else does
 #     (`su user`, a desktop terminal, tmux, sudo's secure_path, the very shell
 #     the script ran in), so the closing "dxdfir --help" was command-not-found
-#     until a full re-login, and sometimes after it. Now the binary is a real
-#     file in /usr/local/bin (on every default PATH, sudo's included), the venv
-#     lives INSIDE the checkout at .venv (gitignored) where dxdfir resolves it
-#     by relation to the repo it just found, and the script proves the result
-#     from a fresh non-login shell before it says "done".
+#     until a full re-login, and sometimes after it. Now every artefact lives
+#     INSIDE the checkout — .go/ for the toolchain + binary, .venv/ for the
+#     ansible layer, .ansible/ for collections (all gitignored) — so the script
+#     proves the result by direct path before it says "done".
 #
 # Usage: scripts/setup-environment.sh [--yes] [--no-color] [--help]
 # ==============================================================================
@@ -350,8 +349,8 @@ for _ans in ansible ansible-playbook ansible-galaxy; do
 done
 ok "ansible in the venv: $("$DXDFIR_VENV/bin/ansible-playbook" --version 2>/dev/null | head -1 || echo 'ansible-playbook')"
 # The legacy system-prefix venv of earlier releases: nothing reads it any more
-# (dxdfir resolves the repo venv, the profile.d drop-in below is rewritten
-# without it), so retire it rather than leave a stale ansible around.
+# (dxdfir resolves the repo venv), so retire it rather than leave a stale
+# ansible around.
 if [[ -d /opt/dxdfir/venv ]]; then
     $SUDO rm -rf /opt/dxdfir/venv && detail "Retired legacy venv /opt/dxdfir/venv"
 fi
@@ -370,18 +369,19 @@ section "Go toolchain + dxdfir front-end"
 GO_VERSION="$(grep -E '^go [0-9]+\.[0-9]+(\.[0-9]+)?$' "$REPO_ROOT_DIR/go/go.mod" | awk '{print $2}')"
 [[ -n "$GO_VERSION" ]] || die "could not read the go directive from go/go.mod"
 GO_MIN_MINOR="$(cut -d. -f2 <<<"$GO_VERSION")"
-# a real file on a directory every default PATH already carries (sudo's
-# secure_path included) — no shim, no drop-in, nothing to re-login for
-DXDFIR_BIN_DIR="${DXDFIR_BIN_DIR:-/usr/local/bin}"
+# The Go toolchain and the built dxdfir binary both live inside the checkout
+# at .go/ (gitignored), so nothing escapes the repo root.
+DXDFIR_GO_ROOT="$REPO_ROOT_DIR/.go"
+DXDFIR_BIN_DIR="${DXDFIR_BIN_DIR:-$DXDFIR_GO_ROOT/bin}"
 _go_ok=0
-if command -v go >/dev/null 2>&1; then
-    _gominor="$(go version 2>/dev/null | grep -oE 'go1\.[0-9]+' | head -1 | cut -d. -f2)"
+if [[ -x "$DXDFIR_GO_ROOT/bin/go" ]]; then
+    _gominor="$("$DXDFIR_GO_ROOT/bin/go" version 2>/dev/null | grep -oE 'go1\.[0-9]+' | head -1 | cut -d. -f2)"
     [[ "$_gominor" =~ ^[0-9]+$ ]] && (( _gominor >= GO_MIN_MINOR )) && _go_ok=1
 fi
 if (( ! _go_ok )); then
-    command -v go >/dev/null 2>&1 \
-        && info "Found Go $(go version 2>/dev/null | awk '{print $3}') — older than go.mod's 1.${GO_MIN_MINOR} floor; replacing it."
-    step "Installing the Go toolchain ($GO_VERSION) ..."
+    [[ -x "$DXDFIR_GO_ROOT/bin/go" ]] \
+        && info "Found Go $("$DXDFIR_GO_ROOT/bin/go" version 2>/dev/null | awk '{print $3}') — older than go.mod's 1.${GO_MIN_MINOR} floor; replacing it."
+    step "Installing the Go toolchain ($GO_VERSION) into .go/ ..."
     case "$(uname -m)" in
         x86_64)        _garch=amd64 ;;
         aarch64|arm64) _garch=arm64 ;;
@@ -391,16 +391,7 @@ if (( ! _go_ok )); then
     curl -fsSL "https://go.dev/dl/${_gotar}" -o "/tmp/${_gotar}" \
         || die "Failed to download the Go toolchain (${_gotar})."
     # Supply-chain: verify the tarball against Go's published SHA-256 BEFORE
-    # extracting it as root over /usr/local/go. Refuse to install on a mismatch.
-    #
-    # The checksum comes from the go.dev release index (?mode=json), the canonical
-    # machine-readable source. The old per-file "<tarball>.sha256" sidecar URLs
-    # were retired: go.dev now answers them with an HTTP 200 HTML redirect page,
-    # so `curl -f` succeeded, the HTML landed in $_gosha, and sha256sum died with
-    # "no properly formatted checksum lines found" — surfacing as a bogus checksum
-    # mismatch on every run. python3 is guaranteed here (a REQUIRED_CMD installed
-    # above), so parse the JSON with it rather than a format-fragile grep;
-    # include=all so a pinned older release is covered, not just the latest few.
+    # extracting it into .go/. Refuse to install on a mismatch.
     _gosha="$(curl -fsSL "https://go.dev/dl/?mode=json&include=all" \
         | python3 -c 'import sys, json; d = json.load(sys.stdin); print(next((f["sha256"] for v in d for f in v["files"] if f.get("filename") == sys.argv[1]), ""))' \
             "${_gotar}")" \
@@ -410,19 +401,22 @@ if (( ! _go_ok )); then
     printf '%s  %s\n' "$_gosha" "/tmp/${_gotar}" | sha256sum -c --status - \
         || die "Go toolchain checksum mismatch for ${_gotar} — refusing to install."
     detail "Verified go${GO_VERSION} (${_garch}) against the go.dev published SHA-256."
-    $SUDO rm -rf /usr/local/go
-    $SUDO tar -C /usr/local -xzf "/tmp/${_gotar}" || die "Failed to extract the Go toolchain."
+    rm -rf "$DXDFIR_GO_ROOT"
+    mkdir -p "$DXDFIR_GO_ROOT"
+    tar -C "$DXDFIR_GO_ROOT" --strip-components=1 -xzf "/tmp/${_gotar}" \
+        || die "Failed to extract the Go toolchain into $DXDFIR_GO_ROOT."
     rm -f "/tmp/${_gotar}"
-    # /usr/local/go/bin joins PATH for this run here and for login shells via
-    # the /etc/profile.d drop-in written below (a rebuild convenience only —
-    # nothing at runtime needs `go`).
-    export PATH="/usr/local/go/bin:$PATH"
+    # Legacy: retire a previous system-wide Go install if present
+    if [[ -d /usr/local/go ]]; then
+        $SUDO rm -rf /usr/local/go && detail "Retired legacy Go toolchain at /usr/local/go"
+    fi
 fi
-step "Building the dxdfir Go front-end ($(go version 2>/dev/null | awk '{print $3}')) ..."
+export PATH="$DXDFIR_GO_ROOT/bin:$PATH"
+step "Building the dxdfir Go front-end ($("$DXDFIR_GO_ROOT/bin/go" version 2>/dev/null | awk '{print $3}')) ..."
 
 # build UNPRIVILEGED from a clean, ephemeral cache: deps resolve from
 # go/vendor/ or the proxy every run, never a previous run's leftovers (docs:
-# Design decisions); only the final install into $DXDFIR_BIN_DIR escalates
+# Design decisions); the binary installs into the in-repo .go/bin/
 _gotmp="$(mktemp -d)"
 _goclean() { [[ -n "$_gotmp" ]] && { chmod -R u+w "$_gotmp" 2>/dev/null; rm -rf "$_gotmp"; }; }
 _goenv=( PATH="$PATH" HOME="$_gotmp" GOTOOLCHAIN=local
@@ -443,49 +437,38 @@ if ! ( cd "$REPO_ROOT_DIR/go" \
         die "Failed to build the dxdfir Go front-end (need network for the module proxy, or vendor the modules for an air-gapped install: 'cd go && go mod vendor')."
     fi
 fi
-# a stale symlink from a legacy install would otherwise be followed
-[[ -L "$DXDFIR_BIN_DIR/dxdfir" ]] && $SUDO rm -f "$DXDFIR_BIN_DIR/dxdfir"
-$SUDO install -Dm755 "$_gotmp/dxdfir" "$DXDFIR_BIN_DIR/dxdfir" \
+install -Dm755 "$_gotmp/dxdfir" "$DXDFIR_BIN_DIR/dxdfir" \
     || { _goclean; die "Failed to install dxdfir into $DXDFIR_BIN_DIR."; }
 _goclean
-# the legacy prefix binary of earlier releases (reachable only via the old
-# drop-in): retire it so two dxdfir versions never coexist on a host
+
+# Legacy retirement: system-wide binaries, man pages, shims, and profile.d
+# drop-ins from earlier releases that installed outside the repo.
+step "Retiring legacy system-wide installs ..."
+if [[ -f /usr/local/bin/dxdfir ]]; then
+    $SUDO rm -f /usr/local/bin/dxdfir && detail "Retired /usr/local/bin/dxdfir"
+fi
 if [[ -f /opt/dxdfir/bin/dxdfir ]]; then
     $SUDO rm -f /opt/dxdfir/bin/dxdfir && $SUDO rmdir /opt/dxdfir/bin 2>/dev/null
-    detail "Retired legacy binary /opt/dxdfir/bin/dxdfir"
+    detail "Retired /opt/dxdfir/bin/dxdfir"
 fi
-# the manual installs beside the binary; best-effort
-$SUDO install -Dm644 "$REPO_ROOT_DIR/go/man/dxdfir.1" /usr/local/share/man/man1/dxdfir.1 2>/dev/null \
-    || warn "Could not install the man page — read it in-tree: man ./go/man/dxdfir.1"
-
-# One managed /etc/profile.d drop-in — a CONVENIENCE for login shells only
-# (`go` for rebuilds, a bare `ansible-playbook` for hand-driven plays); dxdfir
-# itself needs none of it. Venv bin APPENDED so the system python/pip keep
-# winning. Written with an explicit mode: /etc/profile skips a drop-in it
-# cannot read, and a strict umask under sudo would leave it 0600.
-# Legacy shims from earlier releases are retired (docs: Design decisions).
-step "Writing the PATH drop-in (/etc/profile.d/dxdfir.sh) and retiring legacy shims ..."
-_dropin="$(mktemp)"
-printf '%s\n' \
-    "# Managed by DX_DFIR scripts/setup-environment.sh — a convenience for login" \
-    "# shells: the pinned Go toolchain (rebuilds) and the repo venv's ansible*" \
-    "# (hand-driven plays), venv appended so the system python/pip keep winning." \
-    "# dxdfir itself lives in $DXDFIR_BIN_DIR and resolves the venv on its own." \
-    "export PATH=\"/usr/local/go/bin:\$PATH:$DXDFIR_VENV/bin\"" > "$_dropin"
-$SUDO install -m0644 "$_dropin" /etc/profile.d/dxdfir.sh \
-    || { rm -f "$_dropin"; die "Failed to write /etc/profile.d/dxdfir.sh."; }
-rm -f "$_dropin"
+if [[ -f /usr/local/share/man/man1/dxdfir.1 ]]; then
+    $SUDO rm -f /usr/local/share/man/man1/dxdfir.1 && detail "Retired /usr/local/share/man/man1/dxdfir.1"
+fi
+if [[ -f /etc/profile.d/dxdfir.sh ]]; then
+    $SUDO rm -f /etc/profile.d/dxdfir.sh && detail "Retired /etc/profile.d/dxdfir.sh"
+fi
 for _shim in dxdfir go ansible ansible-playbook ansible-galaxy; do
     if [[ -L "/usr/local/bin/$_shim" ]]; then
         case "$(readlink "/usr/local/bin/$_shim")" in
-            /opt/dxdfir/*|"$DXDFIR_VENV/bin/"*|/usr/local/go/bin/*)
+            /opt/dxdfir/*|"$DXDFIR_VENV/bin/"*|/usr/local/go/bin/*|"$DXDFIR_GO_ROOT/bin/"*)
                 $SUDO rm -f "/usr/local/bin/$_shim"
                 detail "Retired legacy shim /usr/local/bin/$_shim" ;;
         esac
     fi
 done
-export PATH="/usr/local/go/bin:$PATH:$DXDFIR_VENV/bin"
+export PATH="$DXDFIR_GO_ROOT/bin:$PATH:$DXDFIR_VENV/bin"
 ok "dxdfir (Go front-end) installed: $("$DXDFIR_BIN_DIR/dxdfir" --version 2>/dev/null || echo "$DXDFIR_BIN_DIR/dxdfir") -> $DXDFIR_BIN_DIR/dxdfir"
+detail "man page: man $REPO_ROOT_DIR/go/man/dxdfir.1"
 
 ################################################################################
 # Install the pinned Ansible dependencies (requirements.yml) into the
@@ -562,23 +545,17 @@ fi
 cmd() { printf '       %s%s%s  %s%s%s\n' "$C_ACCENT" "$1" "$C_RESET" "$C_DIM" "${2:-}" "$C_RESET"; }
 
 section "Setup complete"
-# Prove the install from a FRESH, NON-LOGIN shell with the default PATH — the
-# case the profile.d drop-in never covered (`su user`, a desktop terminal,
-# tmux) — rather than assert it. A failure here is the script's bug, not the
-# operator's shell.
-_probe="$(env -i HOME="$HOME" bash -c 'command -v dxdfir' 2>/dev/null)"
-if [[ "$_probe" == "$DXDFIR_BIN_DIR/dxdfir" ]]; then
-    ok "dxdfir resolves from a fresh non-login shell: $_probe (no re-login needed)"
+# Verify the in-repo binary exists and can find its venv's ansible.
+if [[ -x "$DXDFIR_BIN_DIR/dxdfir" ]]; then
+    ok "dxdfir binary: $("$DXDFIR_BIN_DIR/dxdfir" --version 2>/dev/null || echo "$DXDFIR_BIN_DIR/dxdfir")"
 else
-    die "dxdfir does not resolve from a fresh shell (got '${_probe:-nothing}', expected $DXDFIR_BIN_DIR/dxdfir) — is $DXDFIR_BIN_DIR on the default PATH?"
+    die "dxdfir binary not found at $DXDFIR_BIN_DIR/dxdfir"
 fi
-# ...and that the binary finds the venv's ansible on its own: the landing
-# dashboard's readiness line, from the same clean environment.
-_ap="$(env -i HOME="$HOME" NO_COLOR=1 bash -c "dxdfir --repo-root '$REPO_ROOT_DIR' --no-tui" 2>/dev/null \
+_ap="$(NO_COLOR=1 "$DXDFIR_BIN_DIR/dxdfir" --repo-root "$REPO_ROOT_DIR" --no-tui 2>/dev/null \
     | grep -E '^ *\[[^]]*\] +ansible ' | head -1 | sed 's/^ *//')"
 case "$_ap" in
     "[ok]"*) ok "dxdfir readiness: $_ap" ;;
-    "")      warn "Could not read dxdfir's ansible readiness line — check 'dxdfir --no-tui'." ;;
+    "")      warn "Could not read dxdfir's ansible readiness line — check '.go/bin/dxdfir --no-tui'." ;;
     *)       die "dxdfir does not resolve the venv's ansible: $_ap" ;;
 esac
 # ...and that ansible kept its state in the checkout: anything under
@@ -610,13 +587,13 @@ fi
 echo
 
 step "Run DX_DFIR (works in this shell as it is):"
-cmd "dxdfir --help" "(process evidence, build + verify CAR, deploy the analysis stack — see README.md)"
+cmd ".go/bin/dxdfir --help" "(process evidence, build + verify CAR, deploy the analysis stack — see README.md)"
 echo
 step "Build the hardened tool containers (everything the pipeline runs):"
-cmd "dxdfir build-docker" "(runs dxdfir-build-images.yml with the venv's ansible)"
+cmd ".go/bin/dxdfir build-docker" "(runs dxdfir-build-images.yml with the venv's ansible)"
 echo
 step "Drive ansible by hand (the venv is the repo's own):"
-cmd ". $DXDFIR_VENV/bin/activate" "(login shells also get it from /etc/profile.d/dxdfir.sh)"
+cmd ". $DXDFIR_VENV/bin/activate"
 echo
 step "Pre-seed the analysis images as tarballs for an offline host:"
 cmd "scripts/save-docker-images.sh --build" "(connected host: build + save every image)"
