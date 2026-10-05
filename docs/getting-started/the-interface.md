@@ -1,7 +1,7 @@
 # The interface
 
 `dx` is a plain command-line tool: one `dx <verb> <noun>` per action, with output that
-streams as it happens. There is no interactive dashboard — every command is a single,
+streams as it happens. There is no interactive dashboard; every command is a single,
 auditable invocation you can type, script, redirect, or re-run.
 
 ## Output model
@@ -43,12 +43,12 @@ Staged evidence   (data_store/raw/ - what `process` reads)
 
 Three panels:
 
-- **Readiness** — the environment checks. `[ok]` green, `[!]` an optional lane/capability
+- **Readiness**: the environment checks. `[ok]` green, `[!]` an optional lane/capability
   not yet available (a warning, never a process gate), `[x]` a failing gate. The banner
   sums the gate checks.
-- **Collections** — registered, detected, and dropzone-candidate collections; the active
+- **Collections**: registered, detected, and dropzone-candidate collections; the active
   one is starred. The same data as `dx list collections`.
-- **Staged evidence** — per-lane file counts over `data_store/raw/`. The same data as
+- **Staged evidence**: per-lane file counts over `data_store/raw/`. The same data as
   `dx list evidence`.
 
 The readout is written to stdout, so it is a first-class, greppable payload like any
@@ -56,7 +56,7 @@ other list.
 
 ## Working the pipeline
 
-Everything you need is a verb away — see the [command reference](commands.md). A typical
+Everything you need is a verb away; see the [command reference](commands.md). A typical
 session:
 
 ```bash

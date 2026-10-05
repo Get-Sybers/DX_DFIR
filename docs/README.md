@@ -1,7 +1,7 @@
 # DX_DFIR documentation
 
 DX_DFIR is an offline, container-based digital-forensics pipeline. You point it at
-raw evidence — packet captures, disk images, memory dumps, Windows event logs — and
+raw evidence (packet captures, disk images, memory dumps, Windows event logs) and
 drive the whole thing through one command, `dx`. It processes each kind of
 evidence with the right specialist tool, normalises everything into the
 [MITRE CAR](https://car.mitre.org/data_model/) data model, and feeds a security-on
@@ -24,31 +24,30 @@ New here? Start with **[What DX_DFIR is](getting-started/README.md)**.
 
 ## The three doc sets
 
-- **[Getting started](getting-started/README.md)** — for a first-time visitor. What the
+- **[Getting started](getting-started/README.md)**: for a first-time visitor. What the
   tool offers, how to install it, and the exact commands to run a case from evidence to
   analysis. Written from the operator's side of the screen.
-- **[Architecture](architecture/README.md)** — for someone who wants to understand the
+- **[Architecture](architecture/README.md)**: for someone who wants to understand the
   mechanics: how setup provisions a host, the processing lanes, the CAR pipeline, the
   Elastic stack, and the logical boundaries between the layers.
-- **[Reference](reference/README.md)** — for a contributor: the Go and Ansible standards,
+- **[Reference](reference/README.md)**: for a contributor: the Go and Ansible standards,
   the build/test harness, and a map of the Get-Sybers repositories this one is built on.
 
-## Deep reference (existing material)
+## Deep reference
 
-These pre-date this hub and go deeper than the pages above; they're linked from the
-relevant sections:
+Deeper references, linked from the relevant sections:
 
-- **CAR reference** — owned by the [Byakugan](https://github.com/Get-Sybers/Byakugan) engine (the CAR model + extraction live there, not here):
-  [CAR pipeline](https://github.com/Get-Sybers/Byakugan/-/blob/main/docs/CAR-Pipeline.md) ·
-  [extraction rules](https://github.com/Get-Sybers/Byakugan/-/blob/main/docs/CAR-Extraction-Rules.md) ·
-  [cross-source linkage](https://github.com/Get-Sybers/Byakugan/-/blob/main/docs/CAR-CrossSource.md) ·
-  [relationships](https://github.com/Get-Sybers/Byakugan/-/blob/main/docs/CAR-Relations.md) ·
-  [provenance ledger](https://github.com/Get-Sybers/Byakugan/-/blob/main/docs/car-provenance/README.md) (one field-map per CAR object)
+- **CAR reference**: owned by the [Byakugan](https://github.com/Get-Sybers/Byakugan) engine (the CAR model and extraction live there, not here):
+  [CAR pipeline](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-Pipeline.md) ·
+  [extraction rules](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-Extraction-Rules.md) ·
+  [cross-source linkage](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-CrossSource.md) ·
+  [relationships](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-Relations.md) ·
+  [provenance ledger](https://github.com/Get-Sybers/Byakugan/blob/main/docs/car-provenance/README.md) (one field-map per CAR object)
 - [Signature rules](Signature-Rules.md) · [risk gate](riskgate.md)
 - [Directory structure](Dir-Structure.md) · [tool containers](Containers.md) ·
   [scripts overview](scripts/Scripts-Overview.md)
-- [Research notes](research/README.md) — the evidence-spine proposal (the CAR
-  cross-source-linkage arc lives in the [Byakugan engine repo](https://github.com/Get-Sybers/Byakugan/-/blob/main/docs/research/cross-source-linkage/README.md))
+- [Research notes](research/README.md): the evidence-spine proposal (the CAR
+  cross-source-linkage arc lives in the [Byakugan engine repo](https://github.com/Get-Sybers/Byakugan/blob/main/docs/research/cross-source-linkage/README.md))
 
 ---
 

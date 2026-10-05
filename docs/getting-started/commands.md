@@ -1,10 +1,10 @@
 # Command reference
 
 Every command, grouped by task. `dx --help` (and `--help` on any subcommand) is the
-live source of truth — when this page and the CLI disagree, trust the CLI and open an
+live source of truth; when this page and the CLI disagree, trust the CLI and open an
 issue.
 
-Commands read **verb first** — `<verb> <noun>`: `deploy stack`, `register evidence
+Commands read **verb first** (`<verb> <noun>`): `deploy stack`, `register evidence
 case-a`, `list evidence`. The evidence verbs also take a bare NAME in place of the noun
 (`register case-a` is `register evidence case-a`). The one exception is `byakugan`, a
 tool namespace whose subcommands are its own verbs (`byakugan build`, `byakugan
@@ -28,8 +28,8 @@ staged raw evidence as a whole.
 
 | Command | What it does |
 |---|---|
-| `dx list evidence [--raw\|--processed]` | Show staged evidence — per-lane counts (default), or a directory view of raw/processed. |
-| `dx list collections` | List collections — registered, detected, and dropzone candidates; the active one is starred. |
+| `dx list evidence [--raw\|--processed]` | Show staged evidence: per-lane counts (default), or a directory view of raw/processed. |
+| `dx list collections` | List collections: registered, detected, and dropzone candidates; the active one is starred. |
 | `dx register [evidence] [NAME] [--no-hash]` | Promote a `data_store/raw/sort/<NAME>/` dropzone folder into a tracked collection (or create an empty one) and SHA-1 hash it. |
 | `dx register … --from PATH` | Symlink an external directory in as the collection; NAME defaults to its basename. |
 | `dx sort [evidence] [NAME] [--dry-run]` | Magic-byte-sort the dropzone into a collection's lane subdirs (content beats extension); no NAME means the active one. |
@@ -61,7 +61,7 @@ exchange, both run inside the hardened `get-sybers/byakugan` image.
 
 | Command | What it does |
 |---|---|
-| `dx deploy stack` | Bring up and verify the analysis stack from inventory data (installs docker itself when missing). The service containers read the node TLS keys as gid 0, so the keys must be `root:root 0640`; deploy holds that automatically — when not already root it escalates only the privileged tasks (TLS key lifecycle + docker setup) and prompts once for the sudo password, running the rest as you. No prompt when run as root (`sudo dx deploy stack`). |
+| `dx deploy stack` | Bring up and verify the analysis stack from inventory data (installs docker itself when missing). The service containers read the node TLS keys as gid 0, so the keys must be `root:root 0640`; deploy holds that automatically: when not already root it escalates only the privileged tasks (TLS key lifecycle + docker setup) and prompts once for the sudo password, running the rest as you. No prompt when run as root (`sudo dx deploy stack`). |
 | `dx start stack` / `stop stack` / `status stack` | Start / stop / show the stack's containers. |
 | `dx restart stack` | Stop the containers, then start them again (no data removed). |
 | `dx update stack` | Re-converge the stack onto the current inventory/images (in-place update). Runs the deploy play, so it escalates automatically exactly as `deploy stack` does (a sudo prompt when not already root). |
@@ -85,6 +85,6 @@ See [the stack](../architecture/the-stack.md).
 
 | Command | What it does |
 |---|---|
-| `dx` | No subcommand: the [landing readout](the-interface.md) — environment readiness, tracked collections, staged evidence. |
+| `dx` | No subcommand: the [landing readout](the-interface.md), showing environment readiness, tracked collections, staged evidence. |
 | `dx --repo-root PATH` | Point at a DX_DFIR checkout explicitly (else auto-detected). |
 | `dx --version` · `--help` | Version · help (at every level). |

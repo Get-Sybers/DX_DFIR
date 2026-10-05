@@ -9,7 +9,7 @@ Nothing skips a layer.
 
 ```mermaid
 flowchart TD
-    U([You]) --> CLI["<b>dx</b> — Go CLI front-end<br/>builds a plan, shells out, streams progress"]
+    U([You]) --> CLI["<b>dx</b>: Go CLI front-end<br/>builds a plan, shells out, streams progress"]
     CLI -->|ansible-playbook| ANS["Ansible collection <b>get_sybers.dxdfir</b><br/>roles group · playbooks decide"]
     ANS -->|contract-driven docker run| DK["Hardened <b>get-sybers/*</b> tool containers<br/>Zeek · gowindowlicker · anamnesis · Plaso · signatures…"]
     ANS -.->|CAR + exchange lanes| BYA["External <b>Byakugan</b> engine (in its image)<br/>normalises → MITRE CAR · STIX/CTI exchange"]
@@ -18,15 +18,15 @@ flowchart TD
     FS -.->|Filebeat tails| ES["Elastic stack<br/>Elasticsearch · Kibana · Fleet"]
 ```
 
-## Who does what — and what they don't
+## Who does what, and what they don't
 
 | Layer | Owns | Explicitly does **not** |
 |---|---|---|
-| **Go CLI** (`go/`) | Build a run plan, drive `ansible-playbook`, [stream progress](../getting-started/the-interface.md) by watching output files land | No processing, no `docker run`, no CAR logic (the one native re-port is the [collection registry](processing-lanes.md#collections) reads) |
-| **Ansible** (`ansible/`) | *Roles group; playbooks decide.* Assert inputs, build each confined `docker run` from the tool's contract (the `dxdfir_lane` skeleton), gate on the result | No idempotence in `when:` — that lives in the tool |
-| **Containers** (`docker/`) | Run one hardened tool over one input; discover, batch and skip inside | Nothing else — fixed non-root user, no network, read-only rootfs |
-| **[Byakugan](https://github.com/Get-Sybers/Byakugan)** (external) | Normalise processed evidence into MITRE CAR | Lives outside the repo entirely — cloned + built into the hardened `get-sybers/byakugan` image at its Dockerfile's `BYAKUGAN_REF` pin, never vendored |
-| **[Elastic stack](the-stack.md)** (the `dxdfir_stack` role) | Ingest, search, detect | A separate data plane — it reads the files the pipeline writes; neither drives the other |
+| **Go CLI** (`go/`) | Build a run plan, drive `ansible-playbook`, [stream progress](../getting-started/the-interface.md) by watching output files land | No processing, no `docker run`, no CAR logic (the one native read is the [collection registry](processing-lanes.md#collections)) |
+| **Ansible** (`ansible/`) | *Roles group; playbooks decide.* Assert inputs, build each confined `docker run` from the tool's contract (the `dxdfir_lane` skeleton), gate on the result | No idempotence in `when:`; that lives in the tool |
+| **Containers** (`docker/`) | Run one hardened tool over one input; discover, batch and skip inside | Nothing else: fixed non-root user, no network, read-only rootfs |
+| **[Byakugan](https://github.com/Get-Sybers/Byakugan)** (external) | Normalise processed evidence into MITRE CAR | Lives outside the repo entirely, cloned + built into the hardened `get-sybers/byakugan` image at its Dockerfile's `BYAKUGAN_REF` pin, never vendored |
+| **[Elastic stack](the-stack.md)** (the `dxdfir_stack` role) | Ingest, search, detect | A separate data plane: it reads the files the pipeline writes, and neither drives the other |
 
 The call chain in one line: **you → `dx` → `ansible-playbook` →
 `docker run get-sybers/<tool>` (built from its `contract.yml`) → deterministic
@@ -47,21 +47,21 @@ raw ──process──▶ processed ──byakugan build──▶ car ──bya
  └───────────────────┴──────── Filebeat tails processed/ ──▶ logs-dxdfir.* data streams
 ```
 
-1. **raw** — evidence staged under `data_store/raw/<type>/` (or a
+1. **raw**: evidence staged under `data_store/raw/<type>/` (or a
    [collection](processing-lanes.md#collections)).
-2. **processed** — each [lane](processing-lanes.md) writes deterministic per-item output
+2. **processed**: each [lane](processing-lanes.md) writes deterministic per-item output
    plus a JSON summary the lane verifies and the CLI watches.
-3. **car** — [`byakugan build`](car-pipeline.md) materialises per-source CAR stores via the
+3. **car**: [`byakugan build`](car-pipeline.md) materialises per-source CAR stores via the
    Byakugan engine.
-4. **timeline** — [`byakugan export-timeline`](car-pipeline.md#timeline) unions object events +
+4. **timeline**: [`byakugan export-timeline`](car-pipeline.md#timeline) unions object events +
    relationship edges into one time-ordered stream.
-5. **elastic** — [Filebeat](the-stack.md) ships processed evidence into
-   `logs-dxdfir.<type>-*` data streams; detections run there.
+5. **elastic**: [Filebeat](the-stack.md) ships processed evidence into
+   `logs-dxdfir.<type>-*` data streams, where detections run.
 
 ## Read next
 
-- **[Setup flow](setup-flow.md)** — how a host is provisioned.
-- **[Processing lanes](processing-lanes.md)** — the six lanes in detail.
-- **[CAR pipeline](car-pipeline.md)** — normalisation, verification, timeline.
-- **[The stack](the-stack.md)** — Elasticsearch, Kibana, detections, STIX.
-- **[Repository map](../reference/repository-map.md)** — the Get-Sybers repos this is built on.
+- **[Setup flow](setup-flow.md)**: how a host is provisioned.
+- **[Processing lanes](processing-lanes.md)**: the six lanes in detail.
+- **[CAR pipeline](car-pipeline.md)**: normalisation, verification, timeline.
+- **[The stack](the-stack.md)**: Elasticsearch, Kibana, detections, STIX.
+- **[Repository map](../reference/repository-map.md)**: the Get-Sybers repos this is built on.
