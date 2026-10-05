@@ -95,7 +95,7 @@ Hayabusa under its own GPL-3.0 terms.
 
 ## Build-time dependencies — the Go front-end
 
-The `dxdfir` front-end (`go/`) is a Go program; these modules are pinned in
+The `dx` front-end (`go/`) is a Go program; these modules are pinned in
 `go/go.mod` + `go/go.sum` and compiled into the built binary (so they are
 redistributed if the binary is shipped). All are permissive. `go/go.sum` is the
 integrity lock; `go mod vendor` (pre-run on a connected host) captures
@@ -103,12 +103,8 @@ them under `go/vendor/` for reproducible, air-gapped builds.
 
 | Module | Version | Licence |
 |---|---|---|
-| [github.com/gizak/termui/v3](https://github.com/gizak/termui) | v3.1.0 | MIT |
-| [github.com/spf13/cobra](https://github.com/spf13/cobra) | v1.10.1 | Apache-2.0 |
+| [github.com/spf13/cobra](https://github.com/spf13/cobra) | v1.10.2 | Apache-2.0 |
 | [github.com/spf13/pflag](https://github.com/spf13/pflag) | v1.0.10 | BSD-3-Clause |
-| [github.com/mattn/go-runewidth](https://github.com/mattn/go-runewidth) | v0.0.2 | MIT |
-| [github.com/mitchellh/go-wordwrap](https://github.com/mitchellh/go-wordwrap) | 2015-03-14 | MIT |
-| [github.com/nsf/termbox-go](https://github.com/nsf/termbox-go) | 2019-01-21 | MIT |
 | [github.com/inconshreveable/mousetrap](https://github.com/inconshreveable/mousetrap) | v1.1.0 | Apache-2.0 |
 | [github.com/apenella/go-ansible/v2](https://github.com/apenella/go-ansible) | v2.4.1 | MIT |
 | [github.com/apenella/go-common-utils](https://github.com/apenella/go-common-utils) (`data`, `error`) | 2022-09-13 | MIT |

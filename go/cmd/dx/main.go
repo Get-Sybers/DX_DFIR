@@ -1,7 +1,7 @@
-// Command dxdfir is the Go/termui front-end for the DX_DFIR forensic pipeline.
-// It owns only the user-facing verbs and their presentation; the heavy work
-// stays in the get_sybers.dxdfir Ansible collection and the hardened tool
-// containers it runs, which this binary drives by shelling out.
+// Command dx is the Go front-end for the DX_DFIR forensic pipeline. It owns
+// only the user-facing verbs and their presentation; the heavy work stays in
+// the get_sybers.dxdfir Ansible collection and the hardened tool containers it
+// runs, which this binary drives by shelling out.
 package main
 
 import (
@@ -14,7 +14,7 @@ import (
 )
 
 // version is the project version — this constant is its one home.
-const version = "0.6.0"
+const version = "0.7.0"
 
 // buildVersion augments the semantic version with the short VCS revision and the
 // dirty flag that `go build` embeds in the binary. The dashboards show it at the

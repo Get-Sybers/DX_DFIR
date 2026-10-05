@@ -1,7 +1,7 @@
 // Package model holds the presenter-agnostic types shared between the
-// subprocess/watch producers and the two presenters (tui and plain). It imports
-// neither termui nor os/exec, so both presenters and the runner can depend on it
-// without an import cycle and unit tests need no terminal.
+// subprocess/watch producers and the plain presenter. It imports neither a
+// terminal library nor os/exec, so the presenter and the runner can depend on
+// it without an import cycle and unit tests need no terminal.
 package model
 
 import (
@@ -142,24 +142,11 @@ type Update struct {
 	Err      error
 }
 
-// ProgressEvent is one line of the JSON progress stream (activated by the child
-// with DXDFIR_PROGRESS=json): a job's update serialized so a parent dxdfir (the
-// interactive shell) can render it as live widgets rather than scraping plain
-// text. Exactly one of Snapshot/Log is set per event, plus a final {Done:true}
-// carrying any error text. The shell decodes each stdout line straight back into
-// this type.
-type ProgressEvent struct {
-	Snapshot *Snapshot `json:"snapshot,omitempty"`
-	Log      string    `json:"log,omitempty"`
-	Done     bool      `json:"done,omitempty"`
-	Err      string    `json:"err,omitempty"`
-}
-
-// Presenter renders a stream of Updates. Implemented by internal/tui (termui)
-// and internal/plain (line streaming). onAbort is invoked when the operator
-// requests an early quit so the orchestrator can cancel the underlying job; the
-// presenter keeps draining until it sees Done, then returns (ErrAborted if the
-// quit was operator-initiated, else the job's Err).
+// Presenter renders a stream of Updates. Implemented by internal/plain (line
+// streaming). onAbort is invoked when the operator requests an early quit so
+// the orchestrator can cancel the underlying job; the presenter keeps draining
+// until it sees Done, then returns (ErrAborted if the quit was
+// operator-initiated, else the job's Err).
 type Presenter interface {
 	Run(updates <-chan Update, onAbort func()) error
 }

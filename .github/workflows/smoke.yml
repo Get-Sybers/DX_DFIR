@@ -50,7 +50,7 @@ jobs:
 
       # the repo lock brings ansible-core + the docker SDK the collection's
       # modules import; requirements.yml imports get_sybers.godfir_run by URL
-      - name: Install the dxdfir package and the collection's dependencies
+      - name: Install the pinned ansible layer and the collection's dependencies
         run: |
           python -m pip install --quiet -r requirements.txt
           # galaxy.ansible.com / github resets connections now and then: three attempts
@@ -60,7 +60,7 @@ jobs:
             echo "collection install failed (attempt $attempt) — retrying in 15s"; sleep 15
           done
 
-      # pulled exactly as `dxdfir build-docker` provisions them (godfir_images
+      # pulled exactly as `dx build images` provisions them (godfir_images
       # registry pull + hardening verify); only the two the smoke test drives
       - name: Pull the gowindowlicker + byakugan images (registry pull, hardening verified)
         run: |

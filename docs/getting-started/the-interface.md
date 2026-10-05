@@ -1,122 +1,71 @@
 # The interface
 
-Run `dxdfir` with **no arguments** on a terminal and it launches a persistent,
-interactive UI — a tabbed dashboard with one command box at the bottom. Every line you
-type runs the same `dxdfir` verbs you'd type at a shell, so you keep driving the whole
-pipeline without leaving the UI.
+`dx` is a plain command-line tool: one `dx <verb> <noun>` per action, with output that
+streams as it happens. There is no interactive dashboard — every command is a single,
+auditable invocation you can type, script, redirect, or re-run.
 
-> The previews below are faithful terminal renderings. They render in any Markdown
-> viewer; drop real PNG captures into [`docs/images/`](../images/) and swap them in if
-> you prefer.
+## Output model
 
-## The command box
+- **Progress** (processing, collection hashing, sorting) streams as line output on
+  **stderr**: periodic status lines (`[dx] lanes 2/5 · zeek → conn.log`) plus the live
+  log tail from the tool. Pressing **Ctrl-C** cancels the underlying job cleanly.
+- **Machine-readable payloads** go to **stdout** and are never styled, so
+  `dx list evidence > staged.txt` and friends stay clean under a pipe or redirect.
+- **Colour** is used on stderr for diagnostics only. It is disabled automatically when
+  stderr is not a terminal, and honours `NO_COLOR` and `TERM=dumb`.
 
-The box at the bottom is always live. Type a command, press **Enter**, and its output
-streams into the pane above. Built-ins: `clear`, `quit` / `exit`. Everything else
-(`list`, `list collections`, `process case-a zeek`, …) runs the real CLI verb.
+## The landing readout
 
-| Key | Action |
-|---|---|
-| **Tab** / **→** | next tab |
-| **Shift-Tab** / **←** | previous tab (← is reliable; most terminals don't send Shift-Tab) |
-| **Enter** | run the current line |
-| **Ctrl-C** | cancel a running command or query · quit the shell when idle |
-
-## Pipeline
-
-The streaming output log, plus — while a `process` job runs — a live progress gauge and
-a lane/step queue that ticks as evidence lands. State icons: `▸` running, `✓` done,
-`✗` failed, `–` skipped, `·` queued.
+Run `dx` with **no arguments** for a point-in-time readout of where the pipeline stands:
 
 ```
-┌ Pipeline ─┬ Containers ─┬ Kibana ─┬ Timeline ──────────────────────────────────┐
-│ pipeline                                                                        │
-│ ████████████████░░░░░░░░░░░░░░░░░░░░░░  42%  ·  2/5 lanes  ·  zeek → conn.log    │
-├ queue ──────────────────────────────────────────────────────────────────────── ┤
-│   LANE / STEP        PROGRESS   DETAIL                                           │
-│ ✓ zeek               12/12      conn, dns, http, ssl, files…                     │
-│ ▸ gowindowlicker     3/8        Security.evtx                                    │
-│ – godaemonhunter     –          skipped — no Linux host                          │
-│ · anamnesis          0/1        queued                                           │
-│ · plaso              0/1        queued                                           │
-├ output ─────────────────────────────────────────────────────────────────────── ┤
-│ [zeek] wrote conn.log — 18,442 records                                           │
-│ [gowindowlicker] parsing Security.evtx …                                         │
-├ command ────────────────────────────────────────────────────────────────────── ┤
-│ > process case-a all_                                                            │
-└ type a command, Enter to run · Tab/→ next · Shift-Tab/← prev · Ctrl-C quits ──── ┘
+dx 0.7.0   DX_DFIR forensic pipeline
+repo  /opt/cases/DX_DFIR
+
+[x] NOT READY - 2 of 4 gate check(s) failing.
+Readiness   (* = optional lane/capability, not a process gate)
+  [ok] repo          /opt/cases/DX_DFIR
+  [x]  ansible       ansible-playbook not found - run scripts/setup-environment.sh
+  [ok] collection    get_sybers.dxdfir (ansible/collections/get_sybers.dxdfir)
+  [x]  docker        daemon unreachable - is dockerd running / are you in the docker group?
+  [!]  byakugan*     engine image get-sybers/byakugan:latest not built (dx build images)
+
+Collections
+  * case-a                 142 file(s)  [pcaps:3, memory:2]  sha1:9f2c1a0b4d7e
+
+Staged evidence   (data_store/raw/ - what `process` reads)
+  zeek               3 file(s)  pcaps/
+  anamnesis          2 file(s)  memory/
+  ...
+
+-> process: dx process <scope>   |   register: dx register <name>   |   help: dx --help
 ```
 
-## Containers
+Three panels:
 
-A `ktop`-style table of the running tool containers with aggregate CPU and memory
-gauges. Containers are spawned **per file during a run**, so "none running" is normal at
-rest. The load gauges ramp amber → ochre → crimson as usage climbs.
+- **Readiness** — the environment checks. `[ok]` green, `[!]` an optional lane/capability
+  not yet available (a warning, never a process gate), `[x]` a failing gate. The banner
+  sums the gate checks.
+- **Collections** — registered, detected, and dropzone-candidate collections; the active
+  one is starred. The same data as `dx list collections`.
+- **Staged evidence** — per-lane file counts over `data_store/raw/`. The same data as
+  `dx list evidence`.
 
-```
-┌ Pipeline ─┬ Containers ─┬ Kibana ─┬ Timeline ──────────────────────────────────┐
-│ CPU                                                                             │
-│ ██████████████████████░░░░░░░░░░░░░░░  58%  ·  Σ 232% over 4 cores              │
-│ memory                                                                          │
-│ ████████████████████████████████████  91%  ·  3 containers                     │
-├ containers (3 running) ──────────────────────────────────────────────────────── ┤
-│ NAME             IMAGE                        STATUS   CPU    MEM                │
-│ zeek-case-a-01   get-sybers/zeek              Up 6s    128%   512MiB             │
-│ evtx-case-a-01   get-sybers/gowindowlicker    Up 2s    64%    210MiB             │
-│ plaso-case-a-01  get-sybers/plaso             Up 1s    40%    1.1GiB             │
-└─────────────────────────────────────────────────────────────────────────────── ┘
-```
+The readout is written to stdout, so it is a first-class, greppable payload like any
+other list.
 
-## Kibana
+## Working the pipeline
 
-The command box becomes an **ES|QL query input**. Type a query, press Enter, and the
-result renders as a table. A status header shows the [Elastic stack](../architecture/the-stack.md)
-health and the `logs-dxdfir.*` data streams.
-
-```
-┌ Pipeline ─┬ Containers ─┬ Kibana ─┬ Timeline ──────────────────────────────────┐
-│ ES: green  2 nodes   ·   Kibana: ready  http://127.0.0.1:5601                   │
-│ query> FROM logs-dxdfir.* | STATS n = COUNT(*) BY labels.type | SORT n DESC      │
-├ results (5 rows) ───────────────────────────────────────────────────────────── ┤
-│ labels.type    n                                                                │
-│ evtx           18442                                                            │
-│ zeek           21959                                                            │
-│ volatility     3517                                                             │
-└─────────────────────────────────────────────────────────────────────────────── ┘
-```
-
-## Timeline
-
-The [Byakugan behaviour timeline](../architecture/car-pipeline.md) read from
-`data_store/processed/byakugan`, newest event first — the CAR object events and relationship
-edges unioned into one time-ordered stream.
-
-```
-┌ Pipeline ─┬ Containers ─┬ Kibana ─┬ Timeline ──────────────────────────────────┐
-│ TIME                 KIND    OBJECT   HOST     SUMMARY                          │
-│ 2024-01-01T00:00:03  object  flow     HOST1    10.0.0.5:5000 → 93.1.2.3:443 tls │
-│ 2024-01-01T00:00:02  edge    →        HOST1    process connected_to flow (pid)  │
-│ 2024-01-01T00:00:01  object  process  HOST1    C:\evil.exe  evil.exe -run       │
-└─────────────────────────────────────────────────────────────────────────────── ┘
-```
-
-## Theming
-
-The frame tone is set by the **`DXDFIR_THEME`** environment variable — part of the warm
-"Sunset" palette (marigold running, amber done, ochre warn, vermilion failed, so no
-pass/fail rests on red-vs-green alone):
+Everything you need is a verb away — see the [command reference](commands.md). A typical
+session:
 
 ```bash
-DXDFIR_THEME=ember dxdfir       # deep bronze frame (default)
-DXDFIR_THEME=dusk dxdfir        # burnt amber
-DXDFIR_THEME=driftwood dxdfir   # tan
+dx build images                 # one-time: pull the hardened tool images
+dx register case-a              # track a dropzone folder as a collection
+dx sort case-a                  # magic-byte-sort it into lane subdirs
+dx process case-a               # run every tool with evidence in the case
+dx byakugan build               # normalise the processed tree into CAR
+dx byakugan verify              # gate the CAR before trusting it
+dx deploy stack                 # bring the Elastic analysis stack up
+dx byakugan load                # bulk-load the CAR into the stack
 ```
-
-Anything unset or unknown falls back to `ember`. See the palette rules in
-[Go standards → the Sunset theme](../reference/go-standards.md#the-sunset-theme).
-
-## No terminal? The plain dashboard
-
-If the terminal can't host the UI (piped output, no TTY, or a window below the minimum
-size) `dxdfir` falls back to a plain **readiness dashboard**: environment checks,
-tracked collections, and staged evidence per lane. Force it with `dxdfir --no-tui`.

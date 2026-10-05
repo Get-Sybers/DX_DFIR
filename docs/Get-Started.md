@@ -6,20 +6,20 @@
 
 ### Driving the pipeline
 
-The **`dxdfir` CLI** is the pipeline's front-end (three-layer design — see
+The **`dx` CLI** is the pipeline's front-end (three-layer design — see
 [How It Runs](../README.md#how-it-runs)). Install it, then the numbered steps below
 walk a run end to end:
 
 ```bash
-scripts/setup-environment.sh  # builds the Go dxdfir front-end (go/) + installs the processors and ansible-core
-dxdfir process plaso     # lanes: zeek | gowindowlicker | godaemonhunter | anamnesis | plaso | signatures
-dxdfir build-car         # normalise every processed source into CAR (car_<object>.jsonl)
-dxdfir verify-car        # the CAR correctness gate over what was written
-dxdfir validate          # run the repo check harness
+scripts/setup-environment.sh  # builds the Go dx front-end (go/) + installs the processors and ansible-core
+dx process plaso         # tools: zeek | gowindowlicker | godaemonhunter | anamnesis | plaso | signatures
+dx byakugan build        # normalise every processed source into CAR (car_<object>.jsonl)
+dx byakugan verify       # the CAR correctness gate over what was written
+dx validate              # run the repo check harness
 ```
 
 The processors write the tree the CAR lane builds from and Filebeat ships.
-`man dxdfir` for the manual.
+`dx --help` is the source of truth for the commands.
 
 ### Step 1: Setup Environment
 - **Run setup-environment.sh:**
@@ -53,7 +53,7 @@ _Refer to [📁 Dir-Structure](Dir-Structure.md) for detailed directory structur
 
 ### Step 3: Process Forensic Images (E01 / VMware)
 ```bash
-dxdfir process plaso
+dx process plaso
 ```
 - Automates forensic analysis of all `.E01` disk images and VMware VM exports using Plaso.
 - Output lands in `data_store/processed/log2timeline/<host>/` — the `.plaso` storage
@@ -62,15 +62,15 @@ dxdfir process plaso
 
 ### Step 4: Process PCAPs with Zeek
 ```bash
-dxdfir process zeek
+dx process zeek
 ```
 - Automates processing of all network capture files (`.pcap` and `.pcapng`) using Zeek.
 - Output lands in `data_store/processed/zeek/[<collection>/]<pcap-name>/`.
 
 ### Step 5: Parse Windows and Linux hosts (optional)
 ```bash
-dxdfir process gowindowlicker   # alias: evtx
-dxdfir process godaemonhunter   # alias: daemonhunter
+dx process gowindowlicker   # alias: evtx
+dx process godaemonhunter   # alias: daemonhunter
 ```
 - `gowindowlicker` converts `.evtx` in `data_store/raw/logs/winevt/<host>/` with
   **goevtx** and runs every Windows artefact parser (registry, MFT, Prefetch, SRUM, …)
@@ -78,24 +78,24 @@ dxdfir process godaemonhunter   # alias: daemonhunter
   `processed/windowlicker/[<collection>/]<subtool>/<host>/<item>/`.
 - `godaemonhunter` does the same for Linux hosts (`raw/logs/linux/<host>/` and the
   images' export) into `processed/daemonhunter/[<collection>/]<subtool>/<host>/<item>/`.
-- Both ride `get-sybers/*` images built by `dxdfir build-docker` — nothing operator-supplied.
+- Both ride `get-sybers/*` images built by `dx build images` — nothing operator-supplied.
 - See [Scripts-Overview](scripts/Scripts-Overview.md) for the pipeline layers.
 
 ### Step 6: Build and verify the CAR
 ```bash
-dxdfir build-car                             # every source under data_store/processed
-dxdfir verify-car                            # the promotion gate over the result
-dxdfir build-timeline data_store/processed/byakugan # one time-ordered timeline across every source
+dx byakugan build                            # every source under data_store/processed
+dx byakugan verify                           # the promotion gate over the result
+dx byakugan export-timeline data_store/processed/byakugan # one time-ordered timeline across every source
 ```
-- `build-car` drives the external [Byakugan](https://github.com/Get-Sybers/Byakugan)
+- `byakugan build` drives the external [Byakugan](https://github.com/Get-Sybers/Byakugan)
   engine, run inside the hardened `get-sybers/byakugan` image — cloned + built at
-  the `BYAKUGAN_REF` commit pinned in its Dockerfile by `dxdfir build-docker`: each processed
+  the `BYAKUGAN_REF` commit pinned in its Dockerfile by `dx build images`: each processed
   source becomes its own `car_<object>.jsonl` per populated CAR object plus
   `car_relationships.jsonl` (always written, even empty — the build's done/skip
   marker) under `data_store/processed/byakugan/<source>/`. A source whose
   `car_relationships.jsonl` exists is left alone; `--rebuild` re-derives it
   after a map change.
-- `verify-car` asserts what was written: each exercised object populated, values
+- `byakugan verify` asserts what was written: each exercised object populated, values
   sane (IPs, ports, SIDs, `car_action` in the engine model's vocabulary), every
   row traceable to one artefact, the relationship edges naming real endpoints.
   It reads `data_store/processed/byakugan` by default, or `--car-dir DIR`.
@@ -105,7 +105,7 @@ dxdfir build-timeline data_store/processed/byakugan # one time-ordered timeline 
 ### Step 7: Bring up the Elastic-native backend
 ```bash
 sudo sysctl -w vm.max_map_count=262144
-dxdfir deploy stack             # installs docker if missing, generates secrets + TLS, brings the stack up, verifies it
+dx deploy stack             # installs docker if missing, generates secrets + TLS, brings the stack up, verifies it
 ```
 - Elasticsearch + Kibana (security **on**, TLS on the Elasticsearch API), Fleet
   Server, and Filebeat as the shipper — official Elastic images pinned to
@@ -124,7 +124,7 @@ dxdfir deploy stack             # installs docker if missing, generates secrets 
   `<type>/` tree). Filebeat's own registry keeps re-runs idempotent. It excludes
   `processed/byakugan/` and `processed/byakugan-load/` — the CAR is delivered
   ECS-projected instead (next bullet), not as raw evidence.
-- `dxdfir load-car` bulk-loads the materialised CAR (`processed/byakugan/`) into
+- `dx byakugan load` bulk-loads the materialised CAR (`processed/byakugan/`) into
   the `logs-car.<object>-<namespace>` x13, `logs-car.rel-<namespace>`,
   `logs-car.inferred-<namespace>` and `logs-car.content-<namespace>` data
   streams (the `dxdfir_car_load` role,
@@ -145,10 +145,10 @@ dxdfir deploy stack             # installs docker if missing, generates secrets 
   `/rules`](https://github.com/Get-Sybers/Byakugan/-/blob/main/rules/README.md), validated by the engine's build gate and
   test suite (`rules/validate.py`) — run by Elastic's Detection Engine on the
   stack above.
-- `dxdfir stix export` turns detection hits into STIX 2.1 sightings, and the
-  `stix` sub-app carries the OpenCTI exchange (indicators in, sightings back),
+- `dx byakugan export-stix` turns detection hits into STIX 2.1 sightings, and the
+  `byakugan` namespace carries the OpenCTI exchange (indicators in, sightings back),
   each verb one confined run of the byakugan image's own exchange sub-tools
-  via the `dxdfir_exchange` role; see `dxdfir stix -h` and
+  via the `dxdfir_exchange` role; see `dx byakugan -h` and
   [the engine's STIX-Exchange.md](https://github.com/Get-Sybers/Byakugan/-/blob/main/docs/STIX-Exchange.md).
 
 ---

@@ -1,11 +1,11 @@
 // Package style is the single home for the terminal colour + glyph vocabulary,
 // translated from the retired Python CLI's palette into an ANSI/256-colour set
-// the plain presenter and all non-dashboard verbs share. Colours target STDERR
-// (diagnostics); machine-readable payloads on stdout are never styled.
+// the plain presenter and all verbs share. Colours target STDERR (diagnostics);
+// machine-readable payloads on stdout are never styled.
 //
-// The glyph set is deliberately ASCII-safe: termui pins go-runewidth v0.0.2,
-// which mis-measures emoji and many wide runes and corrupts layout, so the
-// dashboard reuses these markers rather than the emoji the old CLI printed.
+// The glyph set is deliberately ASCII-safe: emoji and many wide runes are
+// mis-measured by common width tables and corrupt alignment, so these simple
+// markers are used rather than the emoji the old CLI printed.
 package style
 
 import "os"

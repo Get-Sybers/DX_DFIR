@@ -24,19 +24,19 @@ stack instead of a pile of CSVs.
 
 ## Quick start
 
-Fresh Debian/Ubuntu host — installs Docker and the `dxdfir` CLI:
+Fresh Debian/Ubuntu host — installs Docker and the `dx` CLI:
 
 ```bash
 git clone --recursive https://github.com/Get-Sybers/DX_DFIR.git
 cd DX_DFIR
-./scripts/setup-environment.sh      # Docker + dxdfir CLI — usable in this shell as it is
+./scripts/setup-environment.sh      # Docker + dx CLI — usable in this shell as it is
 ```
 
 Build the hardened tool images — first run, and again after every pull (images
 whose pinned sources moved are rebuilt and the stale ones removed):
 
 ```bash
-dxdfir build-docker
+dx build images
 ```
 
 **Work a case** — evidence arrives, becomes a registered collection, gets
@@ -45,31 +45,31 @@ processed into CAR:
 ```bash
 mkdir -p data_store/raw/sort/ACME-24            # the case's dropzone folder
 cp /mnt/evidence/* data_store/raw/sort/ACME-24/
-dxdfir register ACME-24             # promote the dropzone: lane-sort by content, SHA-1 hash, registry row
-dxdfir select ACME-24               # the active collection subsequent commands target
-dxdfir list collections             # the active one is starred, per-lane counts shown
-dxdfir process ACME-24              # every lane with staged evidence — or one: dxdfir process ACME-24 memory
-dxdfir build-car                    # normalise every source into per-source CAR stores (car_<object>.jsonl)
-dxdfir verify-car                   # the CAR correctness gate over what was written
-dxdfir build-timeline data_store/processed/byakugan   # one property-rich, time-ordered timeline JSONL
+dx register ACME-24                 # promote the dropzone: lane-sort by content, SHA-1 hash, registry row
+dx select ACME-24                   # the active collection subsequent commands target
+dx list collections                 # the active one is starred, per-lane counts shown
+dx process ACME-24                  # every lane with staged evidence — or one: dx process ACME-24 memory
+dx byakugan build                   # normalise every source into per-source CAR stores (car_<object>.jsonl)
+dx byakugan verify                  # the CAR correctness gate over what was written
+dx byakugan export-timeline data_store/processed/byakugan   # one property-rich, time-ordered timeline JSONL
 ```
 
 Evidence that arrives mid-case goes back through the dropzone: copy it into
-`data_store/raw/sort/ACME-24/`, then `dxdfir sort ACME-24`.
+`data_store/raw/sort/ACME-24/`, then `dx sort ACME-24`.
 
 **Quick look at loose evidence** — no collection, one artefact, one lane:
 
 ```bash
-dxdfir unselect                     # with no active collection, lanes read data_store/raw/<type>/ directly
+dx unselect                         # with no active collection, lanes read data_store/raw/<type>/ directly
 cp memdump.mem data_store/raw/memory/
-dxdfir process anamnesis            # zeek | gowindowlicker | godaemonhunter | anamnesis | plaso | signatures
+dx process anamnesis                # zeek | gowindowlicker | godaemonhunter | anamnesis | plaso | signatures
 ```
 
 Bring up the backend:
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144         # Elasticsearch needs this (persist it in /etc/sysctl.conf)
-dxdfir deploy stack                             # Elasticsearch + Kibana + Fleet + Filebeat, localhost-only
+dx deploy stack                                 # Elasticsearch + Kibana + Fleet + Filebeat, localhost-only
 ```
 
 Deploy converges the whole stack from the inventory
@@ -87,18 +87,18 @@ The CAR→ECS projection into `logs-car.*` and ES|QL `LOOKUP JOIN` flagging agai
 the `car-detections` lookup index are proven by the Phase-0
 [risk gate](docs/riskgate.md); the detection rules are data
 [shipped with the Byakugan engine and baked into its image at `/rules`](https://github.com/Get-Sybers/Byakugan/-/blob/main/rules/README.md)
-(build- and suite-gated engine-side), and `dxdfir stix export` turns their
-hits into STIX 2.1 sightings via the engine's own exchange. `dxdfir --help`
-lists every command (`man dxdfir` for the manual).
+(build- and suite-gated engine-side), and `dx byakugan export-stix` turns their
+hits into STIX 2.1 sightings via the engine's own exchange. `dx --help`
+lists every command (the source of truth for the grammar).
 
 ## How it runs
 <a name="how-it-runs"></a>
 
-A three-layer stack — the **`dxdfir` CLI** → the **`get_sybers.dxdfir` Ansible
+A three-layer stack — the **`dx` CLI** → the **`get_sybers.dxdfir` Ansible
 collection** (one role per source, one action per task) → the
 **[GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) tool containers** —
 writing the processed tree the CAR lane builds from and Filebeat ships. Each
-source runs as `dxdfir process <source>` (driving the matching
+source runs as `dx process <source>` (driving the matching
 `dxdfir_<source>` role); the role builds every `docker run` purely from the
 tool's `contract.yml` (its environment variables and mounts) and the container
 discovers, batches and skips its own inputs. There is no host python layer:
@@ -110,7 +110,7 @@ supply-chain gate is ansible (the GoDFIR-toolz build galaxy's
 ## What it produces
 
 Every lane writes `data_store/processed/<tool>/[<collection>/]<host>/…` — one
-leaf per tool, a collection-scoped run (`dxdfir process <collection> <lane>`)
+leaf per tool, a collection-scoped run (`dx process <collection> <tool>`)
 one level below it, one folder per **host** (a disk image, a capture, a staged
 log folder) and the tool's own items under that:
 
@@ -138,13 +138,13 @@ engine normalises each processed source into finished
 CAR events — one `car_<object>.jsonl` per object (13 objects) plus
 `car_relationships.jsonl` — under `processed/byakugan/<source>/`. The engine runs
 entirely inside the hardened `get-sybers/byakugan` image, cloned + built at the
-`BYAKUGAN_REF` commit pinned in its Dockerfile by `dxdfir build-docker` — never a host checkout.
+`BYAKUGAN_REF` commit pinned in its Dockerfile by `dx build images` — never a host checkout.
 Extraction happens once, in the engine, so that JSON is the contract every sink
 reads and cannot drift from what the engine emits.
 
 **Validated** by the CI **smoke test** (the real EVTX → goevtx → CAR path over
 pinned Sysmon fixtures, asserting the extracted field values) and by
-**`dxdfir verify-car`** (each CAR object populated, values sane — IPs, ports, SIDs —
+**`dx byakugan verify`** (each CAR object populated, values sane — IPs, ports, SIDs —
 `car_action` checked against the engine's model vocabulary, every row traceable to
 a source). The other lanes (Plaso, Zeek, Memory, GoDFIR-toolz) are run by hand on
 the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
@@ -155,7 +155,7 @@ the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
 - **The backend holds evidence.** The Elastic stack runs with security **on**
   — authentication, RBAC, TLS on the Elasticsearch API — its credentials live
   in the gitignored per-host secret store (`ansible/inventory/secrets/`,
-  generated by `dxdfir deploy stack`; vault-overridable) and every port binds
+  generated by `dx deploy stack`; vault-overridable) and every port binds
   `127.0.0.1`. See [SECURITY.md](.github/SECURITY.md).
 - **This handles real evidence.** `data_store/` is gitignored deny-by-default, so
   unknown/extensionless formats are covered — a safety net, not a guarantee. Check
@@ -182,7 +182,7 @@ Apache-2.0 at the repository root (see [LICENSE](LICENSE)) — the terms of the
 redistributed via the `get-sybers/byakugan` image (see [THIRD_PARTY_NOTICES.md](.github/THIRD_PARTY_NOTICES.md)).
 The pipeline code is offered under the more permissive **MIT** licence as a
 self-contained component: the `get_sybers.dxdfir` collection
-(`ansible/collections/`), which carries its own declared licence. The Go `dxdfir` front-end (`go/`) declares none of its own
+(`ansible/collections/`), which carries its own declared licence. The Go `dx` front-end (`go/`) declares none of its own
 and so carries the repository's Apache-2.0. Third-party tool obligations that fall
 on *you* are in [THIRD_PARTY_NOTICES.md](.github/THIRD_PARTY_NOTICES.md); Apache-2.0 §4
 attribution is in [NOTICE](NOTICE).

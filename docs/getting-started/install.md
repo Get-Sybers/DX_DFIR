@@ -36,12 +36,12 @@ git submodules. Already cloned flat? `git submodule update --init --recursive`.
 
 It provisions the host in order — Docker, userland tools, the docker group, the
 submodules, the pinned [Byakugan engine](https://github.com/Get-Sybers/Byakugan),
-repository permissions, the Python + Ansible venv, the Go toolchain and the `dxdfir`
+repository permissions, the Python + Ansible venv, the Go toolchain and the `dx`
 binary, and the pinned Ansible collections. Each step is idempotent and safe to re-run.
 The full step-by-step is in **[Architecture → setup flow](../architecture/setup-flow.md)**
 (and the older [Setup_Environment walkthrough](../scripts/Setup_Environment.md)).
 
-Output is themed to match the [`dxdfir` UI](the-interface.md); pass `--no-color` (or set
+Output is coloured to match the [`dx` CLI](the-interface.md); pass `--no-color` (or set
 `NO_COLOR`) for plain logs. `--help` prints the usage.
 
 > **Log out and back in once.** The script adds you to the `docker` group, but that only
@@ -50,26 +50,26 @@ Output is themed to match the [`dxdfir` UI](the-interface.md); pass `--no-color`
 ## 3. Build the tool images
 
 ```bash
-dxdfir build-docker                          # build + hardening-verify the get-sybers/* images
+dx build images                              # build + hardening-verify the get-sybers/* images
 ```
 
 Every lane runs its tool inside a hardened `get-sybers/*` container. Build them **once
 per host before your first `process`**, and again after changing anything under
-`docker/`. `dxdfir verify-images` audits the set (it fails if any is missing or
+`docker/`. `dx verify images` audits the set (it fails if any is missing or
 un-hardened). See [tool containers](../Containers.md).
 
 ## Verify the install
 
 ```bash
-dxdfir --version
-dxdfir            # on a terminal: the interactive UI; piped: the readiness dashboard
+dx --version
+dx                # the landing readout — environment readiness, collections, staged evidence
 ```
 
-Running `dxdfir` with no arguments shows a **readiness dashboard** — green rows mean the
+Running `dx` with no arguments prints the **landing readout** — green rows mean the
 repo, Python, Docker and the Byakugan engine are all in place. Anything amber/red tells
 you what's missing.
 
 ## Next
 
 - **[First run](first-run.md)** — process your first case.
-- **[The interface](the-interface.md)** — drive it from the terminal UI.
+- **[The interface](the-interface.md)** — how `dx` behaves on the terminal.

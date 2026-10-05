@@ -10,8 +10,8 @@ and gates on the single JSON summary line the container prints. The container
 discovers its inputs, batches over them, skips items that already have valid output
 and writes deterministic output; no host-side processor exists.
 
-`dxdfir process [COLLECTION] [LANE]` picks the lane; `all` runs every lane that has
-evidence. See the [command reference](../getting-started/commands.md#processing).
+`dx process [SCOPE] [TOOL]` picks the tool; `all` runs every lane that has
+evidence. See the [command reference](../getting-started/commands.md#evidence).
 
 ## The six lanes
 
@@ -87,7 +87,7 @@ A **collection** groups raw evidence into one named, registered set so the whole
 pipeline can be scoped to it. Physically it's a folder under
 `data_store/raw/collections/<NAME>/` with the lane subdirs, plus control files: a SQLite
 registry (`.registry.db`), a `.collection` marker, a log, and a `.collection.hashes`
-SHA-1 manifest. `dxdfir process <NAME> <lane>` passes the role its collection subdirs
+SHA-1 manifest. `dx process <NAME> <tool>` passes the role its collection subdirs
 as inputs and `dxdfir_<lane>_collection=<NAME>` for the output, so everything the
 run writes lands one level below the tool's leaf (`processed/<tool>/<NAME>/…`) and
 the CAR engine names every store after that path — two cases never share one.
@@ -95,11 +95,11 @@ the CAR engine names every store after that path — two cases never share one.
 The **dropzone** is `data_store/raw/sort/`. Drop a mixed pile there and:
 
 ```bash
-dxdfir register case-a          # promote data_store/raw/sort/case-a/ → a tracked collection + hash it
-dxdfir sort case-a              # magic-byte-sort loose files into the lane subdirs
-dxdfir select case-a            # make it the active target
+dx register case-a              # promote data_store/raw/sort/case-a/ → a tracked collection + hash it
+dx sort case-a                  # magic-byte-sort loose files into the lane subdirs
+dx select case-a                # make it the active target
 ```
 
 The registry read path (`list collections`, the lane and state reads) is native Go — no subprocess
 — and shares the SQLite schema as its contract with the Python writers. Full command
-list: [commands → evidence and collections](../getting-started/commands.md#evidence-and-collections).
+list: [commands → evidence](../getting-started/commands.md#evidence).

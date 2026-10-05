@@ -157,18 +157,13 @@ lean:
   `$DXDFIR_VENV` overrides) and is created by the invoking user, not root.
   It is a per-checkout dependency layer like `go/vendor/`, so it belongs
   with the checkout; the front-end resolves it by relation to the repo it
-  just located, which is what makes `dxdfir` work from any shell with no
+  just located, which is what makes `dx` work from any shell with no
   PATH edit in between; `. .venv/bin/activate` is the convention every
   python user already knows; and a system-prefix venv brought root-owned
   pip caches and a second install prefix to keep in step with the checkout.
-  An earlier release's `/opt/dxdfir/venv` is retired on the next run — and
-  so is the whole `/opt/dxdfir` prefix once the pinned collections have
-  moved into the checkout too (`.ansible/collections`, the first entry of
-  `ansible.cfg`'s `collections_path`). Nothing of the pipeline lives under
-  a system prefix any more, and an override still naming `/opt/dxdfir`
-  (`DXDFIR_VENV`, `DXDFIR_COLLECTIONS`, `DXDFIR_BIN_DIR` — a stale export
-  from an earlier release's shell) is ignored with a warning, by the script
-  and by `dxdfir` alike. Nothing lands in the home directory either:
+  The pinned collections live in the checkout too (`.ansible/collections`,
+  the first entry of `ansible.cfg`'s `collections_path`), so nothing of the
+  pipeline lives under a system prefix. Nothing lands in the home directory either:
   `ansible.cfg` sets ansible's state home (`home = .ansible`) to the
   checkout, so the `ansible-galaxy` download staging, the galaxy cache and
   token and any persistent-connection sockets live under `.ansible/`
@@ -184,17 +179,14 @@ lean:
   every run resolves dependencies from a source of truth (the in-tree
   `go/vendor/` if pre-vendored, else the proxy), nothing is cached under
   the install prefix, and a rebuild never silently rides stale modules.
-- **`dxdfir` depends on no PATH edit**: the binary is installed as a real
-  file in `/usr/local/bin`, a directory every default PATH — and sudo's
-  `secure_path` — already carries, and it resolves the venv's ansible on
-  its own. An earlier release put it under `/opt/dxdfir/bin`, reachable
-  only through the profile.d drop-in, which login shells read and nothing
-  else does (`su user`, a desktop terminal, tmux, sudo, the shell the
-  script ran in): the closing `dxdfir --help` was command-not-found until
-  a full re-login, and after one too when the drop-in had landed
-  unreadable under a strict umask. The script now **proves** the result
-  from a fresh non-login shell (`env -i bash -c 'command -v dxdfir'`, then
-  the dashboard's ansible readiness line) before it reports success.
+- **`dx` depends on no PATH edit and lands nowhere outside the checkout**:
+  the binary is installed into the repo-local `.go/bin/dx` (gitignored;
+  `$DXDFIR_BIN_DIR` overrides), not a system prefix — no `/usr/local/bin`
+  install and no `/etc/profile.d` drop-in. `dx` locates its repo and
+  resolves the venv's ansible by relation to its own location, so it works
+  from any shell. The script **proves** the result before reporting success:
+  it runs the installed `.go/bin/dx` by absolute path and checks its
+  landing-readout `ansible` readiness line is `[ok]`.
 - **One managed `/etc/profile.d/dxdfir.sh` remains, as a convenience**: the
   pinned Go toolchain (rebuilds) and the venv bin — **appended**, so the
   system python/pip keep winning — for hand-driven `ansible-playbook` in

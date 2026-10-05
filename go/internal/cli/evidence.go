@@ -16,16 +16,14 @@ import (
 	"github.com/Get-Sybers/DX_DFIR/go/internal/collection"
 	"github.com/Get-Sybers/DX_DFIR/go/internal/repo"
 	"github.com/Get-Sybers/DX_DFIR/go/internal/style"
-	"github.com/Get-Sybers/DX_DFIR/go/internal/tui"
 )
 
 // ---- shared query types ----
 //
 // The whole collection layer — status/lanes/state reads, select/unselect/
 // unregister/register/sort/promote/link writes, and the SHA-1 hash — is native
-// Go (internal/collection); nothing shells the retired
-// retired python collection module. These aliases keep the cli's
-// rendering + process-scoping code unchanged.
+// Go (internal/collection). These aliases keep the cli's rendering +
+// process-scoping code terse.
 
 type (
 	collSummary = collection.Summary
@@ -57,92 +55,52 @@ func confirm(prompt string) bool {
 	return a == "y" || a == "yes"
 }
 
-// ---- the collection verbs ----
+// ---- the evidence verbs ----
 //
-// Each verb is one run function wrapped by up to three cobra commands built
-// from the same leaf builder: the verb-first parent that takes a bare NAME as
-// sugar (`register [NAME]`), its `collection` child (`register collection
-// [NAME]`), and the hidden noun-first alias (`collection register [NAME]`).
-// A leaf builder always returns a fresh *cobra.Command — cobra allows a
-// command exactly one parent.
+// Each verb is one run function wrapped by two cobra commands built from the
+// same leaf builder: the verb-first parent that takes a bare NAME as sugar
+// (`register [NAME]`) and its `evidence` child (`register evidence [NAME]`). A
+// leaf builder always returns a fresh *cobra.Command — cobra allows a command
+// exactly one parent. The noun "evidence" names a collection (a named case) or,
+// for `list`/`process`, the staged raw evidence as a whole.
 
-// leafFn builds one spelling of a collection verb under the given Use line.
-type leafFn func(env *Env, use string) *cobra.Command
-
-// collectionVerb builds a verb-first collection command: the parent itself runs
-// the bare-NAME sugar, and its `collection` child is the spelled-out form.
-// nameUse is the NAME part of the Use line ("" / " NAME" / " [NAME]").
-func collectionVerb(env *Env, leaf leafFn, verb, nameUse string) *cobra.Command {
+// evidenceVerb builds a verb-first evidence command: the parent itself runs the
+// bare-NAME sugar, and its `evidence` child is the spelled-out form. nameUse is
+// the NAME part of the Use line ("" / " NAME" / " [NAME]").
+func evidenceVerb(env *Env, leaf leafFn, verb, nameUse string) *cobra.Command {
 	cmd := leaf(env, verb+nameUse)
 	cmd.GroupID = groupEvidence
 	cmd.Long = strings.TrimRight(cmd.Long, "\n") + "\n\n" +
-		"The noun is optional and takes either spelling — `dxdfir " + verb + nameUse + "` is\n" +
-		"`dxdfir " + verb + " collection" + nameUse + "` (or `collections`).\n" +
-		"A collection named exactly `collection`/`collections` needs the spelled-out form."
-	child := leaf(env, "collection"+nameUse)
-	child.Aliases = []string{"collections"}
+		"The noun is optional — `dx " + verb + nameUse + "` is `dx " + verb + " evidence" + nameUse + "`.\n" +
+		"A collection named exactly `evidence` needs the spelled-out form."
+	child := leaf(env, "evidence"+nameUse)
 	cmd.AddCommand(child)
 	return cmd
 }
 
 func newRegisterCmd(env *Env) *cobra.Command {
-	return collectionVerb(env, registerLeaf, "register", " [NAME]")
+	return evidenceVerb(env, registerLeaf, "register", " [NAME]")
 }
 
 func newUnregisterCmd(env *Env) *cobra.Command {
-	return collectionVerb(env, unregisterLeaf, "unregister", " NAME")
+	return evidenceVerb(env, unregisterLeaf, "unregister", " NAME")
 }
 
 func newSelectCmd(env *Env) *cobra.Command {
-	return collectionVerb(env, selectLeaf, "select", " NAME")
+	return evidenceVerb(env, selectLeaf, "select", " NAME")
 }
 
 func newUnselectCmd(env *Env) *cobra.Command {
-	return collectionVerb(env, unselectLeaf, "unselect", "")
+	return evidenceVerb(env, unselectLeaf, "unselect", "")
 }
 
 func newSortCmd(env *Env) *cobra.Command {
-	return collectionVerb(env, sortLeaf, "sort", " [NAME]")
-}
-
-// newCollectionCmd builds the hidden `dxdfir collection <verb>` alias group: the
-// noun-first spelling every verb had before the grammar went verb first. Each
-// child still runs its verb, printing cobra's deprecation note (to stderr) with
-// the verb-first spelling to use instead.
-func newCollectionCmd(env *Env) *cobra.Command {
-	parent := nounGroup("collection",
-		"Deprecated noun-first spelling of the collection verbs.",
-		"Deprecated noun-first spelling of the collection verbs. Each still runs and\n"+
-			"prints the verb-first form to use instead:\n\n"+
-			"  collection list              ->  list collections\n"+
-			"  collection register [NAME]   ->  register collection [NAME]    (or: register NAME)\n"+
-			"  collection unregister NAME   ->  unregister collection NAME    (or: unregister NAME)\n"+
-			"  collection select NAME       ->  select collection NAME        (or: select NAME)\n"+
-			"  collection unselect          ->  unselect collection           (or: unselect)\n"+
-			"  collection sort [NAME]       ->  sort collection [NAME]        (or: sort [NAME])")
-	parent.Hidden = true
-	parent.Aliases = []string{"collections"}
-	for _, alias := range []struct {
-		cmd *cobra.Command
-		now string
-	}{
-		{collectionsLeaf(env, "list"), "list collections"},
-		{registerLeaf(env, "register [NAME]"), "register collection [NAME]"},
-		{unregisterLeaf(env, "unregister NAME"), "unregister collection NAME"},
-		{selectLeaf(env, "select NAME"), "select collection NAME"},
-		{unselectLeaf(env, "unselect"), "unselect collection"},
-		{sortLeaf(env, "sort [NAME]"), "sort collection [NAME]"},
-	} {
-		alias.cmd.Deprecated = "use: dxdfir " + alias.now
-		parent.AddCommand(alias.cmd)
-	}
-	return parent
+	return evidenceVerb(env, sortLeaf, "sort", " [NAME]")
 }
 
 // ---- list collections ----
 
-// collectionsLeaf builds the collection listing (`list collections`, and the
-// hidden alias `collection list`).
+// collectionsLeaf builds the collection listing (`list collections`).
 func collectionsLeaf(env *Env, use string) *cobra.Command {
 	return &cobra.Command{
 		Use:   use,
@@ -169,7 +127,7 @@ func runListCollections(env *Env) error {
 
 func printCollectionList(st collStatus) {
 	if len(st.Registered) == 0 && len(st.Unregistered) == 0 && len(st.Candidates) == 0 {
-		fmt.Println("No collections yet. Register one:  dxdfir register <name>")
+		fmt.Println("No collections yet. Register one:  dx register <name>")
 		return
 	}
 	row := func(c collSummary, tag string) {
@@ -201,7 +159,7 @@ func printCollectionList(st collStatus) {
 		row(c, "unregistered")
 	}
 	for _, c := range st.Candidates {
-		fmt.Printf("   %-22s %s\n", c, style.Cyan("dropzone candidate — dxdfir register "+c))
+		fmt.Printf("   %-22s %s\n", c, style.Cyan("dropzone candidate — dx register "+c))
 	}
 }
 
@@ -239,7 +197,7 @@ func registerLeaf(env *Env, use string) *cobra.Command {
 			}
 			if name == "" {
 				if fromPath == "" {
-					return Fail(2, "register: NAME is required (or pass --from PATH to infer it) — see: dxdfir register --help")
+					return Fail(2, "register: NAME is required (or pass --from PATH to infer it) — see: dx register --help")
 				}
 				name = filepath.Base(fromPath)
 				fmt.Fprintln(os.Stderr, style.Grey(style.GlyphInfo+" no NAME given — using '"+name+"' (basename of --from)."))
@@ -272,7 +230,7 @@ func runRegister(env *Env, name, fromExplicit string, doHash bool) error {
 	defer cancel()
 	runner := &collect.Runner{Repo: r, Title: title}
 	updates := runner.Register(ctx, name, fromPath, doHash)
-	return exitFromErr(present(env, tui.NewCollection(env.Version), updates, cancel))
+	return exitFromErr(present(updates, cancel))
 }
 
 // ---- unregister ----
@@ -408,7 +366,7 @@ func runSort(env *Env, name string, o sortOpts) error {
 	defer cancel()
 	runner := &collect.Runner{Repo: r, Title: title}
 	updates := runner.Sort(ctx, name, o.dryRun, !o.noHash)
-	return exitFromErr(present(env, tui.NewCollection(env.Version), updates, cancel))
+	return exitFromErr(present(updates, cancel))
 }
 
 // ---- shared resolution ----
@@ -431,11 +389,11 @@ func defaultCollection(r *repo.Repo) (string, error) {
 	}
 	switch len(known) {
 	case 0:
-		return "", Fail(2, "No collections. Register one first:  dxdfir register <name>")
+		return "", Fail(2, "No collections. Register one first:  dx register <name>")
 	case 1:
 		return known[0], nil
 	default:
-		return "", Fail(2, "Several collections (%s) — pick one with `dxdfir select <name>` or pass it.",
+		return "", Fail(2, "Several collections (%s) — pick one with `dx select <name>` or pass it.",
 			strings.Join(known, ", "))
 	}
 }
@@ -468,7 +426,7 @@ func resolveCollection(r *repo.Repo, name string, noRegister bool) error {
 		}
 		return nil
 	}
-	return Fail(2, "no such collection '%s'. Register it: dxdfir register %s", name, name)
+	return Fail(2, "no such collection '%s'. Register it: dx register %s", name, name)
 }
 
 func trunc(s string, n int) string {

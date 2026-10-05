@@ -1,6 +1,6 @@
 ## Find Your Way Around
 
-The pipeline is a three-layer design: the **`dxdfir` front-end** (the Go binary,
+The pipeline is a three-layer design: the **`dx` front-end** (the Go binary,
 `go/` — the verbs) drives the **`get_sybers.dxdfir` Ansible collection**
 (orchestration), which runs the **hardened GoDFIR-toolz tool containers** (the
 per-item processing — every lane is a confined `docker run` built from the
@@ -8,8 +8,7 @@ tool's contract; no host python).
 
 ```
   $DX_DFIR
-    └── go/                                           # the dxdfir front-end (Go/termui) — verbs + dashboards; shells out, re-implements nothing
-    │   └── man/                                      # dxdfir.1 man page
+    └── go/                                           # the dx front-end (Go) — verbs; shells out, re-implements nothing
     │
     └── ansible/collections/get_sybers.dxdfir/         # the Ansible collection — orchestration
     │   └── roles/                                    # one role per source + dxdfir_images / godfir_byakugan / dxdfir_exchange / dxdfir_stack / dxdfir_cleanup
@@ -25,7 +24,7 @@ tool's contract; no host python).
     │
     └── docs/                                         # Documentation for project usage and setup
     │
-    └── evidence-taxonomy/                            # Single source of truth for the raw/ evidence lanes — one YAML per lane (subdir + magic signatures + extension claims); read by the dxdfir sort classifier and the Ansible roles' input-dir defaults
+    └── evidence-taxonomy/                            # Single source of truth for the raw/ evidence lanes — one YAML per lane (subdir + magic signatures + extension claims); read by the dx sort classifier and the Ansible roles' input-dir defaults
     │
     └── data_store/                                   # Data storage for raw and processed forensic data
         │
@@ -40,12 +39,12 @@ tool's contract; no host python).
         │   └── filesystem/documents/                 # Documents and loose filesystem artefacts
         │   └── mobile/                               # Mobile-device extractions (one folder per set)
         │   └── other_raw_data/                       # Catch-all; other_raw_data/sql holds SQLite/SQL databases
-        │   └── sort/                                 # Dropzone for staged evidence awaiting `dxdfir sort`
+        │   └── sort/                                 # Dropzone for staged evidence awaiting `dx sort`
         │   └── collections/                          # Registered collections, each sorted into the lanes above
         │
         └── dependencies/                             # Operator-supplied rulesets/tools (Hayabusa, rulesets, MemProcFS symbols)
         │
-        └── processed/                                # processed/<tool>/[<collection>/]<host>/… — what `dxdfir build-car` normalises to CAR
+        └── processed/                                # processed/<tool>/[<collection>/]<host>/… — what `dx byakugan build` normalises to CAR
             └── zeek/[<collection>/]<capture>/        # Zeek JSON (conn.json + every other log) + zeek.jsonl
             │
             └── windowlicker/[<collection>/]          # the Windows parsers (gowindowlicker lane)
@@ -69,13 +68,13 @@ tool's contract; no host python).
             └── byakugan/
             │   └── <source>/                         # the materialised CAR: car_<object>.jsonl (+ car_relationships.jsonl)
             │
-            └── byakugan-load/  exchange/             # `load-car` state; the STIX/CTI exchange's bundles
+            └── byakugan-load/  exchange/             # `byakugan load` state; the STIX/CTI exchange's bundles
 ```
 
 The CAR engine lives **outside** this tree entirely: the Byakugan engine is
 cloned + built into the hardened `get-sybers/byakugan` image
 (`docker/GoDFIR-toolz/byakugan/Dockerfile`) at the pin in the repo-root `sources.yml`, by
-`dxdfir build-docker`. The CAR lane only shells that image — nothing is checked
+`dx build images`. The CAR lane only shells that image — nothing is checked
 out on the host.
 
 The Splunk-era tree (`splunk/` with its eight apps, and a since-removed

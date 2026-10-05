@@ -43,7 +43,7 @@ These are already known. You do not need to report them.
   containers run with `--network none` (the anamnesis symbol fetch is the one
   explicit opt-in). Note that Docker's published-port rules are inserted ahead
   of the host firewall, so `ufw` will not save you from a wrong bind address —
-  check `dxdfir status stack` / `docker port` after a change to the stack's inventory data.
+  check `dx status stack` / `docker port` after a change to the stack's inventory data.
   An `--internal` network was tried once (on the Splunk-era deploy this project
   grew up on) and reverted: it blocks published ports as well, making the
   service unreachable.

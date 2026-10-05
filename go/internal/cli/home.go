@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,16 +11,14 @@ import (
 	"github.com/Get-Sybers/DX_DFIR/go/internal/model"
 	"github.com/Get-Sybers/DX_DFIR/go/internal/plain"
 	"github.com/Get-Sybers/DX_DFIR/go/internal/repo"
-	"github.com/Get-Sybers/DX_DFIR/go/internal/termdetect"
-	"github.com/Get-Sybers/DX_DFIR/go/internal/tui"
 )
 
-// runHome renders the landing dashboard for a bare `dxdfir`: a welcome header,
-// the environment-readiness panel (the checks that must be green before evidence
+// runHome renders the landing readout for a bare `dx`: a welcome header, the
+// environment-readiness panel (the checks that must be green before evidence
 // can be processed), the tracked collections, and the staged evidence per lane.
 // It is deliberately tolerant — a missing repo, absent python, or an unreadable
 // registry each degrade to a visible amber/red row rather than an error exit, so
-// the dashboard's whole job (telling the operator what is and isn't ready) still
+// the readout's whole job (telling the operator what is and isn't ready) still
 // works on a half-provisioned host.
 func runHome(env *Env, version string) error {
 	h := model.Home{Version: version}
@@ -49,15 +46,6 @@ func runHome(env *Env, version string) error {
 	}
 	wg.Wait()
 
-	if !env.ForcePlain && termdetect.UseTUI(env.ForceTUI) {
-		// Bare `dxdfir` on a terminal is the persistent interactive shell: a tabbed
-		// dashboard with a live command box driving the same CLI verbs. It declines
-		// with ErrNoTTY when the terminal can't host it, and we fall through to the
-		// plain readiness/collections listing below.
-		if err := tui.NewShell(version).Run(); !errors.Is(err, tui.ErrNoTTY) {
-			return err
-		}
-	}
 	plain.PrintHome(os.Stdout, h)
 	return nil
 }
@@ -71,7 +59,7 @@ func gatherCollections(r *repo.Repo) (colls []model.CollInfo, note, hardErr stri
 	st, err := collection.CheckStatus(r.Root)
 	if err != nil {
 		if fast := fastCollections(r); len(fast) > 0 {
-			return fast, "registry unavailable (" + firstNonEmptyLine(err.Error()) + ") - names only; `dxdfir list collections` for detail", ""
+			return fast, "registry unavailable (" + firstNonEmptyLine(err.Error()) + ") - names only; `dx list collections` for detail", ""
 		}
 		return nil, "", "collection registry unavailable: " + firstNonEmptyLine(err.Error())
 	}

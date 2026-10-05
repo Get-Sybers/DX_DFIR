@@ -59,7 +59,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # The repo's own venv first (what setup-environment.sh installs; the same
-# resolution dxdfir uses), then whatever ansible-playbook PATH carries.
+# resolution dx uses), then whatever ansible-playbook PATH carries.
 _venv="${DXDFIR_VENV:-$REPO_ROOT_DIR/.venv}"
 if [[ -x "$_venv/bin/ansible-playbook" ]]; then
     PATH="$_venv/bin:$PATH"
@@ -105,7 +105,7 @@ case "$MODE" in
         run_playbook dxdfir-images-load.yml || die "Image load failed."
         echo "🔒 Verifying the hardened image inventory (dxdfir-verify-images.yml)..."
         run_playbook dxdfir-verify-images.yml \
-            || die "Image inventory verification FAILED (see: dxdfir verify-images)."
+            || die "Image inventory verification FAILED (see: dx verify images)."
         ;;
     save)
         if [[ "$BUILD_FIRST" -eq 1 ]]; then

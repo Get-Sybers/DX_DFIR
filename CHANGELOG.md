@@ -7,6 +7,38 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Changed
+- **The CLI is redesigned around a consistent `dx <verb> <noun>` grammar and the
+  binary is renamed `dxdfir` → `dx`.** Commands read verb first — `deploy stack`,
+  `register evidence NAME`, `list evidence`, `process evidence [scope] [tool]`; the
+  evidence verbs still take a bare NAME in place of the noun (`select NAME`). The
+  CAR and STIX/OpenCTI commands fold into a single `byakugan` tool namespace
+  (`byakugan build` / `verify` / `load` / `export-timeline` / `export-stix` /
+  `behaviour` / `pull` / `sightings`, replacing `build-car` / `verify-car` /
+  `load-car` / `build-timeline` / `stix …`). The image setup verbs become
+  `build images` / `verify images` (were `build-docker` / `verify-images`), and
+  one `purge` verb now covers the destructive teardowns — `purge stack` (was
+  `destroy stack`), `purge evidence` / `purge car` / `purge images` (were
+  `cleanup processed` / `cleanup car` / `cleanup docker`). `restart stack` and
+  `update stack` are new. The Ansible layer (playbook names, role names, var
+  prefixes, the `get_sybers.dxdfir` collection) is unchanged — only the
+  user-facing command surface moved.
+- **`process` scope accepts a raw-evidence type**, not just a collection: e.g.
+  `dx process pcaps zeek` scopes the run to the tools that read pcaps.
+
+### Removed
+- **The terminal UI is gone** — the `termui` dashboard and the persistent
+  interactive shell, together with the `--tui` / `--no-tui` flags, the
+  `DXDFIR_PROGRESS=json` bridge, the `DXDFIR_THEME` "Sunset" theming, and the
+  TTY-detection used only to choose between them. A bare `dx` now prints a plain
+  landing readout; long-running verbs stream plain line progress on stderr while
+  stdout stays a clean data channel. This drops three Go dependencies from the
+  stack — `github.com/gizak/termui/v3`, `github.com/mattn/go-runewidth`, and
+  `github.com/nsf/termbox-go` (plus their transitive deps) — and removes the
+  internal `tui` and `termdetect` packages.
+- **The committed man page is removed** (`go/man/dxdfir.1`). `dx --help`, at every
+  level, is the command reference.
+
 ### Added
 - **The dashboards show the running build version** in the top header
   (`dxdfir 0.6.0 (<rev>, dirty)`). The revision and dirty flag come from

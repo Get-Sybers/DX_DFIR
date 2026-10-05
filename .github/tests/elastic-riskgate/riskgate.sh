@@ -53,7 +53,7 @@ if [[ -z "${ES_PASSWORD:-}" ]]; then
         fi
     done
 fi
-[[ -n "${ES_PASSWORD:-}" ]] || die "ES_PASSWORD is not set and no elastic.env handoff carries ELASTIC_PASSWORD — run \`dxdfir deploy stack\` first, or export ES_PASSWORD"
+[[ -n "${ES_PASSWORD:-}" ]] || die "ES_PASSWORD is not set and no elastic.env handoff carries ELASTIC_PASSWORD — run \`dx deploy stack\` first, or export ES_PASSWORD"
 case "$ES_PASSWORD" in
     *change-me*) die "ELASTIC_PASSWORD still holds the .env.example placeholder — the stack would not have started with it" ;;
 esac
@@ -72,7 +72,7 @@ if [[ -z "${ES_CA:-}" && "$RISKGATE_INSECURE" != "1" && "$ES_URL" == https://* ]
         ES_CA="$TMP_DIR/ca.crt"
         note "CA fetched from the compose-era elasticsearch container"
     fi
-    [[ -n "${ES_CA:-}" ]] || die "no CA for $ES_URL: run \`dxdfir deploy stack\` (writes ansible/inventory/secrets/<host>/certs/ca/ca.crt) — or set ES_CA, or RISKGATE_INSECURE=1"
+    [[ -n "${ES_CA:-}" ]] || die "no CA for $ES_URL: run \`dx deploy stack\` (writes ansible/inventory/secrets/<host>/certs/ca/ca.crt) — or set ES_CA, or RISKGATE_INSECURE=1"
 fi
 [[ -z "${ES_CA:-}" || -s "$ES_CA" ]] || die "ES_CA=$ES_CA is not a readable file"
 
