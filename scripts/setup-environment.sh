@@ -488,6 +488,6 @@ fi
 # pretend to set it; nothing outside the checkout is touched.
 section "Run dx"
 ok "dx is installed at $DXDFIR_BIN_DIR/dx"
-detail "it is not on your PATH — add it for this shell (or append to your shell rc):"
+detail "It is not on your PATH — add it for this shell (or append to your shell rc):"
 detail "  export PATH=\"$DXDFIR_BIN_DIR:\$PATH\""
 detail "then run:  dx --help"
