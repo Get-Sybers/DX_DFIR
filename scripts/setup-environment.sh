@@ -289,6 +289,9 @@ section "Repository ownership + permissions"
 # leaving the checkout root-owned.
 getent group docker >/dev/null 2>&1 || $SUDO groupadd --system docker || true
 if getent group docker >/dev/null 2>&1; then
+    id -nG "$RUN_USER" 2>/dev/null | tr ' ' '\n' | grep -qx docker \
+        || $SUDO usermod -aG docker "$RUN_USER" \
+        || warn "Could not add $RUN_USER to the docker group — run 'sudo usermod -aG docker $RUN_USER' manually."
     OWN_SPEC="$RUN_USER:docker"
 else
     OWN_SPEC="$RUN_USER"
