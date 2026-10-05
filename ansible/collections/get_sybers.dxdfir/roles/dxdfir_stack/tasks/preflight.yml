@@ -1,7 +1,7 @@
 ---
 # facts before touching the stack; the engine gate comes first — and it computes
-# the privilege-decision facts (_dxdfir_become / _dxdfir_privileged /
-# _dxdfir_operator), because docker_ensure.yml is ALSO a reusable entry point run
+# the privilege-decision facts (dxdfir_stack_escalate / dxdfir_stack_privileged /
+# dxdfir_stack_operator), because docker_ensure.yml is ALSO a reusable entry point run
 # directly by dxdfir-bootstrap.yml, so it cannot assume preflight set them.
 - name: "stack-preflight | ensure the docker engine"
   ansible.builtin.include_tasks: docker_ensure.yml

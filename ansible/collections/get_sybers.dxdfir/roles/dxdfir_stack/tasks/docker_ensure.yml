@@ -13,17 +13,17 @@
 - name: "stack-docker | privilege decision facts"
   ansible.builtin.set_fact:
     # escalate per-task only when asked AND not already root (no double sudo)
-    _dxdfir_become: >-
+    dxdfir_stack_escalate: >-
       {{ (dxdfir_stack_become | bool)
          and not ((ansible_facts.effective_user_id | default(-1)) | int == 0) }}
     # drives the root:root 0640 key posture + the opt-in assert
-    _dxdfir_privileged: >-
+    dxdfir_stack_privileged: >-
       {{ ((ansible_facts.effective_user_id | default(-1)) | int == 0)
          or (dxdfir_stack_become | bool) }}
     # the human operator to add to the docker group — correct under BOTH
     # `sudo dx …` (SUDO_USER is the operator) and an escalating `dx deploy stack`
     # (SUDO_USER is empty at gather time, so fall back to the connection user)
-    _dxdfir_operator: >-
+    dxdfir_stack_operator: >-
       {{ ansible_facts.env.SUDO_USER
          if (ansible_facts.env.SUDO_USER | default('')) not in ['', 'root']
          else (ansible_facts.user_id | default('')) }}
@@ -80,7 +80,7 @@
 
 # ---- deploy's opt-in: install the engine (setup-environment.sh, as state) --
 - name: "stack-docker | install the engine (deploy's opt-in)"
-  become: "{{ _dxdfir_become }}"
+  become: "{{ dxdfir_stack_escalate }}"
   when:
     - not dxdfir_stack_docker_installed | bool
     - dxdfir_stack_install_docker | bool
@@ -202,24 +202,24 @@
 
 # ---- docker group: privileged only, and never on status/stop/destroy (read/teardown verbs must not mutate accounts)
 - name: "stack-docker | docker group + operator membership (privileged)"
-  become: "{{ _dxdfir_become }}"
+  become: "{{ dxdfir_stack_escalate }}"
   when:
     - dxdfir_stack_install_docker | bool or dxdfir_stack_start_docker | bool
-    - _dxdfir_privileged | bool
+    - dxdfir_stack_privileged | bool
   block:
     - name: "stack-docker | the docker group exists"
       ansible.builtin.group:
         name: docker
         state: present
 
-    # _dxdfir_operator is the human operator under BOTH `sudo dx` and an escalating `dx deploy stack`
+    # dxdfir_stack_operator is the human operator under BOTH `sudo dx` and an escalating `dx deploy stack`
     - name: "stack-docker | hand the operator docker-group membership"
       ansible.builtin.user:
-        name: "{{ _dxdfir_operator }}"
+        name: "{{ dxdfir_stack_operator }}"
         groups: docker
         append: true
       register: dxdfir_stack_docker_member
-      when: _dxdfir_operator not in ['', 'root']
+      when: dxdfir_stack_operator not in ['', 'root']
 
     - name: "stack-docker | note the fresh membership"
       # noqa: no-handler — an operator-facing note, not a notify pattern: `changed`
@@ -227,7 +227,7 @@
       # reminder applies.
       ansible.builtin.debug:
         msg: >-
-          {{ _dxdfir_operator }} was just added to the docker group —
+          {{ dxdfir_stack_operator }} was just added to the docker group —
           log out and back in (or `newgrp docker`) for it to take effect.
       when: dxdfir_stack_docker_member is changed
 
@@ -246,7 +246,7 @@
   when: not dxdfir_stack_docker_up | bool
 
 - name: "stack-docker | start the daemon (deploy/start's opt-in)"
-  become: "{{ _dxdfir_become }}"
+  become: "{{ dxdfir_stack_escalate }}"
   when:
     - dxdfir_stack_start_docker | bool
     - not dxdfir_stack_docker_up | bool
