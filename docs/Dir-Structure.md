@@ -14,11 +14,9 @@ tool's contract; no host python).
     │   └── roles/                                    # one role per source + dxdfir_images / godfir_byakugan / dxdfir_exchange / dxdfir_stack / dxdfir_cleanup
     │   └── playbooks/                                # dxdfir-process-* / dxdfir-build-images / dxdfir-verify-images / dxdfir-build-car / dxdfir-verify-car / dxdfir-car-timeline / dxdfir-exchange-* / dxdfir-stack-* / dxdfir-cleanup
     │
-    └── scripts/                                      # Host provisioning: setup, image save/load, the offline bundle (bash)
+    └── scripts/                                      # Host provisioning: setup, image save/load, the offline bundle (bash); dev/ holds unsupported one-off helpers (fetch-samples, set-version, cold-start)
     │
     └── docker/                                       # Container builds — the hardened get-sybers/* tool images, the GoDFIR-toolz submodule (every tool-image build context), Byakugan's Elastic-native stack (elastic/)
-    │
-    └── dev-scripts/                                  # Experimental/one-off helpers, unsupported (e.g. the Plaso output module)
     │
     └── .github/                                      # CI workflows + the check harness (tests/: run-checks.sh, smoke-test.sh, the Elastic risk gate) + CONTRIBUTING / SECURITY / THIRD_PARTY_NOTICES
     │

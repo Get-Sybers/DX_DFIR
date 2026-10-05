@@ -40,9 +40,9 @@ wheels are covered below). The engine is no longer shipped as a separate
 
 ### DFIR test samples — catalogued, not redistributed
 
-**This repository ships no sample data at all.** `dev-scripts/samples-manifest.tsv`
+**This repository ships no sample data at all.** `scripts/dev/samples-manifest.tsv`
 catalogues 860 files (2.8 TB) held by [Digital Corpora](https://digitalcorpora.org/),
-recording their public URLs, sizes and hashes so `dev-scripts/fetch-samples.sh`
+recording their public URLs, sizes and hashes so `scripts/dev/fetch-samples.sh`
 can retrieve them. Nothing is copied into this repository, so **no
 redistribution obligation attaches to this project** for any of it.
 

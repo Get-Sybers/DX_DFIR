@@ -24,7 +24,7 @@ group "Shell syntax"
 # ------------------------------------------------------------------------------
 while IFS= read -r f; do
     if bash -n "$f" 2>/dev/null; then pass "$f"; else fail "$f does not parse"; fi
-done < <(find scripts dev-scripts .github/tests -name "*.sh" -type f 2>/dev/null | sort)
+done < <(find scripts .github/tests -name "*.sh" -type f 2>/dev/null | sort)
 
 # ------------------------------------------------------------------------------
 group "Shellcheck"
@@ -33,7 +33,7 @@ if command -v shellcheck >/dev/null 2>&1; then
     while IFS= read -r f; do
         # -S error: only hard errors gate. Style warnings are noise for now.
         if shellcheck -S error "$f" >/dev/null 2>&1; then pass "$f"; else fail "shellcheck errors in $f"; fi
-    done < <(find scripts dev-scripts .github/tests -name "*.sh" -type f 2>/dev/null | sort)
+    done < <(find scripts .github/tests -name "*.sh" -type f 2>/dev/null | sort)
 else
     skip "shellcheck not installed"
 fi

@@ -14,7 +14,7 @@ it does **not** run the pipeline. Wired into CI via `.github/workflows/checks.ym
 
 Groups it runs:
 
-- **Shell** — `bash -n` + `shellcheck -S error` over `scripts/`, `dev-scripts/`, `.github/tests/`.
+- **Shell** — `bash -n` + `shellcheck -S error` over `scripts/` (incl. `scripts/dev/`) and `.github/tests/`.
 - **Collection requirements** — asserts every collection dep is an exact `X.Y.Z` pin
   covering every `galaxy.yml` dependency, and that `setup-environment.sh` installs it.
 - **Ansible lint** — `ansible-lint --profile production`.
