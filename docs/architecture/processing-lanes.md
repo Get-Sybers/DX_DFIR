@@ -5,7 +5,7 @@ after it. There are six.
 Each is an Ansible role that declares one or more runs of a
 [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) tool image and delegates
 them to a shared skeleton, which builds each confined `docker run` purely from the
-tool's `contract.yml` — `-e` for its environment variables, `-v` for its mounts —
+tool's `contract.yml` (`-e` for its environment variables, `-v` for its mounts)
 and gates on the single JSON summary line the container prints. The container
 discovers its inputs, batches over them, skips items that already have valid output
 and writes deterministic output; no host-side processor exists.
@@ -16,39 +16,39 @@ evidence. See the [command reference](../getting-started/commands.md#evidence).
 ## The six lanes
 
 Every lane writes `data_store/processed/<tool>/[<collection>/]<host>/…`: one leaf
-per tool, a collection-scoped run one level below it, one folder per **host** — the
+per tool, a collection-scoped run one level below it, one folder per **host** (the
 evidence item: a disk image, a capture, a memory image, a folder of loose logs
-staged as `logs/<os>/<host>/` — and the tool's own items under that.
+staged as `logs/<os>/<host>/`), and the tool's own items under that.
 
 | Lane (aliases) | Evidence in | Tool | Container(s) | Output under `data_store/processed/` |
 |---|---|---|---|---|
 | **zeek** | Packet captures (`data_store/raw/pcaps`) | Zeek → JSON logs | `get-sybers/zeek` | `zeek/[<collection>/]<capture>/*.json` + `zeek.jsonl` |
-| **gowindowlicker** (`windowlicker`, `lick`, `evtx`) | Windows hosts: loose event logs (`raw/logs/winevt/<host>/`) and disk images + VM exports (`raw/disk_images`, `raw/VM_files`), exported once by the shared [`dxdfir_export`](../../ansible/collections/get_sybers.dxdfir/roles/dxdfir_export/README.md) step | The [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) Windows parsers — every one a sub-tool of one static-Go image: goevtx, gore, gosbe, gomft, goprefetch, goese, goamcache, goappcompat, gorb, gole, gojle, gowxt — one run per (parser, host) | `get-sybers/gowindowlicker` (+ `get-sybers/plaso` for the export) | `windowlicker/[<collection>/]<subtool>/<host>/<item>/<subtool>.jsonl` |
-| **godaemonhunter** (`daemonhunter`, `hunt`) | Linux and macOS hosts: loose logs / root trees (`raw/logs/linux/<host>/`) and every disk image, run ON the image | The GoDFIR-toolz daemon matrix: Layer 1 (gohost, gousers, gonetwork; gomachost, gomacusers for a Mac) into a per-host knowledge store, then the daemon parsers (gojournal, goauditd, gowtmp, gosyslog, gounit, gocron, goshell, gotrash, goctl, golaunchd) enriched by it — one run per (parser, host); a Mac's System volume pulled in a second pass | `get-sybers/godaemonhunter` | `daemonhunter/[<collection>/]<subtool>/<host>/<item>/<subtool>.jsonl` + `knowledge/<host>/` |
+| **gowindowlicker** (`windowlicker`, `lick`, `evtx`) | Windows hosts: loose event logs (`raw/logs/winevt/<host>/`) and disk images + VM exports (`raw/disk_images`, `raw/VM_files`), exported once by the shared [`dxdfir_export`](../../ansible/collections/get_sybers.dxdfir/roles/dxdfir_export/README.md) step | The [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) Windows parsers, each a sub-tool of one static-Go image (goevtx, gore, gosbe, gomft, goprefetch, goese, goamcache, goappcompat, gorb, gole, gojle, gowxt): one run per (parser, host) | `get-sybers/gowindowlicker` (+ `get-sybers/plaso` for the export) | `windowlicker/[<collection>/]<subtool>/<host>/<item>/<subtool>.jsonl` |
+| **godaemonhunter** (`daemonhunter`, `hunt`) | Linux and macOS hosts: loose logs / root trees (`raw/logs/linux/<host>/`) and every disk image, run ON the image | The GoDFIR-toolz daemon matrix: Layer 1 (gohost, gousers, gonetwork; gomachost, gomacusers for a Mac) into a per-host knowledge store, then the daemon parsers (gojournal, goauditd, gowtmp, gosyslog, gounit, gocron, goshell, gotrash, goctl, golaunchd) enriched by it, one run per (parser, host); a Mac's System volume pulled in a second pass | `get-sybers/godaemonhunter` | `daemonhunter/[<collection>/]<subtool>/<host>/<item>/<subtool>.jsonl` + `knowledge/<host>/` |
 | **anamnesis** (`memory`) | Memory images (`raw/memory`) | [anamnesis](https://github.com/Get-Sybers/Anamnesis) (MemProcFS) | `get-sybers/anamnesis` | `anamnesis/[<collection>/]<image>/plugins/*.jsonl` + `car.db` |
 | **plaso** (`log2timeline`, `psort`) | Disk images + VM exports | Plaso (`log2timeline` → `psort` sub-tools) | `get-sybers/plaso` | `log2timeline/[<collection>/]<host>/<host>.plaso` + `timeline.jsonl`, side by side |
 | **signatures** | loose files · memory · PCAPs · event-log hosts · disk images (+ their export) | YARA · Suricata replay · Hayabusa Sigma · gomount→goyara disk scan (four sub-tools of one image) | `get-sybers/signatures` | `detections/{yara,suricata,hayabusa}/[<collection>/]<host>/` |
 
-`godfir-toolz`, the retired lane that ran both matrices, is a group: it runs
-`gowindowlicker` + `godaemonhunter`. Disk images are exported once into the shared
-stage `processed/_extracted/[<collection>/]<image>/export/` — the artefact set
+`godfir-toolz` is a group alias: it runs `gowindowlicker` + `godaemonhunter`.
+Disk images are exported once into the shared stage
+`processed/_extracted/[<collection>/]<image>/export/`. That artefact set
 (registry hives + transaction logs, Amcache, jump lists, `$MFT`, Prefetch, SRUM,
-the event logs, the Linux core: gomount's `windows-core` + `linux-core` sets) —
+the event logs, the Linux core: gomount's `windows-core` + `linux-core` sets)
 is a utility no lane includes: gowindowlicker, godaemonhunter and signatures
 (hayabusa and the scan) all run **on** the image through the gomount baked
-into each and export nothing. An operator's playbook can still write the stage
+into each and export nothing. An operator's playbook can write the stage
 first; the others find every image done and skip. The stage is `_`-prefixed:
 never a CAR source, never shipped.
 
 Each tool discovers its items by **content first** (magic bytes / signatures),
-extension as a fallback — so a mislabelled `.pcap` is still recognised. Every tool
+extension as a fallback, so a mislabelled `.pcap` is still recognised. Every tool
 runs in a [hardened container](../Containers.md): fixed non-root user, no network,
 read-only rootfs.
 
 ## The shared lane skeleton
 
-Each lane role (`godfir_zeek`, `godfir_gowindowlicker`, …) carries only its own per-lane piece —
-asserting its inputs and declaring its runs (`{contract, subtool, env, mounts}`) —
+Each lane role (`godfir_zeek`, `godfir_gowindowlicker`, …) carries only its own per-lane piece
+(asserting its inputs and declaring its runs, `{contract, subtool, env, mounts}`),
 then delegates to the shared **`dxdfir_lane`** role. That skeleton is the same for
 every lane:
 
@@ -72,7 +72,7 @@ each read-only evidence mount. The contract's exit table is honoured: 0 success,
 config error (fails).
 
 This is the house rule in action: **the role groups, the playbook decides, and
-idempotence lives in the tool container** — an item whose output already exists is
+idempotence lives in the tool container**: an item whose output already exists is
 skipped by the tool, not in an Ansible `when:`. See
 [Ansible standards](../reference/ansible-standards.md).
 
@@ -90,7 +90,7 @@ registry (`.registry.db`), a `.collection` marker, a log, and a `.collection.has
 SHA-1 manifest. `dx process <NAME> <tool>` passes the role its collection subdirs
 as inputs and `dxdfir_<lane>_collection=<NAME>` for the output, so everything the
 run writes lands one level below the tool's leaf (`processed/<tool>/<NAME>/…`) and
-the CAR engine names every store after that path — two cases never share one.
+the CAR engine names every store after that path, so two cases never share one.
 
 The **dropzone** is `data_store/raw/sort/`. Drop a mixed pile there and:
 
@@ -100,6 +100,6 @@ dx sort case-a                  # magic-byte-sort loose files into the lane subd
 dx select case-a                # make it the active target
 ```
 
-The registry read path (`list collections`, the lane and state reads) is native Go — no subprocess
-— and shares the SQLite schema as its contract with the Python writers. Full command
+The registry read path (`list collections`, the lane and state reads) is native Go, no
+subprocess, and shares the SQLite schema as its contract with the Python writers. Full command
 list: [commands → evidence](../getting-started/commands.md#evidence).

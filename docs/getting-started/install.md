@@ -7,13 +7,13 @@ Debian/Ubuntu codename). One script provisions everything.
 
 - A Debian/Ubuntu x86-64 or arm64 host you can `sudo` on (or run as root).
 - **Headroom.** No hard minimum, but the [Elastic stack](../architecture/the-stack.md)
-  alone reserves a 1 GB JVM heap and processing spins several tool containers — plan for
+  alone reserves a 1 GB JVM heap and processing spins several tool containers, so plan for
   **≥ 8 GB RAM** and generous free disk (evidence is copied through
   `raw → processed → car`, so budget a few times the size of your evidence).
-- Network access on first install — Docker's apt repo, the pinned Go toolchain, the
+- Network access on first install: Docker's apt repo, the pinned Go toolchain, the
   Byakugan engine checkout, and the Python/Ansible dependencies are all fetched.
   (Air-gapped installs: provision connected, save the image tarballs with
-  `scripts/save-docker-images.sh`, disconnect — a `setup-environment.sh` re-run
+  `scripts/save-docker-images.sh`, disconnect, and a `setup-environment.sh` re-run
   with no route out loads them instead of building. See the
   [scripts overview](../scripts/Scripts-Overview.md).)
 
@@ -34,12 +34,12 @@ git submodules. Already cloned flat? `git submodule update --init --recursive`.
 ./scripts/setup-environment.sh --yes        # --yes skips the prompts; drop it to be asked
 ```
 
-It provisions the host in order — Docker, userland tools, the docker group, the
+It provisions the host in order: Docker, userland tools, the docker group, the
 submodules, the pinned [Byakugan engine](https://github.com/Get-Sybers/Byakugan),
 repository permissions, the Python + Ansible venv, the Go toolchain and the `dx`
 binary, and the pinned Ansible collections. Each step is idempotent and safe to re-run.
 The full step-by-step is in **[Architecture → setup flow](../architecture/setup-flow.md)**
-(and the older [Setup_Environment walkthrough](../scripts/Setup_Environment.md)).
+(with more in the [Setup_Environment walkthrough](../scripts/Setup_Environment.md)).
 
 Output is coloured to match the [`dx` CLI](the-interface.md); pass `--no-color` (or set
 `NO_COLOR`) for plain logs. `--help` prints the usage.
@@ -62,14 +62,14 @@ un-hardened). See [tool containers](../Containers.md).
 
 ```bash
 dx --version
-dx                # the landing readout — environment readiness, collections, staged evidence
+dx                # the landing readout: environment readiness, collections, staged evidence
 ```
 
-Running `dx` with no arguments prints the **landing readout** — green rows mean the
+Running `dx` with no arguments prints the **landing readout**: green rows mean the
 repo, Python, Docker and the Byakugan engine are all in place. Anything amber/red tells
 you what's missing.
 
 ## Next
 
-- **[First run](first-run.md)** — process your first case.
-- **[The interface](the-interface.md)** — how `dx` behaves on the terminal.
+- **[First run](first-run.md)**: process your first case.
+- **[The interface](the-interface.md)**: how `dx` behaves on the terminal.

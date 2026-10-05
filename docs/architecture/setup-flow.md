@@ -2,7 +2,7 @@
 
 `scripts/setup-environment.sh` provisions an online host in guarded, idempotent
 steps. Each is safe to re-run; a step that finds its work already done reports and moves
-on. (The older prose walkthrough is [Setup_Environment.md](../scripts/Setup_Environment.md);
+on. (A prose walkthrough is [Setup_Environment.md](../scripts/Setup_Environment.md);
 the source is the best reference.)
 
 ```mermaid
@@ -15,29 +15,28 @@ flowchart LR
 | # | Step | What it provisions |
 |---|---|---|
 | 1 | **Userland tools** | `ca-certificates curl git gnupg unzip python3 python3-venv tar` (only what is missing). |
-| 2 | **Git submodules** | `submodule update --init --recursive` — [anamnesis](https://github.com/Get-Sybers/Anamnesis) (memory lane) and [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) (the tool images). |
-| 3 | **Docker group + ownership** | The `docker` group is pre-created when absent (`groupadd --system docker` — docker itself only arrives at step 7, but the chown needs the group NOW on a fresh host), then `chown -R <user>:docker` + `chmod -R u=rwX,g=rX,o=` over the checkout (capital `X` keeps dirs traversable for the group). |
-| 4 | **Ansible (pinned)** | Create the repo's own `.venv` (gitignored, as the invoking user — no sudo, `$DXDFIR_VENV` overrides), `pip install -r requirements.txt` (ansible-core + the docker SDK the collection's modules import — no host python package). `dx` resolves this venv by relation to the checkout, so nothing needs it on PATH. |
-| 5 | **Go + dx** | Install the pinned, SHA-256-verified Go toolchain into the repo-local `.go/` (if absent/too old), build the `dx` binary unprivileged from a clean ephemeral cache, and install it into the repo-local `.go/bin/dx` (gitignored; `$DXDFIR_BIN_DIR` overrides). Nothing lands outside the checkout — no system prefix, no `/usr/local/bin`, no `/etc/profile.d` drop-in: `dx` finds its repo and venv by relation to its own location, so it works from any shell with nothing on PATH. |
-| 6 | **Ansible collections** | `ansible-galaxy collection install` the collection's pinned `requirements.yml` into the checkout's own `.ansible/collections` (gitignored, as the invoking user — the first entry of `ansible.cfg`'s `collections_path`), with ansible's state home (`ANSIBLE_HOME`, `ansible.cfg`'s `home`) in the checkout's `.ansible/` too, so the galaxy download staging and cache never touch `~/.ansible`. The GoDFIR-toolz **build galaxy** installs NOTHING on the primary path: its roles resolve in place from the submodule (`docker/GoDFIR-toolz/roles` on the repo-root `roles_path`) at the gitlink pin; only a checkout without the submodule has it imported by `ansible-galaxy` from the `.gitmodules` source at the gitlink revision, into the shared path `roles_path` also covers as its degraded-only last entry. |
-| 7 | **Docker engine (ansible)** | `dxdfir-bootstrap.yml` — engine, daemon and the invoking user's docker-group membership, one implementation shared with the deploy. The script invokes the venv's `ansible-playbook` by ABSOLUTE path: sudo's `secure_path` never carries the venv, so a bare `sudo ansible-playbook` is command-not-found on exactly the fresh host this step exists for. |
-| 8 | **Proof** | From a fresh non-login shell with the default PATH (`env -i bash -c …`): `command -v dx` must resolve to the installed file, and the landing readout's `ansible` readiness line must be `[ok]` — the script fails here rather than report a success the operator's next shell would contradict. The docker group is the one thing that still needs a new shell, and only when the membership is newer than the running one; the script detects that case and says `newgrp docker` or re-login. |
+| 2 | **Git submodules** | `submodule update --init --recursive`: [anamnesis](https://github.com/Get-Sybers/Anamnesis) (memory lane) and [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) (the tool images). |
+| 3 | **Docker group + ownership** | The `docker` group is pre-created when absent (`groupadd --system docker`; docker itself only arrives at step 7, but the chown needs the group now on a fresh host), then `chown -R <user>:docker` + `chmod -R u=rwX,g=rX,o=` over the checkout (capital `X` keeps dirs traversable for the group). |
+| 4 | **Ansible (pinned)** | Create the repo's own `.venv` (gitignored, as the invoking user; no sudo, `$DXDFIR_VENV` overrides), `pip install -r requirements.txt` (ansible-core + the docker SDK the collection's modules import; no host python package). `dx` resolves this venv by relation to the checkout, so nothing needs it on PATH. |
+| 5 | **Go + dx** | Install the pinned, SHA-256-verified Go toolchain into the repo-local `.go/` (if absent/too old), build the `dx` binary unprivileged from a clean ephemeral cache, and install it into the repo-local `.go/bin/dx` (gitignored; `$DXDFIR_BIN_DIR` overrides). Nothing lands outside the checkout: no system prefix, no `/usr/local/bin`, no `/etc/profile.d` drop-in. `dx` finds its repo and venv by relation to its own location, so it works from any shell with nothing on PATH. |
+| 6 | **Ansible collections** | `ansible-galaxy collection install` the collection's pinned `requirements.yml` into the checkout's own `.ansible/collections` (gitignored, as the invoking user; the first entry of `ansible.cfg`'s `collections_path`), with ansible's state home (`ANSIBLE_HOME`, `ansible.cfg`'s `home`) in the checkout's `.ansible/` too, so the galaxy download staging and cache never touch `~/.ansible`. The GoDFIR-toolz **build galaxy** installs NOTHING on the primary path: its roles resolve in place from the submodule (`docker/GoDFIR-toolz/roles` on the repo-root `roles_path`) at the gitlink pin; only a checkout without the submodule has it imported by `ansible-galaxy` from the `.gitmodules` source at the gitlink revision, into the shared path `roles_path` also covers as its degraded-only last entry. |
+| 7 | **Docker engine (ansible)** | `dxdfir-bootstrap.yml`: engine, daemon and the invoking user's docker-group membership, one implementation shared with the deploy. The script invokes the venv's `ansible-playbook` by ABSOLUTE path: sudo's `secure_path` never carries the venv, so a bare `sudo ansible-playbook` is command-not-found on exactly the fresh host this step exists for. |
+| 8 | **Proof** | From a fresh non-login shell with the default PATH (`env -i bash -c …`): `command -v dx` must resolve to the installed file, and the landing readout's `ansible` readiness line must be `[ok]`. The script fails here rather than report a success the operator's next shell would contradict. The docker group is the one thing that still needs a new shell, and only when the membership is newer than the running one; the script detects that case and says `newgrp docker` or re-login. |
 
-> The Byakugan CAR engine is **no longer provisioned on the host**. It is cloned + built into the hardened [`get-sybers/byakugan`](https://github.com/Get-Sybers/Byakugan) image at the `sources.yml` pin (`docker/GoDFIR-toolz/byakugan/Dockerfile`, parse binary and model sources baked in) by `dx build images`, alongside the other tool images — so the CAR lane only shells that image.
+> The Byakugan CAR engine is **not provisioned on the host**. It is cloned + built into the hardened [`get-sybers/byakugan`](https://github.com/Get-Sybers/Byakugan) image at the `sources.yml` pin (`docker/GoDFIR-toolz/byakugan/Dockerfile`, parse binary and model sources baked in) by `dx build images`, alongside the other tool images, so the CAR lane only shells that image.
 
 ## Why these choices
 
-A few guards encode ways an earlier revision failed on a clean machine — they're worth
-knowing:
+A few guards matter on a clean machine and are worth knowing:
 
 - **`sudo` is resolved once and may be empty.** Minimal container images are often
-  already root and carry no `sudo`; hardcoding it died on line one.
+  already root and carry no `sudo`, so the scripts never hardcode it.
 - **`--editable` install is required, not a preference.** The Python package resolves
-  paths relative to its own files (the `docker/GoDFIR-toolz` submodule — its
-  `images.yml` manifest included — and `data_store/`). A copying install would put it under `site-packages` where none of
+  paths relative to its own files (the `docker/GoDFIR-toolz` submodule, its
+  `images.yml` manifest included, and `data_store/`). A copying install would put it under `site-packages` where none of
   those resolve.
 - **Capital-`X` permissions.** `u=rwX,g=rX` applies `+x` to directories and to files that
-  already carry it — so the `docker` group can traverse the tree and the `.sh` files stay
+  already carry it, so the `docker` group can traverse the tree and the `.sh` files stay
   runnable, while evidence files stay non-executable.
 - **Pinned, verified Go, built clean.** The toolchain tarball is checksum-verified against
   the go.dev release index before extraction, and the build runs from a throwaway module
@@ -48,6 +47,6 @@ knowing:
 
 Air-gapped installs provision connected first, then disconnect: run
 `scripts/setup-environment.sh` online (build images, install the toolchain),
-save the tarballs with `scripts/save-docker-images.sh`, move/disconnect — a
+save the tarballs with `scripts/save-docker-images.sh`, move/disconnect. A
 re-run with no route out falls back to loading those tarballs. See the
 [scripts overview](../scripts/Scripts-Overview.md).

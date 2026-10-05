@@ -2,21 +2,22 @@
 
 ## Overview
 The `setup-environment.sh` script prepares a host to run the DX_DFIR (Digital
-Forensics and Incident Response) scripts. It installs Docker and the userland
-tools the processing scripts depend on, adds the invoking user to the Docker
+Forensics and Incident Response) pipeline. It installs Docker and the userland
+tools the pipeline depends on, adds the invoking user to the Docker
 group, and sets ownership and permissions on the repository.
 
 Pre-seeding the analysis Docker images as offline tarballs is a separate
 concern and lives in its own script, [`save-docker-images.sh`](#pre-seeding-images-for-offline-hosts).
-On a host with registry access nothing further is needed — the individual
-processing scripts pull their images on first use.
+On a host with registry access nothing further is needed: `dx build images`
+builds the hardened tool images, and `dx deploy stack` pulls the Elastic-stack
+images on first use.
 
-> **For the `dxdfir` front-end** (the pipeline's entry point): this script also
-> builds and installs the Go `dxdfir` binary (`go/`, installing the Go toolchain
+> **For the `dx` front-end** (the pipeline's entry point): this script also
+> builds and installs the Go `dx` binary (`go/`, installing the Go toolchain
 > when absent) and installs the pinned ansible layer (`requirements.txt`:
 > `ansible-core` + the docker SDK the collection's modules import), so
 > `ansible-playbook` lands in the repo's own `.venv` (gitignored), which
-> `dxdfir` resolves by itself — see [How It Runs](../../README.md#how-it-runs).
+> `dx` resolves by itself (see [How It Runs](../../README.md#how-it-runs)).
 
 ## Prerequisites
 - A Debian- or Ubuntu-based Linux distribution (the Docker apt repository is
@@ -32,27 +33,27 @@ processing scripts pull their images on first use.
    ownership across the repository). Exits with a clear message if it is
    neither root nor able to use `sudo`.
 2. **Docker Setup (via ansible, after step 4)**: runs `dxdfir-bootstrap.yml`
-   — the `dxdfir_stack` role's `docker_ensure` entry point, the same state
-   tasks `dxdfir deploy stack` uses — which installs the engine if absent
+   (the `dxdfir_stack` role's `docker_ensure` entry point, the same state
+   tasks `dx deploy stack` uses), which installs the engine if absent
    (Docker's apt repository for the detected Debian/Ubuntu distribution),
    starts and enables the daemon, creates the docker group and adds the
    sudo'ing operator to it. The script carries no shell copy of this.
-3. **Userland tools**: Installs the tools the processing scripts shell out to
+3. **Userland tools**: Installs the tools the pipeline shells out to
    (`curl`, `python3`, `unzip`, `tar`, plus `ca-certificates`/`gnupg`), so a
    missing dependency surfaces here rather than halfway through an ingest.
 4. **Permission Management**:
-   - Sets ownership to the current user and Docker group (the group is pre-created when absent — docker itself arrives later, via the bootstrap playbook)
+   - Sets ownership to the current user and Docker group (the group is pre-created when absent; docker itself arrives later, via the bootstrap playbook)
    - Sets permissions with `u=rwX,g=rX` so directories stay traversable by the
      Docker group and the `.sh` files stay executable
 
-> The Byakugan CAR engine is no longer provisioned on the host: it is cloned +
+> The Byakugan CAR engine is not provisioned on the host: it is cloned +
 > built into the hardened `get-sybers/byakugan` image at its Dockerfile's `BYAKUGAN_REF` pin by
-> `dxdfir build-docker`, alongside the other tool images.
+> `dx build images`, alongside the other tool images.
 
 ### Options
-- `--yes` / `-y` — assume "yes" to all prompts (also assumed automatically when
+- `--yes` / `-y`: assume "yes" to all prompts (also assumed automatically when
   stdin is not a TTY, so the script is safe to run non-interactively)
-- `--help` / `-h` — print the script's header documentation and exit
+- `--help` / `-h`: print the script's header documentation and exit
 
 ## Usage
 
@@ -85,10 +86,10 @@ scripts/save-docker-images.sh --load
 ```
 
 The images managed are:
-- the `get-sybers/*` hardened tool images from the GoDFIR-toolz `images.yml` — built in-repo by
+- the `get-sybers/*` hardened tool images from the GoDFIR-toolz `images.yml`, built in-repo by
   `ansible-playbook playbooks/dxdfir-build-images.yml` (see docs/Containers.md)
 - the Elastic stack's `docker.elastic.co/*` images at `ELASTIC_VERSION`
-  (derived from the inventory's `dxdfir_elastic_version` + the `dxdfir_stack` role's image map) — pulled and
+  (derived from the inventory's `dxdfir_elastic_version` + the `dxdfir_stack` role's image map), pulled and
   saved so the analysis backend deploys offline with zero pulls
 
 Tarballs are written to `data_store/docker_images/`.
@@ -96,16 +97,16 @@ Tarballs are written to `data_store/docker_images/`.
 ## Post-Installation
 After running the script:
 
-1. `dxdfir` works in the shell you ran the script from and in every other
-   one (login or not): it is a real file in `/usr/local/bin`, and it finds
-   the ansible venv at `<repo>/.venv` by itself. Nothing to source, no
-   re-login.
+1. `dx` is installed at `<repo>/.go/bin/dx` (gitignored; `$DXDFIR_BIN_DIR`
+   overrides). It is not on your PATH: invoke it by that path, or add it with
+   `export PATH="<repo>/.go/bin:$PATH"` (the script prints the exact line). It
+   finds the ansible venv at `<repo>/.venv` by itself, so there is nothing to
+   source and no re-login.
 2. The **docker group** is the one thing a new shell is genuinely needed for,
    and only when the bootstrap just added you: the script says so when that
-   is the case — `newgrp docker` in place, or log out and back in once.
-3. To drive ansible by hand, `. .venv/bin/activate` (login shells also get
-   the venv's `ansible*` and the pinned Go on PATH from
-   `/etc/profile.d/dxdfir.sh`, a convenience the front-end never depends on).
+   is the case (`newgrp docker` in place, or log out and back in once). `dx`
+   itself needs neither.
+3. To drive ansible by hand, `. .venv/bin/activate`.
 4. If you are seeding an offline host, carry the tarballs from
    `data_store/docker_images/` across and run `scripts/save-docker-images.sh --load`
    (equivalent to loading each one manually with `docker load -i`)
@@ -131,7 +132,7 @@ lean:
   git ≥ 2.46 gets a trailing `/*` leading-path `safe.directory` match scoped
   to the checkout root; older gits only match exact paths or the global
   `"*"`, so there the fallback is that **global wildcard, confined to the
-  single git invocation** (`-c`, never persisted in the operator's config) —
+  single git invocation** (`-c`, never persisted in the operator's config):
   a wider trust grant for that one command, which is why ≥ 2.46 gets the
   path-scoped form.
 - **Long steps run behind a heartbeat** (a redrawn spinner on a TTY, a line
@@ -142,17 +143,16 @@ lean:
   closing chown rewrites ownership across the whole repository.
 - **The docker engine is provisioned by ansible, not shell**
   (`dxdfir-bootstrap.yml` → `dxdfir_stack`'s `docker_ensure`): one
-  implementation, shared with `dxdfir deploy stack`; the script only probes
+  implementation, shared with `dx deploy stack`; the script only probes
   the fact for its plan and closing notes.
-- **`--recursive` submodule init is kept on principle** — a nesting
-  submodule checks out complete instead of silently empty, the failure mode
-  that bit the vendored CAR engine.
+- **`--recursive` submodule init is kept on principle**: a nesting
+  submodule checks out complete instead of silently empty.
 - **Permissions are `u=rwX,g=rX`**: capital X keeps directories traversable
   by the docker group and `.sh` files runnable while evidence files stay
-  non-executable (the old `chmod -R 744` locked the docker group out).
-- **The venv holds only the pinned ansible layer** (`requirements.txt` —
+  non-executable.
+- **The venv holds only the pinned ansible layer** (`requirements.txt`:
   the lock is the single source of truth, no version literals in the
-  script); there is no host python package to install any more.
+  script); there is no host python package to install.
 - **The venv lives inside the checkout** (`<repo>/.venv`, gitignored,
   `$DXDFIR_VENV` overrides) and is created by the invoking user, not root.
   It is a per-checkout dependency layer like `go/vendor/`, so it belongs
@@ -181,20 +181,13 @@ lean:
   the install prefix, and a rebuild never silently rides stale modules.
 - **`dx` depends on no PATH edit and lands nowhere outside the checkout**:
   the binary is installed into the repo-local `.go/bin/dx` (gitignored;
-  `$DXDFIR_BIN_DIR` overrides), not a system prefix — no `/usr/local/bin`
+  `$DXDFIR_BIN_DIR` overrides), not a system prefix: no `/usr/local/bin`
   install and no `/etc/profile.d` drop-in. `dx` locates its repo and
   resolves the venv's ansible by relation to its own location, so it works
   from any shell. The script **proves** the result before reporting success:
   it runs the installed `.go/bin/dx` by absolute path and checks its
   landing-readout `ansible` readiness line is `[ok]`.
-- **One managed `/etc/profile.d/dxdfir.sh` remains, as a convenience**: the
-  pinned Go toolchain (rebuilds) and the venv bin — **appended**, so the
-  system python/pip keep winning — for hand-driven `ansible-playbook` in
-  login shells. It is written with an explicit `0644` mode (`/etc/profile`
-  skips a drop-in it cannot read). Legacy `/usr/local/bin` symlink shims
-  from earlier releases are retired on the next run; the binary there now
-  is a file, not a shim.
-- **The build galaxy's primary path installs nothing** — the gitlink is the
+- **The build galaxy's primary path installs nothing**: the gitlink is the
   pin and `roles_path` resolves the submodule in place; only a checkout
   without submodule content has the galaxy imported from the `.gitmodules`
   source at the gitlink revision (`--no-deps`: its dependency set is exactly

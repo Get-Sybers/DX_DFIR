@@ -1,18 +1,17 @@
 # CAR pipeline
 
 After the [lanes](processing-lanes.md) process evidence, the CAR pipeline **normalises**
-every processed source into one common shape — the
-[MITRE CAR](https://car.mitre.org/data_model/) data model — so evidence from a PCAP, a
+every processed source into one common shape, the
+[MITRE CAR](https://car.mitre.org/data_model/) data model, so evidence from a PCAP, a
 memory image and an event log describe the same entities in the same vocabulary.
 
-The normalisation itself is done by the **external [Byakugan engine](https://github.com/Get-Sybers/Byakugan)**,
-which runs entirely inside the hardened `get-sybers/byakugan` container — cloned + built
-into the image at the `sources.yml` pin (`docker/GoDFIR-toolz/byakugan/Dockerfile`) by `dx
-build images`, never vendored. DX_DFIR is a thin front over it: one Ansible role,
-`godfir_byakugan`, with three actions. Each action is one confined `docker run` of the
-engine image, built by the shared `dxdfir_lane` skeleton from the image's contract
-(`docker/GoDFIR-toolz/byakugan/contract.yml`) — `byakugan build` / `byakugan timeline`
-driven by their `BYAKUGAN_<SUBTOOL>_*` variables, the processed evidence mounted
+The normalisation runs in the external [Byakugan engine](https://github.com/Get-Sybers/Byakugan),
+inside the hardened `get-sybers/byakugan` container (cloned + built into the image at the
+`sources.yml` pin, `docker/GoDFIR-toolz/byakugan/Dockerfile`, by `dx build images`).
+DX_DFIR is a thin front over it: one Ansible role, `godfir_byakugan`, with three actions.
+Each action is one confined `docker run` of the engine image, built by the shared
+`dxdfir_lane` skeleton from the image's contract
+(`docker/GoDFIR-toolz/byakugan/contract.yml`), with the processed evidence mounted
 read-only and the `byakugan/` output read-write. DX_DFIR holds **no CAR logic itself**.
 
 ```
@@ -30,10 +29,10 @@ dx byakugan build [--rebuild]
 Turns each processed **source** into its **own** CAR store (the isolation rule: one
 source, one materialised tree). Per source: input → artefact map → normalise → enrich
 (within the source only) → export as JSONL: one `car_<object>.jsonl` per populated
-object plus `car_relationships.jsonl` — ALWAYS written, even empty; the build's own
-done/skip marker — under `data_store/processed/byakugan/<source>/` (plus
-`car_inferred.jsonl` with `--derive`, `stix_bundle.json` with `--stix`). No `car.db`,
-no `superset.db` — the JSONL tree is the only per-source output the engine keeps.
+object plus `car_relationships.jsonl` (always written, even empty; the build's own
+done/skip marker), under `data_store/processed/byakugan/<source>/` (plus
+`car_inferred.jsonl` with `--derive`, `stix_bundle.json` with `--stix`). There is no
+`car.db` or `superset.db`; the JSONL tree is the only per-source output the engine keeps.
 
 By default it batches every source under `data_store/processed/`; a source whose store
 already exists is left alone unless you pass `--rebuild`.
@@ -41,10 +40,10 @@ already exists is left alone unless you pass `--rebuild`.
 The **13 CAR objects**: `authentication`, `driver`, `email`, `file`, `flow`, `http`,
 `module`, `process`, `registry`, `service`, `socket`, `thread`, `user_session`.
 
-> Which source field populates each CAR column — and which are honestly-unmapped gaps —
-> is documented per object in the Byakugan engine's [CAR provenance ledger](https://github.com/Get-Sybers/Byakugan/-/blob/main/docs/car-provenance/README.md).
-> The overview is [CAR-Pipeline.md](https://github.com/Get-Sybers/Byakugan/-/blob/main/docs/CAR-Pipeline.md); extraction rules in
-> [CAR-Extraction-Rules.md](https://github.com/Get-Sybers/Byakugan/-/blob/main/docs/CAR-Extraction-Rules.md).
+> Which source field populates each CAR column (and which are honestly-unmapped gaps)
+> is documented per object in the Byakugan engine's [CAR provenance ledger](https://github.com/Get-Sybers/Byakugan/blob/main/docs/car-provenance/README.md).
+> The overview is [CAR-Pipeline.md](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-Pipeline.md); extraction rules in
+> [CAR-Extraction-Rules.md](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-Extraction-Rules.md).
 
 ## Verify
 
@@ -52,14 +51,14 @@ The **13 CAR objects**: `authentication`, `driver`, `email`, `file`, `flow`, `ht
 dx byakugan verify
 ```
 
-The **correctness gate** over the materialised tree — the engine's own `verify` sub-tool
+The **correctness gate** over the materialised tree: the engine's own `verify` sub-tool
 (`byakugan.verify`), driven inside the image by its env contract like every lane. The tree
 is its read-only input mount; its report, `verify.txt`, is written through the output
-mount — beside the stores by default — and the run passes only on the summary's
+mount (beside the stores by default), and the run passes only on the summary's
 `status: ok`. It reads what `byakugan build` wrote and asserts:
 
 - every exercised object has rows, and key fields are **populated**;
-- values are **sane** — IPs are IPs, ports are ports, SIDs are SIDs;
+- values are **sane**: IPs are IPs, ports are ports, SIDs are SIDs;
 - `car_action` is in that object's **vocabulary** (reconstructed from the engine's own
   model, never hardcoded);
 - every row **traces to one artefact** (non-empty `source_artefact`);
@@ -75,10 +74,10 @@ gate checks the materialised output. **Run it before you trust the CAR.**
 dx byakugan export-timeline data_store/processed/byakugan [--out-dir DIR] [--after ISO] [--before ISO]
 ```
 
-Unions the **object events** (`car_<object>.jsonl` — every populated field plus the
-`native` evidence) and the **relationship instances** (`car_relationships.jsonl` —
+Unions the **object events** (`car_<object>.jsonl`: every populated field plus the
+`native` evidence) and the **relationship instances** (`car_relationships.jsonl`:
 source→verb→target with confidence/method) into a single timestamp-ordered stream,
-`timeline.jsonl` — the behaviour timeline, written beside the stores (or under
+`timeline.jsonl`, the behaviour timeline, written beside the stores (or under
 `--out-dir`). Point it at one
 source's car dir, or a parent tree to aggregate every source beneath it. An existing
 `timeline.jsonl` is kept unless `--force`.
@@ -88,8 +87,8 @@ source's car dir, or a parent tree to aggregate every source beneath it. An exis
 Because every source lands in the same object model, entities converge: the same host,
 process GUID, IP or identity seen across a PCAP, a memory image and an event log link up.
 How the join keys work is documented in the Byakugan engine's
-[CAR-CrossSource.md](https://github.com/Get-Sybers/Byakugan/-/blob/main/docs/CAR-CrossSource.md) and
-[CAR-Relations.md](https://github.com/Get-Sybers/Byakugan/-/blob/main/docs/CAR-Relations.md).
+[CAR-CrossSource.md](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-CrossSource.md) and
+[CAR-Relations.md](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-Relations.md).
 
 ## From CAR to detections
 

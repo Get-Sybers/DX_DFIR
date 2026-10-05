@@ -1,6 +1,6 @@
 # 01_Containers
 
-Every tool container the pipeline runs is **built in-repo, hardened** — no
+Every tool container the pipeline runs is **built in-repo, hardened**: no
 third-party tool image is pulled at runtime. This page lists the images, how
 they are built, and the posture they enforce.
 
@@ -15,16 +15,16 @@ ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-im
 | Image | Tool | Source |
 |---|---|---|
 | `get-sybers/zeek` | PCAP → Zeek JSON | Zeek LTS from the project's OBS Debian repo (`docker/GoDFIR-toolz/zeek/`) |
-| `get-sybers/signatures` | detections — YARA + Suricata (offline replay) + Hayabusa | Debian packages + the pinned Hayabusa release (`docker/GoDFIR-toolz/signatures/`) |
+| `get-sybers/signatures` | detections: YARA + Suricata (offline replay) + Hayabusa | Debian packages + the pinned Hayabusa release (`docker/GoDFIR-toolz/signatures/`) |
 | `get-sybers/byakugan` | CAR/STIX behaviour engine | clone-at-build at its Dockerfile's `BYAKUGAN_REF` pin (`docker/GoDFIR-toolz/byakugan/`) |
 | `get-sybers/anamnesis` | memory (anamnesis / MemProcFS) | `docker/GoDFIR-toolz/anamnesis/` (clone-at-build) |
 | `get-sybers/plaso` | Plaso timelining + `image_export` (dfVFS) | GIFT stable PPA (`docker/GoDFIR-toolz/plaso/`) |
-| `get-sybers/gowindowlicker` | the Windows artefact matrix — every parser (goevtx, gomft, gore, goprefetch, …) a sub-tool of one binary | static Go, FROM scratch (`docker/GoDFIR-toolz/gowindowlicker/`) |
+| `get-sybers/gowindowlicker` | the Windows artefact matrix: every parser (goevtx, gomft, gore, goprefetch, …) a sub-tool of one binary | static Go, FROM scratch (`docker/GoDFIR-toolz/gowindowlicker/`) |
 | `get-sybers/godaemonhunter` | the Linux daemon-parser matrix (`hunt`: Layer-1 knowledge store → enriched daemon parsers) | static Go, FROM scratch (repo-root context) |
-| `get-sybers/gomount` | disk-image reader (E01/Ex01, raw, VMDK, VHDX, VHD, QCOW2, VDI, DMG, sparseimage — a sparsebundle directory is readable by gomount itself but is not a lane item; NTFS, the Linux filesystems, APFS, HFS+, LVM2) — the signatures disk scan, the hayabusa export (`materialise`), and baked into the two host-lane images so their parsers run on the image | static Go (`docker/GoDFIR-toolz/gomount/`) |
+| `get-sybers/gomount` | disk-image reader (E01/Ex01, raw, VMDK, VHDX, VHD, QCOW2, VDI, DMG, sparseimage; a sparsebundle directory is readable by gomount itself but is not a lane item; NTFS, the Linux filesystems, APFS, HFS+, LVM2): drives the signatures disk scan, the hayabusa export (`materialise`), and baked into the two host-lane images so their parsers run on the image | static Go (`docker/GoDFIR-toolz/gomount/`) |
 
 The `dxdfir_images` role builds each one and **verifies the minimal-posture
-contract** per build — the static image config plus a shell-free
+contract** per build: the static image config plus a shell-free
 `docker export` scan proving the removed binaries (and, for the tool-only
 images, the shell and python) are absent.
 
@@ -39,15 +39,15 @@ that shouldn't be).
 Chosen for the strongest resistance to container escape AND to a
 supply-chain-compromised tool: strip each image to the tool itself, and confine
 every run hard. ansible does the hardening *at build time*
-(`docker/GoDFIR-toolz/hardening/harden.yml`) and is then **removed from the final image** —
+(`docker/GoDFIR-toolz/hardening/harden.yml`) and is then **removed from the final image**:
 it never ships at runtime.
 
 - the tool is the image **ENTRYPOINT**; there is no ansible, no run-role, no
   orchestration layer in the runtime image
-- the **uid-0 account is renamed `ansible`**, password-locked, nologin — no
+- the **uid-0 account is `ansible`, not `root`**, password-locked, nologin: no
   `root` login name exists; **sudo/su/pkexec** and the account-manipulation
   suite are removed; every setuid/setgid bit is stripped
-- **no package manager, no pip** — nothing installable at runtime
+- **no package manager, no pip**: nothing installable at runtime
 - **no shell and no python** except where the tool irreducibly needs them:
   `get-sybers/signatures` keeps `sh` (its per-file scan loop *is* a shell script);
   `get-sybers/anamnesis` and `get-sybers/plaso` keep python (the tools *are* python).
@@ -59,32 +59,31 @@ code execution does not need an on-image shell), applied on every `docker run`
 the processors issue: `--cap-drop ALL --security-opt no-new-privileges
 --read-only --tmpfs /tmp --pids-limit 512 --network none`. Evidence is mounted
 read-only, output read-write, the root filesystem is immutable. Every evidence
-lane runs with the network off; the anamnesis PDB symbols that once justified
-a network opt-in are baked into the image at build time now, leaving
-byakugan's explicit Elastic push (`BYAKUGAN_LOAD_ES_URL`) as the one
-`network: optional` contract.
+lane runs with the network off: the anamnesis PDB symbols are baked into the
+image at build time, so byakugan's explicit Elastic push (`BYAKUGAN_LOAD_ES_URL`)
+is the one `network: optional` contract.
 
 Why not keep a shell out of a "belt and braces" instinct? Removing the shell
 does not stop an attacker who already has code execution (the premise of a
-compromised tool) — they issue syscalls directly — and adding an in-container
+compromised tool): they issue syscalls directly, and adding an in-container
 orchestrator to police it only enlarges the supply-chain and execution surface.
 So the design minimises what is present and confines what runs, rather than
 policing a large image from inside.
 
 ## Pulled images
 
-No tool image is pulled — every `get-sybers/*` image is built from source. The
+No tool image is pulled; every `get-sybers/*` image is built from source. The
 one pulled set is the analysis backend: the Elastic stack
 is the official `docker.elastic.co/*` images, version-pinned
 (`dxdfir_elastic_version`), deployed by the `dxdfir_stack` role on `127.0.0.1` with
-security on — see its README. `scripts/save-docker-images.sh` includes them in
+security on (see its README). `scripts/save-docker-images.sh` includes them in
 the offline tarball set, so the stack deploys air-gapped with zero pulls.
 
 ## Offline / air-gapped hosts
 
 Two levels:
 
-**Images only** — `save-docker-images.sh` saves the built `get-sybers/*` images
+**Images only:** `save-docker-images.sh` saves the built `get-sybers/*` images
 plus the pulled Elastic-stack images into `data_store/docker_images/`:
 
 ```bash
@@ -92,7 +91,7 @@ scripts/save-docker-images.sh --build     # online: build the get-sybers/* image
 scripts/save-docker-images.sh --verify    # offline: load every tarball, then assert the hardened inventory
 ```
 
-**Full provisioning** — `setup-environment.sh` itself is the offline path:
+**Full provisioning:** `setup-environment.sh` itself is the offline path:
 provision the host connected first (it builds the images and installs the
 toolchain), save the tarballs, then move/disconnect. A re-run that finds no
 route to the internet falls back to loading the pre-seeded tarballs instead of
@@ -101,7 +100,7 @@ expected hardened set. Nothing reaches
 the network.
 
 **Not containers:** **Hayabusa** ships as a self-contained Rust binary (no
-official image) — operator-supplied: download the pinned release into
+official image), operator-supplied: download the pinned release into
 `data_store/dependencies/hayabusa/`. Disk-image file access uses host tools
 (`ewf-tools`, `sleuthkit`, `ntfs-3g`) installed by `setup-environment.sh`.
 
@@ -110,7 +109,7 @@ official image) — operator-supplied: download the pinned release into
 - [Zeek](https://zeek.org/) · [Suricata](https://suricata.io/) · [YARA](https://virustotal.github.io/yara/)
 - [MemProcFS](https://github.com/ufrisk/MemProcFS) · [Plaso / GIFT PPA](https://launchpad.net/~gift)
 - [go-evtx (Velociraptor)](https://github.com/Velocidex/evtx) · [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) · [Hayabusa (Yamato Security)](https://github.com/Yamato-Security/hayabusa)
-- [Elastic Stack](https://www.elastic.co/docs) — the analysis backend ([the stack](architecture/the-stack.md))
+- [Elastic Stack](https://www.elastic.co/docs): the analysis backend ([the stack](architecture/the-stack.md))
 
 The obligations the tools and the backend place on the operator are recorded in
 [THIRD_PARTY_NOTICES.md](../.github/THIRD_PARTY_NOTICES.md).
