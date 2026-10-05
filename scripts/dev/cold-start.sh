@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # Cold-start cleanup for this repo. Wipes all Docker images and volumes,
-# the generated .ansible and .venv dirs, and every local branch except
-# main, so the next run builds from nothing. Add -f/--force to also stop
-# and remove containers that are holding images or volumes hostage.
+# the generated .ansible, .venv, and .go dirs, and every local branch
+# except main, so the next run builds from nothing. Add -f/--force to
+# also stop and remove containers that are holding images or volumes hostage.
 
 FORCE=0
 [[ "${1:-}" == "-f" || "${1:-}" == "--force" ]] && FORCE=1
@@ -67,8 +67,8 @@ fi
 # Scrub the generated dirs so the next run bootstraps them fresh.
 # These may be root-owned if a previous setup-environment.sh ran as root.
 if [[ -n "$REPO_ROOT" ]]; then
-  echo "Removing $REPO_ROOT/.ansible and $REPO_ROOT/.venv..."
-  $SUDO rm -rf -- "$REPO_ROOT/.ansible" "$REPO_ROOT/.venv"
+  echo "Removing $REPO_ROOT/.ansible, $REPO_ROOT/.venv, and $REPO_ROOT/.go..."
+  $SUDO rm -rf -- "$REPO_ROOT/.ansible" "$REPO_ROOT/.venv" "$REPO_ROOT/.go"
 fi
 
 # Delete every local branch except main. Anchored to the repo with the same
