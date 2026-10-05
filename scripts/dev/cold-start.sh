@@ -94,4 +94,22 @@ if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
   fi
 fi
 
+# Undo the setup hint: remove any `dx` PATH line you added to a shell rc, so
+# teardown leaves no dangling reference to the (now-removed) .go/bin. Matched by
+# this repo's exact .go/bin path as a fixed string, so unrelated PATH edits are
+# left alone. Operates on the invoking user's own dotfiles (no sudo).
+if [[ -n "$REPO_ROOT" ]]; then
+  _gobin="$REPO_ROOT/.go/bin"
+  for rc in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.bash_profile" "$HOME/.profile"; do
+    [[ -f "$rc" ]] || continue
+    if grep -qF "$_gobin" "$rc" 2>/dev/null; then
+      tmp=$(mktemp)
+      grep -vF "$_gobin" "$rc" > "$tmp" || true
+      cat "$tmp" > "$rc"
+      rm -f "$tmp"
+      echo "Removed the dx PATH line referencing $_gobin from $rc"
+    fi
+  done
+fi
+
 echo "Done."
