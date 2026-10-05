@@ -6,8 +6,17 @@
 - name: "stack-deploy | the secret store"
   ansible.builtin.include_tasks: secrets.yml
 
+# Escalate the WHOLE TLS key lifecycle, not just the final chown: the CSR task
+# reads each node key and the signing task reads the CA key, so if creation
+# escalates but the reads do not they hit root:root 0640/0600 files as the
+# unprivileged user and fail. _dxdfir_become is false when already root (no
+# double sudo) or when dxdfir_stack_become is unset (a direct playbook run that
+# did not opt in; the assert then governs the key posture).
 - name: "stack-deploy | the TLS material"
-  ansible.builtin.include_tasks: certs.yml
+  ansible.builtin.include_tasks:
+    file: certs.yml
+    apply:
+      become: "{{ _dxdfir_become }}"
 
 # migration: compose-era containers are replaced; the byakugan_* data volumes are NEVER touched
 - name: "stack-deploy | retire compose-era containers (volumes survive)"

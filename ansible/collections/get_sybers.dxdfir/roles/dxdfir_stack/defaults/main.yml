@@ -68,6 +68,11 @@ dxdfir_stack_ca_file: "{{ dxdfir_elastic_ca_file | default(dxdfir_stack_certs_di
 dxdfir_stack_legacy_env_file: "{{ dxdfir_elastic_legacy_env_file | default(dxdfir_stack_repo_root ~ '/docker/elastic/.env') }}"
 # an unprivileged deploy cannot hold node keys root:root 0640 — refuse to weaken unless opted in
 dxdfir_stack_allow_world_readable_keys: false
+# escalate (sudo) only the privileged deploy tasks — the TLS key lifecycle and the
+# docker-engine setup — so node keys land root:root 0640 without running the whole
+# play as root. The CLI sets this automatically for the converge verbs
+# (`dx deploy stack` / `dx update stack`); it has no effect when already root.
+dxdfir_stack_become: false
 dxdfir_stack_secrets_group: docker
 
 # 60 x 5s rides out a cold first boot on slow disks; a CI sandbox can shrink it

@@ -167,3 +167,45 @@ func TestSpellingsShareFlags(t *testing.T) {
 		}
 	}
 }
+
+// TestStackNoBecomeFlag pins the decision that escalation is automatic, not
+// flag-gated: NO stack verb exposes a --become or --allow-world-readable-keys
+// flag. The converge verbs escalate on their own via stackEscalate.
+func TestStackNoBecomeFlag(t *testing.T) {
+	root := NewRootCmd("test")
+	for _, path := range [][]string{
+		{"deploy", "stack"}, {"update", "stack"}, {"start", "stack"},
+		{"stop", "stack"}, {"status", "stack"}, {"restart", "stack"}, {"purge", "stack"},
+	} {
+		cmd, _, err := root.Find(path)
+		if err != nil {
+			t.Fatalf("Find(%q): %v", path, err)
+		}
+		for _, fl := range []string{"become", "allow-world-readable-keys"} {
+			if cmd.Flags().Lookup(fl) != nil {
+				t.Errorf("%q unexpectedly exposes --%s (escalation must be automatic, not a flag)",
+					strings.Join(path, " "), fl)
+			}
+		}
+	}
+}
+
+// TestStackEscalate pins the automatic-escalation decision: a converge action
+// always opts the role into become, and the sudo prompt is requested only when
+// we are not already root (root no-ops the become, so prompting is pointless).
+func TestStackEscalate(t *testing.T) {
+	asUser, askUser := stackEscalate(1000)
+	if len(asUser) != 1 || asUser[0] != "dxdfir_stack_become=true" {
+		t.Errorf("stackEscalate(1000) vars = %v, want [dxdfir_stack_become=true]", asUser)
+	}
+	if !askUser {
+		t.Error("stackEscalate(1000): want askBecomePass=true for a non-root euid")
+	}
+	asRoot, askRoot := stackEscalate(0)
+	if len(asRoot) != 1 || asRoot[0] != "dxdfir_stack_become=true" {
+		t.Errorf("stackEscalate(0) vars = %v, want [dxdfir_stack_become=true]", asRoot)
+	}
+	if askRoot {
+		t.Error("stackEscalate(0): want askBecomePass=false when already root")
+	}
+}
