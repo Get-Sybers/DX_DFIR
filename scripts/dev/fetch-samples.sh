@@ -68,7 +68,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-REPO_ROOT_DIR="$(realpath "$SCRIPT_DIR/..")"
+# this script lives in scripts/dev/, so the repo root is two levels up
+REPO_ROOT_DIR="$(realpath "$SCRIPT_DIR/../..")"
 cd "$REPO_ROOT_DIR"
 
 RAW="data_store/raw"
