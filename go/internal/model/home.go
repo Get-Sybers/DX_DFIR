@@ -1,11 +1,11 @@
 package model
 
-// This file holds the model for the landing dashboard shown by a bare `dxdfir`
+// This file holds the model for the landing readout shown by a bare `dx`
 // (version + environment readiness + tracked collections + staged evidence).
 // Unlike Snapshot, it is not a progress stream — it is a single point-in-time
-// picture assembled once by the cli layer and rendered by tui or plain. It lives
-// in the model package for the same reason Snapshot does: both presenters and
-// the assembler depend on it, and it imports neither termui nor os/exec.
+// picture assembled once by the cli layer and rendered by the plain presenter.
+// It lives in the model package for the same reason Snapshot does: the presenter
+// and the assembler depend on it, and it imports no terminal library nor os/exec.
 
 // CheckState is the outcome of one environment readiness probe.
 type CheckState string
@@ -28,7 +28,7 @@ type Check struct {
 }
 
 // CollInfo is one tracked collection summarised for the home dashboard, mirroring
-// the fields `dxdfir list collections` shows.
+// the fields `dx list collections` shows.
 type CollInfo struct {
 	Name   string
 	Total  int

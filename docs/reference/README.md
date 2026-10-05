@@ -5,7 +5,7 @@ a map of the repositories DX_DFIR is built on. Read [CONTRIBUTING.md](../../.git
 first for the workflow; these pages are the *house style*.
 
 - **[Go standards](go-standards.md)** — the `go-thonic` naming vocabulary, the `internal/`
-  package layout, the Sunset TUI theme, and error handling.
+  package layout, and error handling.
 - **[Ansible standards](ansible-standards.md)** — *roles group, playbooks decide*;
   one-action tasks; the dynamic walk; pinned dependencies; robustness.
 - **[Build and test](build-and-test.md)** — the check harness, the smoke test, the Go

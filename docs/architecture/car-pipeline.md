@@ -7,8 +7,8 @@ memory image and an event log describe the same entities in the same vocabulary.
 
 The normalisation itself is done by the **external [Byakugan engine](https://github.com/Get-Sybers/Byakugan)**,
 which runs entirely inside the hardened `get-sybers/byakugan` container — cloned + built
-into the image at the `sources.yml` pin (`docker/GoDFIR-toolz/byakugan/Dockerfile`) by `dxdfir
-build-docker`, never vendored. DX_DFIR is a thin front over it: one Ansible role,
+into the image at the `sources.yml` pin (`docker/GoDFIR-toolz/byakugan/Dockerfile`) by `dx
+build images`, never vendored. DX_DFIR is a thin front over it: one Ansible role,
 `godfir_byakugan`, with three actions. Each action is one confined `docker run` of the
 engine image, built by the shared `dxdfir_lane` skeleton from the image's contract
 (`docker/GoDFIR-toolz/byakugan/contract.yml`) — `byakugan build` / `byakugan timeline`
@@ -24,7 +24,7 @@ processed/ ──build──▶ byakugan/<source>/car_<object>.jsonl ──timel
 ## Build
 
 ```bash
-dxdfir build-car [--rebuild]
+dx byakugan build [--rebuild]
 ```
 
 Turns each processed **source** into its **own** CAR store (the isolation rule: one
@@ -49,14 +49,14 @@ The **13 CAR objects**: `authentication`, `driver`, `email`, `file`, `flow`, `ht
 ## Verify
 
 ```bash
-dxdfir verify-car
+dx byakugan verify
 ```
 
 The **correctness gate** over the materialised tree — the engine's own `verify` sub-tool
 (`byakugan.verify`), driven inside the image by its env contract like every lane. The tree
 is its read-only input mount; its report, `verify.txt`, is written through the output
 mount — beside the stores by default — and the run passes only on the summary's
-`status: ok`. It reads what `build-car` wrote and asserts:
+`status: ok`. It reads what `byakugan build` wrote and asserts:
 
 - every exercised object has rows, and key fields are **populated**;
 - values are **sane** — IPs are IPs, ports are ports, SIDs are SIDs;
@@ -72,7 +72,7 @@ gate checks the materialised output. **Run it before you trust the CAR.**
 ## Timeline
 
 ```bash
-dxdfir build-timeline data_store/processed/byakugan [--out-dir DIR] [--after ISO] [--before ISO]
+dx byakugan export-timeline data_store/processed/byakugan [--out-dir DIR] [--after ISO] [--before ISO]
 ```
 
 Unions the **object events** (`car_<object>.jsonl` — every populated field plus the
@@ -81,8 +81,7 @@ source→verb→target with confidence/method) into a single timestamp-ordered s
 `timeline.jsonl` — the behaviour timeline, written beside the stores (or under
 `--out-dir`). Point it at one
 source's car dir, or a parent tree to aggregate every source beneath it. An existing
-`timeline.jsonl` is kept unless `--force`. You can also read it live in the
-[Timeline tab](../getting-started/the-interface.md#timeline).
+`timeline.jsonl` is kept unless `--force`.
 
 ## Cross-source linkage
 
@@ -95,15 +94,15 @@ How the join keys work is documented in the Byakugan engine's
 ## From CAR to detections
 
 ```bash
-dxdfir load-car [--namespace NS] [--setup|--no-setup] [--force] [--kibana]
+dx byakugan load [--namespace NS] [--setup|--no-setup] [--force] [--kibana]
 ```
 
-The materialised CAR feeds the [analysis stack](the-stack.md): `dxdfir load-car`
+The materialised CAR feeds the [analysis stack](the-stack.md): `dx byakugan load`
 (the `dxdfir_car_load` role, `byakugan load` behind the stack's own bring-up gate)
 bulk-loads it, projected to ECS, into `logs-car.<object>-<namespace>` x13 +
 `logs-car.rel-<namespace>` + `logs-car.inferred-<namespace>` +
 `logs-car.content-<namespace>`, where ES|QL/EQL
-rules-as-code flag matching evidence lines, and `dxdfir stix export` turns
+rules-as-code flag matching evidence lines, and `dx byakugan export-stix` turns
 detection hits into STIX 2.1 sightings. `--setup` (default, first run) applies
 the `logs-car.*` index/component templates and authenticates as the `elastic`
 superuser; `--no-setup` is for routine repeat loads once the templates exist,

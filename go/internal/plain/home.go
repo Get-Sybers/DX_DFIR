@@ -8,12 +8,11 @@ import (
 	"github.com/Get-Sybers/DX_DFIR/go/internal/style"
 )
 
-// PrintHome renders the landing dashboard as plain lines — the non-TTY form of
-// what tui.RunHome draws. It is what a bare `dxdfir` prints under a pipe, a dumb
-// terminal, or --no-tui, and it is written to stdout (like `list`) so the
-// welcome/readiness report is a first-class, greppable payload.
+// PrintHome renders the landing readout as plain lines. It is what a bare `dx`
+// prints, written to stdout (like `list`) so the welcome/readiness report is a
+// first-class, greppable payload.
 func PrintHome(w io.Writer, h model.Home) {
-	fmt.Fprintln(w, style.Bold(fmt.Sprintf("dxdfir %s", h.Version))+"   DX_DFIR forensic pipeline")
+	fmt.Fprintln(w, style.Bold(fmt.Sprintf("dx %s", h.Version))+"   DX_DFIR forensic pipeline")
 	if h.RepoRoot != "" {
 		fmt.Fprintln(w, style.Grey("repo  "+h.RepoRoot))
 	} else {
@@ -54,7 +53,7 @@ func PrintHome(w io.Writer, h model.Home) {
 	case h.CollErr != "":
 		fmt.Fprintln(w, "  "+style.Yellow(h.CollErr))
 	case len(h.Collections) == 0:
-		fmt.Fprintln(w, "  "+style.Grey("none yet - register one:  dxdfir register <name>"))
+		fmt.Fprintln(w, "  "+style.Grey("none yet - register one:  dx register <name>"))
 	default:
 		if h.CollNote != "" {
 			fmt.Fprintln(w, "  "+style.Grey(h.CollNote))
@@ -103,7 +102,7 @@ func PrintHome(w io.Writer, h model.Home) {
 		fmt.Fprintf(w, "  %-13s %s file(s)  %s%s\n", l.Name, count, l.Loc, note)
 	}
 	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, style.Cyan(style.GlyphHint+" process: dxdfir process <source>   |   register: dxdfir register <name>   |   help: dxdfir --help"))
+	fmt.Fprintln(w, style.Cyan(style.GlyphHint+" process: dx process <scope>   |   register: dx register <name>   |   help: dx --help"))
 }
 
 func homeMark(s model.CheckState) (string, func(string) string) {

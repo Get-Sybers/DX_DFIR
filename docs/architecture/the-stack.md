@@ -24,7 +24,7 @@ each service one docker container on the `byakugan_default` network with named
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144   # Elasticsearch requires this (persist in /etc/sysctl.conf)
-dxdfir deploy stack
+dx deploy stack
 ```
 
 Deploy converges the whole stack from the inventory: it installs Docker when
@@ -48,8 +48,8 @@ deploy) and reused on every run; override any of them as an ansible variable
 generated for it. Deploy also writes two artifacts there for tools outside
 ansible:
 
-- `elastic.env` — the generated credential handoff the TUI's Kibana tab
-  and the [risk gate](../riskgate.md) read (same
+- `elastic.env` — the generated credential handoff the [risk gate](../riskgate.md)
+  reads (same
   dotenv dialect the retired `.env` used; regenerated every deploy — edit the
   per-secret files or override the variables instead).
 - `certs/` — the stack's TLS material (CA at `certs/ca/ca.crt`), generated
@@ -64,9 +64,9 @@ ansible:
 
 | User | Role | Privileges | Used by |
 |---|---|---|---|
-| `elastic` | superuser | everything | bootstrap, Fleet, and any `dxdfir load-car --setup` run (template + saved-object creation needs cluster privileges the loader below deliberately lacks) |
+| `elastic` | superuser | everything | bootstrap, Fleet, and any `dx byakugan load --setup` run (template + saved-object creation needs cluster privileges the loader below deliberately lacks) |
 | `kibana_system` | built-in | Kibana -> Elasticsearch | Kibana |
-| `byakugan_loader` | `logs_car_writer` (created by deploy) | `create_doc`, `create_index`, `read`, `view_index_metadata` on `logs-car.*` only — no cluster privileges | routine (non-`--setup`) `dxdfir load-car` runs |
+| `byakugan_loader` | `logs_car_writer` (created by deploy) | `create_doc`, `create_index`, `read`, `view_index_metadata` on `logs-car.*` only — no cluster privileges | routine (non-`--setup`) `dx byakugan load` runs |
 
 `byakugan_loader` is scoped so it can land evidence and read it back but never
 alter, delete or re-template what is already indexed — least privilege
@@ -101,8 +101,8 @@ docker run --rm --network byakugan_default \
 Filebeat tails `/ingest/*/**/*.{json,jsonl}` (the processed tree), dissects the first
 path segment as the evidence type, and ships each record into a data stream named
 **`logs-dxdfir.<type>-<namespace>`** — e.g. `logs-dxdfir.evtx-default`. Kibana at
-<http://127.0.0.1:5601> is where you explore; the [Kibana tab](../getting-started/the-interface.md#kibana)
-in `dxdfir` runs ES|QL against the same streams without leaving the terminal.
+<http://127.0.0.1:5601> is where you explore — Discover, detections, and ES|QL over
+the same streams.
 
 ## Two index families
 
@@ -127,7 +127,7 @@ The **STIX** side turns detection hits into a STIX 2.1 bundle, engine-side
 container run, like every lane):
 
 ```bash
-dxdfir stix export [HITS_DIR] [--case CASE-17] [--push --network NET]
+dx byakugan export-stix [HITS_DIR] [--case CASE-17] [--push --network NET]
 ```
 
 Each rule becomes an indicator whose pattern *is* the rule query; `indicates`
@@ -141,7 +141,9 @@ objects. OpenCTI is the wire. Deep reference:
 ## Lifecycle
 
 ```bash
-dxdfir status stack                  # what's running
-dxdfir stop stack                    # stop, keep containers
-dxdfir destroy stack --volumes -y    # remove everything, INCLUDING ingested data
+dx status stack                      # what's running
+dx stop stack                        # stop, keep containers
+dx restart stack                     # stop then start, no data removed
+dx update stack                      # re-converge onto the current inventory/images
+dx purge stack --volumes -y          # remove everything, INCLUDING ingested data
 ```

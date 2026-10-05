@@ -30,7 +30,7 @@ images, the shell and python) are absent.
 
 A start-time **inventory guard** then refuses to process against anything but a
 known hardened image: each processor preflight asserts the image it will run is
-a hardened `get-sybers/*` image, and `dxdfir verify-images` audits the whole `get-sybers/*`
+a hardened `get-sybers/*` image, and `dx verify images` audits the whole `get-sybers/*`
 namespace for missing, un-hardened, or **unexpected** images (something added
 that shouldn't be).
 
@@ -96,7 +96,7 @@ scripts/save-docker-images.sh --verify    # offline: load every tarball, then as
 provision the host connected first (it builds the images and installs the
 toolchain), save the tarballs, then move/disconnect. A re-run that finds no
 route to the internet falls back to loading the pre-seeded tarballs instead of
-building, and `dxdfir verify-images` confirms the loaded inventory is the
+building, and `dx verify images` confirms the loaded inventory is the
 expected hardened set. Nothing reaches
 the network.
 

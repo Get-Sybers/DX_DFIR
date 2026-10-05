@@ -1,8 +1,8 @@
 // Package collect drives the collection-creation flows (register / promote /
 // link / sort, then the SHA-1 hash) entirely in native Go via internal/collection
 // (epic #174 phases 1-4) — no python collection subprocess.
-// Each op's progress callbacks are folded into the shared model.Update stream, so
-// the termui and plain presenters render identically.
+// Each op's progress callbacks are folded into the shared model.Update stream,
+// which the plain presenter renders.
 package collect
 
 import (

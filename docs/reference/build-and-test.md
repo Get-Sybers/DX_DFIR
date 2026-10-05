@@ -5,11 +5,11 @@ runs the real pipeline.
 
 ## Checks — static, every push
 
-`.github/tests/run-checks.sh` (also `dxdfir validate`) is static and internal-consistency only —
+`.github/tests/run-checks.sh` (also `dx validate`) is static and internal-consistency only —
 it does **not** run the pipeline. Wired into CI via `.github/workflows/checks.yml`.
 
 ```bash
-./.github/tests/run-checks.sh          # or: dxdfir validate   ·   -v for verbose
+./.github/tests/run-checks.sh          # or: dx validate   ·   -v for verbose
 ```
 
 Groups it runs:
@@ -38,7 +38,7 @@ Triggers: `workflow_dispatch`, a nightly cron, and PRs that touch the pipeline (
 Python processors, the `dxdfir_images` role,
 `.gitmodules`, `docker/GoDFIR-toolz` — the manifest `images.yml` arrives inside it —
 or the smoke test). It checks out submodules recursively and builds the
-tool images with `dxdfir build-docker`, which clones + builds Byakugan into the
+tool images with `dx build images`, which clones + builds Byakugan into the
 `get-sybers/byakugan` image at its Dockerfile's `BYAKUGAN_REF` pin (parse binary and model sources
 baked in).
 
@@ -48,7 +48,7 @@ baked in).
 
 - **`modernc.org/sqlite v1.46.0`** — the pure-Go, cgo-free SQLite driver, **held at
   v1.46.0 to keep the Go 1.24 floor** (a newer sqlite would raise the toolchain
-  requirement). Also `spf13/cobra`, `apenella/go-ansible/v2`, `gizak/termui/v3` — all
+  requirement). Also `spf13/cobra`, `apenella/go-ansible/v2` — all
   pinned.
 
 The [setup script](../architecture/setup-flow.md) installs the pinned Go toolchain

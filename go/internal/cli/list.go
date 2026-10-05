@@ -43,15 +43,15 @@ var evidenceLanes = func() []evidenceLane {
 	return out
 }()
 
-// rawSubdirs are the top-level data_store/raw/ subdirs shown by `list raw`.
+// rawSubdirs are the top-level data_store/raw/ subdirs shown by `list evidence --raw`.
 var rawSubdirs = []string{
 	"pcaps", "memory", "disk_images", "VM_files", "logs", "filesystem",
 	"mobile", "other_raw_data", "collections", "sort",
 }
 
 // processedSubdirs are the top-level data_store/processed/ subdirs shown by
-// `list processed`: one leaf per tool (the lane specs' OutLeaf), then the
-// detection tree and the engine's own leaves.
+// `list evidence --processed`: one leaf per tool (the lane specs' OutLeaf), then
+// the detection tree and the engine's own leaves.
 var processedSubdirs = func() []string {
 	var out []string
 	for _, s := range lanes.Specs {
@@ -96,82 +96,73 @@ func countFilesByExt(dir string, exts map[string]bool) int {
 	return n
 }
 
-// newListCmd builds `dxdfir list [VIEW]`: native (no-subprocess) views of the
-// staged evidence — lane counts over raw/ (the default, bare `list`), a
-// directory view of raw/ or processed/ — and of the tracked collections.
+// newListCmd builds `dx list [evidence|collections]`: native (no-subprocess)
+// views of the staged evidence and of the tracked collections. A bare `list`
+// shows the per-lane evidence counts (the most useful default).
 func newListCmd(env *Env) *cobra.Command {
-	// view builds one evidence view as a subcommand.
-	view := func(use, short string, render func(r *repo.Repo)) *cobra.Command {
-		return &cobra.Command{
-			Use:   use,
-			Short: short,
-			Args:  cobra.NoArgs,
-			RunE: func(*cobra.Command, []string) error {
-				r, err := env.resolveRepo()
-				if err != nil {
-					return err
-				}
-				render(r)
-				return nil
-			},
-		}
-	}
-	lanes := view("lanes", "Per-lane counts over data_store/raw/ (what `process` reads) — the default.", printLanesView)
-	lanes.Aliases = []string{"lane"} // singular is accepted too
 	cmd := &cobra.Command{
-		Use:     "list [VIEW]",
-		Short:   "List staged evidence (lanes | raw | processed) or collections.",
+		Use:     "list [evidence|collections]",
+		Short:   "List staged evidence or the tracked collections.",
 		GroupID: groupEvidence,
 		Long: "List staged evidence, or the tracked collections.\n\n" +
-			"Views:\n" +
-			"  lanes (default) — per-lane counts over data_store/raw/ (what `process` reads).\n" +
-			"  raw             — a directory view of data_store/raw/ top-level subdirs.\n" +
-			"  processed       — a directory view of data_store/processed/ top-level subdirs.\n" +
-			"  collections     — registered, detected and dropzone-candidate collections;\n" +
-			"                    the active one is starred.",
-		Args: cobra.MaximumNArgs(1),
-		// A bare `list` shows the lanes view; a KNOWN view routes to its
-		// subcommand before reaching here, so any arg that lands here is an
-		// unknown view — name the valid ones rather than cobra's generic
-		// "accepts 0 arg(s)".
-		RunE: func(c *cobra.Command, args []string) error {
+			"Nouns:\n" +
+			"  evidence (default) — per-lane counts over data_store/raw/ (what `process` reads).\n" +
+			"                       --raw / --processed switch to a directory view of those trees.\n" +
+			"  collections        — registered, detected and dropzone-candidate collections;\n" +
+			"                       the active one is starred.",
+		Args: cobra.ArbitraryArgs,
+		// A bare `list` shows the evidence lanes view; a known noun routes to its
+		// subcommand before reaching here, so any arg that lands here is an unknown
+		// noun — name the valid ones rather than cobra's generic error.
+		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				return Fail(2, "unknown list view %q — the views are: %s", args[0], viewNames(c))
+				return Fail(2, "unknown list noun %q — the nouns are: evidence, collections", args[0])
 			}
-			return lanes.RunE(c, args)
+			r, err := env.resolveRepo()
+			if err != nil {
+				return err
+			}
+			printLanesView(r)
+			return nil
 		},
 	}
 	collections := collectionsLeaf(env, "collections")
 	collections.Aliases = []string{"collection"} // singular is accepted too
-	cmd.AddCommand(
-		lanes,
-		view("raw", "A directory view of data_store/raw/ top-level subdirs.", func(r *repo.Repo) {
-			printDirView(r.Path("data_store", "raw"), rawSubdirs, "data_store/raw")
-		}),
-		view("processed", "A directory view of data_store/processed/ top-level subdirs.", func(r *repo.Repo) {
-			printDirView(r.Path("data_store", "processed"), processedSubdirs, "data_store/processed")
-		}),
-		collections,
-	)
+	cmd.AddCommand(newListEvidenceCmd(env), collections)
 	return cmd
 }
 
-// viewNames lists the accepted `list` view spellings — each view subcommand's
-// name and its aliases — so the unknown-view error stays exhaustive and never
-// drifts as views (or their singular/plural aliases) change.
-func viewNames(list *cobra.Command) string {
-	var parts []string
-	for _, sub := range list.Commands() {
-		if sub.Name() == "help" { // the auto-generated help command is not a view
-			continue
-		}
-		name := sub.Name()
-		if len(sub.Aliases) > 0 {
-			name += " (or " + strings.Join(sub.Aliases, ", ") + ")"
-		}
-		parts = append(parts, name)
+// newListEvidenceCmd builds `dx list evidence`: the per-lane counts by default,
+// or a directory view of raw/ or processed/ with --raw / --processed.
+func newListEvidenceCmd(env *Env) *cobra.Command {
+	var raw, processed bool
+	cmd := &cobra.Command{
+		Use:     "evidence",
+		Aliases: []string{"lanes", "lane"},
+		Short:   "Per-lane counts over data_store/raw/ (default); --raw / --processed for directory views.",
+		Args:    cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			if raw && processed {
+				return Fail(2, "pass at most one of --raw / --processed")
+			}
+			r, err := env.resolveRepo()
+			if err != nil {
+				return err
+			}
+			switch {
+			case raw:
+				printDirView(r.Path("data_store", "raw"), rawSubdirs, "data_store/raw")
+			case processed:
+				printDirView(r.Path("data_store", "processed"), processedSubdirs, "data_store/processed")
+			default:
+				printLanesView(r)
+			}
+			return nil
+		},
 	}
-	return strings.Join(parts, ", ")
+	cmd.Flags().BoolVar(&raw, "raw", false, "A directory view of data_store/raw/ top-level subdirs.")
+	cmd.Flags().BoolVar(&processed, "processed", false, "A directory view of data_store/processed/ top-level subdirs.")
+	return cmd
 }
 
 // printLanesView prints the per-lane evidence counts over data_store/raw/.
@@ -199,8 +190,8 @@ func printLanesView(r *repo.Repo) {
 	}
 	fmt.Printf("  %-15s %5s          scans pcaps / files / memory / disk images / evtx (the lanes above)\n", "signatures", "-")
 	fmt.Println("")
-	fmt.Println("Process one with:  dxdfir process <source>   (see  dxdfir process -h)")
-	fmt.Println("Other views:       dxdfir list raw   |   dxdfir list processed   |   dxdfir list collections")
+	fmt.Println("Process one with:  dx process <scope>   (see  dx process -h)")
+	fmt.Println("Other views:       dx list evidence --raw   |   dx list evidence --processed   |   dx list collections")
 }
 
 // printDirView prints a directory-oriented file count over each of subs beneath

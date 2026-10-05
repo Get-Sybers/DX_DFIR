@@ -27,13 +27,13 @@ is localhost-only.
 
 ## What you actually touch
 
-Under the hood `dxdfir` is a Go front-end over an Ansible collection and a Python
+Under the hood `dx` is a Go front-end over an Ansible collection and a Python
 processing package driving Docker containers (see the
 [architecture overview](../architecture/README.md)). As a user you only touch:
 
-- the **`dxdfir`** command and its verbs,
+- the **`dx`** command and its verbs,
 - **one setup script**, and
-- **`dxdfir deploy stack`** for the analysis backend (installs docker itself when missing).
+- **`dx deploy stack`** for the analysis backend (installs docker itself when missing).
 
 ## The five-minute path
 
@@ -41,10 +41,10 @@ processing package driving Docker containers (see the
 git clone --recursive https://github.com/Get-Sybers/DX_DFIR.git
 cd DX_DFIR
 ./scripts/setup-environment.sh --yes      # host prep (log out/in once for the docker group)
-dxdfir build-docker                        # build the hardened tool images
+dx build images                            # build the hardened tool images
 # drop evidence under data_store/raw/<type>/ …
-dxdfir process gowindowlicker              # process a lane
-dxdfir build-car && dxdfir verify-car      # normalise into CAR + gate it
+dx process gowindowlicker                  # process a lane
+dx byakugan build && dx byakugan verify    # normalise into CAR + gate it
 ```
 
 Then bring up the backend and explore in Kibana. The full, annotated walk-through is
@@ -54,6 +54,6 @@ Then bring up the backend and explore in Kibana. The full, annotated walk-throug
 
 - **[Install](install.md)** — prerequisites and what the setup script does.
 - **[First run](first-run.md)** — the command journey from evidence to analysis.
-- **[The interface](the-interface.md)** — the `dxdfir` terminal UI.
+- **[The interface](the-interface.md)** — how `dx` behaves on the terminal.
 - **[Command reference](commands.md)** — every command in one table.
 - **[Architecture](../architecture/README.md)** — how it works underneath.

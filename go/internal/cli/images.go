@@ -9,27 +9,44 @@ import (
 	"github.com/Get-Sybers/DX_DFIR/go/internal/run"
 )
 
-// newBuildDockerCmd — `dxdfir build-docker` → dxdfir-build-images.yml
-// (dxdfir_images role): pull each get-sybers/* image from the registry and
-// verify the hardening contract on the result. (Building lives upstream in the
-// get_sybers.godfir_build collection; here the images are pulled, not built.)
-func newBuildDockerCmd(env *Env) *cobra.Command {
+// The get-sybers/* tool images are provisioned by REGISTRY PULL and audited for
+// the hardening contract. Both verbs read verb first with `images` the noun:
+// `build images` (pull + verify) and `verify images` (audit only).
+
+// imagesLong is the shared description of what the image verbs act on.
+const imagesLong = "The hardened get-sybers/* tool images. Building images lives upstream in\n" +
+	"get_sybers.godfir_build; here they are PULLED from the registry\n" +
+	"(ghcr.io/get-sybers/<tool>:<tag> -> get-sybers/<tool>:latest) and the hardening\n" +
+	"contract (non-root USER, com.get-sybers.hardened) is verified on the result."
+
+// newBuildCmd — `dx build images` → dxdfir-build-images.yml (dxdfir_images role).
+func newBuildCmd(env *Env) *cobra.Command {
+	parent := nounGroup("build",
+		"Pull (and hardening-verify) the get-sybers/* tool images from the registry.",
+		"Pull (and hardening-verify) the get-sybers/* tool images from the registry.\n\n"+
+			imagesLong+"\n\nThe noun is required: `dx build images`.")
+	parent.GroupID = groupSetup
+	parent.AddCommand(buildImagesLeaf(env))
+	return parent
+}
+
+func buildImagesLeaf(env *Env) *cobra.Command {
 	var (
 		images    []string
 		force     bool
 		extraVars []string
 	)
 	cmd := &cobra.Command{
-		Use:   "build-docker",
-		Short: "Pull (and hardening-verify) the get-sybers/* tool images from the registry.",
+		Use:     "images",
+		Aliases: []string{"image"},
+		Short:   "Pull (and hardening-verify) the get-sybers/* tool images from the registry.",
 		Long: "Provision the get-sybers/* tool images by REGISTRY PULL.\n\n" +
 			"Fronts playbooks/dxdfir-build-images.yml: the images role delegates to the\n" +
 			"get_sybers.godfir_run.godfir_images role (imported by URL), which pulls\n" +
 			"ghcr.io/get-sybers/<tool>:<tag> and tags it to the local get-sybers/<tool>:latest\n" +
 			"name. Building images lives upstream in get_sybers.godfir_build; the hardening\n" +
 			"contract (non-root USER, com.get-sybers.hardened) is verified by godfir_images.",
-		GroupID: groupSetup,
-		Args:    cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			r, ap, err := env.ansibleRepo()
 			if err != nil {
@@ -55,8 +72,7 @@ func newBuildDockerCmd(env *Env) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			code := run.Passthrough(context.Background(), plan, true)
-			return exitCode(code)
+			return exitCode(run.Passthrough(context.Background(), plan, true))
 		},
 	}
 	cmd.Flags().StringArrayVarP(&images, "image", "i", nil,
@@ -68,17 +84,27 @@ func newBuildDockerCmd(env *Env) *cobra.Command {
 	return cmd
 }
 
-// newVerifyImagesCmd — `dxdfir verify-images` → dxdfir-verify-images.yml: audit
-// the hardened get-sybers/* tool-image inventory (non-clean inventory exits non-zero).
-func newVerifyImagesCmd(env *Env) *cobra.Command {
+// newVerifyCmd — `dx verify images` → dxdfir-verify-images.yml: audit the
+// hardened get-sybers/* tool-image inventory (non-clean inventory exits non-zero).
+func newVerifyCmd(env *Env) *cobra.Command {
+	parent := nounGroup("verify",
+		"Audit the hardened get-sybers/* tool-image inventory.",
+		"Audit the hardened get-sybers/* tool-image inventory.\n\n"+
+			imagesLong+"\n\nThe noun is required: `dx verify images`.")
+	parent.GroupID = groupSetup
+	parent.AddCommand(verifyImagesLeaf(env))
+	return parent
+}
+
+func verifyImagesLeaf(env *Env) *cobra.Command {
 	return &cobra.Command{
-		Use:   "verify-images",
-		Short: "Audit the hardened get-sybers/* tool-image inventory.",
+		Use:     "images",
+		Aliases: []string{"image"},
+		Short:   "Audit the hardened get-sybers/* tool-image inventory.",
 		Long: "Audit the hardened get-sybers/* tool-image inventory (dxdfir-verify-images.yml).\n\n" +
 			"Fails if any expected tool image is missing or un-hardened, or if an\n" +
 			"UNEXPECTED get-sybers/* image is present.",
-		GroupID: groupSetup,
-		Args:    cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			r, ap, err := env.ansibleRepo()
 			if err != nil {
@@ -88,8 +114,7 @@ func newVerifyImagesCmd(env *Env) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			code := run.Passthrough(context.Background(), plan, true)
-			return exitCode(code)
+			return exitCode(run.Passthrough(context.Background(), plan, true))
 		},
 	}
 }

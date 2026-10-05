@@ -217,7 +217,7 @@ detail "get_sybers.godfir_run is imported by URL into .ansible/collections from"
 detail "requirements.yml (no submodule)"
 step "4. Ensure the Docker engine, daemon and group via ansible (dxdfir-bootstrap.yml)"
 detail "the Byakugan CAR engine and every tool image are pulled from the registry"
-detail "(ghcr.io/get-sybers/GoDFIR-toolz/<tool>) by 'dxdfir build-docker'"
+detail "(ghcr.io/get-sybers/GoDFIR-toolz/<tool>) by 'dx build images'"
 echo
 
 confirm "Do you wish to proceed?" || { info "Setup cancelled."; exit 1; }
@@ -261,12 +261,12 @@ fi
 # images; requirements.txt is the one pip surface left (ansible-core + the
 # docker SDK the collection's modules import on the controller).
 #
-# The venv is <repo>/.venv, NOT a system prefix: the dxdfir front-end
+# The venv is <repo>/.venv, NOT a system prefix: the dx front-end
 # resolves it by relation to the repo it just located (no PATH edit, profile
 # drop-in or re-login in between), `. .venv/bin/activate` is the convention
 # every python user already knows for direct ansible use, .gitignore already
 # covers it, and it is created by the invoking user — no root-owned pip
-# caches or venv files. $DXDFIR_VENV overrides the location (dxdfir and
+# caches or venv files. $DXDFIR_VENV overrides the location (dx and
 # save-docker-images.sh honour the same variable).
 ################################################################################
 section "Ansible (pinned)"
@@ -290,17 +290,17 @@ ok "ansible in the venv: $("$DXDFIR_VENV/bin/ansible-playbook" --version 2>/dev/
 export PATH="$DXDFIR_VENV/bin:$PATH"
 
 ################################################################################
-# Build + install the Go/termui front-end; the pinned toolchain is
+# Build + install the Go front-end; the pinned toolchain is
 # (re)installed when absent or under go.mod's floor — GOTOOLCHAIN=local
 # refuses auto-upgrades (docs: Design decisions).
 ################################################################################
-section "Go toolchain + dxdfir front-end"
+section "Go toolchain + dx front-end"
 # The ONE source of the Go toolchain version is go/go.mod's `go` directive
 # (standards §2: scripts read the tracked pin, never carry their own copy).
 GO_VERSION="$(grep -E '^go [0-9]+\.[0-9]+(\.[0-9]+)?$' "$REPO_ROOT_DIR/go/go.mod" | awk '{print $2}')"
 [[ -n "$GO_VERSION" ]] || die "could not read the go directive from go/go.mod"
 GO_MIN_MINOR="$(cut -d. -f2 <<<"$GO_VERSION")"
-# The Go toolchain and the built dxdfir binary both live inside the checkout
+# The Go toolchain and the built dx binary both live inside the checkout
 # at .go/ (gitignored), so nothing escapes the repo root.
 DXDFIR_GO_ROOT="$REPO_ROOT_DIR/.go"
 DXDFIR_BIN_DIR="${DXDFIR_BIN_DIR:-$DXDFIR_GO_ROOT/bin}"
@@ -339,7 +339,7 @@ if (( ! _go_ok )); then
     rm -f "/tmp/${_gotar}"
 fi
 export PATH="$DXDFIR_GO_ROOT/bin:$PATH"
-step "Building the dxdfir Go front-end ($("$DXDFIR_GO_ROOT/bin/go" version 2>/dev/null | awk '{print $3}')) ..."
+step "Building the dx Go front-end ($("$DXDFIR_GO_ROOT/bin/go" version 2>/dev/null | awk '{print $3}')) ..."
 
 # build UNPRIVILEGED from a clean, ephemeral cache: deps resolve from
 # go/vendor/ or the proxy every run, never a previous run's leftovers (docs:
@@ -351,25 +351,25 @@ _goenv=( PATH="$PATH" HOME="$_gotmp" GOTOOLCHAIN=local
 _gomod="-mod=mod"
 [[ -f "$REPO_ROOT_DIR/go/vendor/modules.txt" ]] && _gomod="-mod=vendor"
 if ! ( cd "$REPO_ROOT_DIR/go" \
-        && env "${_goenv[@]}" go build "$_gomod" -o "$_gotmp/dxdfir" ./cmd/dxdfir ); then
+        && env "${_goenv[@]}" go build "$_gomod" -o "$_gotmp/dx" ./cmd/dx ); then
     if [[ "$_gomod" == "-mod=vendor" ]]; then
         # A vendored tree captured before a dependency changed would fail an
         # update; fall back to the proxy rather than wedge on stale vendoring.
         warn "Vendored modules look stale — fetching through the module proxy instead."
         ( cd "$REPO_ROOT_DIR/go" \
-            && env "${_goenv[@]}" go build -mod=mod -o "$_gotmp/dxdfir" ./cmd/dxdfir ) \
-            || { _goclean; die "Failed to build the dxdfir Go front-end (module proxy unreachable? re-vendor on a networked host: 'cd go && go mod vendor')."; }
+            && env "${_goenv[@]}" go build -mod=mod -o "$_gotmp/dx" ./cmd/dx ) \
+            || { _goclean; die "Failed to build the dx Go front-end (module proxy unreachable? re-vendor on a networked host: 'cd go && go mod vendor')."; }
     else
         _goclean
-        die "Failed to build the dxdfir Go front-end (need network for the module proxy, or vendor the modules for an air-gapped install: 'cd go && go mod vendor')."
+        die "Failed to build the dx Go front-end (need network for the module proxy, or vendor the modules for an air-gapped install: 'cd go && go mod vendor')."
     fi
 fi
-install -Dm755 "$_gotmp/dxdfir" "$DXDFIR_BIN_DIR/dxdfir" \
-    || { _goclean; die "Failed to install dxdfir into $DXDFIR_BIN_DIR."; }
+install -Dm755 "$_gotmp/dx" "$DXDFIR_BIN_DIR/dx" \
+    || { _goclean; die "Failed to install dx into $DXDFIR_BIN_DIR."; }
 _goclean
 export PATH="$DXDFIR_GO_ROOT/bin:$PATH:$DXDFIR_VENV/bin"
-ok "dxdfir (Go front-end) installed: $("$DXDFIR_BIN_DIR/dxdfir" --version 2>/dev/null || echo "$DXDFIR_BIN_DIR/dxdfir") -> $DXDFIR_BIN_DIR/dxdfir"
-detail "man page: man $REPO_ROOT_DIR/go/man/dxdfir.1"
+ok "dx (Go front-end) installed: $("$DXDFIR_BIN_DIR/dx" --version 2>/dev/null || echo "$DXDFIR_BIN_DIR/dx") -> $DXDFIR_BIN_DIR/dx"
+detail "command reference: dx --help (and --help on any subcommand)"
 
 ################################################################################
 # Install the pinned Ansible dependencies (requirements.yml) into the
@@ -443,17 +443,17 @@ cmd() { printf '       %s%s%s  %s%s%s\n' "$C_ACCENT" "$1" "$C_RESET" "$C_DIM" "$
 
 section "Setup complete"
 # Verify the in-repo binary exists and can find its venv's ansible.
-if [[ -x "$DXDFIR_BIN_DIR/dxdfir" ]]; then
-    ok "dxdfir binary: $("$DXDFIR_BIN_DIR/dxdfir" --version 2>/dev/null || echo "$DXDFIR_BIN_DIR/dxdfir")"
+if [[ -x "$DXDFIR_BIN_DIR/dx" ]]; then
+    ok "dx binary: $("$DXDFIR_BIN_DIR/dx" --version 2>/dev/null || echo "$DXDFIR_BIN_DIR/dx")"
 else
-    die "dxdfir binary not found at $DXDFIR_BIN_DIR/dxdfir"
+    die "dx binary not found at $DXDFIR_BIN_DIR/dx"
 fi
-_ap="$(NO_COLOR=1 "$DXDFIR_BIN_DIR/dxdfir" --repo-root "$REPO_ROOT_DIR" --no-tui 2>/dev/null \
+_ap="$(NO_COLOR=1 "$DXDFIR_BIN_DIR/dx" --repo-root "$REPO_ROOT_DIR" 2>/dev/null \
     | grep -E '^ *\[[^]]*\] +ansible ' | head -1 | sed 's/^ *//')"
 case "$_ap" in
-    "[ok]"*) ok "dxdfir readiness: $_ap" ;;
-    "")      warn "Could not read dxdfir's ansible readiness line — check '.go/bin/dxdfir --no-tui'." ;;
-    *)       die "dxdfir does not resolve the venv's ansible: $_ap" ;;
+    "[ok]"*) ok "dx readiness: $_ap" ;;
+    "")      warn "Could not read dx's ansible readiness line — check '.go/bin/dx'." ;;
+    *)       die "dx does not resolve the venv's ansible: $_ap" ;;
 esac
 # ...and that ansible kept its state in the checkout: anything under
 # ~/.ansible written since the collections step (the directory itself, if the
@@ -477,7 +477,7 @@ fi
 if [[ "$EUID" -ne 0 ]] && id -nG "$RUN_USER" 2>/dev/null | tr ' ' '\n' | grep -qx docker \
     && ! id -nG | tr ' ' '\n' | grep -qx docker; then
     warn "Your docker-group membership is new — this shell does not carry it yet."
-    detail "Run 'newgrp docker' here, or log out and back in once; dxdfir itself needs neither."
+    detail "Run 'newgrp docker' here, or log out and back in once; dx itself needs neither."
 elif [[ "$DOCKER_WAS_INSTALLED" == false ]]; then
     ok "Docker engine installed."
 fi

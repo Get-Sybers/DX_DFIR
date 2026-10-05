@@ -46,8 +46,8 @@ The most useful contributions right now, roughly in order:
 2. **Verify the MITRE CAR mapping.** The engine's artefact maps are proven on
    the author's corpus and by the smoke test's Sysmon fixtures; confirming
    which fields actually populate for the other lanes — and which are
-   silently null — is worth more than adding more mappings. `dxdfir
-   verify-car` is the gate; the ranked checklist is issue #14.
+   silently null — is worth more than adding more mappings. `dx byakugan
+   verify` is the gate; the ranked checklist is issue #14.
 3. **EVTX ingest.** Built via goevtx, never run against a real event log.
 
 ## Ground rules

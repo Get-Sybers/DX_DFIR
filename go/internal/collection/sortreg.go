@@ -78,7 +78,7 @@ func SortInto(repoRoot, name string, dryRun bool, onItem ItemFn) (SortResult, er
 	if !fsx.IsDir(root) && !fsx.IsSymlink(root) {
 		dz := filepath.Join(dropzoneRoot(repoRoot), name)
 		if !fsx.IsDir(dz) {
-			return res, fmt.Errorf("no such collection %q — register it first: dxdfir register %s", name, name)
+			return res, fmt.Errorf("no such collection %q — register it first: dx register %s", name, name)
 		}
 		if dryRun {
 			src = dz // preview the classification from the dropzone
@@ -277,7 +277,7 @@ func pruneEmptyDirs(root string, subdirs []string) {
 // to write THROUGH a lane subdir that is a symlink (or that otherwise resolves
 // outside the collection root). data_store is group-writable, so a hostile
 // evidence stager could replace, say, collections/<c>/pcaps with a symlink to
-// /etc/cron.d; without this guard the operator's `dxdfir sort` / promote would
+// /etc/cron.d; without this guard the operator's `dx sort` / promote would
 // rename an attacker-named, attacker-content file through the link and write
 // outside the tree — an arbitrary-write → host-code-execution primitive. An
 // externally-linked collection (root itself a legitimate symlink) still works,

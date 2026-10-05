@@ -26,7 +26,7 @@ type Repo struct {
 
 // Detect resolves the repo root. Order: explicit (--repo-root), $DFIR_REPO_ROOT,
 // the current directory and its parents, then the directory of the running
-// binary and its parents (so an in-repo build at <repo>/go/dxdfir resolves too).
+// binary and its parents (so an in-repo build at <repo>/go/dx resolves too).
 func Detect(explicit string) (*Repo, error) {
 	var candidates []string
 	if explicit != "" {
@@ -92,7 +92,7 @@ func (r *Repo) Playbook(name string) string {
 // installs the pinned ansible layer (requirements.txt) into. It lives INSIDE
 // the checkout so the front-end can find it by relation to the repo it just
 // resolved — no PATH edit, profile drop-in or re-login stands between a fresh
-// setup and a working `dxdfir`. $DXDFIR_VENV overrides it (the same knob the
+// setup and a working `dx`. $DXDFIR_VENV overrides it (the same knob the
 // setup script honours).
 const VenvDir = ".venv"
 

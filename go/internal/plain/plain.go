@@ -1,8 +1,7 @@
-// Package plain is the non-TTY presenter: it consumes the exact same
-// model.Update stream the termui dashboard does, but renders it as line output
-// on STDERR. This is what runs under a pipe, CI, DXDFIR_NO_TUI, or a dumb
-// terminal — so the subprocess/watch layer is identical and only the presenter
-// differs. STDERR is used throughout so a machine-readable stdout stays clean.
+// Package plain is the sole presenter: it consumes the model.Update stream and
+// renders it as line output on STDERR — periodic status lines plus live log
+// lines — whether interactive, under a pipe, or in CI. STDERR is used
+// throughout so a machine-readable stdout stays clean.
 package plain
 
 import (
@@ -69,7 +68,7 @@ func (p *Presenter) printLog(l *model.LogLine) {
 
 func (p *Presenter) printProgress(s model.Snapshot) {
 	var b strings.Builder
-	b.WriteString(style.Bold("[dxdfir] "))
+	b.WriteString(style.Bold("[dx] "))
 	if s.Overall.LanesTotal > 0 {
 		fmt.Fprintf(&b, "lanes %d/%d", s.Overall.LanesDone, s.Overall.LanesTotal)
 	}

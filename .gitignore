@@ -71,3 +71,6 @@ ansible/inventory/secrets/*
 # CI working dirs: Go module cache, pip cache
 /.go/
 /.cache/
+# `make build` drops the dx binary in go/ (an artifact, never source); `make
+# link` installs it into the gitignored /.go/bin/ instead.
+/go/dx

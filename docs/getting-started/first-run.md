@@ -1,14 +1,14 @@
 # First run
 
 The command journey from raw evidence to searchable analysis. Each step is one
-`dxdfir` verb; run them in order — later steps read what earlier ones wrote.
+`dx` verb; run them in order — later steps read what earlier ones wrote.
 
-> Assumes you've [installed](install.md) and run `dxdfir build-docker`.
+> Assumes you've [installed](install.md) and run `dx build images`.
 
 ## The path at a glance
 
 ```
-stage evidence → process → build-car → verify-car → build-timeline → bring up stack → explore
+stage evidence → process → byakugan build → byakugan verify → byakugan export-timeline → bring up stack → explore
 ```
 
 ## 1. Stage evidence
@@ -28,7 +28,7 @@ DX_DFIR classify it by magic bytes — see the [collection workflow](#optional-t
 below. Check what's staged:
 
 ```bash
-dxdfir list                    # per-lane evidence counts over data_store/raw/
+dx list evidence               # per-lane evidence counts over data_store/raw/
 ```
 
 > `data_store/` is git-ignored deny-by-default — never commit evidence. Verify hashes
@@ -47,22 +47,23 @@ like any evidence below.
 ## 2. Process
 
 Run a [processing lane](../architecture/processing-lanes.md) over the evidence
-(`process COLLECTION LANE` — the two are order-independent; a known lane name is the
-lane, anything else the collection):
+(`process SCOPE TOOL` — the two positionals are order-independent; a known tool name
+is the tool, and `SCOPE` is a collection name or a raw-evidence type):
 
 ```bash
-dxdfir process gowindowlicker  # one lane over all staged evidence of its type
-dxdfir process all             # every lane that has evidence
+dx process gowindowlicker      # one tool over all staged evidence of its type
+dx process all                 # every tool that has evidence
 ```
 
 Each lane runs its tool in a container and writes deterministic output under
-`data_store/processed/`. On a terminal you get a [live progress dashboard](the-interface.md);
+`data_store/processed/`. Progress streams as plain line output on stderr (see
+[the interface](the-interface.md)) while stdout stays clean for piping;
 `process` is idempotent (already-processed inputs are skipped — pass `--force` to redo).
 
 ## 3. Normalise into CAR
 
 ```bash
-dxdfir build-car               # processed evidence → per-source MITRE CAR stores
+dx byakugan build              # processed evidence → per-source MITRE CAR stores
 ```
 
 This drives the external [Byakugan engine](https://github.com/Get-Sybers/Byakugan) to
@@ -75,7 +76,7 @@ map or coverage? Re-derive with `--rebuild`. See the
 ## 4. Verify
 
 ```bash
-dxdfir verify-car              # the CAR correctness gate
+dx byakugan verify             # the CAR correctness gate
 ```
 
 Checks what the pipeline actually wrote — each exercised object populated, values sane,
@@ -84,19 +85,18 @@ every row traceable to one artefact. **Run this before you trust the CAR.**
 ## 5. Build a timeline
 
 ```bash
-dxdfir build-timeline data_store/processed/byakugan  # writes data_store/processed/byakugan/timeline.jsonl
+dx byakugan export-timeline data_store/processed/byakugan  # writes data_store/processed/byakugan/timeline.jsonl
 ```
 
 Unions every source's object events and relationship edges into one time-ordered
 `timeline.jsonl` — the behaviour timeline. Written under `data_store/processed/byakugan/` by
-default, which is exactly what the [Timeline tab](the-interface.md#timeline) reads. (Pass
-`--out PATH` to put it elsewhere — but the tab only reads the default location.)
+default. (Pass `--out-dir DIR` to put it elsewhere.)
 
 ## 6. Bring up the analysis backend
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144        # Elasticsearch requires this, or it crash-loops
-dxdfir deploy stack                            # Elasticsearch + Kibana + Fleet + Filebeat
+dx deploy stack                                # Elasticsearch + Kibana + Fleet + Filebeat
 ```
 
 `deploy stack` converges everything from the inventory: docker installed when
@@ -114,9 +114,10 @@ data streams. See [the stack](../architecture/the-stack.md).
 
 ## 7. Explore
 
-- **Kibana** at <http://127.0.0.1:5601>.
-- **`dxdfir`** (no args) — the interactive UI: keep driving the pipeline, watch the
-  containers, and run ES|QL queries from the [Kibana tab](the-interface.md).
+- **Kibana** at <http://127.0.0.1:5601> — Discover, detections, and ES|QL over the
+  ingested evidence.
+- **`dx`** (no args) — the [landing readout](the-interface.md): environment readiness,
+  tracked collections, and staged evidence at a glance.
 
 ## Optional: the collection workflow
 
@@ -124,18 +125,18 @@ To group evidence into a named, tracked case and auto-sort a mixed pile:
 
 ```bash
 # drop a mixed pile into data_store/raw/sort/case-a/, then:
-dxdfir register case-a                  # promote it to a tracked collection + SHA-1 hash it
-dxdfir sort case-a                      # magic-byte sort loose files into lane subdirs (add --dry-run to preview)
-dxdfir select case-a                    # make it the active target for later commands
-dxdfir process case-a all               # process the whole collection
+dx register case-a                      # promote it to a tracked collection + SHA-1 hash it
+dx sort case-a                          # magic-byte sort loose files into lane subdirs (add --dry-run to preview)
+dx select case-a                        # make it the active target for later commands
+dx process case-a all                   # process the whole collection
 ```
 
 More in the [command reference](commands.md) and the [collection concept](../architecture/processing-lanes.md#collections).
 
 ## When something's off
 
-- `build-car` / `build-timeline` fail → the Byakugan engine checkout is missing; re-run
-  the [setup script](install.md).
+- `byakugan build` / `byakugan export-timeline` fail → the Byakugan engine checkout is
+  missing; re-run the [setup script](install.md).
 - A lane finds nothing → evidence is in the wrong `data_store/raw/` subdir (step 1).
 - Empty or stale CAR → you ran the steps out of order; the sequence is
-  `process → build-car → verify-car`.
+  `process → byakugan build → byakugan verify`.

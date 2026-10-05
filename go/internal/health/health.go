@@ -131,7 +131,7 @@ func checkDocker(r *repo.Repo) model.Check {
 // checkByakugan reports whether the hardened Byakugan CAR engine image is
 // present. The engine used to be a host checkout; it now runs entirely inside
 // the get-sybers/byakugan image (cloned + built at the sources.yml pin by
-// `dxdfir build-docker`), so the CAR lane just shells that image. It is needed
+// `dx build images`), so the CAR lane just shells that image. It is needed
 // only for the CAR build/timeline/verify verbs, so its absence is a warning,
 // never a process gate.
 // checkMemory reports whether the hardened get-sybers/anamnesis image (the
@@ -150,13 +150,13 @@ func checkMemory(_ *repo.Repo) model.Check {
 		`{{.Config.User}} {{index .Config.Labels "com.get-sybers.hardened"}}`, image)
 	if !ok {
 		c.State = model.CheckWarn
-		c.Detail = "image " + image + " not built - memory lane unavailable (dxdfir build-docker)"
+		c.Detail = "image " + image + " not built - memory lane unavailable (dx build images)"
 		return c
 	}
 	f := strings.Fields(out)
 	if len(f) < 2 || f[0] != "2000:2000" || f[1] != "true" {
 		c.State = model.CheckWarn
-		c.Detail = "image " + image + " present but not hardened (rebuild: dxdfir build-docker)"
+		c.Detail = "image " + image + " present but not hardened (rebuild: dx build images)"
 		return c
 	}
 	c.State = model.CheckOK
@@ -179,13 +179,13 @@ func checkByakugan(_ *repo.Repo) model.Check {
 		`{{.Config.User}} {{index .Config.Labels "com.get-sybers.hardened"}}`, image)
 	if !ok {
 		c.State = model.CheckWarn
-		c.Detail = "engine image " + image + " not built (needed for build-car: dxdfir build-docker)"
+		c.Detail = "engine image " + image + " not built (needed for CAR build: dx build images)"
 		return c
 	}
 	f := strings.Fields(out)
 	if len(f) < 2 || f[0] != "2000:2000" || f[1] != "true" {
 		c.State = model.CheckWarn
-		c.Detail = "engine image " + image + " present but not hardened (rebuild: dxdfir build-docker)"
+		c.Detail = "engine image " + image + " present but not hardened (rebuild: dx build images)"
 		return c
 	}
 	c.State = model.CheckOK

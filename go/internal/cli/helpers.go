@@ -4,35 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/Get-Sybers/DX_DFIR/go/internal/model"
 	"github.com/Get-Sybers/DX_DFIR/go/internal/plain"
 	"github.com/Get-Sybers/DX_DFIR/go/internal/style"
-	"github.com/Get-Sybers/DX_DFIR/go/internal/termdetect"
-	"github.com/Get-Sybers/DX_DFIR/go/internal/tui"
 )
 
 func redf(format string, a ...any) string { return style.Red(fmt.Sprintf(format, a...)) }
 
-// present runs a progress stream under the right presenter: the termui
-// dashboard when the terminal can host it (and not opted out), else plain line
-// streaming. If the dashboard cannot initialise (ErrNoTTY, e.g. window too
-// small), it falls back to plain before any update is consumed.
-func present(env *Env, tuiP model.Presenter, updates <-chan model.Update, onAbort func()) error {
-	// The interactive shell runs jobs as children with DXDFIR_PROGRESS=json so it
-	// can drive its Pipeline widgets from the real update stream (one JSON
-	// ProgressEvent per line) rather than scraping plain text.
-	if os.Getenv("DXDFIR_PROGRESS") == "json" {
-		return plain.NewJSONProgress().Run(updates, onAbort)
-	}
-	if !env.ForcePlain && termdetect.UseTUI(env.ForceTUI) {
-		err := tuiP.Run(updates, onAbort)
-		if !errors.Is(err, tui.ErrNoTTY) {
-			return err
-		}
-		// dashboard declined before consuming updates; stream plain instead
-	}
+// present runs a progress stream under the plain line presenter: periodic
+// status lines plus live log output on stderr, so a machine-readable stdout
+// stays clean. onAbort is invoked by the presenter when the operator quits so
+// the orchestrator can cancel the underlying job.
+func present(updates <-chan model.Update, onAbort func()) error {
 	return plain.New().Run(updates, onAbort)
 }
 

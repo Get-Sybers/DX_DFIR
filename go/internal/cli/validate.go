@@ -9,7 +9,7 @@ import (
 	"github.com/Get-Sybers/DX_DFIR/go/internal/run"
 )
 
-// newValidateCmd builds `dxdfir validate`, a thin front for the repository check
+// newValidateCmd builds `dx validate`, a thin front for the repository check
 // harness (.github/tests/run-checks.sh). It requires bash on PATH and runs the script
 // with the repo root as cwd, propagating its exit code.
 func newValidateCmd(env *Env) *cobra.Command {

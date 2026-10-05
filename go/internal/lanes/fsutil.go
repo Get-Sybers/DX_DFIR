@@ -134,15 +134,13 @@ func itoa(n int) string {
 
 // sanitizeLog mirrors run.Sanitize without importing run (avoids a cycle): drop
 // everything before the last carriage return (collapsing in-place redraws to
-// their final state), strip ANSI escape sequences, defuse termui's [text](style)
-// markup by breaking the "](" adjacency its parser keys on, and trim — so a
-// tailed log line is safe to hand straight to a termui widget.
+// their final state), strip ANSI escape sequences, and trim — so a tailed log
+// line is safe to print verbatim.
 func sanitizeLog(line string) string {
 	if i := strings.LastIndexByte(line, '\r'); i >= 0 {
 		line = line[i+1:]
 	}
 	line = ansiRE.ReplaceAllString(line, "")
-	line = strings.ReplaceAll(line, "](", "] (")
 	return strings.TrimRight(line, " \t")
 }
 

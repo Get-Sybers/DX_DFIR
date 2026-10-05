@@ -2,7 +2,7 @@
 
 DX_DFIR is an offline, container-based digital-forensics pipeline. You point it at
 raw evidence — packet captures, disk images, memory dumps, Windows event logs — and
-drive the whole thing through one command, `dxdfir`. It processes each kind of
+drive the whole thing through one command, `dx`. It processes each kind of
 evidence with the right specialist tool, normalises everything into the
 [MITRE CAR](https://car.mitre.org/data_model/) data model, and feeds a security-on
 Elastic stack where detections run as rules-as-code.
@@ -16,7 +16,7 @@ New here? Start with **[What DX_DFIR is](getting-started/README.md)**.
 | Understand what this is and whether it's for me | [Getting started → overview](getting-started/README.md) |
 | Install it on a fresh host | [Getting started → install](getting-started/install.md) |
 | Run my first case, command by command | [Getting started → first run](getting-started/first-run.md) |
-| Drive it from the terminal UI | [Getting started → the interface](getting-started/the-interface.md) |
+| See how it behaves on the terminal | [Getting started → the interface](getting-started/the-interface.md) |
 | Look up a specific command | [Getting started → command reference](getting-started/commands.md) |
 | Understand how it works under the hood | [Architecture → overview](architecture/README.md) |
 | See the processing lanes | [Architecture → processing lanes](architecture/processing-lanes.md) |
@@ -53,5 +53,5 @@ relevant sections:
 ---
 
 > **Pre-release software.** Interfaces may still change. When a page and the CLI
-> disagree, trust `dxdfir --help` and open an issue. Release notes:
+> disagree, trust `dx --help` and open an issue. Release notes:
 > [CHANGELOG.md](../CHANGELOG.md).

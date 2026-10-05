@@ -1,6 +1,6 @@
-# dxdfir Go/termui front-end.
+# dx Go front-end.
 GO      ?= go
-BIN     ?= dxdfir
+BIN     ?= dx
 PREFIX  ?=
 
 # `make link` install layout — the SAME as scripts/setup-environment.sh: the
@@ -12,15 +12,15 @@ BIN_DIR    ?= ../.go/bin
 
 .PHONY: build install link check fmt fmt-check vet tidy clean
 
-build: ## build ./dxdfir
-	$(GO) build -o $(BIN) ./cmd/dxdfir
+build: ## build ./dx
+	$(GO) build -o $(BIN) ./cmd/dx
 
-install: ## go install as `dxdfir` (into $GOBIN / $GOPATH/bin)
-	$(GO) install ./cmd/dxdfir
+install: ## go install as `dx` (into $GOBIN / $GOPATH/bin)
+	$(GO) install ./cmd/dx
 
-link: build ## build, then install `dxdfir` into .go/bin/ (same layout as setup-environment.sh)
-	install -Dm0755 "$(BIN)" "$(BIN_DIR)/dxdfir"
-	@echo "installed: $(BIN_DIR)/dxdfir"
+link: build ## build, then install `dx` into .go/bin/ (same layout as setup-environment.sh)
+	install -Dm0755 "$(BIN)" "$(BIN_DIR)/dx"
+	@echo "installed: $(BIN_DIR)/dx"
 
 check: fmt-check vet build ## gofmt -l, go vet, build
 
