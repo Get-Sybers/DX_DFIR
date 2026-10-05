@@ -2,14 +2,14 @@
 #
 # Fetch DFIR test samples and land them where the processing scripts read.
 #
-#   ./dev-scripts/fetch-samples.sh --list              # every group and where it routes
-#   ./dev-scripts/fetch-samples.sh --list <group>      # the files in one group + routing
-#   ./dev-scripts/fetch-samples.sh --route             # show the routing map for every file
-#   ./dev-scripts/fetch-samples.sh --fetch <group>     # fetch one group into data_store/raw/
-#   ./dev-scripts/fetch-samples.sh --file <name>       # fetch individual files by name
+#   ./scripts/dev/fetch-samples.sh --list              # every group and where it routes
+#   ./scripts/dev/fetch-samples.sh --list <group>      # the files in one group + routing
+#   ./scripts/dev/fetch-samples.sh --route             # show the routing map for every file
+#   ./scripts/dev/fetch-samples.sh --fetch <group>     # fetch one group into data_store/raw/
+#   ./scripts/dev/fetch-samples.sh --file <name>       # fetch individual files by name
 #                                                      # pattern, one at a time
-#   ./dev-scripts/fetch-samples.sh --fetch all --yes   # fetch everything (2.8 TB)
-#   ./dev-scripts/fetch-samples.sh --verify [<group>]  # re-check what is on disk
+#   ./scripts/dev/fetch-samples.sh --fetch all --yes   # fetch everything (2.8 TB)
+#   ./scripts/dev/fetch-samples.sh --verify [<group>]  # re-check what is on disk
 #
 #   Flags: --keep-archives retains the compressed source under .sources/ after
 #          extraction (hash-re-verifiable, but doubles disk). The DEFAULT prunes
@@ -68,14 +68,15 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-REPO_ROOT_DIR="$(realpath "$SCRIPT_DIR/..")"
+# this script lives in scripts/dev/, so the repo root is two levels up
+REPO_ROOT_DIR="$(realpath "$SCRIPT_DIR/../..")"
 cd "$REPO_ROOT_DIR"
 
 RAW="data_store/raw"
 SRC_DIR="$RAW/.sources"                       # staged compressed originals
 BASE="https://digitalcorpora.s3.amazonaws.com/corpora"
 S3_BASE="s3://digitalcorpora/corpora"         # same objects over the S3 API
-MANIFEST_FILE="dev-scripts/samples-manifest.tsv"
+MANIFEST_FILE="scripts/dev/samples-manifest.tsv"
 KEEP_ARCHIVES=false
 EXCLUDE=""                                    # --exclude <regex>: skip matching groups
 

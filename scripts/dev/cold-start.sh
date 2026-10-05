@@ -94,4 +94,11 @@ if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
   fi
 fi
 
+# The dx PATH line (if you added `export PATH=...<repo>/.go/bin...` to a shell
+# rc from setup-environment.sh's hint) lives in your own dotfiles, OUTSIDE this
+# checkout. Teardown never writes outside the repo, so it does not edit them —
+# remove that line yourself if you want it gone; it just points at the .go/bin
+# this run deleted.
+echo "Note: if you added the dx PATH line (.../.go/bin) to a shell rc, remove it yourself — teardown does not edit files outside the repo."
+
 echo "Done."

@@ -38,10 +38,10 @@ dx list evidence               # per-lane evidence counts over data_store/raw/
 to the repo, but small, hash-pinned public samples are fetched on demand:
 
 ```bash
-./dev-scripts/fetch-samples.sh --fetch drives-dftt-2004    # a few small disk images (~MBs)
+./scripts/dev/fetch-samples.sh --fetch drives-dftt-2004    # a few small disk images (~MBs)
 ```
 
-Run `./dev-scripts/fetch-samples.sh --list` for the full sample catalogue, then process it
+Run `./scripts/dev/fetch-samples.sh --list` for the full sample catalogue, then process it
 like any evidence below.
 
 ## 2. Process

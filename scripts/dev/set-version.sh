@@ -3,7 +3,7 @@
 # Set the project version in the few places that genuinely carry it (the tag
 # and the badge carry maturity; CHANGELOG.md is the versioned record).
 #
-#   ./dev-scripts/set-version.sh 0.3.0-alpha.1
+#   ./scripts/dev/set-version.sh 0.3.0-alpha.1
 #
 # This does NOT tag. Releasing: run this, commit "Release vX.Y.Z-pre.N",
 # `git tag -a vX.Y.Z-pre.N` and push --follow-tags, then create the GitHub
@@ -12,7 +12,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-REPO_ROOT_DIR="$(realpath "$SCRIPT_DIR/..")"
+# this script lives in scripts/dev/, so the repo root is two levels up
+REPO_ROOT_DIR="$(realpath "$SCRIPT_DIR/../..")"
 cd "$REPO_ROOT_DIR"
 
 VERSION="${1:-}"

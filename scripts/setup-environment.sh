@@ -481,3 +481,13 @@ if [[ "$EUID" -ne 0 ]] && id -nG "$RUN_USER" 2>/dev/null | tr ' ' '\n' | grep -q
 elif [[ "$DOCKER_WAS_INSTALLED" == false ]]; then
     ok "Docker engine installed."
 fi
+
+# The dx binary lives in the checkout (.go/bin), never on PATH — so the last
+# word is how to reach it. A `run` script cannot edit the parent shell's PATH
+# (the export dies with this process), so print the line to copy rather than
+# pretend to set it; nothing outside the checkout is touched.
+section "Run dx"
+ok "dx is installed at $DXDFIR_BIN_DIR/dx"
+detail "It is not on your PATH — add it for this shell (or append to your shell rc):"
+detail "  export PATH=\"$DXDFIR_BIN_DIR:\$PATH\""
+detail "then run:  dx --help"

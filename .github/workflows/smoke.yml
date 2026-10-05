@@ -29,8 +29,8 @@ on:
       - "ansible.cfg"
       - "requirements.txt"
       - ".github/tests/smoke-test.sh"
-      - "dev-scripts/fetch-samples.sh"
-      - "dev-scripts/samples-manifest.tsv"
+      - "scripts/dev/fetch-samples.sh"
+      - "scripts/dev/samples-manifest.tsv"
       - ".github/workflows/smoke.yml"
 
 permissions:

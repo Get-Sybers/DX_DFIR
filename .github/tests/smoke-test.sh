@@ -112,7 +112,7 @@ pass "docker, python3 and ansible-playbook present (daemon + image gates run in 
 section "Fixtures (sha256-pinned Sysmon .evtx)"
 # --fetch is idempotent; never gate on --verify (it exits 0 on an empty checkout — bit the first CI run)
 echo "   fetching sysmon-attack-samples (checksum-verified, idempotent)…"
-./dev-scripts/fetch-samples.sh --fetch sysmon-attack-samples >/dev/null 2>&1 \
+./scripts/dev/fetch-samples.sh --fetch sysmon-attack-samples >/dev/null 2>&1 \
     || die "could not fetch the Sysmon fixtures (network? manifest?)."
 n_fix=$(find "$FIXTURE_DIR" -iname '*.evtx' 2>/dev/null | wc -l)
 (( n_fix > 0 )) || die "no fixtures on disk under $FIXTURE_DIR after fetch."

@@ -8,7 +8,7 @@ tag, not a documentation edit. It used to be a twelve-file edit, which is how
 stale labels got in.
 
 ```bash
-./dev-scripts/set-version.sh 0.3.0-beta.1   # CHANGELOG heading + app.conf only
+./scripts/dev/set-version.sh 0.3.0-beta.1   # CHANGELOG heading + app.conf only
 ./.github/tests/run-checks.sh
 git commit -am "Release v0.3.0-beta.1"
 git tag -a v0.3.0-beta.1 -m "v0.3.0-beta.1"

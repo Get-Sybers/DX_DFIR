@@ -24,7 +24,7 @@
 - name: "stack-certs | import the compose-era certificates"
   when:
     - dxdfir_stack_certs_volume.exists
-    - _dxdfir_privileged | bool
+    - dxdfir_stack_privileged | bool
   block:
     - name: "stack-certs | is the volume's CA there to import"
       ansible.builtin.stat:
@@ -63,7 +63,7 @@
       deploy as root to keep the existing CA.
   when:
     - dxdfir_stack_certs_volume.exists
-    - not _dxdfir_privileged | bool
+    - not dxdfir_stack_privileged | bool
 
 # ---- the CA (created once; an imported CA is never regenerated) -------------
 - name: "stack-certs | is a CA already in the store"
@@ -105,7 +105,7 @@
 - name: "stack-certs | assert the key posture is deliberate"
   ansible.builtin.assert:
     that:
-      - _dxdfir_privileged | bool
+      - dxdfir_stack_privileged | bool
         or dxdfir_stack_allow_world_readable_keys | bool
     fail_msg: >-
       this deploy cannot hold the node TLS keys at root:root 0640 (the service
@@ -121,9 +121,9 @@
     path: "{{ dxdfir_stack_certs_dir }}/{{ item.name }}/{{ item.name }}.key"
     # containers read as uid 1000 gid 0: privileged deploy = root:root 0640; an
     # unprivileged one cannot chown gid 0, so 0644 (opted in via the assert above)
-    owner: "{{ 'root' if _dxdfir_privileged | bool else omit }}"
-    group: "{{ 'root' if _dxdfir_privileged | bool else omit }}"
-    mode: "{{ '0640' if _dxdfir_privileged | bool else '0644' }}"
+    owner: "{{ 'root' if dxdfir_stack_privileged | bool else omit }}"
+    group: "{{ 'root' if dxdfir_stack_privileged | bool else omit }}"
+    mode: "{{ '0640' if dxdfir_stack_privileged | bool else '0644' }}"
   loop: &dxdfir_stack_tls_instances
     - name: es01
       dns: [elasticsearch, es01, localhost]
@@ -168,11 +168,11 @@
 - name: "stack-certs | protected private keys"
   ansible.builtin.file:
     path: "{{ item.path }}"
-    owner: "{{ 'root' if _dxdfir_privileged | bool else omit }}"
-    group: "{{ 'root' if _dxdfir_privileged | bool else omit }}"
+    owner: "{{ 'root' if dxdfir_stack_privileged | bool else omit }}"
+    group: "{{ 'root' if dxdfir_stack_privileged | bool else omit }}"
     mode: >-
       {{ '0600' if (item.path | basename) == 'ca.key'
-         else ('0640' if _dxdfir_privileged | bool else '0644') }}
+         else ('0640' if dxdfir_stack_privileged | bool else '0644') }}
   loop: "{{ dxdfir_stack_cert_keys.files }}"
   loop_control:
     label: "{{ item.path | basename }}"
@@ -185,7 +185,7 @@
       containers (uid 1000, gid 0) can read them through the bind mount.
       Run `dx deploy stack` (it escalates automatically) or deploy as root to
       hold them at root:root 0640.
-  when: not _dxdfir_privileged | bool
+  when: not dxdfir_stack_privileged | bool
 
 - name: "stack-certs | find every certificate in the tree"
   ansible.builtin.find:
