@@ -1,60 +1,6 @@
 #!/bin/bash
 # ==============================================================================
-# Prepare a host to run the DX_DFIR scripts.
-#
-# Installs Docker and the handful of userland tools the processing scripts
-# shell out to, puts the invoking user in the docker group, and sets
-# ownership/permissions on the repository.
-#
-# The analysis images are BUILT, not pulled — the dxdfir-build-images.yml
-# playbook (what `dxdfir build-docker` runs) is the one build mechanism, and
-# scripts/save-docker-images.sh --build calls it and saves the results as
-# tarballs for transport. When this script finds no route to the internet it
-# falls back to loading those pre-seeded tarballs (see "Analysis images"
-# below). That fallback covers the IMAGES only: the earlier steps (apt, the
-# Docker repo, submodules, pip, collections) still need the network on a FIRST
-# run, so the offline path assumes a host provisioned online first — set up
-# connected, save the tarballs, move/disconnect, re-run.
-#
-# Each guard below encodes a way the previous revision of this script failed on
-# a clean machine:
-#
-#   - `sudo` is NOT assumed to exist. The previous revision hardcoded it in 11
-#     places and died on its first line ("sudo: command not found") on any
-#     minimal container image, which is exactly where a fresh analyst
-#     environment gets built. We are usually already root there, so the
-#     escalation prefix is resolved once, up front, and may legitimately be
-#     empty.
-#   - Every prompt degrades to a default when stdin is not a TTY. `read` on a
-#     closed stdin returns non-zero immediately, so the old prompts silently
-#     took the "no" branch and the script reported success having installed
-#     nothing. --yes makes that explicit and non-interactive runs assume it.
-#   - The Docker apt repository is derived from /etc/os-release, not hardcoded
-#     to Debian. The old URL installed a Debian repo on Ubuntu hosts, which
-#     resolves but then fails to find the packages.
-#   - apt-get runs with -y. Without it the install blocks on a confirmation
-#     prompt that non-interactive runs can never answer.
-#   - Permissions are u=rwX,g=rX (capital X), not 744. 744 clears the execute
-#     bit on DIRECTORIES for the group, so members of the docker group the
-#     script had just created could not traverse into the very repository it
-#     had just given them. Capital X applies +x to directories and to files
-#     that are already executable, leaving the .sh files runnable and data
-#     files alone.
-#   - unzip is installed, not merely hoped for. dev-scripts/fetch-samples.sh
-#     unpacks zip fixtures with it and the old script never mentioned it.
-#   - Nothing this script installs depends on a PATH edit taking effect. The
-#     previous revision put the dxdfir binary under /opt/dxdfir/bin and the
-#     ansible venv under /opt/dxdfir/venv, reachable only through an
-#     /etc/profile.d drop-in — which login shells read and nothing else does
-#     (`su user`, a desktop terminal, tmux, sudo's secure_path, the very shell
-#     the script ran in), so the closing "dxdfir --help" was command-not-found
-#     until a full re-login, and sometimes after it. Now every artefact lives
-#     INSIDE the checkout — .go/ for the toolchain + binary, .venv/ for the
-#     ansible layer, .ansible/ for collections (all gitignored) — so the script
-#     proves the result by direct path before it says "done".
-#
-# Usage: scripts/setup-environment.sh [--yes] [--no-color] [--help]
-# ==============================================================================
+# Prepare a host to run the DX_DFIR.
 
 set -o pipefail
 
@@ -535,18 +481,3 @@ if [[ "$EUID" -ne 0 ]] && id -nG "$RUN_USER" 2>/dev/null | tr ' ' '\n' | grep -q
 elif [[ "$DOCKER_WAS_INSTALLED" == false ]]; then
     ok "Docker engine installed."
 fi
-echo
-
-step "Run DX_DFIR (works in this shell as it is):"
-cmd ".go/bin/dxdfir --help" "(process evidence, build + verify CAR, deploy the analysis stack — see README.md)"
-echo
-step "Build the hardened tool containers (everything the pipeline runs):"
-cmd ".go/bin/dxdfir build-docker" "(runs dxdfir-build-images.yml with the venv's ansible)"
-echo
-step "Drive ansible by hand (the venv is the repo's own):"
-cmd ". $DXDFIR_VENV/bin/activate"
-echo
-step "Pre-seed the analysis images as tarballs for an offline host:"
-cmd "scripts/save-docker-images.sh --build" "(connected host: build + save every image)"
-cmd "scripts/save-docker-images.sh --load" "(offline host: load tarballs — or just re-run this script)"
-echo
