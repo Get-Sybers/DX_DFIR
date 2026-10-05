@@ -324,15 +324,6 @@ fi
 # save-docker-images.sh honour the same variable).
 ################################################################################
 section "Ansible (pinned)"
-# /opt/dxdfir is the RETIRED prefix: an override still naming it (a stale
-# export from an earlier release's shell, a forgotten ~/.bashrc line) would
-# recreate exactly the layout this script retires — ignore it, loudly.
-for _legacy in DXDFIR_VENV DXDFIR_COLLECTIONS DXDFIR_BIN_DIR; do
-    if [[ "${!_legacy:-}" == /opt/dxdfir || "${!_legacy:-}" == /opt/dxdfir/* ]]; then
-        warn "Ignoring $_legacy=${!_legacy} — /opt/dxdfir is the retired prefix; everything lives in the checkout now."
-        unset "$_legacy"
-    fi
-done
 DXDFIR_VENV="${DXDFIR_VENV:-$REPO_ROOT_DIR/.venv}"
 step "Installing the pinned ansible layer into $DXDFIR_VENV ..."
 python3 -m venv "$DXDFIR_VENV" || die "Failed to create the venv (need python3-venv)."
@@ -348,12 +339,6 @@ for _ans in ansible ansible-playbook ansible-galaxy; do
         || die "Expected $_ans in $DXDFIR_VENV/bin after installing ansible-core."
 done
 ok "ansible in the venv: $("$DXDFIR_VENV/bin/ansible-playbook" --version 2>/dev/null | head -1 || echo 'ansible-playbook')"
-# The legacy system-prefix venv of earlier releases: nothing reads it any more
-# (dxdfir resolves the repo venv), so retire it rather than leave a stale
-# ansible around.
-if [[ -d /opt/dxdfir/venv ]]; then
-    $SUDO rm -rf /opt/dxdfir/venv && detail "Retired legacy venv /opt/dxdfir/venv"
-fi
 # The rest of THIS script run sees the venv directly (child launchers
 # included); sudo steps keep invoking the venv binaries by absolute path.
 export PATH="$DXDFIR_VENV/bin:$PATH"
@@ -406,10 +391,6 @@ if (( ! _go_ok )); then
     tar -C "$DXDFIR_GO_ROOT" --strip-components=1 -xzf "/tmp/${_gotar}" \
         || die "Failed to extract the Go toolchain into $DXDFIR_GO_ROOT."
     rm -f "/tmp/${_gotar}"
-    # Legacy: retire a previous system-wide Go install if present
-    if [[ -d /usr/local/go ]]; then
-        $SUDO rm -rf /usr/local/go && detail "Retired legacy Go toolchain at /usr/local/go"
-    fi
 fi
 export PATH="$DXDFIR_GO_ROOT/bin:$PATH"
 step "Building the dxdfir Go front-end ($("$DXDFIR_GO_ROOT/bin/go" version 2>/dev/null | awk '{print $3}')) ..."
@@ -440,32 +421,6 @@ fi
 install -Dm755 "$_gotmp/dxdfir" "$DXDFIR_BIN_DIR/dxdfir" \
     || { _goclean; die "Failed to install dxdfir into $DXDFIR_BIN_DIR."; }
 _goclean
-
-# Legacy retirement: system-wide binaries, man pages, shims, and profile.d
-# drop-ins from earlier releases that installed outside the repo.
-step "Retiring legacy system-wide installs ..."
-if [[ -f /usr/local/bin/dxdfir ]]; then
-    $SUDO rm -f /usr/local/bin/dxdfir && detail "Retired /usr/local/bin/dxdfir"
-fi
-if [[ -f /opt/dxdfir/bin/dxdfir ]]; then
-    $SUDO rm -f /opt/dxdfir/bin/dxdfir && $SUDO rmdir /opt/dxdfir/bin 2>/dev/null
-    detail "Retired /opt/dxdfir/bin/dxdfir"
-fi
-if [[ -f /usr/local/share/man/man1/dxdfir.1 ]]; then
-    $SUDO rm -f /usr/local/share/man/man1/dxdfir.1 && detail "Retired /usr/local/share/man/man1/dxdfir.1"
-fi
-if [[ -f /etc/profile.d/dxdfir.sh ]]; then
-    $SUDO rm -f /etc/profile.d/dxdfir.sh && detail "Retired /etc/profile.d/dxdfir.sh"
-fi
-for _shim in dxdfir go ansible ansible-playbook ansible-galaxy; do
-    if [[ -L "/usr/local/bin/$_shim" ]]; then
-        case "$(readlink "/usr/local/bin/$_shim")" in
-            /opt/dxdfir/*|"$DXDFIR_VENV/bin/"*|/usr/local/go/bin/*|"$DXDFIR_GO_ROOT/bin/"*)
-                $SUDO rm -f "/usr/local/bin/$_shim"
-                detail "Retired legacy shim /usr/local/bin/$_shim" ;;
-        esac
-    fi
-done
 export PATH="$DXDFIR_GO_ROOT/bin:$PATH:$DXDFIR_VENV/bin"
 ok "dxdfir (Go front-end) installed: $("$DXDFIR_BIN_DIR/dxdfir" --version 2>/dev/null || echo "$DXDFIR_BIN_DIR/dxdfir") -> $DXDFIR_BIN_DIR/dxdfir"
 detail "man page: man $REPO_ROOT_DIR/go/man/dxdfir.1"
@@ -497,10 +452,6 @@ step "Installing pinned Ansible collections into $DXDFIR_COLLECTIONS ..."
 # requirements.yml as a git-URL collection and was installed by the step above,
 # straight into .ansible/collections — no submodule, no separate import.
 ok "Collections installed: $("$DXDFIR_VENV/bin/ansible-galaxy" collection list -p "$DXDFIR_COLLECTIONS" 2>/dev/null | grep -cE '^[a-z]' || echo '?') pinned (incl. get_sybers.godfir_run from its git URL)"
-# the retired prefix, once its last tenant (the collections) has moved in-tree
-if [[ -d /opt/dxdfir ]]; then
-    $SUDO rm -rf /opt/dxdfir && detail "Retired legacy prefix /opt/dxdfir (nothing of the pipeline lives there any more)"
-fi
 
 ################################################################################
 # Docker engine + group — ansible, not shell (one implementation, shared with
