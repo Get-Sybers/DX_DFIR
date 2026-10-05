@@ -21,13 +21,25 @@ import (
 // extraVars are appended manually as ordered, repeated -e KEY=VALUE pairs;
 // check adds --check for a dry run.
 func ansiblePlan(r *repo.Repo, ap, name string, extraVars []string, check bool) (run.Plan, error) {
+	return ansiblePlanOpts(r, ap, name, extraVars, check, false)
+}
+
+// ansiblePlanOpts is ansiblePlan with the extra privilege knob: askBecomePass
+// emits --ask-become-pass so ansible prompts once for the sudo password on the
+// TTY. We deliberately do NOT set a global Become — only the role's per-task
+// `become` escalates (the TLS key lifecycle + docker-engine setup), so the rest
+// of the play still runs as the operator. With NOPASSWD sudo the prompt is
+// skipped; with a password and a non-interactive (piped) stdin it fails, which
+// is the correct, visible outcome.
+func ansiblePlanOpts(r *repo.Repo, ap, name string, extraVars []string, check, askBecomePass bool) (run.Plan, error) {
 	cmd := playbook.NewAnsiblePlaybookCmd(
 		playbook.WithBinary(ap),
 		playbook.WithPlaybooks(r.Playbook(name)),
 		playbook.WithPlaybookOptions(&playbook.AnsiblePlaybookOptions{
-			Inventory:  "localhost,",
-			Connection: "local",
-			Check:      check,
+			Inventory:     "localhost,",
+			Connection:    "local",
+			Check:         check,
+			AskBecomePass: askBecomePass,
 		}),
 	)
 	argv, err := cmd.Command()

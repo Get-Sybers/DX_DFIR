@@ -39,8 +39,14 @@ logged; overriding the `dxdfir_elastic_*` variable — `host_vars`,
 `ansible-vault encrypt_string`, `-e` — wins and materialises nothing), the
 `elastic.env` handoff for tools outside ansible, and the TLS tree
 (`community.crypto` state modules; CA at `certs/ca/ca.crt`, node keys
-`root:root 0640` — an unprivileged deploy refuses to weaken them without
-`dxdfir_stack_allow_world_readable_keys`). The compose-era `setup` service's
+`root:root 0640`). The service containers read the node keys as gid 0, so the
+keys must be `root:root`; `dx deploy stack` (and `dx update stack`) holds that
+posture automatically — when not already root it escalates only the TLS key
+lifecycle and the docker-engine setup (`dxdfir_stack_become`) and prompts once
+for the sudo password, running the rest of the play as the operator. A direct
+playbook run that neither is root nor sets `dxdfir_stack_become` refuses to
+weaken the keys to `0644` unless `dxdfir_stack_allow_world_readable_keys` opts
+in. The compose-era `setup` service's
 API bootstrap is idempotent `uri` tasks: the `kibana_system` password, the
 least-privilege `logs_car_writer` role and the `byakugan_loader` user are
 read first and changed only when they differ.
@@ -88,6 +94,7 @@ knobs:
 | `dxdfir_stack_wait_retries` / `_wait_delay` | `60` / `5` | Bring-up readiness probes. |
 | `dxdfir_stack_es_memlock` | `true` | Unlimited memlock on elasticsearch; false for runtimes that cannot grant it. |
 | `dxdfir_stack_allow_world_readable_keys` | `false` | Explicit opt-in before an unprivileged deploy writes 0644 node keys. |
+| `dxdfir_stack_become` | `false` | Escalate (sudo) only the privileged tasks (TLS key lifecycle + docker-engine setup) so node keys land `root:root 0640`. Set automatically by the converge verbs (`dx deploy stack` / `dx update stack`); no effect when already root. |
 
 Identity, images, ports, paths and secrets resolve from `dxdfir_elastic_*`
 (inventory) with self-contained fallbacks in `defaults/main.yml`.

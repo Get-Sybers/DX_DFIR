@@ -39,6 +39,24 @@ is `0`, anything may change without notice.
 - **The committed man page is removed** (`go/man/dxdfir.1`). `dx --help`, at every
   level, is the command reference.
 
+### Fixed
+- **`dx deploy stack` works as an unprivileged operator — escalation is now
+  automatic, no flag.** The analysis stack's service containers read the node
+  TLS keys as gid 0, so the keys must be `root:root 0640`; a root deploy wrote
+  them correctly but an unprivileged one could not chown to root, and the role
+  refused to weaken them to world-readable 0644 without an opt-in — so the
+  deploy failed. `dx deploy stack` (and `dx update stack`, which runs the same
+  converge play) now escalates ONLY the privileged tasks — the TLS key lifecycle
+  and the docker-engine setup — through Ansible per-task `become`, holding the
+  keys at root:root 0640 while the rest of the play runs as the operator. When
+  not already root it prompts once for the sudo password (`--ask-become-pass`);
+  run as root (`sudo dx deploy stack`) and there is no prompt and no double
+  sudo. The role keys the posture off the request (`dxdfir_stack_become`, set
+  automatically by the converge verbs), not the gathered `effective_user_id`,
+  which stays the unprivileged connection user even under escalation. A direct
+  playbook run can still accept 0644 node keys with
+  `-e dxdfir_stack_allow_world_readable_keys=true`.
+
 ### Added
 - **The dashboards show the running build version** in the top header
   (`dxdfir 0.6.0 (<rev>, dirty)`). The revision and dirty flag come from

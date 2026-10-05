@@ -1,5 +1,32 @@
 ---
 # facts before touching the stack; the engine gate comes first
+
+# Privilege decision, set once for every action. gather_facts runs as the
+# connection user (unprivileged), so effective_user_id stays that user even when
+# a later task escalates via become — the posture must key off the request
+# (dxdfir_stack_become), NOT effective_user_id, or escalated tasks still write
+# 0644 / omit the root owner. See roles/dxdfir_stack/README.md "Secrets and TLS".
+- name: "stack-preflight | privilege decision facts"
+  ansible.builtin.set_fact:
+    # already root: no escalation needed or wanted
+    _dxdfir_already_root: "{{ (ansible_facts.effective_user_id | default(-1)) | int == 0 }}"
+    # escalate per-task only when asked AND not already root (no double sudo)
+    _dxdfir_become: >-
+      {{ (dxdfir_stack_become | bool)
+         and not ((ansible_facts.effective_user_id | default(-1)) | int == 0) }}
+    # drives the root:root 0640 key posture + the opt-in assert
+    _dxdfir_privileged: >-
+      {{ ((ansible_facts.effective_user_id | default(-1)) | int == 0)
+         or (dxdfir_stack_become | bool) }}
+    # the human operator to add to the docker group — correct under BOTH
+    # `sudo dx …` (SUDO_USER is the operator) and an escalating `dx deploy stack`
+    # (SUDO_USER is empty at gather time, so fall back to the connection user)
+    _dxdfir_operator: >-
+      {{ ansible_facts.env.SUDO_USER
+         if (ansible_facts.env.SUDO_USER | default('')) not in ['', 'root']
+         else (ansible_facts.user_id | default('')) }}
+  tags: [always]
+
 - name: "stack-preflight | ensure the docker engine"
   ansible.builtin.include_tasks: docker_ensure.yml
 

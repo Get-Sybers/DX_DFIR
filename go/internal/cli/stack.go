@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -19,18 +20,38 @@ import (
 // later target such as another service cannot collide. `purge stack` (the
 // destructive teardown) lives with the other purge targets in purge.go.
 
-// runStackAction drives one dxdfir-stack-<action>.yml with any action-specific vars.
-func (env *Env) runStackAction(action string, vars []string) error {
+// runStackAction drives one dxdfir-stack-<action>.yml with any action-specific
+// vars. escalate marks an action whose privileged tasks (the TLS key lifecycle
+// and the docker-engine setup) must run as root — the converge verbs
+// deploy/update. Escalation is AUTOMATIC, not flag-gated: such an action always
+// requests the role's per-task become, and the sudo-password prompt is added
+// only when we are not already root (the role no-ops the become when root, and
+// prompting there would be pointless).
+func (env *Env) runStackAction(action string, vars []string, escalate bool) error {
 	r, ap, err := env.ansibleRepo()
 	if err != nil {
 		return err
 	}
-	plan, err := ansiblePlan(r, ap, "dxdfir-stack-"+action+".yml", vars, false)
+	askBecomePass := false
+	if escalate {
+		ev, ask := stackEscalate(os.Geteuid())
+		vars = append(vars, ev...)
+		askBecomePass = ask
+	}
+	plan, err := ansiblePlanOpts(r, ap, "dxdfir-stack-"+action+".yml", vars, false, askBecomePass)
 	if err != nil {
 		return err
 	}
 	code := run.Passthrough(context.Background(), plan, true)
 	return exitCode(code)
+}
+
+// stackEscalate returns, for a converge action, the extra Ansible vars that opt
+// the role into per-task escalation and whether the sudo password must be
+// prompted. Pure (euid passed in) so the decision is unit-testable. Already
+// root (euid 0) → the role skips the become and no prompt is needed.
+func stackEscalate(euid int) (vars []string, askBecomePass bool) {
+	return []string{"dxdfir_stack_become=true"}, euid != 0
 }
 
 // stackLong is the shared description of the stack the verbs act on.
@@ -86,10 +107,15 @@ func stackDeployLeaf(env *Env, use string) *cobra.Command {
 	return &cobra.Command{
 		Use:   use,
 		Short: "Bring the stack up from inventory data, then verify it is running.",
-		Long:  "Bring the stack up from inventory data, then verify it is running.\n\n" + stackLong,
-		Args:  cobra.NoArgs,
+		Long: "Bring the stack up from inventory data, then verify it is running.\n\n" + stackLong +
+			"\n\nThe service containers read the node TLS keys as gid 0, so the keys must be\n" +
+			"root:root 0640. Deploy escalates for that automatically: when not already root it\n" +
+			"prompts once for the sudo password and runs only the privileged tasks (the TLS\n" +
+			"key lifecycle and the docker-engine setup) as root, the rest as you. Run it as\n" +
+			"root (sudo) and there is no prompt.",
+		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := env.runStackAction("deploy", nil); err != nil {
+			if err := env.runStackAction("deploy", nil, true); err != nil {
 				return err
 			}
 			fmt.Println(style.Green(style.GlyphOK + " elastic stack deployed."))
@@ -105,7 +131,7 @@ func stackStartLeaf(env *Env, use string) *cobra.Command {
 		Long:  "Start EXISTING stopped containers.\n\n" + stackLong,
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := env.runStackAction("start", nil); err != nil {
+			if err := env.runStackAction("start", nil, false); err != nil {
 				return err
 			}
 			fmt.Println(style.Green(style.GlyphOK + " elastic stack started."))
@@ -121,7 +147,7 @@ func stackStopLeaf(env *Env, use string) *cobra.Command {
 		Long:  "Stop containers but keep them.\n\n" + stackLong,
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := env.runStackAction("stop", nil); err != nil {
+			if err := env.runStackAction("stop", nil, false); err != nil {
 				return err
 			}
 			fmt.Println(style.Green(style.GlyphOK + " elastic stack stopped."))
@@ -141,10 +167,10 @@ func stackRestartLeaf(env *Env, use string) *cobra.Command {
 			"Composed from the stop and start plays (no data is removed).\n\n" + stackLong,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := env.runStackAction("stop", nil); err != nil {
+			if err := env.runStackAction("stop", nil, false); err != nil {
 				return err
 			}
-			if err := env.runStackAction("start", nil); err != nil {
+			if err := env.runStackAction("start", nil, false); err != nil {
 				return err
 			}
 			fmt.Println(style.Green(style.GlyphOK + " elastic stack restarted."))
@@ -160,7 +186,7 @@ func stackStatusLeaf(env *Env, use string) *cobra.Command {
 		Long:  "Show container status.\n\n" + stackLong,
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return env.runStackAction("status", nil)
+			return env.runStackAction("status", nil, false)
 		},
 	}
 }
@@ -174,10 +200,13 @@ func stackUpdateLeaf(env *Env, use string) *cobra.Command {
 		Short: "Re-converge the stack onto the current inventory/images (in-place update).",
 		Long: "Re-converge the stack onto the current inventory and pulled images — an\n" +
 			"in-place update. Runs the deploy play, which is idempotent: unchanged\n" +
-			"services are left as they are, changed ones are rolled forward.\n\n" + stackLong,
+			"services are left as they are, changed ones are rolled forward.\n\n" + stackLong +
+			"\n\nBecause it runs the deploy play it also writes the node TLS keys, so it\n" +
+			"escalates automatically exactly as `deploy stack` does (a sudo prompt when not\n" +
+			"already root).",
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := env.runStackAction("deploy", nil); err != nil {
+			if err := env.runStackAction("deploy", nil, true); err != nil {
 				return err
 			}
 			fmt.Println(style.Green(style.GlyphOK + " elastic stack updated."))

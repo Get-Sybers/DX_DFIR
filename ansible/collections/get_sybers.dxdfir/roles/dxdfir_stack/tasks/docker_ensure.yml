@@ -53,6 +53,7 @@
 
 # ---- deploy's opt-in: install the engine (setup-environment.sh, as state) --
 - name: "stack-docker | install the engine (deploy's opt-in)"
+  become: "{{ _dxdfir_become }}"
   when:
     - not dxdfir_stack_docker_installed | bool
     - dxdfir_stack_install_docker | bool
@@ -172,35 +173,36 @@
       override so deploy installs it.
     quiet: true
 
-# ---- docker group: root-only, and never on status/stop/destroy (read/teardown verbs must not mutate accounts)
-- name: "stack-docker | the docker group exists"
-  ansible.builtin.group:
-    name: docker
-    state: present
+# ---- docker group: privileged only, and never on status/stop/destroy (read/teardown verbs must not mutate accounts)
+- name: "stack-docker | docker group + operator membership (privileged)"
+  become: "{{ _dxdfir_become }}"
   when:
     - dxdfir_stack_install_docker | bool or dxdfir_stack_start_docker | bool
-    - (ansible_facts.effective_user_id | default(-1)) | int == 0
+    - _dxdfir_privileged | bool
+  block:
+    - name: "stack-docker | the docker group exists"
+      ansible.builtin.group:
+        name: docker
+        state: present
 
-- name: "stack-docker | hand the sudo'ing operator docker-group membership"
-  ansible.builtin.user:
-    name: "{{ ansible_facts.env.SUDO_USER }}"
-    groups: docker
-    append: true
-  register: dxdfir_stack_docker_member
-  when:
-    - dxdfir_stack_install_docker | bool or dxdfir_stack_start_docker | bool
-    - (ansible_facts.effective_user_id | default(-1)) | int == 0
-    - (ansible_facts.env.SUDO_USER | default('')) not in ['', 'root']
+    # _dxdfir_operator is the human operator under BOTH `sudo dx` and an escalating `dx deploy stack`
+    - name: "stack-docker | hand the operator docker-group membership"
+      ansible.builtin.user:
+        name: "{{ _dxdfir_operator }}"
+        groups: docker
+        append: true
+      register: dxdfir_stack_docker_member
+      when: _dxdfir_operator not in ['', 'root']
 
-- name: "stack-docker | note the fresh membership"
-  # noqa: no-handler — an operator-facing note, not a notify pattern: `changed`
-  # here means "this run granted the membership", the one moment the log-out
-  # reminder applies.
-  ansible.builtin.debug:
-    msg: >-
-      {{ ansible_facts.env.SUDO_USER }} was just added to the docker group —
-      log out and back in (or `newgrp docker`) for it to take effect.
-  when: dxdfir_stack_docker_member is changed
+    - name: "stack-docker | note the fresh membership"
+      # noqa: no-handler — an operator-facing note, not a notify pattern: `changed`
+      # here means "this run granted the membership", the one moment the log-out
+      # reminder applies.
+      ansible.builtin.debug:
+        msg: >-
+          {{ _dxdfir_operator }} was just added to the docker group —
+          log out and back in (or `newgrp docker`) for it to take effect.
+      when: dxdfir_stack_docker_member is changed
 
 # ---- daemon down: the up-verbs start it; the rest answer with the absence decision
 - name: "stack-docker | re-probe the daemon after the install"
@@ -217,6 +219,7 @@
   when: not dxdfir_stack_docker_up | bool
 
 - name: "stack-docker | start the daemon (deploy/start's opt-in)"
+  become: "{{ _dxdfir_become }}"
   when:
     - dxdfir_stack_start_docker | bool
     - not dxdfir_stack_docker_up | bool

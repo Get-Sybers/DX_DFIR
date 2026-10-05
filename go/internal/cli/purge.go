@@ -62,7 +62,7 @@ func newPurgeStackCmd(env *Env) *cobra.Command {
 				}
 			}
 			vars := []string{"dxdfir_stack_remove_volumes=" + boolVar(volumes)}
-			if err := env.runStackAction("destroy", vars); err != nil {
+			if err := env.runStackAction("destroy", vars, false); err != nil {
 				return err
 			}
 			fmt.Println(style.Green(style.GlyphOK + " elastic stack purged."))

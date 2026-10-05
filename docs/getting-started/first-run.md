@@ -96,15 +96,20 @@ default. (Pass `--out-dir DIR` to put it elsewhere.)
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144        # Elasticsearch requires this, or it crash-loops
-dx deploy stack                                # Elasticsearch + Kibana + Fleet + Filebeat
+dx deploy stack                                # Elasticsearch + Kibana + Fleet + Filebeat (prompts once for sudo)
 ```
 
 `deploy stack` converges everything from the inventory: docker installed when
 missing (Debian/Ubuntu), secrets generated into the per-host store
 (`ansible/inventory/secrets/`, gitignored, vault-overridable), TLS material
-generated, the services brought up in order and verified. Everything binds
-`127.0.0.1`; Filebeat ships the processed evidence into `logs-dxdfir.<type>-*`
-data streams. See [the stack](../architecture/the-stack.md).
+generated, the services brought up in order and verified. The service
+containers read the node TLS keys as gid 0, so the keys must be `root:root
+0640`; deploy handles that for you — when not already root it escalates only the
+TLS key lifecycle and the docker-engine setup (prompting once for the sudo
+password) while the rest of the play runs as you. Run it as root (`sudo dx
+deploy stack`) and there is no prompt. Everything binds `127.0.0.1`; Filebeat
+ships the processed evidence into `logs-dxdfir.<type>-*` data streams. See
+[the stack](../architecture/the-stack.md).
 
 > **Two things bite here on a first run:**
 > - `vm.max_map_count=262144` must be set on the host or Elasticsearch won't start

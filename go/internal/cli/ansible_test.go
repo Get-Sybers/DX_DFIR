@@ -115,3 +115,29 @@ func TestAnsiblePlanCheckFlag(t *testing.T) {
 		t.Errorf("unexpected -e pairs with nil extraVars: %v", vals)
 	}
 }
+
+// TestAnsiblePlanBecome pins the escalation knob: askBecomePass adds
+// --ask-become-pass (so ansible prompts for the sudo password) and NEVER a
+// global --become — only the role's per-task become escalates.
+func TestAnsiblePlanBecome(t *testing.T) {
+	r := &repo.Repo{Root: "/fake/repo"}
+
+	with, err := ansiblePlanOpts(r, "ap", "dxdfir-stack-deploy.yml", nil, false, true)
+	if err != nil {
+		t.Fatalf("ansiblePlanOpts(become): %v", err)
+	}
+	if indexOf(with.Args, "--ask-become-pass") < 0 {
+		t.Errorf("--ask-become-pass missing with askBecomePass=true: %v", with.Args)
+	}
+	if indexOf(with.Args, "--become") >= 0 {
+		t.Errorf("unexpected global --become (only per-task escalation is wanted): %v", with.Args)
+	}
+
+	without, err := ansiblePlanOpts(r, "ap", "dxdfir-stack-deploy.yml", nil, false, false)
+	if err != nil {
+		t.Fatalf("ansiblePlanOpts(no become): %v", err)
+	}
+	if indexOf(without.Args, "--ask-become-pass") >= 0 {
+		t.Errorf("--ask-become-pass present with askBecomePass=false: %v", without.Args)
+	}
+}

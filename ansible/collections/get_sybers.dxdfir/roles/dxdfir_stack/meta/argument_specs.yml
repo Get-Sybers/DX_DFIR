@@ -124,6 +124,18 @@ argument_specs:
           keys (it cannot hold them at root:root 0640); without it such a
           deploy fails with the remedy instead of silently weakening key
           permissions.
+      dxdfir_stack_become:
+        type: bool
+        required: false
+        default: false
+        description: >-
+          Escalate (sudo) only the privileged deploy tasks — the TLS key
+          lifecycle and the docker-engine setup — so the node TLS keys land
+          root:root 0640 without running the whole play as root. The CLI sets
+          this automatically for the converge verbs (`dx deploy stack` /
+          `dx update stack`); it has no effect when the play already runs as
+          root. The sudo password is collected by the CLI's `--ask-become-pass`
+          when it is not already root.
       dxdfir_stack_secrets_group:
         type: str
         required: false
