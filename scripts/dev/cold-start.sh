@@ -14,45 +14,61 @@ FORCE=0
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) \
   || REPO_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
+# Resolve privilege prefixes once: SUDO for root-level ops (rm of
+# root-owned dirs), DOCKER for the docker CLI.  When the invoking user is
+# in the docker group, docker runs unprivileged; otherwise sudo is
+# required for both.
+if [[ "$EUID" -eq 0 ]]; then
+  SUDO="" DOCKER="docker"
+elif id -nG | tr ' ' '\n' | grep -qx docker 2>/dev/null; then
+  DOCKER="docker"
+  SUDO="$(command -v sudo 2>/dev/null || true)"
+else
+  command -v sudo >/dev/null 2>&1 \
+    || { echo "Not root, not in the docker group, and sudo is not installed." >&2; exit 1; }
+  SUDO="sudo" DOCKER="sudo docker"
+fi
+
 if [[ "$FORCE" -eq 1 ]]; then
   # Stop and remove all containers first so nothing blocks image or
   # volume removal.
-  containers=$(docker ps -aq)
+  containers=$($DOCKER ps -aq)
   if [[ -n "$containers" ]]; then
     echo "Stopping and removing containers..."
-    docker stop $containers >/dev/null 2>&1 || true
-    docker rm   $containers >/dev/null 2>&1 || true
+    $DOCKER stop $containers >/dev/null 2>&1 || true
+    $DOCKER rm   $containers >/dev/null 2>&1 || true
   fi
 fi
 
 # Remove volumes. With containers gone (force) every volume is fair game;
 # otherwise any still in use get skipped.
-volumes=$(docker volume ls -q)
+volumes=$($DOCKER volume ls -q)
 if [[ -n "$volumes" ]]; then
   echo "Removing volumes..."
-  docker volume rm $volumes >/dev/null 2>&1 || true
+  $DOCKER volume rm $volumes >/dev/null 2>&1 || true
 else
   echo "No volumes to remove."
 fi
 
 # Remove images.
-images=$(docker images -aq | sort -u)
+images=$($DOCKER images -aq | sort -u)
 if [[ -n "$images" ]]; then
   if [[ "$FORCE" -eq 1 ]]; then
     echo "Force-removing all images..."
-    docker rmi -f $images
+    $DOCKER rmi -f $images
   else
     echo "Removing all images..."
-    docker rmi $images
+    $DOCKER rmi $images
   fi
 else
   echo "No images to remove."
 fi
 
 # Scrub the generated dirs so the next run bootstraps them fresh.
+# These may be root-owned if a previous setup-environment.sh ran as root.
 if [[ -n "$REPO_ROOT" ]]; then
   echo "Removing $REPO_ROOT/.ansible and $REPO_ROOT/.venv..."
-  rm -rf -- "$REPO_ROOT/.ansible" "$REPO_ROOT/.venv"
+  $SUDO rm -rf -- "$REPO_ROOT/.ansible" "$REPO_ROOT/.venv"
 fi
 
 # Delete every local branch except main. Anchored to the repo with the same
