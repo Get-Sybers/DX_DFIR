@@ -39,6 +39,13 @@ is `0`, anything may change without notice.
 - **The committed man page is removed** (`go/man/dxdfir.1`). `dx --help`, at every
   level, is the command reference.
 
+### Added
+- **The dashboards show the running build version** in the top header
+  (`dxdfir 0.6.0 (<rev>, dirty)`). The revision and dirty flag come from
+  the VCS metadata `go build` embeds, so a rebuilt binary is distinguishable
+  from a stale one at a glance — a plain semantic version is identical across
+  rebuilds and can't tell a fresh build from an old one still on `PATH`.
+
 ### Fixed
 - **`dx deploy stack` works as an unprivileged operator — escalation is now
   automatic, no flag.** The analysis stack's service containers read the node
@@ -56,15 +63,6 @@ is `0`, anything may change without notice.
   which stays the unprivileged connection user even under escalation. A direct
   playbook run can still accept 0644 node keys with
   `-e dxdfir_stack_allow_world_readable_keys=true`.
-
-### Added
-- **The dashboards show the running build version** in the top header
-  (`dxdfir 0.6.0 (<rev>, dirty)`). The revision and dirty flag come from
-  the VCS metadata `go build` embeds, so a rebuilt binary is distinguishable
-  from a stale one at a glance — a plain semantic version is identical across
-  rebuilds and can't tell a fresh build from an old one still on `PATH`.
-
-### Fixed
 - **Dashboard panes no longer leave a ghost when the layout shrinks.** termui
   only paints the cells of the drawables it is handed, and the render loop
   never cleared the back buffer before a normal or final frame, so a pane that

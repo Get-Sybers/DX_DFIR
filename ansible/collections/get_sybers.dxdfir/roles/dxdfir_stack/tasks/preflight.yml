@@ -8,9 +8,9 @@
 # 0644 / omit the root owner. See roles/dxdfir_stack/README.md "Secrets and TLS".
 - name: "stack-preflight | privilege decision facts"
   ansible.builtin.set_fact:
-    # already root: no escalation needed or wanted
-    _dxdfir_already_root: "{{ (ansible_facts.effective_user_id | default(-1)) | int == 0 }}"
-    # escalate per-task only when asked AND not already root (no double sudo)
+    # escalate per-task only when asked AND not already root (no double sudo).
+    # The root check is re-inlined in each fact rather than referencing a sibling
+    # key — sibling set_fact keys cannot reliably see each other within one task.
     _dxdfir_become: >-
       {{ (dxdfir_stack_become | bool)
          and not ((ansible_facts.effective_user_id | default(-1)) | int == 0) }}
