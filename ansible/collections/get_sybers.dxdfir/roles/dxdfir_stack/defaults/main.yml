@@ -1,69 +1,64 @@
 ---
 # OPERATOR CONFIG lives in the inventory (playbooks/group_vars/all.yml,
-# dxdfir_elastic_*) — that is the single source of truth (standards §29).
-# Each deployment input below reads its dxdfir_elastic_* counterpart and falls
-# back to vars/main.yml's dxdfir_stack_fallback ONLY so the role still resolves
-# standalone (a bare role run, molecule) when that inventory layer is absent;
-# the fallback values are not a second place to edit — change the deployment in
-# the inventory. Semantics and the secret/TLS posture: README.md. Variable
-# types: meta/argument_specs.yml.
+# dxdfir_elastic_*) — the SINGLE SOURCE OF TRUTH (standards §29). Each shared
+# identity, secret and path below REFERENCES its dxdfir_elastic_* counterpart
+# directly, the §30 pattern (a role var references the collection var). There is
+# NO fallback: a run without the inventory layer leaves dxdfir_elastic_* undefined
+# and fails, which is correct — the missing source is the bug, not something to
+# paper over with default() (standards §28). Only genuine role behaviour below
+# carries a literal default. Semantics and the secret/TLS posture: README.md.
+# Variable types: meta/argument_specs.yml.
 
-# ---- role behaviour (universal safe defaults; the playbook flips the toggles)
+# ---- role behaviour (the role's own inputs; the playbook flips the toggles)
 dxdfir_stack_action: status
-dxdfir_stack_repo_root: "{{ role_path }}/../../../../.."
 # playbook decision — continue | report | fail (an engine-less host answers the same way)
 dxdfir_stack_when_absent: continue
 # playbook decisions (tasks/docker_ensure.yml); off here, the deploy/start playbooks enable them
 dxdfir_stack_install_docker: false
 dxdfir_stack_start_docker: false
+# false for runtimes that cannot grant memlock (rootless docker) — not a shared
+# identity, so a plain role input, not sourced from the inventory
+dxdfir_stack_es_memlock: true
 
-# ---- deployment inputs: inventory (dxdfir_elastic_*) wins; else the fallback
-dxdfir_stack_name: "{{ dxdfir_elastic_stack_name | default(dxdfir_stack_fallback.stack_name) }}"
-dxdfir_stack_label_key: "{{ dxdfir_elastic_label_key | default(dxdfir_stack_fallback.label_key) }}"
-dxdfir_stack_legacy_project: "{{ dxdfir_elastic_legacy_project | default(dxdfir_stack_fallback.legacy_project) }}"
+# ---- shared identities: the inventory (dxdfir_elastic_*) is the source of truth
+dxdfir_stack_name: "{{ dxdfir_elastic_stack_name }}"
+dxdfir_stack_label_key: "{{ dxdfir_elastic_label_key }}"
+dxdfir_stack_legacy_project: "{{ dxdfir_elastic_legacy_project }}"
 # a computed dict: ansible templates mapping VALUES, not keys, so the dynamic key needs a Jinja expression
 dxdfir_stack_labels: "{{ {dxdfir_stack_label_key: dxdfir_stack_name} }}"
 
-dxdfir_stack_elastic_version: "{{ dxdfir_elastic_version | default(dxdfir_stack_fallback.elastic_version) }}"
-dxdfir_stack_network: "{{ dxdfir_elastic_network | default(dxdfir_stack_fallback.network) }}"
-# per-key: a partial dxdfir_elastic_volumes overrides only the keys it names
-dxdfir_stack_volumes: "{{ dxdfir_stack_fallback.volumes | combine(dxdfir_elastic_volumes | default({})) }}"
-dxdfir_stack_bind: "{{ dxdfir_elastic_bind | default(dxdfir_stack_fallback.bind) }}"
-dxdfir_stack_es_port: "{{ dxdfir_elastic_es_port | default(dxdfir_stack_fallback.es_port) }}"
-dxdfir_stack_kibana_port: "{{ dxdfir_elastic_kibana_port | default(dxdfir_stack_fallback.kibana_port) }}"
-dxdfir_stack_fleet_port: "{{ dxdfir_elastic_fleet_port | default(dxdfir_stack_fallback.fleet_port) }}"
-dxdfir_stack_es_heap: "{{ dxdfir_elastic_es_heap | default(dxdfir_stack_fallback.es_heap) }}"
-# false for runtimes that cannot grant memlock (rootless docker) — the container cannot start at all there
-dxdfir_stack_es_memlock: "{{ dxdfir_elastic_es_memlock | default(dxdfir_stack_fallback.es_memlock) }}"
-dxdfir_stack_namespace: "{{ dxdfir_elastic_namespace | default(dxdfir_stack_fallback.namespace) }}"
-dxdfir_stack_ingest_dir: "{{ dxdfir_elastic_ingest_dir | default(dxdfir_stack_repo_root ~ '/data_store/processed') }}"
-
-dxdfir_stack_images: >-
-  {{ dxdfir_elastic_images | default({
-       'elasticsearch': 'docker.elastic.co/elasticsearch/elasticsearch:' ~ dxdfir_stack_elastic_version,
-       'kibana': 'docker.elastic.co/kibana/kibana:' ~ dxdfir_stack_elastic_version,
-       'fleet-server': 'docker.elastic.co/elastic-agent/elastic-agent:' ~ dxdfir_stack_elastic_version,
-       'filebeat': 'docker.elastic.co/beats/filebeat:' ~ dxdfir_stack_elastic_version}) }}
+dxdfir_stack_elastic_version: "{{ dxdfir_elastic_version }}"
+dxdfir_stack_network: "{{ dxdfir_elastic_network }}"
+dxdfir_stack_volumes: "{{ dxdfir_elastic_volumes }}"
+dxdfir_stack_bind: "{{ dxdfir_elastic_bind }}"
+dxdfir_stack_es_port: "{{ dxdfir_elastic_es_port }}"
+dxdfir_stack_kibana_port: "{{ dxdfir_elastic_kibana_port }}"
+dxdfir_stack_fleet_port: "{{ dxdfir_elastic_fleet_port }}"
+dxdfir_stack_es_heap: "{{ dxdfir_elastic_es_heap }}"
+dxdfir_stack_namespace: "{{ dxdfir_elastic_namespace }}"
+dxdfir_stack_ingest_dir: "{{ dxdfir_elastic_ingest_dir }}"
+dxdfir_stack_images: "{{ dxdfir_elastic_images }}"
 dxdfir_stack_containers:
   elasticsearch: "{{ dxdfir_stack_name }}-elasticsearch"
   kibana: "{{ dxdfir_stack_name }}-kibana"
   fleet-server: "{{ dxdfir_stack_name }}-fleet-server"
   filebeat: "{{ dxdfir_stack_name }}-filebeat"
 
-# ---- secrets and deploy artifacts (inventory: dxdfir_elastic_*; empty fallbacks fail the non-empty assert)
-dxdfir_stack_secrets_dir: "{{ dxdfir_elastic_secrets_dir | default(dxdfir_stack_repo_root ~ '/ansible/inventory/secrets/' ~ inventory_hostname) }}"
-dxdfir_stack_elastic_password: "{{ dxdfir_elastic_password | default('') }}"
-dxdfir_stack_kibana_system_password: "{{ dxdfir_elastic_kibana_system_password | default('') }}"
-dxdfir_stack_byakugan_loader_password: "{{ dxdfir_elastic_byakugan_loader_password | default('') }}"
-dxdfir_stack_kibana_saved_objects_key: "{{ dxdfir_elastic_kibana_saved_objects_key | default('') }}"
-dxdfir_stack_kibana_security_key: "{{ dxdfir_elastic_kibana_security_key | default('') }}"
-dxdfir_stack_kibana_reporting_key: "{{ dxdfir_elastic_kibana_reporting_key | default('') }}"
-dxdfir_stack_fleet_service_token: "{{ dxdfir_elastic_fleet_service_token | default('') }}"
-dxdfir_stack_env_file: "{{ dxdfir_elastic_env_file | default(dxdfir_stack_secrets_dir ~ '/elastic.env') }}"
+# ---- secrets and deploy artifacts (the inventory generates and owns them;
+# the secrets.yml entry assert is the clean diagnostic when one is missing)
+dxdfir_stack_secrets_dir: "{{ dxdfir_elastic_secrets_dir }}"
+dxdfir_stack_elastic_password: "{{ dxdfir_elastic_password }}"
+dxdfir_stack_kibana_system_password: "{{ dxdfir_elastic_kibana_system_password }}"
+dxdfir_stack_byakugan_loader_password: "{{ dxdfir_elastic_byakugan_loader_password }}"
+dxdfir_stack_kibana_saved_objects_key: "{{ dxdfir_elastic_kibana_saved_objects_key }}"
+dxdfir_stack_kibana_security_key: "{{ dxdfir_elastic_kibana_security_key }}"
+dxdfir_stack_kibana_reporting_key: "{{ dxdfir_elastic_kibana_reporting_key }}"
+dxdfir_stack_fleet_service_token: "{{ dxdfir_elastic_fleet_service_token }}"
+dxdfir_stack_env_file: "{{ dxdfir_elastic_env_file }}"
 dxdfir_stack_write_env_file: true
-dxdfir_stack_certs_dir: "{{ dxdfir_elastic_certs_dir | default(dxdfir_stack_secrets_dir ~ '/certs') }}"
-dxdfir_stack_ca_file: "{{ dxdfir_elastic_ca_file | default(dxdfir_stack_certs_dir ~ '/ca/ca.crt') }}"
-dxdfir_stack_legacy_env_file: "{{ dxdfir_elastic_legacy_env_file | default(dxdfir_stack_repo_root ~ '/docker/elastic/.env') }}"
+dxdfir_stack_certs_dir: "{{ dxdfir_elastic_certs_dir }}"
+dxdfir_stack_ca_file: "{{ dxdfir_elastic_ca_file }}"
+dxdfir_stack_legacy_env_file: "{{ dxdfir_elastic_legacy_env_file }}"
 # an unprivileged deploy cannot hold node keys root:root 0640 — refuse to weaken unless opted in
 dxdfir_stack_allow_world_readable_keys: false
 # escalate (sudo) only the privileged deploy tasks — the TLS key lifecycle and the

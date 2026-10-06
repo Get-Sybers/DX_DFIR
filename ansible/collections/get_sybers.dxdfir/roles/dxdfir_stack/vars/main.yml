@@ -1,33 +1,9 @@
 ---
-# Role constants and the role's self-contained fallback data (§4: vars/ holds
-# true constants; §28: the "magic lists" live here, not inside a task). The
-# OPERATOR source of truth is the inventory (playbooks/group_vars/all.yml,
-# dxdfir_elastic_*); defaults/main.yml references dxdfir_stack_fallback only so
-# the role still resolves standalone (a bare role run, molecule) when that
-# inventory layer is absent. Change the deployment's values in the inventory,
-# not here.
-
-# ---- bare-run fallbacks: the one place the role's own default values live,
-# mirrored by the inventory which overrides them (defaults/main.yml reads this)
-dxdfir_stack_fallback:
-  stack_name: byakugan
-  label_key: com.get-sybers.stack
-  legacy_project: byakugan
-  elastic_version: "9.5.4"
-  network: byakugan_default
-  volumes:
-    certs: byakugan_certs
-    esdata: byakugan_esdata
-    kibanadata: byakugan_kibanadata
-    fleetdata: byakugan_fleetdata
-    filebeatdata: byakugan_filebeatdata
-  bind: "127.0.0.1"
-  es_port: 9200
-  kibana_port: 5601
-  fleet_port: 8220
-  es_heap: 1g
-  es_memlock: true
-  namespace: default
+# Role constants and the "magic lists" (standards §4: vars/ holds true constants;
+# §28: required internal data and magic lists live here, high-precedence and not
+# meant to be overridden, never assembled inside a task). The OPERATOR source of
+# truth is the inventory (playbooks/group_vars/all.yml, dxdfir_elastic_*) — the
+# values an operator sets live there, referenced by defaults/main.yml, not here.
 
 # ---- TLS instances (was an inline anchor in tasks/certs.yml). SANs are DATA:
 # the per-instance DNS names, plus loopback, plus the deploy's bind address
