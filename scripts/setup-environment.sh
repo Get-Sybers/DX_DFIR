@@ -254,6 +254,27 @@ if [[ -d "$REPO_ROOT_DIR" ]]; then
         || warn "Some permission changes were skipped"
 fi
 
+# The hardened tool containers run as the image's non-root uid and, through the
+# role's --group-add, under the group that owns this tree — which the chown
+# above makes the shared `docker` group. That group already has the right
+# membership; it just needs WRITE on the surfaces the containers produce:
+# data_store/processed (every lane's output, plus _scratch and the per-image
+# work dirs) and the anamnesis symbol cache. Grant group-write + setgid there
+# (setgid keeps container-created subdirs in the group). The evidence inputs —
+# data_store/raw and the dependency rulesets — stay read-only to the group
+# (raw is also bound into the containers :ro).
+for _out in "$REPO_ROOT_DIR/data_store/processed" \
+            "$REPO_ROOT_DIR/data_store/dependencies/memprocfs-symbols"; do
+    [[ -d "$_out" ]] || continue
+    _oname="data_store/${_out#*/data_store/}"
+    run_with_progress "   -> $_oname (group-writable: container output surface)" \
+        $SUDO chmod -R g+w "$_out" \
+        || warn "Some $_oname permission changes were skipped"
+    run_with_progress "   -> $_oname (setgid on dirs)" \
+        $SUDO find "$_out" -type d -exec chmod g+s {} + \
+        || warn "Some $_oname setgid changes were skipped"
+done
+
 ################################################################################
 # Install the pinned ansible layer into the checkout's own venv (PEP 668).
 # There is no host python package any more — the engine logic lives in
