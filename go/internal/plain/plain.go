@@ -215,25 +215,34 @@ func (p *Presenter) renderBlock(s model.Snapshot, spin rune, jobElapsed string) 
 	return rows
 }
 
+// markW is the fixed width of the status-mark column. It holds the widest mark
+// ("[ok]") so every lane's title and detail line up regardless of which mark
+// (spinner, "[ok]", "=>", ...) precedes it — padding only the title left the
+// columns ragged because the marks differ in width.
+const markW = 4
+
 // laneCells renders one lane as (left, right): the status on the left (a `=>`
 // prefix for settled lanes, the spinning wheel while running) and that lane's
-// elapsed time on the right, mirroring Docker's per-step timing column.
+// elapsed time on the right, mirroring Docker's per-step timing column. The
+// mark is padded to markW *before* colouring so the pad counts visible columns,
+// not escape bytes.
 func laneCells(l model.Lane, spin rune, pad int) (string, string) {
 	title := fmt.Sprintf("%-*s", pad, l.Title)
 	switch l.State {
 	case model.Done:
-		return style.Green(fmt.Sprintf(" %s %s  %s", style.GlyphOK, title, doneDetail(l))),
+		return style.Green(fmt.Sprintf(" %-*s %s  %s", markW, style.GlyphOK, title, doneDetail(l))),
 			style.Grey(elapsed2(l.Started, l.Ended))
 	case model.Failed:
-		return style.Red(fmt.Sprintf(" %s %s  failed", style.GlyphErr, title)),
+		return style.Red(fmt.Sprintf(" %-*s %s  failed", markW, style.GlyphErr, title)),
 			style.Grey(elapsed2(l.Started, l.Ended))
 	case model.Skipped:
-		return style.Grey(fmt.Sprintf(" %s %s  skipped", style.GlyphInfo, title)), ""
+		return style.Grey(fmt.Sprintf(" %-*s %s  skipped", markW, style.GlyphInfo, title)), ""
 	case model.Running:
-		return fmt.Sprintf(" %s %s  %s", style.Cyan(string(spin)), title, runningDetail(l)),
+		mark := fmt.Sprintf("%-*s", markW, string(spin))
+		return fmt.Sprintf(" %s %s  %s", style.Cyan(mark), title, runningDetail(l)),
 			style.Cyan(elapsed(l.Started))
 	default: // queued
-		return style.Grey(fmt.Sprintf(" %s %s  queued", "=>", title)), ""
+		return style.Grey(fmt.Sprintf(" %-*s %s  queued", markW, "=>", title)), ""
 	}
 }
 
@@ -273,6 +282,12 @@ func runningDetail(l model.Lane) string {
 		head = fmt.Sprintf("working %s (%s)", elapsed(l.Started), humanBytes(l.Cur))
 	default: // spinner
 		head = "working " + elapsed(l.Started)
+	}
+	// A gauge/byte lane that reads 100% while still Running has all its outputs
+	// on disk (often a re-run where nothing is redone) and is waiting on the
+	// playbook to exit; say so rather than look stuck at 100% but uncounted.
+	if (l.Kind == model.KindGauge || l.Kind == model.KindBytes) && l.Percent() >= 100 {
+		return head + style.Grey("  finishing")
 	}
 	if l.Item != "" {
 		head += "  " + l.Item
