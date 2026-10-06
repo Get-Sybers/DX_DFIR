@@ -1,7 +1,8 @@
 ---
 # The inventory-layer wiring of the Elastic analysis backend — the one
-# definition every role references (roles keep bare-run fallbacks; inventory
-# wins; host_vars/vault beat this file; -e beats everything). Playbook-adjacent
+# definition every role references and the single source of truth (dxdfir_stack
+# references these directly with no fallback; host_vars/vault beat this file; -e
+# beats everything). Playbook-adjacent
 # so it loads for every run whatever inventory is passed (the CLI's
 # `-i localhost,` included). Semantics: roles/dxdfir_stack/README.md.
 

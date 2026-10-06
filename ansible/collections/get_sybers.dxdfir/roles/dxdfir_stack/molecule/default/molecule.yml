@@ -1,0 +1,26 @@
+---
+# Offline scenario for dxdfir_stack (same shape as dxdfir_evidence): no live
+# Elastic deploy — converge reads the host by label, finds the stack absent, and
+# reports it cleanly, then proves a bad input is a controlled failure. Runs
+# containerised against the host daemon via playbooks/dxdfir-molecule.yml.
+prerun: false
+dependency:
+  name: galaxy
+  enabled: false
+driver:
+  name: default
+platforms:
+  - name: localhost
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: ${MOLECULE_PROJECT_DIRECTORY}/..
+  inventory:
+    host_vars:
+      localhost:
+        ansible_connection: local
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  playbooks:
+    converge: converge.yml
+verifier:
+  name: ansible

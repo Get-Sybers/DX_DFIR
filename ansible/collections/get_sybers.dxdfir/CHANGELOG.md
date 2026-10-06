@@ -7,6 +7,23 @@ root [CHANGELOG.md](../../../CHANGELOG.md).
 
 ### Changed
 
+- **`dxdfir_stack` brought into line with the Ansible standards.** The role's
+  config now flows through native precedence with no catering: the inventory
+  (`dxdfir_elastic_*`) is the single source of truth and `defaults/main.yml`
+  references it directly — the self-contained fallbacks are gone, so a run
+  without the inventory fails (cleanly, via a preflight entry assert) instead
+  of inventing values. The three monolithic task files (`certs.yml`,
+  `deploy.yml`, `docker_ensure.yml`) are split into staged, data-driven files;
+  the TLS instance matrix and the Elasticsearch security objects moved from
+  task-embedded literals into `vars/main.yml`. Kibana's `publicBaseUrl` is now
+  derived from the deploy's bind (via `KIBANA_PUBLIC_BASE_URL`), so exposing
+  the stack on the host's address makes the UI reachable there instead of
+  being pinned to `127.0.0.1`. Internal `register`/`set_fact` vars carry the
+  `__dxdfir_stack_` prefix, dict access uses bracket notation, static includes
+  are `import_tasks`, and `argument_specs.yml` now documents every input. A
+  `molecule/default/` scenario (status-mode converge + a negative case) ships
+  with the role. No behavioural change to a normal `dx deploy stack`.
+
 - **The wrapper roles are gone; the playbooks drive the imported lanes
   directly.** `dxdfir_{zeek,anamnesis,plaso,signatures,gowindowlicker,
   godaemonhunter,byakugan}` — thin assert+rename shims over the

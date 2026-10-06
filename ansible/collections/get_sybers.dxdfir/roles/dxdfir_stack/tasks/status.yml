@@ -5,11 +5,11 @@
 - name: "stack-status | container status"
   ansible.builtin.debug:
     msg: >-
-      {{ (dxdfir_stack_host_info.containers | default([])
-          + dxdfir_stack_legacy_info.containers | default([]))
+      {{ (__dxdfir_stack_host_info['containers'] | default([])
+          + __dxdfir_stack_legacy_info['containers'] | default([]))
          | map(attribute='Names') | map('first') | map('regex_replace', '^/', '')
-         | zip((dxdfir_stack_host_info.containers | default([])
-                + dxdfir_stack_legacy_info.containers | default([]))
+         | zip((__dxdfir_stack_host_info['containers'] | default([])
+                + __dxdfir_stack_legacy_info['containers'] | default([]))
                | map(attribute='Status'))
          | map('join', ' — ') | list }}
 
@@ -17,15 +17,15 @@
   ansible.builtin.debug:
     msg: >-
       volumes:
-      {{ (dxdfir_stack_host_info.volumes | default([])
-          + dxdfir_stack_legacy_info.volumes | default([]))
+      {{ (__dxdfir_stack_host_info['volumes'] | default([])
+          + __dxdfir_stack_legacy_info['volumes'] | default([]))
          | map(attribute='Name') | unique | sort | join(', ') }}
 
 - name: "stack-status | compose-era containers present"
   ansible.builtin.debug:
     msg: >-
       compose-era containers are running this stack
-      ({{ dxdfir_stack_legacy_containers | join(', ') }}) — `dxdfir deploy
+      ({{ __dxdfir_stack_legacy_containers | join(', ') }}) — `dxdfir deploy
       stack` migrates them to the inventory-driven deployment; the data
       volumes carry over untouched.
-  when: dxdfir_stack_legacy_containers | length > 0
+  when: __dxdfir_stack_legacy_containers | length > 0

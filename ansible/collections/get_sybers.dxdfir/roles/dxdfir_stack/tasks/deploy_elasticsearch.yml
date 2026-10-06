@@ -1,0 +1,57 @@
+---
+# Elasticsearch: the first service up (compose's depends_on root). Start the
+# container, then wait on the HTTPS endpoint until TLS answers AND security
+# rejects the unauthenticated call (401) — that 401 is the readiness signal, so
+# the assert treats anything else as a failed bring-up.
+
+- name: "stack-deploy | elasticsearch container"
+  community.docker.docker_container:
+    name: "{{ dxdfir_stack_containers['elasticsearch'] }}"
+    image: "{{ dxdfir_stack_images['elasticsearch'] }}"
+    state: started
+    labels: "{{ dxdfir_stack_labels }}"
+    networks:
+      - name: "{{ dxdfir_stack_network }}"
+        aliases: [elasticsearch, es01]
+    env:
+      ELASTIC_PASSWORD: "{{ dxdfir_stack_elastic_password }}"
+      ES_JAVA_OPTS: "-Xms{{ dxdfir_stack_es_heap }} -Xmx{{ dxdfir_stack_es_heap }}"
+    ulimits: "{{ ['memlock:-1:-1'] if dxdfir_stack_es_memlock | bool else omit }}"
+    volumes:
+      - "{{ role_path }}/files/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro"
+      - "{{ dxdfir_stack_certs_dir }}:/usr/share/elasticsearch/config/certs:ro"
+      - "{{ dxdfir_stack_volumes['esdata'] }}:/usr/share/elasticsearch/data"
+    published_ports:
+      - "{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}:9200"
+    healthcheck:
+      # TLS answers AND security rejects the unauthenticated call — the posture check
+      test: ["CMD-SHELL", "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+  no_log: true
+
+- name: "stack-deploy | wait for elasticsearch (TLS up, security on)"
+  ansible.builtin.uri:
+    url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/"
+    ca_path: "{{ dxdfir_stack_ca_file }}"
+    status_code: [401]
+  register: __dxdfir_stack_es_wait
+  until: __dxdfir_stack_es_wait['status'] == 401
+  retries: "{{ dxdfir_stack_wait_retries }}"
+  delay: "{{ dxdfir_stack_wait_delay }}"
+  failed_when: false
+  changed_when: false
+
+- name: "stack-deploy | assert elasticsearch answered"
+  ansible.builtin.assert:
+    that:
+      - __dxdfir_stack_es_wait['status'] == 401
+    fail_msg: >-
+      elasticsearch never answered on
+      https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }} with
+      security on (last status
+      {{ __dxdfir_stack_es_wait['status'] | default('none') }}). Check
+      `docker logs {{ dxdfir_stack_containers['elasticsearch'] }}` — on a
+      fresh host the usual cause is vm.max_map_count < 262144.
+    quiet: true

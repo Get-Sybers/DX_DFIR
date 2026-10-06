@@ -8,7 +8,7 @@
   community.docker.docker_container:
     name: "{{ item }}"
     state: absent
-  loop: "{{ (dxdfir_stack_owned_containers + dxdfir_stack_legacy_containers) | unique }}"
+  loop: "{{ (__dxdfir_stack_owned_containers + __dxdfir_stack_legacy_containers) | unique }}"
 
 - name: "stack-destroy | remove the stack's network"
   community.docker.docker_network:

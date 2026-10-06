@@ -1,0 +1,48 @@
+---
+# Imported material arrives with container-side ownership — pin the whole tree
+# to the store's posture: private keys protected (ca.key 0600; node keys
+# root:root 0640 privileged, else 0644), certificates and CSRs world-readable.
+
+- name: "stack-certs | find every private key in the tree"
+  ansible.builtin.find:
+    paths: "{{ dxdfir_stack_certs_dir }}"
+    patterns: ["*.key"]
+    recurse: true
+  register: __dxdfir_stack_cert_keys
+
+- name: "stack-certs | protected private keys"
+  ansible.builtin.file:
+    path: "{{ item['path'] }}"
+    owner: "{{ 'root' if __dxdfir_stack_privileged | bool else omit }}"
+    group: "{{ 'root' if __dxdfir_stack_privileged | bool else omit }}"
+    mode: >-
+      {{ '0600' if (item['path'] | basename) == 'ca.key'
+         else ('0640' if __dxdfir_stack_privileged | bool else '0644') }}
+  loop: "{{ __dxdfir_stack_cert_keys['files'] }}"
+  loop_control:
+    label: "{{ item['path'] | basename }}"
+
+- name: "stack-certs | note the unprivileged key posture"
+  ansible.builtin.debug:
+    msg: >-
+      unprivileged deploy: the node TLS keys under
+      {{ dxdfir_stack_certs_dir }} are world-readable (0644) so the service
+      containers (uid 1000, gid 0) can read them through the bind mount.
+      Run `dx deploy stack` (it escalates automatically) or deploy as root to
+      hold them at root:root 0640.
+  when: not __dxdfir_stack_privileged | bool
+
+- name: "stack-certs | find every certificate in the tree"
+  ansible.builtin.find:
+    paths: "{{ dxdfir_stack_certs_dir }}"
+    patterns: ["*.crt", "*.csr"]
+    recurse: true
+  register: __dxdfir_stack_cert_certs
+
+- name: "stack-certs | world-readable certificates"
+  ansible.builtin.file:
+    path: "{{ item['path'] }}"
+    mode: "0644"
+  loop: "{{ __dxdfir_stack_cert_certs['files'] }}"
+  loop_control:
+    label: "{{ item['path'] | basename }}"

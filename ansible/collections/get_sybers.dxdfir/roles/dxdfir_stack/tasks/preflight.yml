@@ -1,10 +1,41 @@
 ---
 # facts before touching the stack; the engine gate comes first — and it computes
-# the privilege-decision facts (dxdfir_stack_escalate / dxdfir_stack_privileged /
-# dxdfir_stack_operator), because docker_ensure.yml is ALSO a reusable entry point run
+# the privilege-decision facts (__dxdfir_stack_escalate / __dxdfir_stack_privileged /
+# __dxdfir_stack_operator), because docker_ensure.yml is ALSO a reusable entry point run
 # directly by dxdfir-bootstrap.yml, so it cannot assume preflight set them.
+# §10: the role has no fallback — the inventory layer (dxdfir_elastic_*) is the
+# single source of truth (§29). Assert it is present at entry so a run without
+# it fails with THIS clear message instead of a raw "undefined variable" the
+# first time a later task dereferences one. -e / host_vars overrides of these
+# satisfy the check; the secrets get their own resolve-assert in secrets.yml.
+- name: "stack-preflight | the inventory layer defining the stack is present"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_elastic_stack_name is defined
+      - dxdfir_elastic_label_key is defined
+      - dxdfir_elastic_network is defined
+      - dxdfir_elastic_images is defined
+      - dxdfir_elastic_volumes is defined
+      - dxdfir_elastic_bind is defined
+      - dxdfir_elastic_es_port is defined
+      - dxdfir_elastic_kibana_port is defined
+      - dxdfir_elastic_fleet_port is defined
+      - dxdfir_elastic_certs_dir is defined
+      - dxdfir_elastic_ca_file is defined
+      - dxdfir_elastic_ingest_dir is defined
+      - dxdfir_elastic_secrets_dir is defined
+    fail_msg: >-
+      the inventory layer that defines this stack is missing — one or more
+      dxdfir_elastic_* values are undefined. They are defined once in
+      playbooks/group_vars/all.yml (the single source of truth) and load under
+      any inventory source; run through the stack playbooks, or supply them via
+      -e / host_vars. This role keeps no fallback, so it stops here rather than
+      inventing values.
+    quiet: true
+  tags: [always]
+
 - name: "stack-preflight | ensure the docker engine"
-  ansible.builtin.include_tasks: docker_ensure.yml
+  ansible.builtin.import_tasks: docker_ensure.yml
 
 # presence answers by label — the role's own AND the compose-era project label
 - name: "stack-preflight | read the stack's containers and volumes"
@@ -16,7 +47,7 @@
     volumes: true
     volumes_filters:
       label: "{{ dxdfir_stack_label_key }}={{ dxdfir_stack_name }}"
-  register: dxdfir_stack_host_info
+  register: __dxdfir_stack_host_info
 
 - name: "stack-preflight | read the compose-era containers and volumes"
   community.docker.docker_host_info:
@@ -27,31 +58,31 @@
     volumes: true
     volumes_filters:
       label: "com.docker.compose.project={{ dxdfir_stack_legacy_project }}"
-  register: dxdfir_stack_legacy_info
+  register: __dxdfir_stack_legacy_info
 
 - name: "stack-preflight | is any of the stack present here"
   ansible.builtin.set_fact:
-    dxdfir_stack_owned_containers: "{{ _owned }}"
-    dxdfir_stack_legacy_containers: "{{ _legacy }}"
-    dxdfir_stack_has_containers: "{{ (_owned + _legacy) | length > 0 }}"
-    dxdfir_stack_has_volumes: "{{ _volumes }}"
-    dxdfir_stack_present: "{{ (_owned + _legacy) | length > 0 or _volumes }}"
+    __dxdfir_stack_owned_containers: "{{ _owned }}"
+    __dxdfir_stack_legacy_containers: "{{ _legacy }}"
+    __dxdfir_stack_has_containers: "{{ (_owned + _legacy) | length > 0 }}"
+    __dxdfir_stack_has_volumes: "{{ _volumes }}"
+    __dxdfir_stack_present: "{{ (_owned + _legacy) | length > 0 or _volumes }}"
   vars:
     _owned: >-
-      {{ dxdfir_stack_host_info.containers | default([])
+      {{ __dxdfir_stack_host_info['containers'] | default([])
          | map(attribute='Names') | flatten | map('regex_replace', '^/', '') | list }}
     _legacy: >-
-      {{ dxdfir_stack_legacy_info.containers | default([])
+      {{ __dxdfir_stack_legacy_info['containers'] | default([])
          | map(attribute='Names') | flatten | map('regex_replace', '^/', '') | list }}
     _volumes: >-
-      {{ (dxdfir_stack_host_info.volumes | default([])
-          + dxdfir_stack_legacy_info.volumes | default([])) | length > 0 }}
+      {{ (__dxdfir_stack_host_info['volumes'] | default([])
+          + __dxdfir_stack_legacy_info['volumes'] | default([])) | length > 0 }}
 
 # the playbook decides what absence means (README "Actions and their playbook decisions")
 - name: "stack-preflight | report the absent stack and end"
   when:
     - dxdfir_stack_when_absent == 'report'
-    - not dxdfir_stack_present | bool
+    - not __dxdfir_stack_present | bool
   block:
     - name: "stack-preflight | no analysis stack on this host"
       ansible.builtin.debug:
@@ -69,7 +100,7 @@
 - name: "stack-preflight | flag the absent stack"
   ansible.builtin.assert:
     that:
-      - dxdfir_stack_present | bool
+      - __dxdfir_stack_present | bool
     fail_msg: >-
       nothing to {{ dxdfir_stack_action }}: no analysis stack on this host —
       '{{ dxdfir_stack_name }}' has no containers and no data volumes.
@@ -84,49 +115,49 @@
   block:
     - name: "stack-preflight | the images the stack runs"
       ansible.builtin.set_fact:
-        dxdfir_stack_image_set: "{{ dxdfir_stack_images.values() | unique | list }}"
+        __dxdfir_stack_image_set: "{{ dxdfir_stack_images.values() | unique | list }}"
 
     - name: "stack-preflight | which of them are already local"
       community.docker.docker_image_info:
-        name: "{{ dxdfir_stack_image_set }}"
-      register: dxdfir_stack_local
+        name: "{{ __dxdfir_stack_image_set }}"
+      register: __dxdfir_stack_local
 
     - name: "stack-preflight | the images still to pull"
       vars:
         # RepoTags is null on digest-only/untagged images — guard the pipeline
         _local_tags: >-
-          {{ (dxdfir_stack_local.images | default([]))
+          {{ (__dxdfir_stack_local['images'] | default([]))
              | map(attribute='RepoTags') | flatten | select('string') | list }}
       ansible.builtin.set_fact:
-        dxdfir_stack_missing_images: >-
-          {{ dxdfir_stack_image_set | difference(_local_tags) }}
+        __dxdfir_stack_missing_images: >-
+          {{ __dxdfir_stack_image_set | difference(_local_tags) }}
 
     - name: "stack-preflight | gate the stores while a pull is coming"
-      when: dxdfir_stack_missing_images | length > 0
+      when: __dxdfir_stack_missing_images | length > 0
       vars:
-        dxdfir_stack_need_bytes: "{{ dxdfir_stack_min_free_gib | int * 1024 * 1024 * 1024 }}"
+        __dxdfir_stack_need_bytes: "{{ dxdfir_stack_min_free_gib | int * 1024 * 1024 * 1024 }}"
       block:
         - name: "stack-preflight | measure free space on the image stores"
           ansible.builtin.command:
             argv: ["df", "--output=avail", "--block-size=1", "{{ item }}"]
           loop: "{{ dxdfir_stack_image_store_paths }}"
-          register: dxdfir_stack_df
+          register: __dxdfir_stack_df
           changed_when: false
           failed_when: false
 
         - name: "stack-preflight | the tightest store decides"
           ansible.builtin.set_fact:
-            dxdfir_stack_free_bytes: "{{ (_avail | min) if _avail | length > 0 else -1 }}"
+            __dxdfir_stack_free_bytes: "{{ (_avail | min) if _avail | length > 0 else -1 }}"
           vars:
             _avail: >-
-              {{ dxdfir_stack_df.results | selectattr('rc', 'equalto', 0)
+              {{ __dxdfir_stack_df['results'] | selectattr('rc', 'equalto', 0)
                  | map(attribute='stdout_lines') | map('last')
                  | map('trim') | map('int') | list }}
 
         - name: "stack-preflight | assert an image store was measurable"
           ansible.builtin.assert:
             that:
-              - dxdfir_stack_free_bytes | int >= 0
+              - __dxdfir_stack_free_bytes | int >= 0
             fail_msg: >-
               none of dxdfir_stack_image_store_paths
               ({{ dxdfir_stack_image_store_paths | join(', ') }}) exists on this
@@ -141,46 +172,46 @@
               dangling: "{{ not (dxdfir_stack_reclaim_all_images | bool) }}"
             networks: true
             builder_cache: true
-          register: dxdfir_stack_prune
+          register: __dxdfir_stack_prune
           changed_when: >-
-            (dxdfir_stack_prune.containers | default([]) | length
-             + dxdfir_stack_prune.images | default([]) | length
-             + dxdfir_stack_prune.networks | default([]) | length) > 0
-            or (dxdfir_stack_prune.builder_cache_space_reclaimed | default(0) | int) > 0
-          when: dxdfir_stack_free_bytes | int < dxdfir_stack_need_bytes | int
+            (__dxdfir_stack_prune['containers'] | default([]) | length
+             + __dxdfir_stack_prune['images'] | default([]) | length
+             + __dxdfir_stack_prune['networks'] | default([]) | length) > 0
+            or (__dxdfir_stack_prune['builder_cache_space_reclaimed'] | default(0) | int) > 0
+          when: __dxdfir_stack_free_bytes | int < __dxdfir_stack_need_bytes | int
 
         - name: "stack-preflight | re-measure after the reclaim"
           ansible.builtin.command:
             argv: ["df", "--output=avail", "--block-size=1", "{{ item }}"]
           loop: "{{ dxdfir_stack_image_store_paths }}"
-          register: dxdfir_stack_df
+          register: __dxdfir_stack_df
           changed_when: false
           failed_when: false
-          when: dxdfir_stack_prune is not skipped
+          when: __dxdfir_stack_prune is not skipped
 
         - name: "stack-preflight | the tightest store, after the reclaim"
           ansible.builtin.set_fact:
-            dxdfir_stack_free_bytes: "{{ (_avail | min) if _avail | length > 0 else -1 }}"
+            __dxdfir_stack_free_bytes: "{{ (_avail | min) if _avail | length > 0 else -1 }}"
           vars:
             _avail: >-
-              {{ dxdfir_stack_df.results | selectattr('rc', 'equalto', 0)
+              {{ __dxdfir_stack_df['results'] | selectattr('rc', 'equalto', 0)
                  | map(attribute='stdout_lines') | map('last')
                  | map('trim') | map('int') | list }}
-          when: dxdfir_stack_prune is not skipped
+          when: __dxdfir_stack_prune is not skipped
 
         - name: "stack-preflight | assert the stores can hold the pull"
           ansible.builtin.assert:
             that:
-              - dxdfir_stack_free_bytes | int >= dxdfir_stack_need_bytes | int
+              - __dxdfir_stack_free_bytes | int >= __dxdfir_stack_need_bytes | int
             fail_msg: >-
-              {{ dxdfir_stack_missing_images | length }} stack image(s) still to
+              {{ __dxdfir_stack_missing_images | length }} stack image(s) still to
               pull, but the tightest of {{ dxdfir_stack_image_store_paths | join(', ') }}
-              has {{ ((dxdfir_stack_free_bytes | int) / 1073741824) | round(1) }} GiB free
+              has {{ ((__dxdfir_stack_free_bytes | int) / 1073741824) | round(1) }} GiB free
               (dxdfir_stack_min_free_gib wants {{ dxdfir_stack_min_free_gib }}).
               The reclaim already ran — free space (docker system prune -a, drop
               stale build output/evidence, grow the disk) and rerun.
             success_msg: >-
               image stores clear the pull:
-              {{ ((dxdfir_stack_free_bytes | int) / 1073741824) | round(1) }} GiB free
+              {{ ((__dxdfir_stack_free_bytes | int) / 1073741824) | round(1) }} GiB free
               >= {{ dxdfir_stack_min_free_gib }} GiB.
             quiet: true

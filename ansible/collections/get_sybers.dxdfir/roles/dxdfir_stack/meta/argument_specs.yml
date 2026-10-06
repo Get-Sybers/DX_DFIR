@@ -10,8 +10,9 @@ argument_specs:
         data volumes), start, stop and status. Compose is retired — settings
         live in the inventory (playbooks/group_vars/all.yml,
         dxdfir_elastic_*), secrets in the per-host secret store there, and
-        every dxdfir_stack_* value below references its dxdfir_elastic_*
-        counterpart with a self-contained fallback. Preflight reads the host
+        every shared dxdfir_stack_* value below references its dxdfir_elastic_*
+        counterpart directly (the inventory is the single source of truth; a
+        run without it fails rather than falling back). Preflight reads the host
         first (the docker engine, then containers + volumes by label — the
         role's own and the compose-era project label) and THE PLAYBOOK
         DECIDES the rest: what absence means (dxdfir_stack_when_absent),
@@ -28,21 +29,22 @@ argument_specs:
       dxdfir_stack_name:
         type: str
         required: false
-        default: byakugan
-        description: "The stack's name: container-name prefix and the ownership label's value."
+        description: >-
+          The stack's name: container-name prefix and the ownership label's
+          value (inventory: dxdfir_elastic_stack_name).
       dxdfir_stack_label_key:
         type: str
         required: false
-        default: com.get-sybers.stack
-        description: "The label every stack container/volume carries and every query reads."
+        description: >-
+          The label every stack container/volume carries and every query reads
+          (inventory: dxdfir_elastic_label_key).
       dxdfir_stack_legacy_project:
         type: str
         required: false
-        default: byakugan
         description: >-
           The compose-era project label still honoured by presence, status,
           start, stop and destroy; deploy migrates such containers (volumes
-          carry over).
+          carry over). Inventory: dxdfir_elastic_legacy_project.
       dxdfir_stack_when_absent:
         type: str
         required: false
@@ -201,6 +203,80 @@ argument_specs:
         required: false
         default: false
         description: "Reclaim may evict ALL unused images, not just dangling ones (evicts warm tool images — off by default)."
+      # ---- topology (inventory: dxdfir_elastic_*; no literal default — the role fails without the inventory layer)
+      dxdfir_stack_bind:
+        type: str
+        required: false
+        description: "Host address the published ports bind to (inventory: dxdfir_elastic_bind; 127.0.0.1 by default in the inventory)."
+      dxdfir_stack_es_port:
+        type: int
+        required: false
+        description: "Host port mapped to Elasticsearch's 9200 (inventory: dxdfir_elastic_es_port)."
+      dxdfir_stack_kibana_port:
+        type: int
+        required: false
+        description: "Host port mapped to Kibana's 5601 (inventory: dxdfir_elastic_kibana_port)."
+      dxdfir_stack_fleet_port:
+        type: int
+        required: false
+        description: "Host port mapped to Fleet Server's 8220 (inventory: dxdfir_elastic_fleet_port)."
+      dxdfir_stack_es_heap:
+        type: str
+        required: false
+        description: "Elasticsearch JVM heap (-Xms/-Xmx; inventory: dxdfir_elastic_es_heap, e.g. 1g)."
+      dxdfir_stack_namespace:
+        type: str
+        required: false
+        description: "The DFIR namespace filebeat tags ingested data with (inventory: dxdfir_elastic_namespace)."
+      dxdfir_stack_ingest_dir:
+        type: str
+        required: false
+        description: "Host path (the processed tree) filebeat tails, mounted read-only (inventory: dxdfir_elastic_ingest_dir)."
+      dxdfir_stack_env_file:
+        type: str
+        required: false
+        description: "Where the generated elastic.env handoff is written (inventory: dxdfir_elastic_env_file)."
+      dxdfir_stack_ca_file:
+        type: str
+        required: false
+        description: "The CA certificate the readiness probes trust (inventory: dxdfir_elastic_ca_file)."
+      dxdfir_stack_legacy_env_file:
+        type: str
+        required: false
+        description: "The compose-era operator .env read once on deploy to import secrets, never written (inventory: dxdfir_elastic_legacy_env_file)."
+      # ---- secrets: generated once into the per-host store, read back thereafter
+      # (inventory: dxdfir_elastic_*); every task that carries one is no_log
+      dxdfir_stack_elastic_password:
+        type: str
+        required: false
+        description: "The elastic superuser password (secret store; inventory: dxdfir_elastic_password)."
+      dxdfir_stack_kibana_system_password:
+        type: str
+        required: false
+        description: "The kibana_system password (secret store; inventory: dxdfir_elastic_kibana_system_password)."
+      dxdfir_stack_byakugan_loader_password:
+        type: str
+        required: false
+        description: "The byakugan_loader (CAR writer) password (secret store; inventory: dxdfir_elastic_byakugan_loader_password)."
+      dxdfir_stack_kibana_saved_objects_key:
+        type: str
+        required: false
+        description: "Kibana encryptedSavedObjects key, >= 32 chars (secret store; inventory: dxdfir_elastic_kibana_saved_objects_key)."
+      dxdfir_stack_kibana_security_key:
+        type: str
+        required: false
+        description: "Kibana security session key, >= 32 chars (secret store; inventory: dxdfir_elastic_kibana_security_key)."
+      dxdfir_stack_kibana_reporting_key:
+        type: str
+        required: false
+        description: "Kibana reporting key, >= 32 chars (secret store; inventory: dxdfir_elastic_kibana_reporting_key)."
+      dxdfir_stack_fleet_service_token:
+        type: str
+        required: false
+        description: >-
+          Pre-created Fleet service token; empty means fleet-server requests
+          one from Kibana on first boot (inventory:
+          dxdfir_elastic_fleet_service_token).
   docker_ensure:
     short_description: "Ensure the docker engine: installed, running, group in place."
     description:

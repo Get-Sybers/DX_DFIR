@@ -1,0 +1,35 @@
+---
+# The CA: created once, and an imported CA is never regenerated over.
+
+- name: "stack-certs | is a CA already in the store"
+  ansible.builtin.stat:
+    path: "{{ dxdfir_stack_certs_dir }}/ca/ca.crt"
+  register: __dxdfir_stack_ca_stat
+
+- name: "stack-certs | create the CA"
+  when: not __dxdfir_stack_ca_stat['stat']['exists']
+  block:
+    - name: "stack-certs | the CA private key"
+      community.crypto.openssl_privatekey:
+        path: "{{ dxdfir_stack_certs_dir }}/ca/ca.key"
+        mode: "0600"
+
+    - name: "stack-certs | the CA signing request"
+      community.crypto.openssl_csr:
+        path: "{{ dxdfir_stack_certs_dir }}/ca/ca.csr"
+        privatekey_path: "{{ dxdfir_stack_certs_dir }}/ca/ca.key"
+        common_name: "DX_DFIR {{ dxdfir_stack_name }} CA"
+        basic_constraints: ["CA:TRUE"]
+        basic_constraints_critical: true
+        key_usage: [keyCertSign, cRLSign]
+        key_usage_critical: true
+        mode: "0644"
+
+    - name: "stack-certs | self-signed CA certificate"
+      community.crypto.x509_certificate:
+        path: "{{ dxdfir_stack_certs_dir }}/ca/ca.crt"
+        csr_path: "{{ dxdfir_stack_certs_dir }}/ca/ca.csr"
+        privatekey_path: "{{ dxdfir_stack_certs_dir }}/ca/ca.key"
+        provider: selfsigned
+        selfsigned_not_after: "+3650d"
+        mode: "0644"

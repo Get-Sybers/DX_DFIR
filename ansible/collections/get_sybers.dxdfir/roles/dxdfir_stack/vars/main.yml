@@ -1,0 +1,44 @@
+---
+# Role constants and the "magic lists" (standards §4: vars/ holds true constants;
+# §28: required internal data and magic lists live here, high-precedence and not
+# meant to be overridden, never assembled inside a task). The OPERATOR source of
+# truth is the inventory (playbooks/group_vars/all.yml, dxdfir_elastic_*) — the
+# values an operator sets live there, referenced by defaults/main.yml, not here.
+
+# ---- the ownership label(s) every stack container/volume carries and every
+# query reads: DERIVED from the label key and stack name (not an operator input,
+# so it lives here, not in defaults — §28). A computed dict: Ansible templates
+# mapping VALUES not keys, so the dynamic key needs a Jinja expression.
+dxdfir_stack_labels: "{{ {dxdfir_stack_label_key: dxdfir_stack_name} }}"
+
+# ---- TLS instances (was an inline anchor in tasks/certs.yml). SANs are DATA:
+# the per-instance DNS names, plus loopback, plus the deploy's bind address
+# when it is a routable IP (so exposing the stack issues certs valid for it).
+dxdfir_stack_tls_instances:
+  - name: es01
+    dns: [elasticsearch, es01, localhost]
+  - name: fleet-server
+    dns: [fleet-server, localhost]
+
+# the extra IP SAN every instance carries: always loopback, plus the bind when
+# it is a concrete non-loopback IPv4 (not 0.0.0.0 / a hostname) — certs then
+# verify whether the stack is reached on 127.0.0.1 or on the host's own address
+dxdfir_stack_tls_extra_ips: >-
+  {{ (['127.0.0.1'] + ([dxdfir_stack_bind]
+       if (dxdfir_stack_bind is match('^(?!0\.0\.0\.0$)(?!127\.)\d{1,3}(\.\d{1,3}){3}$'))
+       else [])) | unique }}
+
+# ---- Elasticsearch security objects created on deploy (were hardcoded bodies
+# inside tasks/deploy.yml). Definitions are DATA; deploy_security.yml acts.
+# the least-privilege CAR loader role
+dxdfir_stack_security_roles:
+  - name: logs_car_writer
+    indices:
+      - names: ["logs-car.*"]
+        privileges: [create_doc, create_index, read, view_index_metadata]
+# the loader user bound to that role; its password comes from the secret store
+dxdfir_stack_security_users:
+  - name: byakugan_loader
+    password: "{{ dxdfir_stack_byakugan_loader_password }}"
+    roles: [logs_car_writer]
+    full_name: "byakugan load (CAR to logs-car.*)"

@@ -1,0 +1,125 @@
+---
+# deploy's opt-in: install the engine the way scripts/setup-environment.sh does
+# (Docker's own apt repository, Debian/Ubuntu families only), then assert it
+# landed. The whole block escalates; its rescue points at the manual path.
+
+- name: "stack-docker | install the engine (deploy's opt-in)"
+  become: "{{ __dxdfir_stack_escalate }}"
+  when:
+    - not __dxdfir_stack_docker_installed | bool
+    - dxdfir_stack_install_docker | bool
+  block:
+    - name: "stack-docker | assert the distro family is supported"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['os_family'] == 'Debian'
+        fail_msg: >-
+          unsupported distro family '{{ ansible_facts['os_family'] }}' for the
+          automatic docker install (Docker's repo is derived for
+          Debian/Ubuntu only, matching scripts/setup-environment.sh).
+          Install Docker manually (https://docs.docker.com/engine/install/),
+          then rerun.
+        quiet: true
+
+    # derivatives (Mint, Pop!_OS) carry UBUNTU_CODENAME and ride the repo of what they are LIKE
+    - name: "stack-docker | read the distro identity the docker repo derives from"
+      ansible.builtin.slurp:
+        src: /etc/os-release
+      register: __dxdfir_stack_os_release
+
+    - name: "stack-docker | derive the docker repo distro and codename"
+      ansible.builtin.set_fact:
+        __dxdfir_stack_docker_distro: >-
+          {{ _id if _id in ['debian', 'ubuntu']
+             else ('ubuntu' if 'ubuntu' in _like
+                   else ('debian' if 'debian' in _like else '')) }}
+        __dxdfir_stack_docker_codename: "{{ _ubuntu_codename or _version_codename }}"
+      vars:
+        _osr: "{{ (__dxdfir_stack_os_release['content'] | b64decode).splitlines() }}"
+        _id: >-
+          {{ _osr | select('match', '^ID=') | map('regex_replace', '^ID="?([^"]*)"?$', '\1')
+             | first | default('') }}
+        _like: >-
+          {{ _osr | select('match', '^ID_LIKE=') | map('regex_replace', '^ID_LIKE="?([^"]*)"?$', '\1')
+             | first | default('') }}
+        _ubuntu_codename: >-
+          {{ _osr | select('match', '^UBUNTU_CODENAME=')
+             | map('regex_replace', '^UBUNTU_CODENAME="?([^"]*)"?$', '\1')
+             | first | default('') }}
+        _version_codename: >-
+          {{ _osr | select('match', '^VERSION_CODENAME=')
+             | map('regex_replace', '^VERSION_CODENAME="?([^"]*)"?$', '\1')
+             | first | default('') }}
+
+    - name: "stack-docker | assert the repo could be derived"
+      ansible.builtin.assert:
+        that:
+          - __dxdfir_stack_docker_distro | length > 0
+          - __dxdfir_stack_docker_codename | length > 0
+        fail_msg: >-
+          could not derive the docker apt repo from /etc/os-release
+          (distro '{{ __dxdfir_stack_docker_distro }}', codename
+          '{{ __dxdfir_stack_docker_codename }}'). Install Docker manually
+          (https://docs.docker.com/engine/install/), then rerun.
+        quiet: true
+
+    # dpkg names the arch the repo line needs (amd64/arm64, not uname's x86_64)
+    - name: "stack-docker | the dpkg architecture for the repo line"
+      ansible.builtin.command:
+        argv: [dpkg, --print-architecture]
+      register: __dxdfir_stack_dpkg_arch
+      changed_when: false
+
+    - name: "stack-docker | keyrings directory"
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: "stack-docker | docker's signing key"
+      ansible.builtin.get_url:
+        url: "https://download.docker.com/linux/{{ __dxdfir_stack_docker_distro }}/gpg"
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: "stack-docker | docker's apt repository"
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [arch={{ __dxdfir_stack_dpkg_arch['stdout'] | trim }}
+          signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/{{ __dxdfir_stack_docker_distro }}
+          {{ __dxdfir_stack_docker_codename }} stable
+        filename: docker
+        state: present
+
+    - name: "stack-docker | the engine, cli, containerd and the plugins"
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+        state: present
+        update_cache: true
+
+  rescue:
+    - name: "stack-docker | engine install failed — fail with the manual path"
+      ansible.builtin.fail:
+        msg: >-
+          the docker engine install failed
+          ({{ ansible_failed_result.msg | default('see the failed task above') }}).
+          Install it manually — scripts/setup-environment.sh or
+          https://docs.docker.com/engine/install/ — then rerun.
+
+# continue-path floor: only a deploy that opted OUT of installing reaches this false — say exactly that
+- name: "stack-docker | assert the engine is present"
+  ansible.builtin.assert:
+    that:
+      - __dxdfir_stack_docker_installed | bool or dxdfir_stack_install_docker | bool
+    fail_msg: >-
+      no docker engine on this host and installing it was disabled
+      (dxdfir_stack_install_docker=false). Install Docker manually
+      (scripts/setup-environment.sh or
+      https://docs.docker.com/engine/install/) and rerun, or drop the
+      override so deploy installs it.
+    quiet: true
