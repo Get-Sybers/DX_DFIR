@@ -97,7 +97,9 @@ knobs:
 | `dxdfir_stack_become` | `false` | Escalate (sudo) only the privileged tasks (TLS key lifecycle + docker-engine setup) so node keys land `root:root 0640`. Set automatically by the converge verbs (`dx deploy stack` / `dx update stack`); no effect when already root. |
 
 Identity, images, ports, paths and secrets resolve from `dxdfir_elastic_*`
-(inventory) with self-contained fallbacks in `defaults/main.yml`.
+(inventory) through the per-value references in `defaults/main.yml`; the
+role's own fallback data (for a bare role run with no inventory) lives in
+`vars/main.yml` (`dxdfir_stack_fallback`), not inlined in defaults.
 
 ## Usage
 
