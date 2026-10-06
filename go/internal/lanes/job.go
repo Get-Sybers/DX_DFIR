@@ -144,6 +144,7 @@ func (j *Job) runLane(ctx context.Context, updates chan<- model.Update, lane *mo
 	defer ticker.Stop()
 
 	var tail []string
+	var curItem string // the file/host ansible last reported working on, if any
 	refresh := func() {
 		lane.Done = lr.Spec.countDone(outDir, lr.Collection)
 		if lane.Total > 0 && lane.Done > lane.Total {
@@ -157,6 +158,9 @@ func (j *Job) runLane(ctx context.Context, updates chan<- model.Update, lane *mo
 			lane.Detail = "scanning · " + humanElapsed(lane.Started)
 		default:
 			lane.Detail = fmt.Sprintf("%d/%d", lane.Done, lane.Total)
+		}
+		if curItem != "" {
+			lane.Detail += " · " + curItem
 		}
 		if longPole {
 			if lg := activeLog(lr.Spec, outDir); lg != "" {
@@ -181,6 +185,9 @@ func (j *Job) runLane(ctx context.Context, updates chan<- model.Update, lane *mo
 			if !ok {
 				lines = nil
 				continue
+			}
+			if it, ok := itemName(ln.Text); ok {
+				curItem = it
 			}
 			if isFatal(ln.Text) {
 				lane.Fails = appendCapped(lane.Fails, ln.Text, 12)
@@ -264,6 +271,28 @@ func isFatal(s string) bool {
 	l := strings.ToLower(strings.TrimSpace(s))
 	return strings.HasPrefix(l, "fatal:") || strings.HasPrefix(l, "failed:") ||
 		strings.Contains(l, "failed=1") || strings.Contains(l, "unreachable=1")
+}
+
+// itemName best-effort extracts the file/host a lane is working on from an
+// ansible result line like `changed: [localhost] => (item=/raw/.../x.evtx)`,
+// returning its basename. It is advisory (the newest item ansible reported, so
+// a close proxy for "currently on"): a dict/complex item or a non-result line
+// yields no name and the caller just keeps the count.
+func itemName(s string) (string, bool) {
+	const marker = "=> (item="
+	i := strings.Index(s, marker)
+	if i < 0 {
+		return "", false
+	}
+	v := s[i+len(marker):]
+	if j := strings.LastIndex(v, ")"); j >= 0 {
+		v = v[:j]
+	}
+	v = strings.TrimSpace(v)
+	if v == "" || strings.HasPrefix(v, "{") || strings.HasPrefix(v, "[") {
+		return "", false // skip looped dicts/lists; only show a plain path/host
+	}
+	return filepath.Base(v), true
 }
 
 func cloneLanes(in []model.Lane) []model.Lane {
