@@ -7,16 +7,18 @@
     # role reads the host by label, matches nothing, and reports absent. These
     # mirror playbooks/group_vars/all.yml's dxdfir_elastic_* (the real source of
     # truth) so the §10 entry gate is satisfied; paths live under /tmp.
+    # inert test values — the real pins live once in playbooks/group_vars/all.yml
+    # and must not be copied here; status mode never pulls, so the refs are never used
     _moltmp: /tmp/dxdfir-stack-molecule
     dxdfir_elastic_stack_name: byakugan-molecule
     dxdfir_elastic_label_key: com.get-sybers.stack
     dxdfir_elastic_legacy_project: byakugan-molecule-legacy
-    dxdfir_elastic_version: "9.5.4"
+    dxdfir_elastic_version: "0.0.0-moltest"
     dxdfir_elastic_images:
-      elasticsearch: "docker.elastic.co/elasticsearch/elasticsearch:9.5.4"
-      kibana: "docker.elastic.co/kibana/kibana:9.5.4"
-      fleet-server: "docker.elastic.co/elastic-agent/elastic-agent:9.5.4"
-      filebeat: "docker.elastic.co/beats/filebeat:9.5.4"
+      elasticsearch: "moltest/elasticsearch:0.0.0"
+      kibana: "moltest/kibana:0.0.0"
+      fleet-server: "moltest/fleet-server:0.0.0"
+      filebeat: "moltest/filebeat:0.0.0"
     dxdfir_elastic_network: byakugan-molecule_default
     dxdfir_elastic_volumes:
       certs: byakugan-molecule_certs
