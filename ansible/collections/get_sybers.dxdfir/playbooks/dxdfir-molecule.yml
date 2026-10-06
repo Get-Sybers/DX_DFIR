@@ -9,11 +9,13 @@
   gather_facts: false
   vars:
     dxdfir_molecule_repo_root: "{{ playbook_dir | dirname | dirname | dirname | dirname }}"
-    # versioned with the molecule pin in requirements.txt plus a runner
-    # revision (bump the -rN suffix when molecule-runner.Dockerfile changes
-    # without a molecule bump): any change renames the tag, so
-    # `state: present` rebuilds instead of reusing a stale cached runner —
-    # never :latest (standards §31)
+    # the containerised molecule runner, PULLED from the registry — never built
+    # here. GoDFIR-toolz images.yml lists get-sybers/molecule under
+    # non_tool_repos and godfir_build is explicit that consumers pull the
+    # published images and do not build. The pull goes through
+    # get_sybers.godfir_run.godfir_images (below), so the registry
+    # (ghcr.io/get-sybers/godfir-toolz) is sourced there, not reproduced here;
+    # this is the local name the run uses. Pinned by tag, never :latest (§31).
     dxdfir_molecule_image: get-sybers/molecule:26.9.0-r2
     # The per-tool lane scenarios moved upstream with the run machinery: the
     # get_sybers.godfir_run lanes are molecule-tested in that collection and the
@@ -23,14 +25,16 @@
       - dxdfir_evidence
       - dxdfir_stack
   tasks:
-    - name: "dxdfir-molecule | the runner image exists (built once, cached)"
-      community.docker.docker_image:
-        name: "{{ dxdfir_molecule_image }}"
-        source: build
-        build:
-          path: "{{ dxdfir_molecule_repo_root }}"
-          dockerfile: .github/tests/molecule-runner.Dockerfile
-        state: present
+    - name: "dxdfir-molecule | the runner image is present (pulled from the registry, never built)"
+      ansible.builtin.include_role:
+        name: get_sybers.godfir_run.godfir_images
+        tasks_from: ensure_present
+      vars:
+        godfir_images_required: ["{{ dxdfir_molecule_image }}"]
+        # the runner is a non_tool_repo (no `release:` in images.yml), so pin its
+        # tag from the ref above; ensure_present pulls <registry>/molecule:<tag>
+        # and tags it to this local name
+        godfir_images_tag: "{{ dxdfir_molecule_image | regex_replace('^.*:', '') }}"
 
     - name: "dxdfir-molecule | resolve each scenario's fixture requirement"
       ansible.builtin.set_fact:
