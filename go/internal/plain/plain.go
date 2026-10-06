@@ -274,8 +274,8 @@ func runningDetail(l model.Lane) string {
 	default: // spinner
 		head = "working " + elapsed(l.Started)
 	}
-	if d := itemOf(l); d != "" {
-		head += "  " + d
+	if l.Item != "" {
+		head += "  " + l.Item
 	}
 	return head
 }
@@ -289,22 +289,6 @@ func doneDetail(l model.Lane) string {
 		return humanBytes(l.Cur) + " hashed"
 	default:
 		return "done " + elapsed2(l.Started, l.Ended)
-	}
-}
-
-// itemOf extracts the current item/file the producer stashed in Detail. For
-// gauge lanes Detail is "done/total" or "done/total · <file>"; surface only the
-// file part. Heartbeat/spinner Detail is already a human phrase.
-func itemOf(l model.Lane) string {
-	d := l.Detail
-	if i := strings.LastIndex(d, " · "); i >= 0 {
-		return strings.TrimSpace(d[i+len(" · "):])
-	}
-	switch l.Kind {
-	case model.KindGauge, model.KindBytes:
-		return "" // bare "done/total" is already shown as the gauge
-	default:
-		return d
 	}
 }
 
@@ -409,23 +393,27 @@ func (p *Presenter) printProgress(s model.Snapshot) {
 }
 
 func laneOneLine(l model.Lane) string {
+	item := ""
+	if l.Item != "" {
+		item = " " + l.Item
+	}
 	switch l.Kind {
 	case model.KindGauge:
 		if pct := l.Percent(); pct >= 0 {
-			return fmt.Sprintf("%s %d%% (%d/%d) %s", l.Title, pct, l.Done, l.Total, l.Detail)
+			return fmt.Sprintf("%s %d%% (%d/%d)%s", l.Title, pct, l.Done, l.Total, item)
 		}
-		return fmt.Sprintf("%s (%d) %s", l.Title, l.Done, l.Detail)
+		return fmt.Sprintf("%s (%d)%s", l.Title, l.Done, item)
 	case model.KindBytes:
 		if pct := l.Percent(); pct >= 0 {
-			return fmt.Sprintf("%s %d%% (%s/%s) %s", l.Title, pct,
-				humanBytes(l.Cur), humanBytes(l.CurMax), l.Detail)
+			return fmt.Sprintf("%s %d%% (%s/%s)%s", l.Title, pct,
+				humanBytes(l.Cur), humanBytes(l.CurMax), item)
 		}
-		return fmt.Sprintf("%s %s hashed %s", l.Title, humanBytes(l.Cur), l.Detail)
+		return fmt.Sprintf("%s %s hashed%s", l.Title, humanBytes(l.Cur), item)
 	case model.KindHeartbeat:
-		return fmt.Sprintf("%s working %s (%s) %s", l.Title,
-			elapsed(l.Started), humanBytes(l.Cur), l.Detail)
+		return fmt.Sprintf("%s working %s (%s)%s", l.Title,
+			elapsed(l.Started), humanBytes(l.Cur), item)
 	default: // spinner
-		return fmt.Sprintf("%s working %s %s", l.Title, elapsed(l.Started), l.Detail)
+		return fmt.Sprintf("%s working %s%s", l.Title, elapsed(l.Started), item)
 	}
 }
 

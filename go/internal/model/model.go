@@ -64,7 +64,8 @@ type Lane struct {
 	Cur    int64 // bytes done (KindBytes) or on-disk artefact size (KindHeartbeat)
 	CurMax int64 // total bytes (KindBytes); 0 => unknown
 
-	Detail string  // current item / status line, already trimmed for width
+	Detail string  // status phrase (count / "scanning" / "N images"), trimmed for width
+	Item   string  // current file/host the lane is working on; "" when unknown
 	Rate   float64 // units-or-bytes per second, 0 => not computed
 
 	Steps []Step // optional nested checklist (the host lanes)

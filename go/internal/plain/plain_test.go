@@ -42,7 +42,7 @@ func TestRenderBlockShapesLikeDocker(t *testing.T) {
 		Overall: model.Overall{LanesDone: 1, LanesTotal: 3, Pct: -1},
 		Lanes: []model.Lane{
 			{ID: "zeek", Title: "zeek", Kind: model.KindGauge, State: model.Done, Done: 12, Total: 12, Started: start, Ended: time.Now()},
-			{ID: "gowindowlicker", Title: "gowindowlicker", Kind: model.KindGauge, State: model.Running, Done: 4, Total: 10, Detail: "4/10 · Security.evtx", Started: start},
+			{ID: "gowindowlicker", Title: "gowindowlicker", Kind: model.KindGauge, State: model.Running, Done: 4, Total: 10, Detail: "4/10", Item: "Security.evtx", Started: start},
 			{ID: "anamnesis", Title: "anamnesis", Kind: model.KindSpinner, State: model.Queued},
 		},
 	}
@@ -72,6 +72,25 @@ func TestRenderBlockShapesLikeDocker(t *testing.T) {
 		if w := visibleWidth(r); w > p.cols-1 {
 			t.Errorf("row %d visible width %d exceeds %d: %q", i, w, p.cols-1, r)
 		}
+	}
+}
+
+func TestRunningDetailHeartbeatNoDoubleElapsed(t *testing.T) {
+	// Regression: a heartbeat lane's Detail carries its own " · " before the
+	// elapsed; with no current file, the detail must not echo the elapsed as a
+	// bogus "current file" (was: "working 40s (70.0MB)  40s").
+	l := model.Lane{
+		Kind: model.KindHeartbeat, State: model.Running, Cur: 70 << 20,
+		Detail: "0/1 images · 40s", Item: "", Started: time.Now().Add(-40 * time.Second),
+	}
+	got := runningDetail(l)
+	if strings.Count(got, "40s") > 1 {
+		t.Errorf("runningDetail = %q, elapsed should appear at most once", got)
+	}
+	// With a real item, it is surfaced.
+	l.Item = "WS01.mem"
+	if got := runningDetail(l); !strings.Contains(got, "WS01.mem") {
+		t.Errorf("runningDetail = %q, want the current file", got)
 	}
 }
 
