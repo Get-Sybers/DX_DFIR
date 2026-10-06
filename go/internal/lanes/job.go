@@ -159,9 +159,7 @@ func (j *Job) runLane(ctx context.Context, updates chan<- model.Update, lane *mo
 		default:
 			lane.Detail = fmt.Sprintf("%d/%d", lane.Done, lane.Total)
 		}
-		if curItem != "" {
-			lane.Detail += " · " + curItem
-		}
+		lane.Item = curItem // the file/host the lane is on, or "" until ansible names one
 		if longPole {
 			if lg := activeLog(lr.Spec, outDir); lg != "" {
 				tail = readTail(lg, tailLines, 64*1024)
