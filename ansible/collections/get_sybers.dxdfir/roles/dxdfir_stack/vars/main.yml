@@ -1,0 +1,62 @@
+---
+# Role constants and the role's self-contained fallback data (§4: vars/ holds
+# true constants; §28: the "magic lists" live here, not inside a task). The
+# OPERATOR source of truth is the inventory (playbooks/group_vars/all.yml,
+# dxdfir_elastic_*); defaults/main.yml references dxdfir_stack_fallback only so
+# the role still resolves standalone (a bare role run, molecule) when that
+# inventory layer is absent. Change the deployment's values in the inventory,
+# not here.
+
+# ---- bare-run fallbacks: the one place the role's own default values live,
+# mirrored by the inventory which overrides them (defaults/main.yml reads this)
+dxdfir_stack_fallback:
+  stack_name: byakugan
+  label_key: com.get-sybers.stack
+  legacy_project: byakugan
+  elastic_version: "9.5.4"
+  network: byakugan_default
+  volumes:
+    certs: byakugan_certs
+    esdata: byakugan_esdata
+    kibanadata: byakugan_kibanadata
+    fleetdata: byakugan_fleetdata
+    filebeatdata: byakugan_filebeatdata
+  bind: "127.0.0.1"
+  es_port: 9200
+  kibana_port: 5601
+  fleet_port: 8220
+  es_heap: 1g
+  es_memlock: true
+  namespace: default
+
+# ---- TLS instances (was an inline anchor in tasks/certs.yml). SANs are DATA:
+# the per-instance DNS names, plus loopback, plus the deploy's bind address
+# when it is a routable IP (so exposing the stack issues certs valid for it).
+dxdfir_stack_tls_instances:
+  - name: es01
+    dns: [elasticsearch, es01, localhost]
+  - name: fleet-server
+    dns: [fleet-server, localhost]
+
+# the extra IP SAN every instance carries: always loopback, plus the bind when
+# it is a concrete non-loopback IPv4 (not 0.0.0.0 / a hostname) — certs then
+# verify whether the stack is reached on 127.0.0.1 or on the host's own address
+dxdfir_stack_tls_extra_ips: >-
+  {{ (['127.0.0.1'] + ([dxdfir_stack_bind]
+       if (dxdfir_stack_bind is match('^(?!0\.0\.0\.0$)(?!127\.)\d{1,3}(\.\d{1,3}){3}$'))
+       else [])) | unique }}
+
+# ---- Elasticsearch security objects created on deploy (were hardcoded bodies
+# inside tasks/deploy.yml). Definitions are DATA; deploy_security.yml acts.
+# the least-privilege CAR loader role
+dxdfir_stack_security_roles:
+  - name: logs_car_writer
+    indices:
+      - names: ["logs-car.*"]
+        privileges: [create_doc, create_index, read, view_index_metadata]
+# the loader user bound to that role; its password comes from the secret store
+dxdfir_stack_security_users:
+  - name: byakugan_loader
+    password: "{{ dxdfir_stack_byakugan_loader_password }}"
+    roles: [logs_car_writer]
+    full_name: "byakugan load (CAR to logs-car.*)"
