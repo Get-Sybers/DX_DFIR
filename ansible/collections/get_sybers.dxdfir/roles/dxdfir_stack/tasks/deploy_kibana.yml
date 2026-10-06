@@ -1,0 +1,60 @@
+---
+# Kibana: started once Elasticsearch is up and kibana_system holds its password.
+# Wait on the login redirect (302) as the readiness signal. KIBANA_PUBLIC_BASE_URL
+# is derived from the deploy's bind so the UI advertises a reachable address
+# (files/kibana.yml reads it via ${VAR}); 0.0.0.0 can't appear in a browser URL,
+# so a wildcard bind advertises loopback.
+
+- name: "stack-deploy | kibana container"
+  community.docker.docker_container:
+    name: "{{ dxdfir_stack_containers.kibana }}"
+    image: "{{ dxdfir_stack_images.kibana }}"
+    state: started
+    labels: "{{ dxdfir_stack_labels }}"
+    networks:
+      - name: "{{ dxdfir_stack_network }}"
+        aliases: [kibana]
+    env:
+      # Consumed by files/kibana.yml via ${VAR} substitution.
+      KIBANA_SYSTEM_PASSWORD: "{{ dxdfir_stack_kibana_system_password }}"
+      KIBANA_ENCRYPTED_SAVED_OBJECTS_KEY: "{{ dxdfir_stack_kibana_saved_objects_key }}"
+      KIBANA_SECURITY_ENCRYPTION_KEY: "{{ dxdfir_stack_kibana_security_key }}"
+      KIBANA_REPORTING_ENCRYPTION_KEY: "{{ dxdfir_stack_kibana_reporting_key }}"
+      KIBANA_PUBLIC_BASE_URL: "http://{{ '127.0.0.1' if dxdfir_stack_bind == '0.0.0.0' else dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port }}"
+    volumes:
+      - "{{ role_path }}/files/kibana.yml:/usr/share/kibana/config/kibana.yml:ro"
+      - "{{ dxdfir_stack_certs_dir }}:/usr/share/kibana/config/certs:ro"
+      - "{{ dxdfir_stack_volumes.kibanadata }}:/usr/share/kibana/data"
+    published_ports:
+      - "{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port }}:5601"
+    healthcheck:
+      # ready once the login redirect is served (503 until then)
+      test: ["CMD-SHELL", "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302'"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+  no_log: true
+
+- name: "stack-deploy | wait for kibana's login redirect"
+  ansible.builtin.uri:
+    url: "http://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port }}/"
+    follow_redirects: none
+    status_code: [302]
+  register: dxdfir_stack_kibana_wait
+  until: dxdfir_stack_kibana_wait.status == 302
+  retries: "{{ dxdfir_stack_wait_retries }}"
+  delay: "{{ dxdfir_stack_wait_delay }}"
+  failed_when: false
+  changed_when: false
+
+- name: "stack-deploy | assert kibana answered"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_stack_kibana_wait.status == 302
+    fail_msg: >-
+      kibana never served its login redirect on
+      http://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port }}
+      (last status
+      {{ dxdfir_stack_kibana_wait.status | default('none') }}). Check
+      `docker logs {{ dxdfir_stack_containers.kibana }}`.
+    quiet: true

@@ -3,7 +3,7 @@
 # by the dxdfir_stack role from the inventory's secret store).
 server.name: byakugan-kibana
 server.host: "0.0.0.0"
-server.publicBaseUrl: "http://127.0.0.1:5601"
+server.publicBaseUrl: "${KIBANA_PUBLIC_BASE_URL}"
 telemetry.optIn: false
 
 elasticsearch.hosts: ["https://elasticsearch:9200"]
