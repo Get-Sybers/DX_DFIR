@@ -7,8 +7,8 @@
 
 - name: "stack-deploy | kibana container"
   community.docker.docker_container:
-    name: "{{ dxdfir_stack_containers.kibana }}"
-    image: "{{ dxdfir_stack_images.kibana }}"
+    name: "{{ dxdfir_stack_containers['kibana'] }}"
+    image: "{{ dxdfir_stack_images['kibana'] }}"
     state: started
     labels: "{{ dxdfir_stack_labels }}"
     networks:
@@ -24,7 +24,7 @@
     volumes:
       - "{{ role_path }}/files/kibana.yml:/usr/share/kibana/config/kibana.yml:ro"
       - "{{ dxdfir_stack_certs_dir }}:/usr/share/kibana/config/certs:ro"
-      - "{{ dxdfir_stack_volumes.kibanadata }}:/usr/share/kibana/data"
+      - "{{ dxdfir_stack_volumes['kibanadata'] }}:/usr/share/kibana/data"
     published_ports:
       - "{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port }}:5601"
     healthcheck:
@@ -40,8 +40,8 @@
     url: "http://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port }}/"
     follow_redirects: none
     status_code: [302]
-  register: dxdfir_stack_kibana_wait
-  until: dxdfir_stack_kibana_wait.status == 302
+  register: __dxdfir_stack_kibana_wait
+  until: __dxdfir_stack_kibana_wait['status'] == 302
   retries: "{{ dxdfir_stack_wait_retries }}"
   delay: "{{ dxdfir_stack_wait_delay }}"
   failed_when: false
@@ -50,11 +50,11 @@
 - name: "stack-deploy | assert kibana answered"
   ansible.builtin.assert:
     that:
-      - dxdfir_stack_kibana_wait.status == 302
+      - __dxdfir_stack_kibana_wait['status'] == 302
     fail_msg: >-
       kibana never served its login redirect on
       http://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port }}
       (last status
-      {{ dxdfir_stack_kibana_wait.status | default('none') }}). Check
-      `docker logs {{ dxdfir_stack_containers.kibana }}`.
+      {{ __dxdfir_stack_kibana_wait['status'] | default('none') }}). Check
+      `docker logs {{ dxdfir_stack_containers['kibana'] }}`.
     quiet: true

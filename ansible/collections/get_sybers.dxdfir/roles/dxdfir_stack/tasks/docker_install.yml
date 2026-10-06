@@ -4,17 +4,17 @@
 # landed. The whole block escalates; its rescue points at the manual path.
 
 - name: "stack-docker | install the engine (deploy's opt-in)"
-  become: "{{ dxdfir_stack_escalate }}"
+  become: "{{ __dxdfir_stack_escalate }}"
   when:
-    - not dxdfir_stack_docker_installed | bool
+    - not __dxdfir_stack_docker_installed | bool
     - dxdfir_stack_install_docker | bool
   block:
     - name: "stack-docker | assert the distro family is supported"
       ansible.builtin.assert:
         that:
-          - ansible_facts.os_family == 'Debian'
+          - ansible_facts['os_family'] == 'Debian'
         fail_msg: >-
-          unsupported distro family '{{ ansible_facts.os_family }}' for the
+          unsupported distro family '{{ ansible_facts['os_family'] }}' for the
           automatic docker install (Docker's repo is derived for
           Debian/Ubuntu only, matching scripts/setup-environment.sh).
           Install Docker manually (https://docs.docker.com/engine/install/),
@@ -25,17 +25,17 @@
     - name: "stack-docker | read the distro identity the docker repo derives from"
       ansible.builtin.slurp:
         src: /etc/os-release
-      register: dxdfir_stack_os_release
+      register: __dxdfir_stack_os_release
 
     - name: "stack-docker | derive the docker repo distro and codename"
       ansible.builtin.set_fact:
-        dxdfir_stack_docker_distro: >-
+        __dxdfir_stack_docker_distro: >-
           {{ _id if _id in ['debian', 'ubuntu']
              else ('ubuntu' if 'ubuntu' in _like
                    else ('debian' if 'debian' in _like else '')) }}
-        dxdfir_stack_docker_codename: "{{ _ubuntu_codename or _version_codename }}"
+        __dxdfir_stack_docker_codename: "{{ _ubuntu_codename or _version_codename }}"
       vars:
-        _osr: "{{ (dxdfir_stack_os_release.content | b64decode).splitlines() }}"
+        _osr: "{{ (__dxdfir_stack_os_release['content'] | b64decode).splitlines() }}"
         _id: >-
           {{ _osr | select('match', '^ID=') | map('regex_replace', '^ID="?([^"]*)"?$', '\1')
              | first | default('') }}
@@ -54,12 +54,12 @@
     - name: "stack-docker | assert the repo could be derived"
       ansible.builtin.assert:
         that:
-          - dxdfir_stack_docker_distro | length > 0
-          - dxdfir_stack_docker_codename | length > 0
+          - __dxdfir_stack_docker_distro | length > 0
+          - __dxdfir_stack_docker_codename | length > 0
         fail_msg: >-
           could not derive the docker apt repo from /etc/os-release
-          (distro '{{ dxdfir_stack_docker_distro }}', codename
-          '{{ dxdfir_stack_docker_codename }}'). Install Docker manually
+          (distro '{{ __dxdfir_stack_docker_distro }}', codename
+          '{{ __dxdfir_stack_docker_codename }}'). Install Docker manually
           (https://docs.docker.com/engine/install/), then rerun.
         quiet: true
 
@@ -67,7 +67,7 @@
     - name: "stack-docker | the dpkg architecture for the repo line"
       ansible.builtin.command:
         argv: [dpkg, --print-architecture]
-      register: dxdfir_stack_dpkg_arch
+      register: __dxdfir_stack_dpkg_arch
       changed_when: false
 
     - name: "stack-docker | keyrings directory"
@@ -78,17 +78,17 @@
 
     - name: "stack-docker | docker's signing key"
       ansible.builtin.get_url:
-        url: "https://download.docker.com/linux/{{ dxdfir_stack_docker_distro }}/gpg"
+        url: "https://download.docker.com/linux/{{ __dxdfir_stack_docker_distro }}/gpg"
         dest: /etc/apt/keyrings/docker.asc
         mode: "0644"
 
     - name: "stack-docker | docker's apt repository"
       ansible.builtin.apt_repository:
         repo: >-
-          deb [arch={{ dxdfir_stack_dpkg_arch.stdout | trim }}
+          deb [arch={{ __dxdfir_stack_dpkg_arch['stdout'] | trim }}
           signed-by=/etc/apt/keyrings/docker.asc]
-          https://download.docker.com/linux/{{ dxdfir_stack_docker_distro }}
-          {{ dxdfir_stack_docker_codename }} stable
+          https://download.docker.com/linux/{{ __dxdfir_stack_docker_distro }}
+          {{ __dxdfir_stack_docker_codename }} stable
         filename: docker
         state: present
 
@@ -115,7 +115,7 @@
 - name: "stack-docker | assert the engine is present"
   ansible.builtin.assert:
     that:
-      - dxdfir_stack_docker_installed | bool or dxdfir_stack_install_docker | bool
+      - __dxdfir_stack_docker_installed | bool or dxdfir_stack_install_docker | bool
     fail_msg: >-
       no docker engine on this host and installing it was disabled
       (dxdfir_stack_install_docker=false). Install Docker manually

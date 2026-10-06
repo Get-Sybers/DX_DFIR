@@ -8,7 +8,7 @@
   community.docker.docker_container:
     name: "{{ item }}"
     state: absent
-  loop: "{{ dxdfir_stack_legacy_containers | default([]) }}"
+  loop: "{{ __dxdfir_stack_legacy_containers | default([]) }}"
 
 - name: "stack-deploy | the stack's network"
   community.docker.docker_network:
@@ -20,10 +20,10 @@
     name: "{{ item }}"
     labels: "{{ dxdfir_stack_labels }}"
   loop:
-    - "{{ dxdfir_stack_volumes.esdata }}"
-    - "{{ dxdfir_stack_volumes.kibanadata }}"
-    - "{{ dxdfir_stack_volumes.fleetdata }}"
-    - "{{ dxdfir_stack_volumes.filebeatdata }}"
+    - "{{ dxdfir_stack_volumes['esdata'] }}"
+    - "{{ dxdfir_stack_volumes['kibanadata'] }}"
+    - "{{ dxdfir_stack_volumes['fleetdata'] }}"
+    - "{{ dxdfir_stack_volumes['filebeatdata'] }}"
 
 - name: "stack-deploy | the ingest tree filebeat tails exists"
   ansible.builtin.file:
@@ -36,7 +36,7 @@
     name: "{{ item }}"
     source: pull
   loop: "{{ dxdfir_stack_images.values() | unique | list }}"
-  register: dxdfir_stack_pull
+  register: __dxdfir_stack_pull
   retries: 3
   delay: 5
-  until: dxdfir_stack_pull is not failed
+  until: __dxdfir_stack_pull is not failed

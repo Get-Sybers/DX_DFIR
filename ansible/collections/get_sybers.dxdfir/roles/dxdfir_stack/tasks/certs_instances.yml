@@ -8,7 +8,7 @@
 - name: "stack-certs | assert the key posture is deliberate"
   ansible.builtin.assert:
     that:
-      - dxdfir_stack_privileged | bool
+      - __dxdfir_stack_privileged | bool
         or dxdfir_stack_allow_world_readable_keys | bool
     fail_msg: >-
       this deploy cannot hold the node TLS keys at root:root 0640 (the service
@@ -21,33 +21,33 @@
 
 - name: "stack-certs | instance private keys"
   community.crypto.openssl_privatekey:
-    path: "{{ dxdfir_stack_certs_dir }}/{{ item.name }}/{{ item.name }}.key"
+    path: "{{ dxdfir_stack_certs_dir }}/{{ item['name'] }}/{{ item['name'] }}.key"
     # containers read as uid 1000 gid 0: privileged deploy = root:root 0640; an
     # unprivileged one cannot chown gid 0, so 0644 (opted in via the assert above)
-    owner: "{{ 'root' if dxdfir_stack_privileged | bool else omit }}"
-    group: "{{ 'root' if dxdfir_stack_privileged | bool else omit }}"
-    mode: "{{ '0640' if dxdfir_stack_privileged | bool else '0644' }}"
+    owner: "{{ 'root' if __dxdfir_stack_privileged | bool else omit }}"
+    group: "{{ 'root' if __dxdfir_stack_privileged | bool else omit }}"
+    mode: "{{ '0640' if __dxdfir_stack_privileged | bool else '0644' }}"
   loop: "{{ dxdfir_stack_tls_instances }}"
   loop_control:
-    label: "{{ item.name }}"
+    label: "{{ item['name'] }}"
 
 - name: "stack-certs | instance signing requests"
   community.crypto.openssl_csr:
-    path: "{{ dxdfir_stack_certs_dir }}/{{ item.name }}/{{ item.name }}.csr"
-    privatekey_path: "{{ dxdfir_stack_certs_dir }}/{{ item.name }}/{{ item.name }}.key"
-    common_name: "{{ item.name }}"
+    path: "{{ dxdfir_stack_certs_dir }}/{{ item['name'] }}/{{ item['name'] }}.csr"
+    privatekey_path: "{{ dxdfir_stack_certs_dir }}/{{ item['name'] }}/{{ item['name'] }}.key"
+    common_name: "{{ item['name'] }}"
     subject_alt_name: >-
-      {{ (item.dns | map('regex_replace', '^', 'DNS:') | list)
+      {{ (item['dns'] | map('regex_replace', '^', 'DNS:') | list)
          + (dxdfir_stack_tls_extra_ips | map('regex_replace', '^', 'IP:') | list) }}
     mode: "0644"
   loop: "{{ dxdfir_stack_tls_instances }}"
   loop_control:
-    label: "{{ item.name }}"
+    label: "{{ item['name'] }}"
 
 - name: "stack-certs | instance certificates signed by the CA"
   community.crypto.x509_certificate:
-    path: "{{ dxdfir_stack_certs_dir }}/{{ item.name }}/{{ item.name }}.crt"
-    csr_path: "{{ dxdfir_stack_certs_dir }}/{{ item.name }}/{{ item.name }}.csr"
+    path: "{{ dxdfir_stack_certs_dir }}/{{ item['name'] }}/{{ item['name'] }}.crt"
+    csr_path: "{{ dxdfir_stack_certs_dir }}/{{ item['name'] }}/{{ item['name'] }}.csr"
     provider: ownca
     ownca_path: "{{ dxdfir_stack_certs_dir }}/ca/ca.crt"
     ownca_privatekey_path: "{{ dxdfir_stack_certs_dir }}/ca/ca.key"
@@ -55,4 +55,4 @@
     mode: "0644"
   loop: "{{ dxdfir_stack_tls_instances }}"
   loop_control:
-    label: "{{ item.name }}"
+    label: "{{ item['name'] }}"

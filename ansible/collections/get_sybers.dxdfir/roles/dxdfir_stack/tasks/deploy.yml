@@ -1,44 +1,44 @@
 ---
 # Bring-up from inventory data in bootstrap order (compose's depends_on as
-# explicit waits). Thin: each stage is its own file; the role ACTS in order,
-# the playbook DECIDES the action (§5). The rescue around the service bring-up
+# explicit waits). Thin: each stage is its own file, imported statically so the
+# stages stay visible to --list-tasks (§24); the role ACTS in order, the
+# playbook DECIDES the action (§5). The rescue around the service bring-up
 # surfaces the failed step with the live container states.
 
 - name: "stack-deploy | the secret store"
-  ansible.builtin.include_tasks: secrets.yml
+  ansible.builtin.import_tasks: secrets.yml
 
 # Escalate the WHOLE TLS key lifecycle, not just the final chown: the CSR task
 # reads each node key and the signing task reads the CA key, so if creation
 # escalates but the reads do not they hit root:root 0640/0600 files as the
-# unprivileged user and fail. dxdfir_stack_escalate is false when already root
+# unprivileged user and fail. __dxdfir_stack_escalate is false when already root
 # (no double sudo) or when dxdfir_stack_become is unset (a direct playbook run
-# that did not opt in; the assert then governs the key posture).
+# that did not opt in; the assert then governs the key posture). become on a
+# static import propagates to every imported task, same as the old apply form.
 - name: "stack-deploy | the TLS material"
-  ansible.builtin.include_tasks:
-    file: certs.yml
-    apply:
-      become: "{{ dxdfir_stack_escalate }}"
+  ansible.builtin.import_tasks: certs.yml
+  become: "{{ __dxdfir_stack_escalate }}"
 
 - name: "stack-deploy | network, volumes and images"
-  ansible.builtin.include_tasks: deploy_prepare.yml
+  ansible.builtin.import_tasks: deploy_prepare.yml
 
 - name: "stack-deploy | bring the services up in bootstrap order"
   block:
     - name: "stack-deploy | elasticsearch"
-      ansible.builtin.include_tasks: deploy_elasticsearch.yml
+      ansible.builtin.import_tasks: deploy_elasticsearch.yml
 
     # the compose setup-service's security objects, reconciled read-first
     - name: "stack-deploy | the security objects"
-      ansible.builtin.include_tasks: deploy_security.yml
+      ansible.builtin.import_tasks: deploy_security.yml
 
     - name: "stack-deploy | kibana"
-      ansible.builtin.include_tasks: deploy_kibana.yml
+      ansible.builtin.import_tasks: deploy_kibana.yml
 
     - name: "stack-deploy | fleet-server"
-      ansible.builtin.include_tasks: deploy_fleet.yml
+      ansible.builtin.import_tasks: deploy_fleet.yml
 
     - name: "stack-deploy | filebeat"
-      ansible.builtin.include_tasks: deploy_filebeat.yml
+      ansible.builtin.import_tasks: deploy_filebeat.yml
   rescue:
     - name: "stack-deploy | read the stack's state for the diagnostic"
       community.docker.docker_host_info:
@@ -46,7 +46,7 @@
         containers_all: true
         containers_filters:
           label: "{{ dxdfir_stack_label_key }}={{ dxdfir_stack_name }}"
-      register: dxdfir_stack_failed_state
+      register: __dxdfir_stack_failed_state
       failed_when: false
 
     - name: "stack-deploy | the bring-up failed — one diagnostic"
@@ -55,9 +55,9 @@
           stack bring-up failed at
           "{{ ansible_failed_task.name | default('a bring-up step') }}".
           Container state:
-          {{ dxdfir_stack_failed_state.containers | default([])
+          {{ __dxdfir_stack_failed_state['containers'] | default([])
              | map(attribute='Names') | flatten | zip(
-               dxdfir_stack_failed_state.containers | default([])
+               __dxdfir_stack_failed_state['containers'] | default([])
                | map(attribute='Status'))
              | map('join', ': ') | list | join('; ') | default('none', true) }}.
           Inspect the failing container's logs (docker logs <name>), fix,
@@ -65,4 +65,4 @@
           first.
 
 - name: "stack-deploy | ensure the stack is up"
-  ansible.builtin.include_tasks: ensure_running.yml
+  ansible.builtin.import_tasks: ensure_running.yml

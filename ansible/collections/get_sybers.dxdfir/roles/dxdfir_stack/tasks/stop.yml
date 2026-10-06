@@ -6,4 +6,4 @@
     name: "{{ item }}"
     state: stopped
     container_default_behavior: no_defaults
-  loop: "{{ (dxdfir_stack_owned_containers + dxdfir_stack_legacy_containers) | unique }}"
+  loop: "{{ (__dxdfir_stack_owned_containers + __dxdfir_stack_legacy_containers) | unique }}"

@@ -15,20 +15,20 @@
     env:
       FLEET_SERVER_ENABLE: "1"
       FLEET_SERVER_POLICY_ID: fleet-server-policy
-      FLEET_SERVER_ELASTICSEARCH_HOST: https://elasticsearch:9200
+      FLEET_SERVER_ELASTICSEARCH_HOST: "https://elasticsearch:9200"
       FLEET_SERVER_ELASTICSEARCH_CA: /certs/ca/ca.crt
       FLEET_SERVER_SERVICE_TOKEN: "{{ dxdfir_stack_fleet_service_token }}"
       FLEET_SERVER_CERT: /certs/fleet-server/fleet-server.crt
       FLEET_SERVER_CERT_KEY: /certs/fleet-server/fleet-server.key
-      FLEET_URL: https://fleet-server:8220
+      FLEET_URL: "https://fleet-server:8220"
       FLEET_CA: /certs/ca/ca.crt
       KIBANA_FLEET_SETUP: "1"
-      KIBANA_FLEET_HOST: http://kibana:5601
+      KIBANA_FLEET_HOST: "http://kibana:5601"
       KIBANA_FLEET_USERNAME: elastic
       KIBANA_FLEET_PASSWORD: "{{ dxdfir_stack_elastic_password }}"
     volumes:
       - "{{ dxdfir_stack_certs_dir }}:/certs:ro"
-      - "{{ dxdfir_stack_volumes.fleetdata }}:/usr/share/elastic-agent/state"
+      - "{{ dxdfir_stack_volumes['fleetdata'] }}:/usr/share/elastic-agent/state"
     published_ports:
       - "{{ dxdfir_stack_bind }}:{{ dxdfir_stack_fleet_port }}:8220"
     healthcheck:

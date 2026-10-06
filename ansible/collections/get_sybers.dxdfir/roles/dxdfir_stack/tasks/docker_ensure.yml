@@ -16,49 +16,49 @@
 - name: "stack-docker | privilege decision facts"
   ansible.builtin.set_fact:
     # escalate per-task only when asked AND not already root (no double sudo)
-    dxdfir_stack_escalate: >-
+    __dxdfir_stack_escalate: >-
       {{ (dxdfir_stack_become | bool)
-         and not ((ansible_facts.effective_user_id | default(-1)) | int == 0) }}
+         and not ((ansible_facts['effective_user_id'] | default(-1)) | int == 0) }}
     # drives the root:root 0640 key posture + the opt-in assert
-    dxdfir_stack_privileged: >-
-      {{ ((ansible_facts.effective_user_id | default(-1)) | int == 0)
+    __dxdfir_stack_privileged: >-
+      {{ ((ansible_facts['effective_user_id'] | default(-1)) | int == 0)
          or (dxdfir_stack_become | bool) }}
     # the human operator to add to the docker group — correct under BOTH
     # `sudo dx …` (SUDO_USER is the operator) and an escalating `dx deploy stack`
     # (SUDO_USER is empty at gather time, so fall back to the connection user)
-    dxdfir_stack_operator: >-
-      {{ ansible_facts.env.SUDO_USER
-         if (ansible_facts.env.SUDO_USER | default('')) not in ['', 'root']
-         else (ansible_facts.user_id | default('')) }}
+    __dxdfir_stack_operator: >-
+      {{ ansible_facts['env']['SUDO_USER']
+         if (ansible_facts['env']['SUDO_USER'] | default('')) not in ['', 'root']
+         else (ansible_facts['user_id'] | default('')) }}
   tags: [always]
 
 - name: "stack-docker | is the docker cli on this host"
   ansible.builtin.command:
     argv: [which, docker]
-  register: dxdfir_stack_docker_cli
+  register: __dxdfir_stack_docker_cli
   changed_when: false
   failed_when: false
 
 - name: "stack-docker | does the daemon answer"
   ansible.builtin.command:
     argv: [docker, version]
-  register: dxdfir_stack_docker
+  register: __dxdfir_stack_docker
   changed_when: false
   failed_when: false
-  when: dxdfir_stack_docker_cli.rc == 0
+  when: __dxdfir_stack_docker_cli['rc'] == 0
 
 - name: "stack-docker | the engine's state as facts"
   ansible.builtin.set_fact:
-    dxdfir_stack_docker_installed: "{{ dxdfir_stack_docker_cli.rc == 0 }}"
-    dxdfir_stack_docker_up: >-
-      {{ dxdfir_stack_docker_cli.rc == 0
-         and (dxdfir_stack_docker.rc | default(1)) == 0 }}
+    __dxdfir_stack_docker_installed: "{{ __dxdfir_stack_docker_cli['rc'] == 0 }}"
+    __dxdfir_stack_docker_up: >-
+      {{ __dxdfir_stack_docker_cli['rc'] == 0
+         and (__dxdfir_stack_docker['rc'] | default(1)) == 0 }}
 
 # ---- no engine: no stack can exist here ------------------------------------
 - name: "stack-docker | report the engine-less host and end"
   when:
     - dxdfir_stack_when_absent == 'report'
-    - not dxdfir_stack_docker_installed | bool
+    - not __dxdfir_stack_docker_installed | bool
   block:
     - name: "stack-docker | no docker engine on this host"
       ansible.builtin.debug:
@@ -73,7 +73,7 @@
 - name: "stack-docker | flag the engine-less host"
   ansible.builtin.assert:
     that:
-      - dxdfir_stack_docker_installed | bool
+      - __dxdfir_stack_docker_installed | bool
     fail_msg: >-
       nothing to {{ dxdfir_stack_action }}: no docker engine on this host, so
       no analysis stack can exist here. Deploy first: dxdfir deploy stack
@@ -83,10 +83,10 @@
 
 # ---- the engine present, grouped and running (each stage self-gates) -------
 - name: "stack-docker | ensure the engine is installed"
-  ansible.builtin.include_tasks: docker_install.yml
+  ansible.builtin.import_tasks: docker_install.yml
 
 - name: "stack-docker | ensure the docker group and operator membership"
-  ansible.builtin.include_tasks: docker_group.yml
+  ansible.builtin.import_tasks: docker_group.yml
 
 - name: "stack-docker | ensure the daemon is running"
-  ansible.builtin.include_tasks: docker_daemon.yml
+  ansible.builtin.import_tasks: docker_daemon.yml

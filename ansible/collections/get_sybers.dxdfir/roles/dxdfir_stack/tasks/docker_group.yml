@@ -3,24 +3,24 @@
 # up-verbs (deploy/start); read/teardown verbs must never mutate accounts.
 
 - name: "stack-docker | docker group + operator membership (privileged)"
-  become: "{{ dxdfir_stack_escalate }}"
+  become: "{{ __dxdfir_stack_escalate }}"
   when:
     - dxdfir_stack_install_docker | bool or dxdfir_stack_start_docker | bool
-    - dxdfir_stack_privileged | bool
+    - __dxdfir_stack_privileged | bool
   block:
     - name: "stack-docker | the docker group exists"
       ansible.builtin.group:
         name: docker
         state: present
 
-    # dxdfir_stack_operator is the human operator under BOTH `sudo dx` and an escalating `dx deploy stack`
+    # __dxdfir_stack_operator is the human operator under BOTH `sudo dx` and an escalating `dx deploy stack`
     - name: "stack-docker | hand the operator docker-group membership"
       ansible.builtin.user:
-        name: "{{ dxdfir_stack_operator }}"
+        name: "{{ __dxdfir_stack_operator }}"
         groups: docker
         append: true
-      register: dxdfir_stack_docker_member
-      when: dxdfir_stack_operator not in ['', 'root']
+      register: __dxdfir_stack_docker_member
+      when: __dxdfir_stack_operator not in ['', 'root']
 
     - name: "stack-docker | note the fresh membership"
       # noqa: no-handler — an operator-facing note, not a notify pattern: `changed`
@@ -28,6 +28,6 @@
       # reminder applies.
       ansible.builtin.debug:
         msg: >-
-          {{ dxdfir_stack_operator }} was just added to the docker group —
+          {{ __dxdfir_stack_operator }} was just added to the docker group —
           log out and back in (or `newgrp docker`) for it to take effect.
-      when: dxdfir_stack_docker_member is changed
+      when: __dxdfir_stack_docker_member is changed

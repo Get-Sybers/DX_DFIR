@@ -7,13 +7,13 @@
 # escalated by the caller (deploy.yml applies become to this include).
 
 - name: "stack-certs | the tree and the compose-era import"
-  ansible.builtin.include_tasks: certs_import.yml
+  ansible.builtin.import_tasks: certs_import.yml
 
 - name: "stack-certs | the certificate authority"
-  ansible.builtin.include_tasks: certs_ca.yml
+  ansible.builtin.import_tasks: certs_ca.yml
 
 - name: "stack-certs | the instance certificates"
-  ansible.builtin.include_tasks: certs_instances.yml
+  ansible.builtin.import_tasks: certs_instances.yml
 
 - name: "stack-certs | the key and certificate posture"
-  ansible.builtin.include_tasks: certs_perms.yml
+  ansible.builtin.import_tasks: certs_perms.yml

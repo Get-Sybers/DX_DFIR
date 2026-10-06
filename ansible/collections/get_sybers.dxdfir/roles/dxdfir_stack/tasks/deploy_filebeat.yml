@@ -5,8 +5,8 @@
 
 - name: "stack-deploy | filebeat container"
   community.docker.docker_container:
-    name: "{{ dxdfir_stack_containers.filebeat }}"
-    image: "{{ dxdfir_stack_images.filebeat }}"
+    name: "{{ dxdfir_stack_containers['filebeat'] }}"
+    image: "{{ dxdfir_stack_images['filebeat'] }}"
     state: started
     user: root
     command: ["-e", "--strict.perms=false", "-environment", "container"]
@@ -15,7 +15,7 @@
       - name: "{{ dxdfir_stack_network }}"
         aliases: [filebeat]
     env:
-      ELASTICSEARCH_HOSTS: https://elasticsearch:9200
+      ELASTICSEARCH_HOSTS: "https://elasticsearch:9200"
       ELASTICSEARCH_USERNAME: elastic
       ELASTICSEARCH_PASSWORD: "{{ dxdfir_stack_elastic_password }}"
       DFIR_NAMESPACE: "{{ dxdfir_stack_namespace }}"
@@ -23,7 +23,7 @@
       - "{{ role_path }}/files/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro"
       - "{{ dxdfir_stack_certs_dir }}:/certs:ro"
       - "{{ dxdfir_stack_ingest_dir }}:/ingest:ro"
-      - "{{ dxdfir_stack_volumes.filebeatdata }}:/usr/share/filebeat/data"
+      - "{{ dxdfir_stack_volumes['filebeatdata'] }}:/usr/share/filebeat/data"
     healthcheck:
       test: ["CMD", "filebeat", "test", "output", "--strict.perms=false"]
       interval: 60s

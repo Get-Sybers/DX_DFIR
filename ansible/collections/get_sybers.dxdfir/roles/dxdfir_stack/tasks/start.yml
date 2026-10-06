@@ -10,17 +10,17 @@
     name: "{{ item }}"
     state: started
     container_default_behavior: no_defaults
-  loop: "{{ (dxdfir_stack_owned_containers + dxdfir_stack_legacy_containers) | unique }}"
+  loop: "{{ (__dxdfir_stack_owned_containers + __dxdfir_stack_legacy_containers) | unique }}"
 
 - name: "stack-start | ensure the stack is up"
-  ansible.builtin.include_tasks: ensure_running.yml
-  when: dxdfir_stack_legacy_containers | length == 0
+  ansible.builtin.import_tasks: ensure_running.yml
+  when: __dxdfir_stack_legacy_containers | length == 0
 
 - name: "stack-start | a compose-era stack was started"
   ansible.builtin.debug:
     msg: >-
       compose-era containers were started as-is
-      ({{ dxdfir_stack_legacy_containers | join(', ') }}). Run `dxdfir deploy
+      ({{ __dxdfir_stack_legacy_containers | join(', ') }}). Run `dxdfir deploy
       stack` to migrate them to the inventory-driven deployment — the data
       volumes carry over untouched.
-  when: dxdfir_stack_legacy_containers | length > 0
+  when: __dxdfir_stack_legacy_containers | length > 0

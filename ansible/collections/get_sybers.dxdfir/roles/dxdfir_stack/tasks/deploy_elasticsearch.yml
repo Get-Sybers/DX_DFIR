@@ -6,8 +6,8 @@
 
 - name: "stack-deploy | elasticsearch container"
   community.docker.docker_container:
-    name: "{{ dxdfir_stack_containers.elasticsearch }}"
-    image: "{{ dxdfir_stack_images.elasticsearch }}"
+    name: "{{ dxdfir_stack_containers['elasticsearch'] }}"
+    image: "{{ dxdfir_stack_images['elasticsearch'] }}"
     state: started
     labels: "{{ dxdfir_stack_labels }}"
     networks:
@@ -20,7 +20,7 @@
     volumes:
       - "{{ role_path }}/files/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro"
       - "{{ dxdfir_stack_certs_dir }}:/usr/share/elasticsearch/config/certs:ro"
-      - "{{ dxdfir_stack_volumes.esdata }}:/usr/share/elasticsearch/data"
+      - "{{ dxdfir_stack_volumes['esdata'] }}:/usr/share/elasticsearch/data"
     published_ports:
       - "{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}:9200"
     healthcheck:
@@ -36,8 +36,8 @@
     url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/"
     ca_path: "{{ dxdfir_stack_ca_file }}"
     status_code: [401]
-  register: dxdfir_stack_es_wait
-  until: dxdfir_stack_es_wait.status == 401
+  register: __dxdfir_stack_es_wait
+  until: __dxdfir_stack_es_wait['status'] == 401
   retries: "{{ dxdfir_stack_wait_retries }}"
   delay: "{{ dxdfir_stack_wait_delay }}"
   failed_when: false
@@ -46,12 +46,12 @@
 - name: "stack-deploy | assert elasticsearch answered"
   ansible.builtin.assert:
     that:
-      - dxdfir_stack_es_wait.status == 401
+      - __dxdfir_stack_es_wait['status'] == 401
     fail_msg: >-
       elasticsearch never answered on
       https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }} with
       security on (last status
-      {{ dxdfir_stack_es_wait.status | default('none') }}). Check
-      `docker logs {{ dxdfir_stack_containers.elasticsearch }}` — on a
+      {{ __dxdfir_stack_es_wait['status'] | default('none') }}). Check
+      `docker logs {{ dxdfir_stack_containers['elasticsearch'] }}` — on a
       fresh host the usual cause is vm.max_map_count < 262144.
     quiet: true

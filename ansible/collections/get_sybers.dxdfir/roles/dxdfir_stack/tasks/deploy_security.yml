@@ -14,7 +14,7 @@
     url_password: "{{ dxdfir_stack_kibana_system_password }}"
     force_basic_auth: true
     status_code: [200, 401]
-  register: dxdfir_stack_kibana_system_auth
+  register: __dxdfir_stack_kibana_system_auth
   changed_when: false
   no_log: true
 
@@ -30,35 +30,35 @@
     body:
       password: "{{ dxdfir_stack_kibana_system_password }}"
     status_code: [200]
-  register: dxdfir_stack_kibana_system_set
-  until: dxdfir_stack_kibana_system_set.status == 200
+  register: __dxdfir_stack_kibana_system_set
+  until: __dxdfir_stack_kibana_system_set['status'] == 200
   retries: 6
   delay: 5
   changed_when: true
-  when: dxdfir_stack_kibana_system_auth.status == 401
+  when: __dxdfir_stack_kibana_system_auth['status'] == 401
   no_log: true
 
 # the CAR loader role — least-privilege, its body is dxdfir_stack_security_roles
 - name: "stack-deploy | reconcile the least-privilege CAR loader role"
   vars:
     _role: "{{ dxdfir_stack_security_roles | first }}"
-    _idx: "{{ _role.indices | first }}"
+    _idx: "{{ _role['indices'] | first }}"
   block:
-    - name: "stack-deploy | read the live CAR loader role {{ _role.name }}"
+    - name: "stack-deploy | read the live CAR loader role {{ _role['name'] }}"
       ansible.builtin.uri:
-        url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_security/role/{{ _role.name }}"
+        url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_security/role/{{ _role['name'] }}"
         ca_path: "{{ dxdfir_stack_ca_file }}"
         url_username: elastic
         url_password: "{{ dxdfir_stack_elastic_password }}"
         force_basic_auth: true
         status_code: [200, 404]
-      register: dxdfir_stack_car_role
+      register: __dxdfir_stack_car_role
       changed_when: false
       no_log: true
 
-    - name: "stack-deploy | converge the least-privilege CAR loader role {{ _role.name }}"
+    - name: "stack-deploy | converge the least-privilege CAR loader role {{ _role['name'] }}"
       ansible.builtin.uri:
-        url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_security/role/{{ _role.name }}"
+        url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_security/role/{{ _role['name'] }}"
         method: PUT
         ca_path: "{{ dxdfir_stack_ca_file }}"
         url_username: elastic
@@ -66,16 +66,16 @@
         force_basic_auth: true
         body_format: json
         body:
-          indices: "{{ _role.indices }}"
+          indices: "{{ _role['indices'] }}"
         status_code: [200]
       vars:
-        _live: "{{ (dxdfir_stack_car_role.json | default({}))[_role.name] | default({}) }}"
-        _live_first: "{{ (_live.indices | default([{}])) | first | default({}) }}"
+        _live: "{{ (__dxdfir_stack_car_role['json'] | default({}))[_role['name']] | default({}) }}"
+        _live_first: "{{ (_live['indices'] | default([{}])) | first | default({}) }}"
       when: >-
-        dxdfir_stack_car_role.status == 404
-        or (_live_first.names | default([]) | sort) != (_idx.names | sort)
-        or (_live_first.privileges | default([]) | sort)
-           != (_idx.privileges | sort)
+        __dxdfir_stack_car_role['status'] == 404
+        or (_live_first['names'] | default([]) | sort) != (_idx['names'] | sort)
+        or (_live_first['privileges'] | default([]) | sort)
+           != (_idx['privileges'] | sort)
       changed_when: true
       no_log: true
 
@@ -84,21 +84,21 @@
   vars:
     _user: "{{ dxdfir_stack_security_users | first }}"
   block:
-    - name: "stack-deploy | check whether the loader already authenticates as {{ _user.name }}"
+    - name: "stack-deploy | check whether the loader already authenticates as {{ _user['name'] }}"
       ansible.builtin.uri:
         url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_security/_authenticate"
         ca_path: "{{ dxdfir_stack_ca_file }}"
-        url_username: "{{ _user.name }}"
-        url_password: "{{ _user.password }}"
+        url_username: "{{ _user['name'] }}"
+        url_password: "{{ _user['password'] }}"
         force_basic_auth: true
         status_code: [200, 401]
-      register: dxdfir_stack_loader_auth
+      register: __dxdfir_stack_loader_auth
       changed_when: false
       no_log: true
 
-    - name: "stack-deploy | converge the CAR loader user {{ _user.name }}"
+    - name: "stack-deploy | converge the CAR loader user {{ _user['name'] }}"
       ansible.builtin.uri:
-        url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_security/user/{{ _user.name }}"
+        url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_security/user/{{ _user['name'] }}"
         method: PUT
         ca_path: "{{ dxdfir_stack_ca_file }}"
         url_username: elastic
@@ -106,10 +106,10 @@
         force_basic_auth: true
         body_format: json
         body:
-          password: "{{ _user.password }}"
-          roles: "{{ _user.roles }}"
-          full_name: "{{ _user.full_name }}"
+          password: "{{ _user['password'] }}"
+          roles: "{{ _user['roles'] }}"
+          full_name: "{{ _user['full_name'] }}"
         status_code: [200]
-      when: dxdfir_stack_loader_auth.status == 401
+      when: __dxdfir_stack_loader_auth['status'] == 401
       changed_when: true
       no_log: true

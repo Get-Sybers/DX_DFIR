@@ -12,53 +12,53 @@
 
 - name: "stack-certs | does a compose-era certs volume exist"
   community.docker.docker_volume_info:
-    name: "{{ dxdfir_stack_volumes.certs }}"
-  register: dxdfir_stack_certs_volume
+    name: "{{ dxdfir_stack_volumes['certs'] }}"
+  register: __dxdfir_stack_certs_volume
 
 - name: "stack-certs | import the compose-era certificates"
   when:
-    - dxdfir_stack_certs_volume.exists
-    - dxdfir_stack_privileged | bool
+    - __dxdfir_stack_certs_volume['exists']
+    - __dxdfir_stack_privileged | bool
   block:
     - name: "stack-certs | is the volume's CA there to import"
       ansible.builtin.stat:
-        path: "{{ dxdfir_stack_certs_volume.volume.Mountpoint }}/ca/ca.crt"
-      register: dxdfir_stack_legacy_ca
+        path: "{{ __dxdfir_stack_certs_volume['volume']['Mountpoint'] }}/ca/ca.crt"
+      register: __dxdfir_stack_legacy_ca
 
     - name: "stack-certs | find the volume's certificate files"
       ansible.builtin.find:
-        paths: "{{ dxdfir_stack_certs_volume.volume.Mountpoint }}"
+        paths: "{{ __dxdfir_stack_certs_volume['volume']['Mountpoint'] }}"
         patterns: ["*.crt", "*.key"]
         recurse: true
-      register: dxdfir_stack_legacy_cert_files
-      when: dxdfir_stack_legacy_ca.stat.exists
+      register: __dxdfir_stack_legacy_cert_files
+      when: __dxdfir_stack_legacy_ca['stat']['exists']
 
     # per file force: false — the store always wins; a partial volume imports what it has.
     # the CA plus one dir per TLS instance: the import set mirrors the matrix, not a literal list
     - name: "stack-certs | copy the compose-era certificates into the store"
       ansible.builtin.copy:
-        src: "{{ item.path }}"
-        dest: "{{ dxdfir_stack_certs_dir }}/{{ item.path | relpath(dxdfir_stack_certs_volume.volume.Mountpoint) }}"
+        src: "{{ item['path'] }}"
+        dest: "{{ dxdfir_stack_certs_dir }}/{{ item['path'] | relpath(__dxdfir_stack_certs_volume['volume']['Mountpoint']) }}"
         remote_src: true
         force: false
         mode: preserve
-      loop: "{{ (dxdfir_stack_legacy_cert_files.files | default([]))
-                | selectattr('path', 'search', dxdfir_stack_cert_import_re) | list }}"
+      loop: "{{ (__dxdfir_stack_legacy_cert_files['files'] | default([]))
+                | selectattr('path', 'search', __dxdfir_stack_cert_import_re) | list }}"
       loop_control:
-        label: "{{ item.path | relpath(dxdfir_stack_certs_volume.volume.Mountpoint) }}"
-      when: dxdfir_stack_legacy_ca.stat.exists
+        label: "{{ item['path'] | relpath(__dxdfir_stack_certs_volume['volume']['Mountpoint']) }}"
+      when: __dxdfir_stack_legacy_ca['stat']['exists']
       vars:
-        dxdfir_stack_cert_import_re: >-
+        __dxdfir_stack_cert_import_re: >-
           /(ca|{{ dxdfir_stack_tls_instances | map(attribute='name') | join('|') }})/
 
 - name: "stack-certs | note the certs volume a non-root deploy cannot import"
   ansible.builtin.debug:
     msg: >-
-      a compose-era certs volume ({{ dxdfir_stack_volumes.certs }}) exists but
+      a compose-era certs volume ({{ dxdfir_stack_volumes['certs'] }}) exists but
       this deploy is unprivileged, so its CA cannot be imported — fresh
       certificates will be generated and Fleet agents enrolled against the
       old CA re-enrol. Run `dx deploy stack` (it escalates automatically) or
       deploy as root to keep the existing CA.
   when:
-    - dxdfir_stack_certs_volume.exists
-    - not dxdfir_stack_privileged | bool
+    - __dxdfir_stack_certs_volume['exists']
+    - not __dxdfir_stack_privileged | bool

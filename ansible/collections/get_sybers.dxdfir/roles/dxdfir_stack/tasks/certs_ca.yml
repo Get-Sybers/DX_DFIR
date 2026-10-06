@@ -4,17 +4,17 @@
 - name: "stack-certs | is a CA already in the store"
   ansible.builtin.stat:
     path: "{{ dxdfir_stack_certs_dir }}/ca/ca.crt"
-  register: dxdfir_stack_ca_stat
+  register: __dxdfir_stack_ca_stat
 
 - name: "stack-certs | create the CA"
-  when: not dxdfir_stack_ca_stat.stat.exists
+  when: not __dxdfir_stack_ca_stat['stat']['exists']
   block:
-    - name: "stack-certs | CA private key"
+    - name: "stack-certs | the CA private key"
       community.crypto.openssl_privatekey:
         path: "{{ dxdfir_stack_certs_dir }}/ca/ca.key"
         mode: "0600"
 
-    - name: "stack-certs | CA signing request"
+    - name: "stack-certs | the CA signing request"
       community.crypto.openssl_csr:
         path: "{{ dxdfir_stack_certs_dir }}/ca/ca.csr"
         privatekey_path: "{{ dxdfir_stack_certs_dir }}/ca/ca.key"
