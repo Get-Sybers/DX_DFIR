@@ -21,6 +21,7 @@
     # What remains DX_DFIR-specific is evidence discovery, tested offline here.
     dxdfir_molecule_roles:
       - dxdfir_evidence
+      - dxdfir_stack
   tasks:
     - name: "dxdfir-molecule | the runner image exists (built once, cached)"
       community.docker.docker_image:

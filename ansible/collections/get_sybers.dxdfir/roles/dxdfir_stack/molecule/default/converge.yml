@@ -1,0 +1,85 @@
+---
+- name: Converge
+  hosts: localhost
+  gather_facts: true
+  vars:
+    # The scenario's fixture is a MINIMAL inventory stand-in (no live stack): the
+    # role reads the host by label, matches nothing, and reports absent. These
+    # mirror playbooks/group_vars/all.yml's dxdfir_elastic_* (the real source of
+    # truth) so the §10 entry gate is satisfied; paths live under /tmp.
+    _moltmp: /tmp/dxdfir-stack-molecule
+    dxdfir_elastic_stack_name: byakugan-molecule
+    dxdfir_elastic_label_key: com.get-sybers.stack
+    dxdfir_elastic_legacy_project: byakugan-molecule-legacy
+    dxdfir_elastic_version: "9.5.4"
+    dxdfir_elastic_images:
+      elasticsearch: "docker.elastic.co/elasticsearch/elasticsearch:9.5.4"
+      kibana: "docker.elastic.co/kibana/kibana:9.5.4"
+      fleet-server: "docker.elastic.co/elastic-agent/elastic-agent:9.5.4"
+      filebeat: "docker.elastic.co/beats/filebeat:9.5.4"
+    dxdfir_elastic_network: byakugan-molecule_default
+    dxdfir_elastic_volumes:
+      certs: byakugan-molecule_certs
+      esdata: byakugan-molecule_esdata
+      kibanadata: byakugan-molecule_kibanadata
+      fleetdata: byakugan-molecule_fleetdata
+      filebeatdata: byakugan-molecule_filebeatdata
+    dxdfir_elastic_bind: 127.0.0.1
+    dxdfir_elastic_es_port: 9200
+    dxdfir_elastic_kibana_port: 5601
+    dxdfir_elastic_fleet_port: 8220
+    dxdfir_elastic_es_heap: 512m
+    dxdfir_elastic_namespace: default
+    dxdfir_elastic_ingest_dir: "{{ _moltmp }}/ingest"
+    dxdfir_elastic_secrets_dir: "{{ _moltmp }}/secrets"
+    dxdfir_elastic_certs_dir: "{{ _moltmp }}/secrets/certs"
+    dxdfir_elastic_ca_file: "{{ _moltmp }}/secrets/certs/ca/ca.crt"
+    dxdfir_elastic_env_file: "{{ _moltmp }}/secrets/elastic.env"
+    dxdfir_elastic_legacy_env_file: "{{ _moltmp }}/docker/elastic/.env"
+  tasks:
+    # ---- positive: status reads the (absent) stack without deploying anything
+    - name: "converge | status reads the absent stack, read-only"
+      ansible.builtin.include_role:
+        name: dxdfir_stack
+      vars:
+        dxdfir_stack_action: status
+        dxdfir_stack_when_absent: continue
+        dxdfir_stack_install_docker: false
+        dxdfir_stack_start_docker: false
+        dxdfir_stack_pull_gate: false
+
+    - name: "converge | the stack is reported absent (the interface facts exist)"
+      ansible.builtin.assert:
+        that:
+          - __dxdfir_stack_present is defined
+          - not (__dxdfir_stack_present | bool)
+          - __dxdfir_stack_has_containers is defined
+          - not (__dxdfir_stack_has_containers | bool)
+          - __dxdfir_stack_legacy_containers == []
+        fail_msg: >-
+          expected an absent stack — present={{ __dxdfir_stack_present | default('UNDEF') }},
+          has_containers={{ __dxdfir_stack_has_containers | default('UNDEF') }},
+          legacy={{ __dxdfir_stack_legacy_containers | default('UNDEF') }}
+        quiet: true
+
+    # ---- negative: a bad input is a controlled failure at the entry gate, not a crash
+    - name: "converge | an invalid action is rejected cleanly"
+      block:
+        - name: "converge | invoke the role with an invalid action"
+          ansible.builtin.include_role:
+            name: dxdfir_stack
+          vars:
+            dxdfir_stack_action: frobnicate
+
+        - name: "converge | the invalid action must not have been accepted"
+          ansible.builtin.fail:
+            msg: "an invalid dxdfir_stack_action was accepted — the entry assert did not fire"
+      rescue:
+        - name: "converge | the entry gate rejected it with a labelled message"
+          ansible.builtin.assert:
+            that:
+              - "'dxdfir_stack_action' in (ansible_failed_result.msg | default(''))"
+            fail_msg: >-
+              the role failed, but not with the expected input-validation
+              message: {{ ansible_failed_result.msg | default('(none)') }}
+            quiet: true
