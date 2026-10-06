@@ -3,6 +3,37 @@
 # the privilege-decision facts (__dxdfir_stack_escalate / __dxdfir_stack_privileged /
 # __dxdfir_stack_operator), because docker_ensure.yml is ALSO a reusable entry point run
 # directly by dxdfir-bootstrap.yml, so it cannot assume preflight set them.
+# §10: the role has no fallback — the inventory layer (dxdfir_elastic_*) is the
+# single source of truth (§29). Assert it is present at entry so a run without
+# it fails with THIS clear message instead of a raw "undefined variable" the
+# first time a later task dereferences one. -e / host_vars overrides of these
+# satisfy the check; the secrets get their own resolve-assert in secrets.yml.
+- name: "stack-preflight | the inventory layer defining the stack is present"
+  ansible.builtin.assert:
+    that:
+      - dxdfir_elastic_stack_name is defined
+      - dxdfir_elastic_label_key is defined
+      - dxdfir_elastic_network is defined
+      - dxdfir_elastic_images is defined
+      - dxdfir_elastic_volumes is defined
+      - dxdfir_elastic_bind is defined
+      - dxdfir_elastic_es_port is defined
+      - dxdfir_elastic_kibana_port is defined
+      - dxdfir_elastic_fleet_port is defined
+      - dxdfir_elastic_certs_dir is defined
+      - dxdfir_elastic_ca_file is defined
+      - dxdfir_elastic_ingest_dir is defined
+      - dxdfir_elastic_secrets_dir is defined
+    fail_msg: >-
+      the inventory layer that defines this stack is missing — one or more
+      dxdfir_elastic_* values are undefined. They are defined once in
+      playbooks/group_vars/all.yml (the single source of truth) and load under
+      any inventory source; run through the stack playbooks, or supply them via
+      -e / host_vars. This role keeps no fallback, so it stops here rather than
+      inventing values.
+    quiet: true
+  tags: [always]
+
 - name: "stack-preflight | ensure the docker engine"
   ansible.builtin.import_tasks: docker_ensure.yml
 

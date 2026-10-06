@@ -5,6 +5,12 @@
 # truth is the inventory (playbooks/group_vars/all.yml, dxdfir_elastic_*) — the
 # values an operator sets live there, referenced by defaults/main.yml, not here.
 
+# ---- the ownership label(s) every stack container/volume carries and every
+# query reads: DERIVED from the label key and stack name (not an operator input,
+# so it lives here, not in defaults — §28). A computed dict: Ansible templates
+# mapping VALUES not keys, so the dynamic key needs a Jinja expression.
+dxdfir_stack_labels: "{{ {dxdfir_stack_label_key: dxdfir_stack_name} }}"
+
 # ---- TLS instances (was an inline anchor in tasks/certs.yml). SANs are DATA:
 # the per-instance DNS names, plus loopback, plus the deploy's bind address
 # when it is a routable IP (so exposing the stack issues certs valid for it).

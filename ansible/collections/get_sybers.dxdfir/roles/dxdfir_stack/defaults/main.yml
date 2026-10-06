@@ -24,8 +24,8 @@ dxdfir_stack_es_memlock: true
 dxdfir_stack_name: "{{ dxdfir_elastic_stack_name }}"
 dxdfir_stack_label_key: "{{ dxdfir_elastic_label_key }}"
 dxdfir_stack_legacy_project: "{{ dxdfir_elastic_legacy_project }}"
-# a computed dict: ansible templates mapping VALUES, not keys, so the dynamic key needs a Jinja expression
-dxdfir_stack_labels: "{{ {dxdfir_stack_label_key: dxdfir_stack_name} }}"
+# dxdfir_stack_labels is DERIVED from label_key + name (not an operator input),
+# so it lives in vars/main.yml (§28), not here.
 
 dxdfir_stack_elastic_version: "{{ dxdfir_elastic_version }}"
 dxdfir_stack_network: "{{ dxdfir_elastic_network }}"
