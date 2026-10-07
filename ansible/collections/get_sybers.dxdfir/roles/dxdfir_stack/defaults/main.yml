@@ -37,6 +37,7 @@ dxdfir_stack_fleet_port: "{{ dxdfir_elastic_fleet_port }}"
 dxdfir_stack_es_heap: "{{ dxdfir_elastic_es_heap }}"
 dxdfir_stack_namespace: "{{ dxdfir_elastic_namespace }}"
 dxdfir_stack_ingest_dir: "{{ dxdfir_elastic_ingest_dir }}"
+dxdfir_stack_config_dir: "{{ dxdfir_elastic_config_dir }}"
 dxdfir_stack_images: "{{ dxdfir_elastic_images }}"
 dxdfir_stack_containers:
   elasticsearch: "{{ dxdfir_stack_name }}-elasticsearch"

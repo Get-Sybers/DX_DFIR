@@ -232,6 +232,10 @@ argument_specs:
         type: str
         required: false
         description: "Host path (the processed tree) filebeat tails, mounted read-only (inventory: dxdfir_elastic_ingest_dir)."
+      dxdfir_stack_config_dir:
+        type: str
+        required: false
+        description: "The Elastic config tree (filebeat config, ingest pipelines, templates, Kibana saved objects) deploy reconciles verbatim (inventory: dxdfir_elastic_config_dir; see elastic/README.md)."
       dxdfir_stack_env_file:
         type: str
         required: false

@@ -33,6 +33,7 @@
     dxdfir_elastic_es_heap: 512m
     dxdfir_elastic_namespace: default
     dxdfir_elastic_ingest_dir: "{{ _moltmp }}/ingest"
+    dxdfir_elastic_config_dir: "{{ _moltmp }}/elastic"
     dxdfir_elastic_secrets_dir: "{{ _moltmp }}/secrets"
     dxdfir_elastic_certs_dir: "{{ _moltmp }}/secrets/certs"
     dxdfir_elastic_ca_file: "{{ _moltmp }}/secrets/certs/ca/ca.crt"

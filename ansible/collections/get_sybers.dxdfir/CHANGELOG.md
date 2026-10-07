@@ -7,6 +7,20 @@ root [CHANGELOG.md](../../../CHANGELOG.md).
 
 ### Changed
 
+- **`dxdfir_stack` deploys the repo-root Elastic config tree.** A new
+  `deploy_ingest.yml` stage (after kibana, before filebeat) reconciles
+  `dxdfir_stack_config_dir` (inventory: `dxdfir_elastic_config_dir`,
+  `<repo>/elastic/`) read-first against the live APIs: ingest pipelines
+  (`elastic/pipelines/*.json`, name = filename), component then index
+  templates (`elastic/templates/{component,index}/*.json`), and the Kibana
+  saved objects (`elastic/dashboards/*.ndjson`, imported with overwrite,
+  gated on a content-hash deploy artifact in the secret store). Filebeat's
+  config moved out of the role (`files/filebeat.yml` →
+  `elastic/filebeat/filebeat.yml`) and its container is fixed to start under
+  beats 9 (`--environment=container`; the single-dash spelling is parsed as a
+  positional command and exits) and now deploys **before** fleet-server, so a
+  Fleet failure cannot take the evidence ingest down with it.
+
 - **`dxdfir_stack` brought into line with the Ansible standards.** The role's
   config now flows through native precedence with no catering: the inventory
   (`dxdfir_elastic_*`) is the single source of truth and `defaults/main.yml`

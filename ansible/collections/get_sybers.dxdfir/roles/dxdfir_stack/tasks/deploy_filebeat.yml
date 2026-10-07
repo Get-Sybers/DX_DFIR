@@ -9,7 +9,9 @@
     image: "{{ dxdfir_stack_images['filebeat'] }}"
     state: started
     user: root
-    command: ["-e", "--strict.perms=false", "-environment", "container"]
+    # beats 9 parses flags with cobra: the single-dash `-environment container`
+    # spelling is read as a positional command and refuses to start
+    command: ["-e", "--strict.perms=false", "--environment=container"]
     labels: "{{ dxdfir_stack_labels }}"
     networks:
       - name: "{{ dxdfir_stack_network }}"
@@ -20,7 +22,7 @@
       ELASTICSEARCH_PASSWORD: "{{ dxdfir_stack_elastic_password }}"
       DFIR_NAMESPACE: "{{ dxdfir_stack_namespace }}"
     volumes:
-      - "{{ role_path }}/files/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro"
+      - "{{ dxdfir_stack_config_dir }}/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro"
       - "{{ dxdfir_stack_certs_dir }}:/certs:ro"
       - "{{ dxdfir_stack_ingest_dir }}:/ingest:ro"
       - "{{ dxdfir_stack_volumes['filebeatdata'] }}:/usr/share/filebeat/data"
