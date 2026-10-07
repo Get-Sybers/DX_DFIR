@@ -1,5 +1,5 @@
 # ==============================================================================
-# 🛑 Evidence safety — deny by default
+# Evidence safety — deny by default
 # ==============================================================================
 #
 # data_store/ holds real forensic evidence. This file denies everything and
@@ -36,46 +36,82 @@
 !/.gitignore
 !/README.md
 
+!/dependencies/
 !/dependencies/.gitkeep
+!/dependencies/hayabusa/
 !/dependencies/hayabusa/.gitkeep
+!/dependencies/suricata-rules/
 !/dependencies/suricata-rules/.gitkeep
+!/dependencies/memprocfs-symbols/
 !/dependencies/memprocfs-symbols/.gitkeep
+!/dependencies/yara-rules/
 !/dependencies/yara-rules/.gitkeep
 # NOTE: /dependencies/hayabusa/ (fetched tool cache, embeds a git repo under
 # rules/) needs no special rule any more — like every other unlisted directory
 # it is ignored and pruned outright.
 
+!/docker_images/
 !/docker_images/.gitkeep
 
+!/processed/
 !/processed/.gitkeep
+!/processed/byakugan/
 !/processed/byakugan/.gitkeep
+!/processed/byakugan-load/
 !/processed/byakugan-load/.gitkeep
+!/processed/exchange/
 !/processed/exchange/.gitkeep
+!/processed/detections/
 !/processed/detections/.gitkeep
+!/processed/detections/byakugan/
 !/processed/detections/byakugan/.gitkeep
+!/processed/detections/yara/
 !/processed/detections/yara/.gitkeep
+!/processed/detections/suricata/
 !/processed/detections/suricata/.gitkeep
+!/processed/detections/hayabusa/
 !/processed/detections/hayabusa/.gitkeep
 # one leaf per tool: processed/<tool>/[<collection>/]<host>/…
+!/processed/anamnesis/
 !/processed/anamnesis/.gitkeep
+!/processed/daemonhunter/
 !/processed/daemonhunter/.gitkeep
+!/processed/log2timeline/
 !/processed/log2timeline/.gitkeep
+!/processed/windowlicker/
 !/processed/windowlicker/.gitkeep
+!/processed/zeek/
 !/processed/zeek/.gitkeep
 
+!/raw/
 !/raw/.gitkeep
+!/raw/VM_files/
 !/raw/VM_files/.gitkeep
+!/raw/disk_images/
 !/raw/disk_images/.gitkeep
+!/raw/memory/
 !/raw/memory/.gitkeep
+!/raw/mobile/
 !/raw/mobile/.gitkeep
+!/raw/logs/
 !/raw/logs/.gitkeep
+!/raw/logs/winevt/
 !/raw/logs/winevt/.gitkeep
+!/raw/logs/linux/
 !/raw/logs/linux/.gitkeep
+!/raw/logs/macOS/
 !/raw/logs/macOS/.gitkeep
+!/raw/filesystem/
 !/raw/filesystem/.gitkeep
 !/raw/filesystem/documents/
 !/raw/filesystem/documents/.gitkeep
+!/raw/other_raw_data/
 !/raw/other_raw_data/.gitkeep
+!/raw/other_raw_data/sql/
 !/raw/other_raw_data/sql/.gitkeep
+!/raw/pcaps/
 !/raw/pcaps/.gitkeep
+!/raw/sort/
+!/raw/sort/.gitkeep
+!/raw/collections/
 !/raw/collections/.gitkeep
