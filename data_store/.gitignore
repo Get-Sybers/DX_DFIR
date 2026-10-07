@@ -46,9 +46,9 @@
 !/dependencies/memprocfs-symbols/.gitkeep
 !/dependencies/yara-rules/
 !/dependencies/yara-rules/.gitkeep
-# NOTE: /dependencies/hayabusa/ (fetched tool cache, embeds a git repo under
-# rules/) needs no special rule any more — like every other unlisted directory
-# it is ignored and pruned outright.
+# NOTE: /dependencies/hayabusa/ is tracked as an empty skeleton directory; its
+# contents (fetched tool cache, embeds a git repo under rules/) remain ignored
+# by the `*` deny-all rule.
 
 !/docker_images/
 !/docker_images/.gitkeep
