@@ -7,6 +7,33 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Added
+- **The Elastic config tree: `elastic/` at the repo root.** What the analysis
+  stack ingests and shows is now configuration as data, in one
+  operator-editable place — the Filebeat config, per-evidence-type **ingest
+  pipelines** (`logs-dxdfir-router` + one pipeline per lane: evidence time →
+  `@timestamp`, never re-stamped, with ingest time in `event.ingested`;
+  `event.module`/`event.dataset`; grok over composite strings like Plaso's
+  `display_name`; ECS copies for the Zeek 4-tuple and the GoDFIR host
+  envelope), the **`logs-dxdfir.*` index/component templates** (mirroring the
+  built-in `logs-*-*` composition, plus `flattened` mappings for Plaso's
+  recursive `pathspec`), and the **Kibana saved objects** (the
+  `logs-dxdfir.*`/`logs-car.*` data views, per-lane saved searches, the
+  evidence-overview dashboard, and a should-stay-empty pipeline-errors view —
+  a parse failure indexes the record as-is with the error in
+  `labels.pipeline_error`, never dropping evidence). `dx deploy stack` /
+  `dx update stack` reconcile the tree read-first (`deploy_ingest.yml`):
+  pipelines and templates against the live Elasticsearch APIs, saved objects
+  imported when the tree's content hash changes. See `elastic/README.md`.
+
+### Fixed
+- **Filebeat starts again — the evidence ingest was down.** Beats 9 parses
+  flags with cobra, which reads the compose-era `-environment container`
+  spelling as a positional command and exits (`unknown command "container"`);
+  the container now starts with `--environment=container`. Filebeat also
+  deploys **before** fleet-server, so a Fleet enrolment failure can no longer
+  leave the evidence ingest down.
+
 ### Changed
 - **The CLI is redesigned around a consistent `dx <verb> <noun>` grammar and the
   binary is renamed `dxdfir` → `dx`.** Commands read verb first — `deploy stack`,

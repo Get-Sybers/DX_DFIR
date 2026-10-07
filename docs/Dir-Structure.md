@@ -16,7 +16,9 @@ tool's contract; no host python).
     │
     └── scripts/                                      # Host provisioning: setup, image save/load, the offline bundle (bash); dev/ holds unsupported one-off helpers (fetch-samples, set-version, cold-start)
     │
-    └── docker/                                       # Container builds: the hardened get-sybers/* tool images, the GoDFIR-toolz submodule (every tool-image build context), Byakugan's Elastic-native stack (elastic/)
+    └── docker/                                       # Container builds: the hardened get-sybers/* tool images, the GoDFIR-toolz submodule (every tool-image build context)
+    │
+    └── elastic/                                      # The Elastic config tree: filebeat ingest config, per-type ingest pipelines (grok/dates), index templates, Kibana saved objects — deployed verbatim by the dxdfir_stack role (see elastic/README.md)
     │
     └── .github/                                      # CI workflows + the check harness (tests/: run-checks.sh, smoke-test.sh, the Elastic risk gate) + CONTRIBUTING / SECURITY / THIRD_PARTY_NOTICES
     │

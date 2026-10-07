@@ -98,9 +98,24 @@ docker run --rm --network byakugan_default \
 
 Filebeat tails `/ingest/*/**/*.{json,jsonl}` (the processed tree), dissects the first
 path segment as the evidence type, and ships each record into a data stream named
-**`logs-dxdfir.<type>-<namespace>`**, e.g. `logs-dxdfir.evtx-default`. Kibana at
+**`logs-dxdfir.<type>-<namespace>`**, e.g. `logs-dxdfir.zeek-default`. Cluster-side,
+each stream's default pipeline (`logs-dxdfir-router`) hands the record to its
+evidence type's ingest pipeline: evidence time → `@timestamp` (ingest time stays in
+`event.ingested`; evidence is never re-stamped), `event.module`/`event.dataset`,
+grok over composite strings, and the cheap ECS copies. Kibana at
 <http://127.0.0.1:5601> is where you explore: Discover, detections, and ES|QL over
 the same streams.
+
+## The config tree (`elastic/`)
+
+What the stack ingests and shows is **configuration as data** at the repo root —
+[`elastic/`](../../elastic/README.md): the Filebeat config, the ingest pipelines
+(one JSON file per pipeline; grok lives here), the `logs-dxdfir.*`
+component/index templates, and the Kibana saved objects (data views, searches,
+dashboards). Deploy reconciles the tree read-first on every
+`dx deploy stack` / `dx update stack` — edit a file, re-converge, done; an
+unchanged tree is `changed=0`. The path is the inventory's
+`dxdfir_elastic_config_dir`.
 
 ## Two index families
 
