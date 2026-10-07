@@ -1,9 +1,11 @@
-# Byakugan shipper: /ingest (<type>/**/*.json[l]) straight into
-# logs-dxdfir.<type>-<namespace> data streams; no Logstash.
+# DX_DFIR shipper: /ingest (<type>/**/*.json[l]) straight into
+# logs-dxdfir.<type>-<namespace> data streams; no Logstash. Per-type parsing
+# happens cluster-side (elastic/pipelines/, wired as the streams'
+# default_pipeline) — this file only discovers, decodes and routes.
 
 filebeat.inputs:
   - type: filestream
-    id: byakugan-evidence
+    id: dxdfir-evidence
     enabled: true
     paths:
       - /ingest/*/**/*.json
@@ -20,6 +22,11 @@ filebeat.inputs:
       # windows_logs/_extracted_evtx and godfir-toolz/_extracted
       - '^/ingest/_[^/]*/.*'
       - '^/ingest/[^/]+/_extracted[^/]*/.*'
+      # lane RUN SUMMARIES (what the dx CLI watches), not evidence — and their
+      # own `log` key would clobber filebeat's log.file.path under
+      # overwrite_keys, routing the rows to logs-dxdfir.misc-*
+      - '^/ingest/zeek/.*/zeek\.jsonl$'
+      - '^/ingest/log2timeline/.*/(log2timeline|psort)\.jsonl$'
     parsers:
       - ndjson:
           target: ""
@@ -33,7 +40,8 @@ filebeat.inputs:
           field: log.file.path
           target_prefix: ""
 
-# the built-in logs-*-* template creates the streams; Filebeat manages neither templates nor ILM
+# the logs-dxdfir index template (elastic/templates/) creates the streams;
+# Filebeat manages neither templates nor ILM
 setup.template.enabled: false
 setup.ilm.enabled: false
 

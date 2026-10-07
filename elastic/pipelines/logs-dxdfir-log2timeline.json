@@ -1,0 +1,57 @@
+{
+  "description": "Plaso json_line events: evidence time from the epoch-microsecond timestamp (kept as ingest time when absent or the pre-1970 sentinel), filesystem/path grokked out of display_name. The pathspec tree is mapped flattened by the logs-dxdfir@custom component template.",
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/pipelines/logs-dxdfir-log2timeline.json"
+  },
+  "processors": [
+    {
+      "set": {
+        "field": "event.module",
+        "value": "plaso",
+        "override": false
+      }
+    },
+    {
+      "grok": {
+        "field": "log.file.path",
+        "patterns": [
+          "/(?<_tmp_dataset>[^/]+)\\.jsonl?$"
+        ],
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "event.dataset",
+        "value": "plaso.{{{_tmp_dataset}}}",
+        "if": "ctx._tmp_dataset != null",
+        "override": false
+      }
+    },
+    {
+      "remove": {
+        "field": "_tmp_dataset",
+        "ignore_missing": true
+      }
+    },
+    {
+      "script": {
+        "description": "timestamp is epoch MICROseconds; <= 0 is the pre-1970 sentinel (e.g. the Windows FILETIME epoch) — evidence time only when it is a real one",
+        "if": "ctx.timestamp instanceof Number && ((Number) ctx.timestamp).longValue() > 0L",
+        "source": "ctx['@timestamp'] = Instant.ofEpochMilli(((Number) ctx.timestamp).longValue() / 1000L).toString();"
+      }
+    },
+    {
+      "grok": {
+        "field": "display_name",
+        "patterns": [
+          "^%{DATA:plaso.fs_type}:%{GREEDYDATA:file.path}$"
+        ],
+        "if": "ctx.display_name != null && ctx.file?.path == null",
+        "ignore_failure": true
+      }
+    }
+  ]
+}

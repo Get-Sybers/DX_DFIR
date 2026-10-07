@@ -1,0 +1,26 @@
+{
+  "index_patterns": [
+    "logs-dxdfir.*-*"
+  ],
+  "composed_of": [
+    "logs@mappings",
+    "logs@settings",
+    "logs@custom",
+    "ecs@mappings",
+    "logs-dxdfir@custom"
+  ],
+  "priority": 200,
+  "data_stream": {
+    "hidden": false,
+    "allow_custom_routing": false
+  },
+  "allow_auto_create": true,
+  "ignore_missing_component_templates": [
+    "logs@custom"
+  ],
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/templates/index/logs-dxdfir.json",
+    "description": "The processed-evidence streams: the built-in logs-*-* composition (logsdb, ECS dynamic mappings, the operator's logs@custom extension point) plus the logs-dxdfir@custom component, which wires the per-type ingest pipelines"
+  }
+}

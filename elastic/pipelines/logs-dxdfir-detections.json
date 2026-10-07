@@ -1,0 +1,64 @@
+{
+  "description": "The signatures lane (detections/<engine>/...): every row is an alert; event.module is the engine (yara, suricata, hayabusa, or byakugan's reserved tree), evidence time from the engine's own timestamp field (suricata: timestamp, hayabusa: Timestamp).",
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/pipelines/logs-dxdfir-detections.json"
+  },
+  "processors": [
+    {
+      "set": {
+        "field": "event.kind",
+        "value": "alert",
+        "override": false
+      }
+    },
+    {
+      "grok": {
+        "field": "log.file.path",
+        "patterns": [
+          "^/ingest/detections/(?<_tmp_engine>[^/]+)/"
+        ],
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "event.module",
+        "copy_from": "_tmp_engine",
+        "if": "ctx._tmp_engine != null",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "event.dataset",
+        "value": "{{{_tmp_engine}}}.alert",
+        "if": "ctx._tmp_engine != null",
+        "override": false
+      }
+    },
+    {
+      "remove": {
+        "field": "_tmp_engine",
+        "ignore_missing": true
+      }
+    },
+    {
+      "date": {
+        "field": "timestamp",
+        "target_field": "@timestamp",
+        "formats": ["ISO8601"],
+        "if": "ctx.timestamp instanceof String"
+      }
+    },
+    {
+      "date": {
+        "field": "Timestamp",
+        "target_field": "@timestamp",
+        "formats": ["ISO8601"],
+        "if": "ctx.timestamp == null && ctx.Timestamp instanceof String"
+      }
+    }
+  ]
+}
