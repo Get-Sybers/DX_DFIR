@@ -61,7 +61,7 @@ exchange, both run inside the hardened `get-sybers/byakugan` image.
 
 | Command | What it does |
 |---|---|
-| `dx deploy stack` | Bring up and verify the analysis stack from inventory data (installs docker itself when missing). The service containers read the node TLS keys as gid 0, so the keys must be `root:root 0640`; deploy holds that automatically: when not already root it escalates only the privileged tasks (TLS key lifecycle + docker setup) and prompts once for the sudo password, running the rest as you. No prompt when run as root (`sudo dx deploy stack`). |
+| `dx deploy stack` | Bring up and verify the analysis stack from inventory data (installs docker itself when missing), including the Elastic config tree: the ingest pipelines, the `logs-dxdfir.*` templates and the Kibana saved objects, among them the `malcolm` space ([the dashboards](../architecture/the-stack.md#the-dashboards)). The service containers read the node TLS keys as gid 0, so the keys must be `root:root 0640`; deploy holds that automatically: when not already root it escalates only the privileged tasks (TLS key lifecycle + docker setup) and prompts once for the sudo password, running the rest as you. No prompt when run as root (`sudo dx deploy stack`). |
 | `dx start stack` / `stop stack` / `status stack` | Start / stop / show the stack's containers. |
 | `dx restart stack` | Stop the containers, then start them again (no data removed). |
 | `dx update stack` | Re-converge the stack onto the current inventory/images (in-place update). Runs the deploy play, so it escalates automatically exactly as `deploy stack` does (a sudo prompt when not already root). |

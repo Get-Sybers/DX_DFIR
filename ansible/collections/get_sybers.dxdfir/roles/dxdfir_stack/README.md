@@ -19,8 +19,12 @@ What the stack *ingests and shows* is configuration as data in the repo-root
 ingest pipelines and `logs-dxdfir.*` templates `deploy_ingest.yml`
 reconciles read-first against the live APIs, and the Kibana saved objects
 it imports (gated on the tree's content hash, a deploy artifact in the
-secret store). The role carries no pipeline or dashboard bodies of its
-own — see `elastic/README.md`.
+secret store), into the default space and into every space the tree
+defines (`dashboards/<id>/space.json`, created or updated first). It also
+rolls over every existing `logs-dxdfir.*` stream whose write index is not
+yet on the router pipeline, once, so a stream created before the tree is
+routed from its next document on. The role carries no pipeline or dashboard
+bodies of its own — see `elastic/README.md`.
 
 ## Actions and their playbook decisions
 

@@ -25,6 +25,7 @@ elastic/
 │   ├── component/             # component templates (deployed first)
 │   └── index/                 # index templates (composed of the above)
 └── dashboards/                # Kibana saved objects (*.ndjson), imported on deploy
+    └── malcolm/               # a Kibana SPACE: space.json + its own *.ndjson (see dashboards/malcolm/README.md)
 ```
 
 ## How a record flows in
@@ -66,10 +67,21 @@ elastic/
 - **Mappings**: add to the
   [`logs-dxdfir@custom`](templates/component/logs-dxdfir@custom.json)
   component template. Template changes apply to a stream's **next** backing
-  index (rollover) — existing indices keep their mappings.
+  index — existing indices keep their mappings. Deploy rolls over every
+  existing `logs-dxdfir.*` stream whose write index is not yet on the router
+  pipeline, so a stream created before the tree existed is routed from its
+  next document on.
 - **Dashboards**: export from Kibana (*Stack Management → Saved Objects*)
   into `dashboards/*.ndjson`. Deploy imports with `overwrite=true`, gated on
   a content hash, so hand-edits in Kibana survive until the tree changes.
+- **A Kibana space**: a directory `dashboards/<id>/` holding `space.json`
+  (the space's id, name, initials, colour and disabled features, as Kibana's
+  spaces API takes them) and that space's saved objects as `*.ndjson`. Deploy
+  creates the space when missing, updates it when a field differs, and
+  imports the directory's objects into it the same way as the default
+  space's, gated on their own content hash. The [`malcolm`](dashboards/malcolm/README.md)
+  space, 36 dashboards derived from cisagov/Malcolm over the Zeek and
+  Suricata streams, is one.
 
 Pipeline and template **names are the filenames** (minus `.json`); keep the
 `logs-dxdfir-` / `logs-dxdfir@` prefixes so the stack's objects stay

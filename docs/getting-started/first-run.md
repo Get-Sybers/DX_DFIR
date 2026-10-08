@@ -108,8 +108,10 @@ containers read the node TLS keys as gid 0, so the keys must be `root:root
 TLS key lifecycle and the docker-engine setup (prompting once for the sudo
 password) while the rest of the play runs as you. Run it as root (`sudo dx
 deploy stack`) and there is no prompt. Everything binds `127.0.0.1`; Filebeat
-ships the processed evidence into `logs-dxdfir.<type>-*` data streams. See
-[the stack](../architecture/the-stack.md).
+ships the processed evidence into `logs-dxdfir.<type>-*` data streams. The
+deploy also imports the `malcolm` Kibana space: 36 dashboards derived from
+cisagov/Malcolm over the Zeek (`logs-dxdfir.zeek-*`) and Suricata
+(`logs-dxdfir.detections-*`) streams. See [the stack](../architecture/the-stack.md).
 
 > **Two things bite here on a first run:**
 > - `vm.max_map_count=262144` must be set on the host or Elasticsearch won't start
@@ -120,7 +122,8 @@ ships the processed evidence into `logs-dxdfir.<type>-*` data streams. See
 ## 7. Explore
 
 - **Kibana** at <http://127.0.0.1:5601>: Discover, detections, and ES|QL over the
-  ingested evidence.
+  ingested evidence; the `malcolm` space (<http://127.0.0.1:5601/s/malcolm/app/dashboards>)
+  holds the Zeek and Suricata dashboards.
 - **`dx`** (no args): the [landing readout](the-interface.md) of environment readiness,
   tracked collections, and staged evidence at a glance.
 
