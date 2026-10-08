@@ -48,7 +48,7 @@ REPO_ROOT = os.path.abspath(os.path.join(HERE, os.pardir, os.pardir, os.pardir))
 # names a local copy instead (air-gapped runs: point it into a byakugan
 # checkout at the pin).
 PIN_DOCKERFILE = os.path.join(REPO_ROOT, "docker", "GoDFIR-toolz", "byakugan", "Dockerfile")
-CONTRACT_TEMPLATE_URL = ("https://github.com/Get-Sybers/Byakugan/-/raw/"
+CONTRACT_TEMPLATE_URL = ("https://raw.githubusercontent.com/Get-Sybers/Byakugan/"
                          "{ref}/rules/car-detections/car-detections.index-template.json")
 
 
