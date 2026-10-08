@@ -144,7 +144,9 @@ group "Elastic config tree (pipelines, templates, Kibana saved objects)"
 # names out of the dashboards derived from it
 ELASTIC_TREE="elastic"
 if command -v python3 >/dev/null 2>&1 && [[ -d "$ELASTIC_TREE/dashboards" ]]; then
-    _tree_out=$(python3 - "$ELASTIC_TREE" <<'PY'
+    # stderr is captured too and the exit status checked: a crash of the
+    # checker itself (a traceback, empty stdout) must fail, not pass
+    _tree_out=$(python3 - "$ELASTIC_TREE" 2>&1 <<'PY'
 import glob, json, os, re, sys
 tree = sys.argv[1]
 problems = []
@@ -253,7 +255,11 @@ for space_file in sorted(glob.glob(os.path.join(tree, "dashboards", "*", "space.
 print("\n".join(problems))
 PY
 )
-    if [[ -n "$_tree_out" ]]; then
+    _tree_rc=$?
+    if [[ $_tree_rc -ne 0 ]]; then
+        fail "elastic tree: the checker itself failed (exit $_tree_rc)"
+        printf '%s\n' "$_tree_out" | tail -3 | sed 's/^/      /'
+    elif [[ -n "$_tree_out" ]]; then
         while IFS= read -r _line; do fail "elastic tree: $_line"; done <<< "$_tree_out"
     else
         pass "elastic/ pipelines, templates and saved objects parse and reference each other"

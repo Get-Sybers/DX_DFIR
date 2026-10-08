@@ -95,7 +95,7 @@ dashboard's time range and filters. The query after a panel is the KQL it applie
 
 - Files - Log Count Over Time (chart): `event.dataset:zeek.files`
 - Files - Files By Size (Bytes) (table): `event.dataset:zeek.files`
--  - Destination IP Address (table): `event.dataset:zeek.files`
+- Files - Destination IP Address (table): `event.dataset:zeek.files`
 - Files - Source IP Address (table): `event.dataset:zeek.files`
 - Files - Log Count (metric): `event.dataset:zeek.files`
 - Files - Source (chart): `event.dataset:zeek.files`
@@ -193,7 +193,7 @@ dashboard's time range and filters. The query after a panel is the KQL it applie
 - HTTP - Referrer (table): `event.dataset:zeek.http`
 - HTTP - Destination Port (chart): `event.dataset:zeek.http`
 - HTTP - Log Count (metric): `event.dataset:zeek.http`
-- HTTP  - Status and Method (table): `event.dataset:zeek.http`
+- HTTP - Status and Method (table): `event.dataset:zeek.http`
 - HTTP - Unique Usernames and Passwords (metric): `event.dataset:zeek.http`
 - HTTP - Version (pie chart): `(event.dataset:zeek.http) AND (NOT version:"0.0")`
 - HTTP - File Type (tag cloud): `event.dataset:zeek.http`
