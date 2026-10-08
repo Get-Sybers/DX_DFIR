@@ -181,7 +181,7 @@ for (kind, name), body in templates.items():
 LENS = {"lnsDatatable", "lnsPie", "lnsMetric", "lnsXY", "lnsTagcloud"}
 MALCOLM = ("network.protocol", "rule.", "event.action", "event.result", "event.severity", "event.provider",
            "related.", "url.", "user_agent.", "file.")
-def check_objects(label, files, data_views_from_files):
+def check_objects(label, files):
     views = {}
     objs_by_file = {}
     for fn in files:
@@ -241,7 +241,7 @@ def check_objects(label, files, data_views_from_files):
             if bad in text: err(f"{rel}: contains {bad!r}")
     if not views: err(f"{label}: no data view")
 
-check_objects("dashboards", sorted(glob.glob(os.path.join(tree, "dashboards", "*.ndjson"))), True)
+check_objects("dashboards", sorted(glob.glob(os.path.join(tree, "dashboards", "*.ndjson"))))
 for space_file in sorted(glob.glob(os.path.join(tree, "dashboards", "*", "space.json"))):
     d = os.path.dirname(space_file)
     with open(space_file, encoding="utf-8") as fh:
@@ -251,7 +251,7 @@ for space_file in sorted(glob.glob(os.path.join(tree, "dashboards", "*", "space.
         if key not in space: err(f"{d}/space.json: missing {key}")
     files = sorted(glob.glob(os.path.join(d, "*.ndjson")))
     if not files: err(f"{d}: no saved objects")
-    check_objects("dashboards/" + os.path.basename(d), files, True)
+    check_objects("dashboards/" + os.path.basename(d), files)
 print("\n".join(problems))
 PY
 )
