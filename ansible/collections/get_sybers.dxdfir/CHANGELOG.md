@@ -21,6 +21,24 @@ root [CHANGELOG.md](../../../CHANGELOG.md).
   positional command and exits) and now deploys **before** fleet-server, so a
   Fleet failure cannot take the evidence ingest down with it.
 
+- **`deploy_ingest.yml` handles Kibana spaces and rolls existing streams
+  over.** A directory `elastic/dashboards/<id>/` with a `space.json` is a
+  Kibana space: created when missing, updated when a field differs, its
+  `*.ndjson` imported into it with overwrite behind its own content-hash
+  marker and first-object probe, like the default space's objects. After
+  the templates, every existing `logs-dxdfir.*` data stream whose write
+  index is not on the router pipeline is rolled over once, so a stream
+  created before the config tree is routed from its next document on. The
+  first space is `malcolm`: 36 dashboards derived from cisagov/Malcolm
+  v26.09.0 (Apache-2.0, recorded in `.github/THIRD_PARTY_NOTICES.md`) over
+  the Zeek and Suricata streams. The Zeek pipeline gains `network.bytes` on
+  `conn` records and the detections pipeline names a Suricata record by its
+  EVE `event_type` (`suricata.alert`, `suricata.flow`, …); Filebeat skips the
+  signatures lane's run summaries (`suricata.jsonl`, `hayabusa.jsonl`) like
+  Zeek's. The repository check harness gains a group that parses the tree's
+  pipelines, templates and saved objects and checks the references between
+  them.
+
 - **`dxdfir_stack` brought into line with the Ansible standards.** The role's
   config now flows through native precedence with no catering: the inventory
   (`dxdfir_elastic_*`) is the single source of truth and `defaults/main.yml`

@@ -1,5 +1,5 @@
 {
-  "description": "Zeek logs: evidence time from ts (ISO8601 or epoch), event.dataset from the log name, ECS endpoint copies from the conn 4-tuple. Native Zeek fields stay in place.",
+  "description": "Zeek logs: evidence time from ts (ISO8601 or epoch), event.dataset from the log name, ECS endpoint copies from the conn 4-tuple, network.bytes on conn records. Native Zeek fields stay in place.",
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/pipelines/logs-dxdfir-zeek.json"
@@ -55,7 +55,10 @@
       "date": {
         "field": "ts",
         "target_field": "@timestamp",
-        "formats": ["ISO8601", "UNIX"],
+        "formats": [
+          "ISO8601",
+          "UNIX"
+        ],
         "if": "ctx.ts != null"
       }
     },
@@ -97,6 +100,14 @@
         "copy_from": "proto",
         "if": "ctx.proto != null",
         "override": false
+      }
+    },
+    {
+      "script": {
+        "description": "conn: network.bytes = orig_ip_bytes + resp_ip_bytes (the connection's IP-level total, what the dashboards sum)",
+        "lang": "painless",
+        "if": "ctx.event?.dataset == 'zeek.conn' && (ctx.orig_ip_bytes != null || ctx.resp_ip_bytes != null)",
+        "source": "long b = 0; if (ctx.orig_ip_bytes != null) { b += ((Number) ctx.orig_ip_bytes).longValue(); } if (ctx.resp_ip_bytes != null) { b += ((Number) ctx.resp_ip_bytes).longValue(); } if (ctx.network == null) { ctx.network = new HashMap(); } if (ctx.network.bytes == null) { ctx.network.bytes = b; }"
       }
     }
   ]

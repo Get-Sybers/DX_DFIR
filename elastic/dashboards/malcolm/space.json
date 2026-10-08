@@ -1,0 +1,8 @@
+{
+  "color": "#54B399",
+  "description": "cisagov/Malcolm dashboards adapted to DX_DFIR's Zeek (logs-dxdfir.zeek-*) and Suricata (logs-dxdfir.detections-*) streams",
+  "disabledFeatures": [],
+  "id": "malcolm",
+  "initials": "Ma",
+  "name": "Malcolm"
+}

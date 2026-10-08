@@ -27,6 +27,7 @@ filebeat.inputs:
       # overwrite_keys, routing the rows to logs-dxdfir.misc-*
       - '^/ingest/zeek/.*/zeek\.jsonl$'
       - '^/ingest/log2timeline/.*/(log2timeline|psort)\.jsonl$'
+      - '^/ingest/detections/(suricata|hayabusa)/.*/(suricata|hayabusa)\.jsonl$'
     parsers:
       - ndjson:
           target: ""

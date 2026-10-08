@@ -1,5 +1,5 @@
 {
-  "description": "The signatures lane (detections/<engine>/...): every row is an alert; event.module is the engine (yara, suricata, hayabusa, or byakugan's reserved tree), evidence time from the engine's own timestamp field (suricata: timestamp, hayabusa: Timestamp).",
+  "description": "The signatures lane (detections/<engine>/...): event.module is the engine (yara, suricata, hayabusa, or byakugan's reserved tree), event.dataset <engine>.alert — for Suricata <engine>.<event_type>, so suricata.alert is the alerts and suricata.flow, suricata.dns, ... the rest of its EVE output; evidence time from the engine's own timestamp field (suricata: timestamp, hayabusa: Timestamp).",
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/pipelines/logs-dxdfir-detections.json"
@@ -39,6 +39,15 @@
       }
     },
     {
+      "set": {
+        "description": "Suricata writes every EVE record type into eve.json; its event_type names the record",
+        "field": "event.dataset",
+        "value": "suricata.{{{event_type}}}",
+        "if": "ctx._tmp_engine == 'suricata' && ctx.event_type instanceof String",
+        "override": true
+      }
+    },
+    {
       "remove": {
         "field": "_tmp_engine",
         "ignore_missing": true
@@ -48,7 +57,9 @@
       "date": {
         "field": "timestamp",
         "target_field": "@timestamp",
-        "formats": ["ISO8601"],
+        "formats": [
+          "ISO8601"
+        ],
         "if": "ctx.timestamp instanceof String"
       }
     },
@@ -56,7 +67,9 @@
       "date": {
         "field": "Timestamp",
         "target_field": "@timestamp",
-        "formats": ["ISO8601"],
+        "formats": [
+          "ISO8601"
+        ],
         "if": "ctx.timestamp == null && ctx.Timestamp instanceof String"
       }
     }

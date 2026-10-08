@@ -117,6 +117,21 @@ dashboards). Deploy reconciles the tree read-first on every
 unchanged tree is `changed=0`. The path is the inventory's
 `dxdfir_elastic_config_dir`.
 
+## The dashboards
+
+The config tree's `dashboards/` is what Kibana shows. Beside the default
+space's evidence overview, deploy creates the **`malcolm` Kibana space** and
+imports its 36 dashboards, derived from [cisagov/Malcolm](https://github.com/cisagov/Malcolm)
+and converted to the Zeek (`logs-dxdfir.zeek-*`) and Suricata
+(`logs-dxdfir.detections-*`) documents the pipelines produce: Overview,
+Connections, Files, Executables, Zeek Weird and Suricata Alerts; one
+dashboard per Zeek protocol log (DNS, HTTP, SSL, SMB, Kerberos, …); Modbus
+and DNP3. The space is at <http://127.0.0.1:5601/s/malcolm/app/dashboards>;
+[`elastic/dashboards/malcolm/`](../../elastic/dashboards/malcolm/README.md)
+lists [every dashboard](../../elastic/dashboards/malcolm/DASHBOARDS.md) and
+the field conversion. Like the rest of the tree, the space is re-imported
+in place whenever its files change.
+
 ## Two index families
 
 | Family | Holds | From |

@@ -1,0 +1,2 @@
+{"attributes":{"name":"Malcolm · Zeek (logs-dxdfir.zeek-*)","timeFieldName":"@timestamp","title":"logs-dxdfir.zeek-*"},"id":"malcolm-zeek","managed":false,"references":[],"type":"index-pattern"}
+{"attributes":{"name":"Malcolm · Suricata (logs-dxdfir.detections-*)","timeFieldName":"@timestamp","title":"logs-dxdfir.detections-*"},"id":"malcolm-suricata","managed":false,"references":[],"type":"index-pattern"}

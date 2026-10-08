@@ -16,10 +16,29 @@ Two categories matter, and they matter differently:
 
 ## Vendored components
 
-The project vendors no third-party source in its own tree. (The MITRE CAR data
-model, formerly kept as `car_data_model.json`, is no longer vendored — see
-**MITRE CAR** below; its attribution is now carried by the `get-sybers/byakugan`
-image that redistributes MITRE's `car` repo.)
+One third-party component is carried in the tree, as derived data rather than
+source: the Kibana dashboards below. (The MITRE CAR data model, formerly kept
+as `car_data_model.json`, is no longer vendored — see **MITRE CAR** below; its
+attribution is now carried by the `get-sybers/byakugan` image that
+redistributes MITRE's `car` repo.)
+
+### Malcolm dashboards (Apache-2.0)
+
+`elastic/dashboards/malcolm/` holds 36 Kibana dashboards **derived from**
+[cisagov/Malcolm](https://github.com/cisagov/Malcolm) v26.09.0 (commit
+`7cfac5bc448bd9031a2cbb35bd058d7253c2e2c8`, `dashboards/dashboards/*.json`),
+Copyright 2026 Battelle Energy Alliance, LLC, licensed under the
+[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). Malcolm's
+licence notice ships next to them as `elastic/dashboards/malcolm/LICENSE.txt`.
+They are modified from the originals: the field names, queries and data views
+are those of DX_DFIR's `logs-dxdfir.zeek-*` and `logs-dxdfir.detections-*`
+streams, the visualisations are Kibana Lens objects stored in the dashboards
+instead of the legacy aggregation-based objects, and the panels and
+dashboards that depend on Malcolm's own enrichment and Zeek packages are
+absent (the directory's README states the scope). Nothing else of Malcolm
+(its Logstash pipelines, Arkime, NetBox, the file scanners) is used or
+shipped. The derived dashboards are redistributed under Apache-2.0, the
+repository's default licence.
 
 ### MITRE CAR
 

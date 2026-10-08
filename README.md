@@ -83,6 +83,9 @@ deployment is migrated in place with its data volumes untouched.
 Kibana is at `http://127.0.0.1:5601`. Filebeat tails the processed evidence tree
 (`<type>/**/*.json[l]`, pointed at by `ELASTIC_INGEST_DIR`) into
 `logs-dxdfir.<type>-*` data streams — see [the stack](docs/architecture/the-stack.md).
+The deploy also imports the `malcolm` Kibana space: 36 dashboards derived from
+[cisagov/Malcolm](https://github.com/cisagov/Malcolm) over the Zeek and Suricata
+streams ([the dashboards](docs/architecture/the-stack.md#the-dashboards)).
 The CAR→ECS projection into `logs-car.*` and ES|QL `LOOKUP JOIN` flagging against
 the `car-detections` lookup index are proven by the Phase-0
 [risk gate](docs/riskgate.md); the detection rules are data

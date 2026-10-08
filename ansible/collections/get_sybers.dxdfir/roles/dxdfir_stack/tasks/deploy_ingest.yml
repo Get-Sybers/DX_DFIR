@@ -133,6 +133,67 @@
   changed_when: true
   no_log: true
 
+# ---- existing streams: a template applies to the backing indices created
+# after it, so a stream whose write index is not yet on the router pipeline is
+# rolled over once; its next document then goes through the tree's pipelines.
+# A new stream needs nothing: its first backing index is created from the
+# template. Documents indexed before the rollover keep what they were indexed
+# with.
+
+- name: "stack-deploy | read the existing logs-dxdfir.* data streams"
+  ansible.builtin.uri:
+    url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_data_stream/logs-dxdfir.*-*"
+    ca_path: "{{ dxdfir_stack_ca_file }}"
+    url_username: elastic
+    url_password: "{{ dxdfir_stack_elastic_password }}"
+    force_basic_auth: true
+    status_code: [200, 404]
+  register: __dxdfir_stack_data_streams
+  changed_when: false
+  no_log: true
+
+- name: "stack-deploy | read each stream's write-index pipeline binding"
+  ansible.builtin.uri:
+    url: >-
+      https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port
+      }}/{{ (item['indices'] | last)['index_name'] }}/_settings/index.default_pipeline
+    ca_path: "{{ dxdfir_stack_ca_file }}"
+    url_username: elastic
+    url_password: "{{ dxdfir_stack_elastic_password }}"
+    force_basic_auth: true
+    status_code: [200]
+  loop: "{{ (__dxdfir_stack_data_streams['json'] | default({}))['data_streams'] | default([]) }}"
+  loop_control:
+    label: "{{ item['name'] }}"
+  register: __dxdfir_stack_write_settings
+  changed_when: false
+  no_log: true
+
+- name: "stack-deploy | roll over the streams whose write index is not on the router pipeline"
+  ansible.builtin.uri:
+    url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/{{ item['item']['name'] }}/_rollover"
+    method: POST
+    ca_path: "{{ dxdfir_stack_ca_file }}"
+    url_username: elastic
+    url_password: "{{ dxdfir_stack_elastic_password }}"
+    force_basic_auth: true
+    status_code: [200]
+  loop: "{{ __dxdfir_stack_write_settings['results'] | default([]) }}"
+  loop_control:
+    label: "{{ item['item']['name'] }}"
+  vars:
+    # the pipeline the tree binds to the streams (templates/component/logs-dxdfir@custom.json)
+    _router: >-
+      {{ (lookup('ansible.builtin.file', dxdfir_stack_config_dir ~ '/templates/component/logs-dxdfir@custom.json')
+          | from_json)['template']['settings']['index']['default_pipeline'] }}
+    _index: "{{ (item['item']['indices'] | last)['index_name'] }}"
+    _bound: >-
+      {{ ((((item['json'] | default({}))[_index] | default({}))['settings'] | default({}))['index'] | default({}))['default_pipeline']
+         | default('') }}
+  when: _bound != _router
+  changed_when: true
+  no_log: true
+
 # ---- Kibana saved objects (elastic/dashboards/*.ndjson): imported with
 # overwrite, gated on the tree's content hash (a deploy artifact in the secret
 # store) so hand-edits in Kibana survive until the tree itself changes
@@ -221,4 +282,184 @@
         content: "{{ __dxdfir_stack_saved_objects_payload | hash('sha256') }}"
         dest: "{{ dxdfir_stack_secrets_dir }}/kibana_saved_objects.sha256"
         mode: "0640"
+      changed_when: false
+
+# ---- Kibana spaces (elastic/dashboards/<dir>/space.json plus that
+# directory's *.ndjson): each space is created when missing and updated when
+# one of its fields differs; its saved objects are imported into it the same
+# way as the default space's above, gated on their own content hash and on
+# the probe of their first object
+
+- name: "stack-deploy | the Kibana spaces in the config tree"
+  ansible.builtin.find:
+    paths: "{{ dxdfir_stack_config_dir }}/dashboards"
+    patterns: space.json
+    recurse: true
+    depth: 2
+  register: __dxdfir_stack_space_files
+
+- name: "stack-deploy | reconcile the Kibana spaces"
+  when: __dxdfir_stack_space_files['files'] | length > 0
+  block:
+    - name: "stack-deploy | the spaces and their saved-object files"
+      ansible.builtin.set_fact:
+        __dxdfir_stack_spaces: >-
+          {{ __dxdfir_stack_spaces | default([]) + [{
+               'id': _space['id'], 'space': _space,
+               'files': lookup('ansible.builtin.fileglob', (item['path'] | dirname) ~ '/*.ndjson', wantlist=true) | sort}] }}
+      vars:
+        _space: "{{ lookup('ansible.builtin.file', item['path']) | from_json }}"
+      loop: "{{ __dxdfir_stack_space_files['files'] | sort(attribute='path') }}"
+      loop_control:
+        label: "{{ item['path'] | dirname | basename }}"
+      changed_when: false
+
+    - name: "stack-deploy | assemble each space's saved-objects payload"
+      ansible.builtin.set_fact:
+        __dxdfir_stack_space_payloads: >-
+          {{ __dxdfir_stack_space_payloads | default({})
+             | combine({item[0]['id']: ((__dxdfir_stack_space_payloads | default({}))[item[0]['id']] | default(''))
+                                        ~ lookup('ansible.builtin.file', item[1]) ~ _nl}) }}
+      vars:
+        _nl: "\n"
+      loop: "{{ __dxdfir_stack_spaces | subelements('files') }}"
+      loop_control:
+        label: "{{ item[0]['id'] }}: {{ item[1] | basename }}"
+      changed_when: false
+
+    - name: "stack-deploy | read the live spaces"
+      ansible.builtin.uri:
+        url: "http://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port }}/api/spaces/space/{{ item['id'] }}"
+        url_username: elastic
+        url_password: "{{ dxdfir_stack_elastic_password }}"
+        force_basic_auth: true
+        headers:
+          kbn-xsrf: "true"
+        status_code: [200, 404]
+      loop: "{{ __dxdfir_stack_spaces }}"
+      loop_control:
+        label: "{{ item['id'] }}"
+      register: __dxdfir_stack_spaces_live
+      changed_when: false
+      no_log: true
+
+    - name: "stack-deploy | create the missing spaces"
+      ansible.builtin.uri:
+        url: "http://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port }}/api/spaces/space"
+        method: POST
+        url_username: elastic
+        url_password: "{{ dxdfir_stack_elastic_password }}"
+        force_basic_auth: true
+        headers:
+          kbn-xsrf: "true"
+        body_format: json
+        body: "{{ item['item']['space'] }}"
+        status_code: [200]
+      loop: "{{ __dxdfir_stack_spaces_live['results'] }}"
+      loop_control:
+        label: "{{ item['item']['id'] }}"
+      when: item['status'] == 404
+      changed_when: true
+      no_log: true
+
+    - name: "stack-deploy | update the spaces whose fields differ"
+      ansible.builtin.uri:
+        url: "http://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port }}/api/spaces/space/{{ item['item']['id'] }}"
+        method: PUT
+        url_username: elastic
+        url_password: "{{ dxdfir_stack_elastic_password }}"
+        force_basic_auth: true
+        headers:
+          kbn-xsrf: "true"
+        body_format: json
+        body: "{{ item['item']['space'] }}"
+        status_code: [200]
+      loop: "{{ __dxdfir_stack_spaces_live['results'] }}"
+      loop_control:
+        label: "{{ item['item']['id'] }}"
+      vars:
+        _wanted: "{{ item['item']['space'] }}"
+        _keys: "{{ _wanted.keys() | list }}"
+        # compare only the fields the file defines; Kibana echoes bookkeeping of its own
+        _live: >-
+          {{ dict(_keys | zip(_keys | map('extract', item['json'] | default({})) | map('default', '') | list)) }}
+      when:
+        - item['status'] == 200
+        - _live != _wanted
+      changed_when: true
+      no_log: true
+
+    - name: "stack-deploy | read each space's deployed saved-objects hash"
+      ansible.builtin.slurp:
+        src: "{{ dxdfir_stack_secrets_dir }}/kibana_saved_objects.{{ item['id'] }}.sha256"
+      loop: "{{ __dxdfir_stack_spaces }}"
+      loop_control:
+        label: "{{ item['id'] }}"
+      register: __dxdfir_stack_space_markers
+      failed_when: false
+
+    - name: "stack-deploy | probe each space's first saved object in the live kibana"
+      ansible.builtin.uri:
+        url: >-
+          http://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port
+          }}/s/{{ item['id'] }}/api/saved_objects/{{ _probe['type'] }}/{{ _probe['id'] }}
+        url_username: elastic
+        url_password: "{{ dxdfir_stack_elastic_password }}"
+        force_basic_auth: true
+        headers:
+          kbn-xsrf: "true"
+        status_code: [200, 404]
+      vars:
+        _nl: "\n"
+        _probe: "{{ __dxdfir_stack_space_payloads[item['id']].split(_nl) | first | from_json }}"
+      loop: "{{ __dxdfir_stack_spaces }}"
+      loop_control:
+        label: "{{ item['id'] }}"
+      register: __dxdfir_stack_space_probe
+      changed_when: false
+      no_log: true
+
+    - name: "stack-deploy | import each space's saved objects"
+      ansible.builtin.uri:
+        url: >-
+          http://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port
+          }}/s/{{ item['item']['id'] }}/api/saved_objects/_import?overwrite=true
+        method: POST
+        url_username: elastic
+        url_password: "{{ dxdfir_stack_elastic_password }}"
+        force_basic_auth: true
+        headers:
+          kbn-xsrf: "true"
+        body_format: form-multipart
+        body:
+          file:
+            content: "{{ __dxdfir_stack_space_payloads[item['item']['id']] }}"
+            filename: "{{ item['item']['id'] }}-saved-objects.ndjson"
+            mime_type: application/ndjson
+        status_code: [200]
+      loop: "{{ __dxdfir_stack_space_probe['results'] }}"
+      loop_control:
+        label: "{{ item['item']['id'] }}"
+      vars:
+        _marker: >-
+          {{ (__dxdfir_stack_space_markers['results'] | selectattr('item.id', 'equalto', item['item']['id'])
+              | first)['content'] | default('') | b64decode | trim }}
+      register: __dxdfir_stack_space_import
+      failed_when: >-
+        __dxdfir_stack_space_import['status'] != 200
+        or not (__dxdfir_stack_space_import['json']['success'] | default(false))
+      when: >-
+        item['status'] == 404
+        or _marker != (__dxdfir_stack_space_payloads[item['item']['id']] | hash('sha256'))
+      changed_when: true
+      no_log: true
+
+    - name: "stack-deploy | record each space's deployed saved-objects hash"
+      ansible.builtin.copy:
+        content: "{{ __dxdfir_stack_space_payloads[item['id']] | hash('sha256') }}"
+        dest: "{{ dxdfir_stack_secrets_dir }}/kibana_saved_objects.{{ item['id'] }}.sha256"
+        mode: "0640"
+      loop: "{{ __dxdfir_stack_spaces }}"
+      loop_control:
+        label: "{{ item['id'] }}"
       changed_when: false

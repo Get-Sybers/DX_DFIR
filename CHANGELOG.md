@@ -25,6 +25,18 @@ is `0`, anything may change without notice.
   `dx update stack` reconcile the tree read-first (`deploy_ingest.yml`):
   pipelines and templates against the live Elasticsearch APIs, saved objects
   imported when the tree's content hash changes. See `elastic/README.md`.
+- **The `malcolm` Kibana space.** `deploy stack` creates the space and
+  imports 36 dashboards derived from
+  [cisagov/Malcolm](https://github.com/cisagov/Malcolm) (v26.09.0,
+  Apache-2.0) and converted to the Zeek (`logs-dxdfir.zeek-*`) and Suricata
+  (`logs-dxdfir.detections-*`) documents the pipelines produce: Overview,
+  Connections, Files, Executables, Zeek Weird, Suricata Alerts, one
+  dashboard per Zeek protocol log, Modbus and DNP3
+  (`elastic/dashboards/malcolm/`). The config tree now defines Kibana
+  spaces (`dashboards/<id>/space.json`), deploy rolls existing
+  `logs-dxdfir.*` streams over onto the router pipeline once, the Zeek
+  pipeline sets `network.bytes` on `conn` records and a Suricata record's
+  `event.dataset` is its EVE `event_type`.
 
 ### Fixed
 - **Filebeat starts again — the evidence ingest was down.** Beats 9 parses

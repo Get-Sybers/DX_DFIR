@@ -137,6 +137,132 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+group "Elastic config tree (pipelines, templates, Kibana saved objects)"
+# ------------------------------------------------------------------------------
+# the tree is JSON data deploy PUTs/imports verbatim: parse every file, check
+# the references between the saved objects, and keep the Malcolm-era field
+# names out of the dashboards derived from it
+ELASTIC_TREE="elastic"
+if command -v python3 >/dev/null 2>&1 && [[ -d "$ELASTIC_TREE/dashboards" ]]; then
+    _tree_out=$(python3 - "$ELASTIC_TREE" <<'PY'
+import glob, json, os, re, sys
+tree = sys.argv[1]
+problems = []
+def err(msg): problems.append(msg)
+def ndjson(path):
+    with open(path, encoding="utf-8") as fh:
+        return [json.loads(line) for line in fh if line.strip()]
+
+# ---- pipelines and templates parse; the router names pipelines the tree ships
+pipelines = {}
+for fn in sorted(glob.glob(os.path.join(tree, "pipelines", "*.json"))):
+    with open(fn, encoding="utf-8") as fh:
+        pipelines[os.path.basename(fn)[:-5]] = json.load(fh)
+for name, body in pipelines.items():
+    for pr in body.get("processors", []):
+        target = pr.get("pipeline", {}).get("name")
+        if target and target not in pipelines: err(f"pipelines/{name}.json hands to {target}, which the tree does not ship")
+templates = {}
+for kind in ("component", "index"):
+    for fn in sorted(glob.glob(os.path.join(tree, "templates", kind, "*.json"))):
+        with open(fn, encoding="utf-8") as fh:
+            templates[(kind, os.path.basename(fn)[:-5])] = json.load(fh)
+for (kind, name), body in templates.items():
+    if kind == "component":
+        dp = body.get("template", {}).get("settings", {}).get("index", {}).get("default_pipeline")
+        if dp and dp not in pipelines: err(f"templates/component/{name}.json binds {dp}, which the tree does not ship")
+    else:
+        for comp in body.get("composed_of", []):
+            if comp.startswith("logs-dxdfir") and ("component", comp) not in templates: err(f"templates/index/{name}.json composes {comp}, which the tree does not ship")
+
+# ---- saved objects: the default space's files, then every space directory
+LENS = {"lnsDatatable", "lnsPie", "lnsMetric", "lnsXY", "lnsTagcloud"}
+MALCOLM = ("network.protocol", "rule.", "event.action", "event.result", "event.severity", "event.provider",
+           "related.", "url.", "user_agent.", "file.")
+def check_objects(label, files, data_views_from_files):
+    views = {}
+    objs_by_file = {}
+    for fn in files:
+        objs_by_file[fn] = ndjson(fn)
+        for o in objs_by_file[fn]:
+            if o["type"] == "index-pattern": views[o["id"]] = o
+    seen = {}
+    dashboard_ids = {o["id"] for objs in objs_by_file.values() for o in objs if o["type"] == "dashboard"}
+    for fn, objs in objs_by_file.items():
+        rel = f"{label}/{os.path.basename(fn)}"
+        for o in objs:
+            if o["type"] not in ("index-pattern", "search", "dashboard", "visualization", "lens"): err(f"{rel}: object type {o['type']}")
+            if o["id"] in seen and seen[o["id"]] != o: err(f"{rel}: id {o['id']} differs from its other copy")
+            seen[o["id"]] = o
+        for s in (o for o in objs if o["type"] == "search"):
+            refs = {r["name"]: r for r in s.get("references", [])}
+            if refs.get("kibanaSavedObjectMeta.searchSourceJSON.index", {}).get("id") not in views: err(f"{rel}: search {s['id']} references a data view the space does not define")
+        for dash in (o for o in objs if o["type"] == "dashboard"):
+            refs = {r["name"]: r for r in dash.get("references", [])}
+            searches = {o["id"] for objs2 in objs_by_file.values() for o in objs2 if o["type"] == "search"}
+            panels = json.loads(dash["attributes"]["panelsJSON"])
+            if len({p["panelIndex"] for p in panels}) != len(panels): err(f"{rel}: duplicate panelIndex")
+            used = set()
+            for p in panels:
+                if p["type"] == "search":
+                    ref = refs.get(p["panelRefName"], {})
+                    if ref.get("type") != "search" or ref.get("id") not in searches: err(f"{rel}: search panel {p.get('panelRefName')}")
+                    used.add(p["panelRefName"])
+                elif p["type"] == "lens":
+                    a = p["embeddableConfig"]["attributes"]
+                    if a["visualizationType"] not in LENS: err(f"{rel}: {p.get('title')}: {a['visualizationType']}")
+                    if a["state"]["query"]["language"] != "kuery": err(f"{rel}: {p.get('title')}: query language")
+                    for layer_id, layer in a["state"]["datasourceStates"]["formBased"]["layers"].items():
+                        if set(layer["columnOrder"]) != set(layer["columns"]): err(f"{rel}: {p.get('title')}: columnOrder")
+                        for col in layer["columns"].values():
+                            f = col["sourceField"]
+                            if f.startswith(MALCOLM): err(f"{rel}: {p.get('title')}: Malcolm field {f}")
+                        name = f"indexpattern-datasource-layer-{layer_id}"
+                        if not a["references"] or a["references"][0]["name"] != name or a["references"][0]["id"] not in views: err(f"{rel}: {p.get('title')}: layer reference")
+                        dash_ref = f"{p['panelIndex']}:{name}"
+                        if refs.get(dash_ref, {}).get("id") != a["references"][0]["id"]: err(f"{rel}: {p.get('title')}: dashboard reference")
+                        used.add(dash_ref)
+                elif p["type"] == "visualization":
+                    vis = p.get("embeddableConfig", {}).get("savedVis")
+                    if vis and vis["type"] == "markdown":
+                        for target in re.findall(r"\(#/view/([0-9a-f-]+)\)", vis["params"]["markdown"]):
+                            if target not in dashboard_ids: err(f"{rel}: navigation link to {target}")
+                    elif not vis:
+                        ref = refs.get(p.get("panelRefName"), {})
+                        if ref.get("id") not in seen: err(f"{rel}: visualization panel {p.get('panelRefName')}")
+                        used.add(p.get("panelRefName"))
+                else:
+                    err(f"{rel}: panel type {p['type']}")
+            if used - set(refs): err(f"{rel}: panel references missing from the dashboard: {sorted(used - set(refs))}")
+        text = open(fn, encoding="utf-8").read()
+        for bad in ("MALCOLM_", "arkime"):
+            if bad in text: err(f"{rel}: contains {bad!r}")
+    if not views: err(f"{label}: no data view")
+
+check_objects("dashboards", sorted(glob.glob(os.path.join(tree, "dashboards", "*.ndjson"))), True)
+for space_file in sorted(glob.glob(os.path.join(tree, "dashboards", "*", "space.json"))):
+    d = os.path.dirname(space_file)
+    with open(space_file, encoding="utf-8") as fh:
+        space = json.load(fh)
+    if space.get("id") != os.path.basename(d): err(f"{d}/space.json: id {space.get('id')!r} is not the directory name")
+    for key in ("id", "name", "initials", "color", "disabledFeatures"):
+        if key not in space: err(f"{d}/space.json: missing {key}")
+    files = sorted(glob.glob(os.path.join(d, "*.ndjson")))
+    if not files: err(f"{d}: no saved objects")
+    check_objects("dashboards/" + os.path.basename(d), files, True)
+print("\n".join(problems))
+PY
+)
+    if [[ -n "$_tree_out" ]]; then
+        while IFS= read -r _line; do fail "elastic tree: $_line"; done <<< "$_tree_out"
+    else
+        pass "elastic/ pipelines, templates and saved objects parse and reference each other"
+    fi
+else
+    skip "python3 not available or no elastic/dashboards"
+fi
+
+# ------------------------------------------------------------------------------
 group "Repo-root path resolution"
 # ------------------------------------------------------------------------------
 # every script computing REPO_ROOT_DIR must land on the real root, whatever depth it lives at
