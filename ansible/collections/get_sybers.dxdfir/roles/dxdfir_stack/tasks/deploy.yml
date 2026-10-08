@@ -34,11 +34,19 @@
     - name: "stack-deploy | kibana"
       ansible.builtin.import_tasks: deploy_kibana.yml
 
-    - name: "stack-deploy | fleet-server"
-      ansible.builtin.import_tasks: deploy_fleet.yml
+    # the config tree (pipelines, templates, saved objects) lands before
+    # filebeat ever writes, so the streams' first document is already routed
+    - name: "stack-deploy | the ingest config tree"
+      ansible.builtin.import_tasks: deploy_ingest.yml
 
+    # filebeat needs only elasticsearch (and the config tree above), so it
+    # comes up before fleet-server: a fleet enrolment failure must never
+    # leave the evidence ingest down
     - name: "stack-deploy | filebeat"
       ansible.builtin.import_tasks: deploy_filebeat.yml
+
+    - name: "stack-deploy | fleet-server"
+      ansible.builtin.import_tasks: deploy_fleet.yml
   rescue:
     - name: "stack-deploy | read the stack's state for the diagnostic"
       community.docker.docker_host_info:

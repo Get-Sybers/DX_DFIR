@@ -1,0 +1,103 @@
+{
+  "description": "Zeek logs: evidence time from ts (ISO8601 or epoch), event.dataset from the log name, ECS endpoint copies from the conn 4-tuple. Native Zeek fields stay in place.",
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/pipelines/logs-dxdfir-zeek.json"
+  },
+  "processors": [
+    {
+      "rename": {
+        "description": "files.log/weird.log carry a native STRING source (e.g. HTTP) that collides with the ECS source object; move it aside before the endpoint copies",
+        "field": "source",
+        "target_field": "zeek.log_source",
+        "if": "ctx.source instanceof String"
+      }
+    },
+    {
+      "set": {
+        "field": "event.module",
+        "value": "zeek",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "event.kind",
+        "value": "event",
+        "override": false
+      }
+    },
+    {
+      "grok": {
+        "field": "log.file.path",
+        "patterns": [
+          "/(?<_tmp_dataset>[^/]+)\\.jsonl?$"
+        ],
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "event.dataset",
+        "value": "zeek.{{{_tmp_dataset}}}",
+        "if": "ctx._tmp_dataset != null",
+        "override": false
+      }
+    },
+    {
+      "remove": {
+        "field": "_tmp_dataset",
+        "ignore_missing": true
+      }
+    },
+    {
+      "date": {
+        "field": "ts",
+        "target_field": "@timestamp",
+        "formats": ["ISO8601", "UNIX"],
+        "if": "ctx.ts != null"
+      }
+    },
+    {
+      "set": {
+        "field": "source.ip",
+        "copy_from": "id.orig_h",
+        "if": "ctx.id?.orig_h != null",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "source.port",
+        "copy_from": "id.orig_p",
+        "if": "ctx.id?.orig_p != null",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "destination.ip",
+        "copy_from": "id.resp_h",
+        "if": "ctx.id?.resp_h != null",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "destination.port",
+        "copy_from": "id.resp_p",
+        "if": "ctx.id?.resp_p != null",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "network.transport",
+        "copy_from": "proto",
+        "if": "ctx.proto != null",
+        "override": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,224 @@
+---
+# The Elastic config tree (elastic/ at the repo root, dxdfir_stack_config_dir):
+# ingest pipelines, component/index templates and Kibana saved objects. The
+# BODIES are data — the tree's files, deployed verbatim; this file only
+# reconciles them read-first so a rerun against an unchanged tree is changed=0.
+# Runs after kibana (saved objects need its API); pipelines/templates land
+# before filebeat ever writes, so the streams' first document is routed.
+
+# ---- ingest pipelines (elastic/pipelines/*.json; the name is the filename)
+
+- name: "stack-deploy | read the live ingest pipelines"
+  ansible.builtin.uri:
+    url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_ingest/pipeline"
+    ca_path: "{{ dxdfir_stack_ca_file }}"
+    url_username: elastic
+    url_password: "{{ dxdfir_stack_elastic_password }}"
+    force_basic_auth: true
+    status_code: [200]
+  register: __dxdfir_stack_live_pipelines
+  changed_when: false
+  no_log: true
+
+- name: "stack-deploy | converge the ingest pipelines"
+  ansible.builtin.uri:
+    url: >-
+      https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port
+      }}/_ingest/pipeline/{{ item | basename | regex_replace('\.json$', '') }}
+    method: PUT
+    ca_path: "{{ dxdfir_stack_ca_file }}"
+    url_username: elastic
+    url_password: "{{ dxdfir_stack_elastic_password }}"
+    force_basic_auth: true
+    body_format: json
+    body: "{{ lookup('ansible.builtin.file', item) | from_json }}"
+    status_code: [200]
+  loop: "{{ lookup('ansible.builtin.fileglob', dxdfir_stack_config_dir ~ '/pipelines/*.json', wantlist=true) | sort }}"
+  loop_control:
+    label: "{{ item | basename }}"
+  vars:
+    _name: "{{ item | basename | regex_replace('\\.json$', '') }}"
+    # the cluster echoes bookkeeping fields it added itself; compare without them
+    _live: >-
+      {{ (__dxdfir_stack_live_pipelines['json'][_name] | default({}))
+         | dict2items
+         | rejectattr('key', 'in', ['version', 'deprecated', 'created_date_millis', 'modified_date_millis'])
+         | items2dict }}
+  when: _live != (lookup('ansible.builtin.file', item) | from_json)
+  changed_when: true
+  no_log: true
+
+# ---- templates: components first (the index templates compose them)
+
+- name: "stack-deploy | read the live component templates"
+  ansible.builtin.uri:
+    url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_component_template"
+    ca_path: "{{ dxdfir_stack_ca_file }}"
+    url_username: elastic
+    url_password: "{{ dxdfir_stack_elastic_password }}"
+    force_basic_auth: true
+    status_code: [200]
+  register: __dxdfir_stack_live_components
+  changed_when: false
+  no_log: true
+
+- name: "stack-deploy | converge the component templates"
+  ansible.builtin.uri:
+    url: >-
+      https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port
+      }}/_component_template/{{ item | basename | regex_replace('\.json$', '') }}
+    method: PUT
+    ca_path: "{{ dxdfir_stack_ca_file }}"
+    url_username: elastic
+    url_password: "{{ dxdfir_stack_elastic_password }}"
+    force_basic_auth: true
+    body_format: json
+    body: "{{ lookup('ansible.builtin.file', item) | from_json }}"
+    status_code: [200]
+  loop: "{{ lookup('ansible.builtin.fileglob', dxdfir_stack_config_dir ~ '/templates/component/*.json', wantlist=true) | sort }}"
+  loop_control:
+    label: "{{ item | basename }}"
+  vars:
+    _name: "{{ item | basename | regex_replace('\\.json$', '') }}"
+    # the cluster echoes bookkeeping fields it added itself; compare without them
+    _live: >-
+      {{ (__dxdfir_stack_live_components['json']['component_templates'] | default([])
+          | selectattr('name', 'equalto', _name)
+          | map(attribute='component_template') | first | default({}))
+         | dict2items
+         | rejectattr('key', 'in', ['version', 'deprecated', 'created_date_millis', 'modified_date_millis'])
+         | items2dict }}
+  when: _live != (lookup('ansible.builtin.file', item) | from_json)
+  changed_when: true
+  no_log: true
+
+- name: "stack-deploy | read the live index templates"
+  ansible.builtin.uri:
+    url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_index_template"
+    ca_path: "{{ dxdfir_stack_ca_file }}"
+    url_username: elastic
+    url_password: "{{ dxdfir_stack_elastic_password }}"
+    force_basic_auth: true
+    status_code: [200]
+  register: __dxdfir_stack_live_templates
+  changed_when: false
+  no_log: true
+
+- name: "stack-deploy | converge the index templates"
+  ansible.builtin.uri:
+    url: >-
+      https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port
+      }}/_index_template/{{ item | basename | regex_replace('\.json$', '') }}
+    method: PUT
+    ca_path: "{{ dxdfir_stack_ca_file }}"
+    url_username: elastic
+    url_password: "{{ dxdfir_stack_elastic_password }}"
+    force_basic_auth: true
+    body_format: json
+    body: "{{ lookup('ansible.builtin.file', item) | from_json }}"
+    status_code: [200]
+  loop: "{{ lookup('ansible.builtin.fileglob', dxdfir_stack_config_dir ~ '/templates/index/*.json', wantlist=true) | sort }}"
+  loop_control:
+    label: "{{ item | basename }}"
+  vars:
+    _name: "{{ item | basename | regex_replace('\\.json$', '') }}"
+    _live: >-
+      {{ (__dxdfir_stack_live_templates['json']['index_templates'] | default([])
+          | selectattr('name', 'equalto', _name)
+          | map(attribute='index_template') | first | default({}))
+         | dict2items
+         | rejectattr('key', 'in', ['version', 'deprecated', 'created_date_millis', 'modified_date_millis'])
+         | items2dict }}
+  when: _live != (lookup('ansible.builtin.file', item) | from_json)
+  changed_when: true
+  no_log: true
+
+# ---- Kibana saved objects (elastic/dashboards/*.ndjson): imported with
+# overwrite, gated on the tree's content hash (a deploy artifact in the secret
+# store) so hand-edits in Kibana survive until the tree itself changes
+
+- name: "stack-deploy | reconcile the Kibana saved objects"
+  vars:
+    _ndjson_files: >-
+      {{ lookup('ansible.builtin.fileglob', dxdfir_stack_config_dir ~ '/dashboards/*.ndjson', wantlist=true) | sort }}
+  when: _ndjson_files | length > 0
+  block:
+    - name: "stack-deploy | assemble the saved-objects payload"
+      ansible.builtin.set_fact:
+        # _nl is a real newline ('\n' inside the expression would pass
+        # through as a literal backslash-n and corrupt the NDJSON)
+        __dxdfir_stack_saved_objects_payload: >-
+          {{ (__dxdfir_stack_saved_objects_payload | default(''))
+             ~ lookup('ansible.builtin.file', item) ~ _nl }}
+      vars:
+        _nl: "\n"
+      loop: "{{ _ndjson_files }}"
+      loop_control:
+        label: "{{ item | basename }}"
+      changed_when: false
+
+    - name: "stack-deploy | read the deployed saved-objects hash"
+      ansible.builtin.slurp:
+        src: "{{ dxdfir_stack_secrets_dir }}/kibana_saved_objects.sha256"
+      register: __dxdfir_stack_saved_objects_marker
+      failed_when: false
+
+    # the hash marker outlives a volume-wiping destroy (it is a deploy
+    # artifact in the secret store), so the gate also probes the live
+    # Kibana: the tree's first object missing means a fresh kibanadata
+    # and the import must run whatever the marker says
+    - name: "stack-deploy | probe the first saved object in the live kibana"
+      ansible.builtin.uri:
+        url: >-
+          http://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port
+          }}/api/saved_objects/{{ __dxdfir_stack_saved_objects_probe['type']
+          }}/{{ __dxdfir_stack_saved_objects_probe['id'] }}
+        url_username: elastic
+        url_password: "{{ dxdfir_stack_elastic_password }}"
+        force_basic_auth: true
+        headers:
+          kbn-xsrf: "true"
+        status_code: [200, 404]
+      vars:
+        _nl: "\n"
+        __dxdfir_stack_saved_objects_probe: >-
+          {{ __dxdfir_stack_saved_objects_payload.split(_nl) | first | from_json }}
+      register: __dxdfir_stack_saved_objects_live
+      changed_when: false
+      no_log: true
+
+    - name: "stack-deploy | import the saved objects into Kibana"
+      ansible.builtin.uri:
+        url: >-
+          http://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_kibana_port
+          }}/api/saved_objects/_import?overwrite=true
+        method: POST
+        url_username: elastic
+        url_password: "{{ dxdfir_stack_elastic_password }}"
+        force_basic_auth: true
+        headers:
+          kbn-xsrf: "true"
+        body_format: form-multipart
+        body:
+          file:
+            content: "{{ __dxdfir_stack_saved_objects_payload }}"
+            filename: dxdfir-saved-objects.ndjson
+            mime_type: application/ndjson
+        status_code: [200]
+      register: __dxdfir_stack_saved_objects_import
+      failed_when: >-
+        __dxdfir_stack_saved_objects_import['status'] != 200
+        or not (__dxdfir_stack_saved_objects_import['json']['success'] | default(false))
+      when: >-
+        __dxdfir_stack_saved_objects_live['status'] == 404
+        or (__dxdfir_stack_saved_objects_marker['content'] | default('') | b64decode | trim)
+           != (__dxdfir_stack_saved_objects_payload | hash('sha256'))
+      changed_when: true
+      no_log: true
+
+    - name: "stack-deploy | record the deployed saved-objects hash"
+      ansible.builtin.copy:
+        content: "{{ __dxdfir_stack_saved_objects_payload | hash('sha256') }}"
+        dest: "{{ dxdfir_stack_secrets_dir }}/kibana_saved_objects.sha256"
+        mode: "0640"
+      changed_when: false

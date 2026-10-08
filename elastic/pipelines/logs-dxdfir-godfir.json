@@ -1,0 +1,89 @@
+{
+  "description": "The GoDFIR host lanes (windowlicker, daemonhunter): evidence time from the tool envelope (EventTime, else TimeStamp/Timestamp, else SourceModified), event.dataset from the Tool field or the output filename, host.name from the envelope's Host.",
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/pipelines/logs-dxdfir-godfir.json"
+  },
+  "processors": [
+    {
+      "set": {
+        "field": "event.module",
+        "copy_from": "labels.type",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "event.dataset",
+        "copy_from": "Tool",
+        "if": "ctx.Tool instanceof String",
+        "override": false
+      }
+    },
+    {
+      "grok": {
+        "field": "log.file.path",
+        "patterns": [
+          "/(?<_tmp_dataset>[^/]+)\\.jsonl?$"
+        ],
+        "if": "ctx.event?.dataset == null",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "event.dataset",
+        "copy_from": "_tmp_dataset",
+        "if": "ctx._tmp_dataset != null",
+        "override": false
+      }
+    },
+    {
+      "remove": {
+        "field": "_tmp_dataset",
+        "ignore_missing": true
+      }
+    },
+    {
+      "date": {
+        "field": "EventTime",
+        "target_field": "@timestamp",
+        "formats": ["ISO8601"],
+        "if": "ctx.EventTime instanceof String"
+      }
+    },
+    {
+      "date": {
+        "field": "TimeStamp",
+        "target_field": "@timestamp",
+        "formats": ["ISO8601"],
+        "if": "ctx.EventTime == null && ctx.TimeStamp instanceof String"
+      }
+    },
+    {
+      "date": {
+        "field": "Timestamp",
+        "target_field": "@timestamp",
+        "formats": ["ISO8601"],
+        "if": "ctx.EventTime == null && ctx.TimeStamp == null && ctx.Timestamp instanceof String"
+      }
+    },
+    {
+      "date": {
+        "field": "SourceModified",
+        "target_field": "@timestamp",
+        "formats": ["ISO8601"],
+        "if": "ctx.EventTime == null && ctx.TimeStamp == null && ctx.Timestamp == null && ctx.SourceModified instanceof String"
+      }
+    },
+    {
+      "set": {
+        "field": "host.name",
+        "copy_from": "Host.Hostname",
+        "if": "ctx.Host instanceof Map && ctx.Host.Hostname instanceof String",
+        "override": false
+      }
+    }
+  ]
+}

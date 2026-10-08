@@ -1,0 +1,48 @@
+{
+  "description": "Anamnesis memory plugins: event.dataset from the plugin's output filename (windows.anamnesis.processes, ...), evidence time from CreateTime when a row carries one. Memory rows without an event time keep the ingest time — a snapshot is not an event.",
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/pipelines/logs-dxdfir-anamnesis.json"
+  },
+  "processors": [
+    {
+      "set": {
+        "field": "event.module",
+        "value": "anamnesis",
+        "override": false
+      }
+    },
+    {
+      "grok": {
+        "field": "log.file.path",
+        "patterns": [
+          "/(?<_tmp_dataset>[^/]+)\\.jsonl?$"
+        ],
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "event.dataset",
+        "copy_from": "_tmp_dataset",
+        "if": "ctx._tmp_dataset != null",
+        "override": false
+      }
+    },
+    {
+      "remove": {
+        "field": "_tmp_dataset",
+        "ignore_missing": true
+      }
+    },
+    {
+      "date": {
+        "field": "CreateTime",
+        "target_field": "@timestamp",
+        "formats": ["ISO8601"],
+        "if": "ctx.CreateTime instanceof String"
+      }
+    }
+  ]
+}

@@ -13,6 +13,15 @@ save) reference from one place.
 One role, five actions (`dxdfir_stack_action`); **the playbook decides**,
 the role groups, the tasks act.
 
+What the stack *ingests and shows* is configuration as data in the repo-root
+**Elastic config tree** (`elastic/`, the inventory's
+`dxdfir_elastic_config_dir`): the Filebeat config filebeat mounts, the
+ingest pipelines and `logs-dxdfir.*` templates `deploy_ingest.yml`
+reconciles read-first against the live APIs, and the Kibana saved objects
+it imports (gated on the tree's content hash, a deploy artifact in the
+secret store). The role carries no pipeline or dashboard bodies of its
+own — see `elastic/README.md`.
+
 ## Actions and their playbook decisions
 
 | Action | Playbook | Decisions it sets |

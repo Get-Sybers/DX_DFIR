@@ -1,0 +1,31 @@
+{
+  "template": {
+    "settings": {
+      "index": {
+        "default_pipeline": "logs-dxdfir-router"
+      }
+    },
+    "mappings": {
+      "properties": {
+        "labels": {
+          "properties": {
+            "type": {
+              "type": "keyword"
+            }
+          }
+        },
+        "pathspec": {
+          "type": "flattened"
+        },
+        "date_time": {
+          "type": "flattened"
+        }
+      }
+    }
+  },
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/templates/component/logs-dxdfir@custom.json",
+    "description": "DX_DFIR additions over the built-in logs behaviour: the router default_pipeline, labels.type as the routing key, and Plaso's recursive pathspec/date_time trees mapped flattened so they never explode the field count"
+  }
+}

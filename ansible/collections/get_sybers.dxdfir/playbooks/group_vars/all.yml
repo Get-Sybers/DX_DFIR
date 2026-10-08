@@ -40,6 +40,10 @@ dxdfir_elastic_fleet_port: 8220
 dxdfir_elastic_es_heap: 1g
 dxdfir_elastic_namespace: default
 dxdfir_elastic_ingest_dir: "{{ dxdfir_repo_root }}/data_store/processed"
+# the Elastic config tree (elastic/ at the repo root): the filebeat config,
+# ingest pipelines, index/component templates and Kibana saved objects the
+# stack deploys verbatim — see elastic/README.md
+dxdfir_elastic_config_dir: "{{ dxdfir_repo_root }}/elastic"
 
 # ---- secrets: file-backed, generated once, operator-overridable (rotation: stack README)
 dxdfir_elastic_secrets_dir: "{{ dxdfir_repo_root }}/ansible/inventory/secrets/{{ inventory_hostname }}"

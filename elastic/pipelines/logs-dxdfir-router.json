@@ -1,0 +1,54 @@
+{
+  "description": "logs-dxdfir.* default pipeline: stamp the ingest time, then hand the record to its evidence type's pipeline. labels.type is the first path segment under /ingest, dissected by Filebeat.",
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/pipelines/logs-dxdfir-router.json"
+  },
+  "processors": [
+    {
+      "set": {
+        "field": "event.ingested",
+        "value": "{{{_ingest.timestamp}}}",
+        "override": false
+      }
+    },
+    {
+      "pipeline": {
+        "name": "logs-dxdfir-zeek",
+        "if": "ctx.labels?.type == 'zeek'"
+      }
+    },
+    {
+      "pipeline": {
+        "name": "logs-dxdfir-log2timeline",
+        "if": "ctx.labels?.type == 'log2timeline'"
+      }
+    },
+    {
+      "pipeline": {
+        "name": "logs-dxdfir-godfir",
+        "if": "ctx.labels?.type == 'windowlicker' || ctx.labels?.type == 'daemonhunter'"
+      }
+    },
+    {
+      "pipeline": {
+        "name": "logs-dxdfir-anamnesis",
+        "if": "ctx.labels?.type == 'anamnesis'"
+      }
+    },
+    {
+      "pipeline": {
+        "name": "logs-dxdfir-detections",
+        "if": "ctx.labels?.type == 'detections'"
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "field": "labels.pipeline_error",
+        "value": "{{{ _ingest.on_failure_message }}}"
+      }
+    }
+  ]
+}
