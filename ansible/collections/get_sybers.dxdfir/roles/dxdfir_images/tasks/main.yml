@@ -3,6 +3,13 @@
 # get_sybers.godfir_run.godfir_images (imported by URL), which pulls
 # ghcr.io/get-sybers/GoDFIR-toolz/<tool>:<tag> for every requested ref and tags it to the
 # local get-sybers/<tool>:latest name. Building lives in get_sybers.godfir_build.
+# the pull runs as the connection user: a docker-group membership this shell
+# does not carry yet is answered with its remedy, not a PermissionError
+- name: "images | the operator can reach the daemon"
+  ansible.builtin.include_role:
+    name: dxdfir_stack
+    tasks_from: docker_access
+
 - name: "images | pull the tool images"
   ansible.builtin.include_role:
     name: get_sybers.godfir_run.godfir_images

@@ -38,7 +38,12 @@ bodies of its own — see `elastic/README.md`.
 Preflight reads the host before anything can fail on a requirement: the
 docker engine's state first (`tasks/docker_ensure.yml` — an engine-less or
 daemon-less host is answered by the same `dxdfir_stack_when_absent`
-decision), then stack presence by label — the role's own
+decision; its daemon probes escalate with the deploy, so a shell that does
+not yet carry the operator's docker-group membership cannot make a running
+daemon look stopped), then the operator's own access to the daemon
+(`tasks/docker_access.yml`, which names the `newgrp docker` / re-login
+remedy instead of letting the first docker module fail with a
+PermissionError), then stack presence by label — the role's own
 (`com.get-sybers.stack`) and the compose-era project label, so a stack
 deployed before the compose retirement is still seen. `stop`, `destroy` and
 `status` need no credentials at all.
@@ -86,6 +91,11 @@ imported from the old certs volume so enrolled agents keep their trust.
 
 - `tasks/docker_ensure.yml` — the engine gate (install/start/group on the
   opt-ins); `dxdfir-bootstrap.yml` drives it for `setup-environment.sh`.
+- `tasks/docker_access.yml` — the operator's own access to the daemon,
+  never escalated: `docker version` as the connection user, failing with
+  the remedy (`newgrp docker`, a new login, or root) when a docker-group
+  membership is missing or newer than the shell. The preflight runs it right
+  after `docker_ensure`; `dxdfir_images` runs it before its first pull.
 - `tasks/ensure_running.yml` — start the required services' EXISTING
   containers and wait until running/healthy; never deploys as a side
   effect. Live-stack consumers (`dxdfir_car_load`) include it before

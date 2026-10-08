@@ -37,6 +37,11 @@
 - name: "stack-preflight | ensure the docker engine"
   ansible.builtin.import_tasks: docker_ensure.yml
 
+# everything from here on talks to the daemon as the connection user: a stale
+# docker-group membership is answered with its remedy, not a PermissionError
+- name: "stack-preflight | the operator can reach the daemon"
+  ansible.builtin.import_tasks: docker_access.yml
+
 # presence answers by label — the role's own AND the compose-era project label
 - name: "stack-preflight | read the stack's containers and volumes"
   community.docker.docker_host_info:

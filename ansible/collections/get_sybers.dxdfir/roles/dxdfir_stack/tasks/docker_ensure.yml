@@ -39,9 +39,17 @@
   changed_when: false
   failed_when: false
 
+# "Is the daemon running" is root's question, not the operator's: the probe
+# escalates exactly as the start block's wait below does, so a shell that
+# does not yet carry the operator's docker-group membership cannot make a
+# running daemon look stopped (which would send deploy into restarting it).
+# Without escalation the probe runs as the connection user, and its
+# permission-denied means "running, but not reachable by this user" — a
+# different fact from "down", answered by docker_access.yml, never by a start.
 - name: "stack-docker | does the daemon answer"
   ansible.builtin.command:
     argv: [docker, version]
+  become: "{{ __dxdfir_stack_escalate }}"
   register: __dxdfir_stack_docker
   changed_when: false
   failed_when: false
@@ -50,9 +58,15 @@
 - name: "stack-docker | the engine's state as facts"
   ansible.builtin.set_fact:
     __dxdfir_stack_docker_installed: "{{ __dxdfir_stack_docker_cli['rc'] == 0 }}"
+    __dxdfir_stack_docker_denied: "{{ _denied }}"
     __dxdfir_stack_docker_up: >-
       {{ __dxdfir_stack_docker_cli['rc'] == 0
-         and (__dxdfir_stack_docker['rc'] | default(1)) == 0 }}
+         and ((__dxdfir_stack_docker['rc'] | default(1)) == 0 or _denied) }}
+  vars:
+    # the CLI's wording when the socket exists and refuses the caller
+    _denied: >-
+      {{ (__dxdfir_stack_docker['rc'] | default(0)) != 0
+         and 'permission denied' in (__dxdfir_stack_docker['stderr'] | default('') | lower) }}
 
 # ---- no engine: no stack can exist here ------------------------------------
 - name: "stack-docker | report the engine-less host and end"

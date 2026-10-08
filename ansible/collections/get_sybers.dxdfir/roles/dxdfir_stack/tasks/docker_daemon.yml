@@ -6,6 +6,7 @@
 - name: "stack-docker | re-probe the daemon after the install"
   ansible.builtin.command:
     argv: [docker, version]
+  become: "{{ __dxdfir_stack_escalate }}"
   register: __dxdfir_stack_docker
   changed_when: false
   failed_when: false
@@ -13,7 +14,12 @@
 
 - name: "stack-docker | refresh the engine facts"
   ansible.builtin.set_fact:
-    __dxdfir_stack_docker_up: "{{ (__dxdfir_stack_docker['rc'] | default(1)) == 0 }}"
+    __dxdfir_stack_docker_denied: "{{ _denied }}"
+    __dxdfir_stack_docker_up: "{{ (__dxdfir_stack_docker['rc'] | default(1)) == 0 or _denied }}"
+  vars:
+    _denied: >-
+      {{ (__dxdfir_stack_docker['rc'] | default(0)) != 0
+         and 'permission denied' in (__dxdfir_stack_docker['stderr'] | default('') | lower) }}
   when: not __dxdfir_stack_docker_up | bool
 
 - name: "stack-docker | start the daemon (deploy/start's opt-in)"
@@ -77,8 +83,14 @@
     quiet: true
   when: dxdfir_stack_when_absent == 'fail'
 
+# the definitive probe: escalated like the others; a permission-denied here is
+# the operator's access, not the daemon's state — docker_access.yml says so
 - name: "stack-docker | the daemon answers"
   ansible.builtin.command:
     argv: [docker, version]
+  become: "{{ __dxdfir_stack_escalate }}"
   register: __dxdfir_stack_docker
   changed_when: false
+  failed_when: >-
+    __dxdfir_stack_docker['rc'] != 0
+    and 'permission denied' not in (__dxdfir_stack_docker['stderr'] | default('') | lower)
