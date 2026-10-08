@@ -49,7 +49,7 @@ see [the role README](roles/dxdfir_images/README.md).
 
 Detection is not a role: the detections are Elastic rules-as-code
 ([shipped with the Byakugan engine and baked into its image at `/rules`,
-gated by the engine's build and suite](https://github.com/Get-Sybers/Byakugan/-/blob/main/rules/README.md)) run by Elastic's Detection Engine on the
+gated by the engine's build and suite](https://github.com/Get-Sybers/Byakugan/blob/main/rules/README.md)) run by Elastic's Detection Engine on the
 analysis stack. The CAR lane (`dxdfir build-car` / `dxdfir verify-car`)
 prepares and gates the materialised CAR they read; `dxdfir_exchange` carries
 their hits into the STIX/CTI exchange.

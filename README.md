@@ -86,7 +86,7 @@ Kibana is at `http://127.0.0.1:5601`. Filebeat tails the processed evidence tree
 The CAR→ECS projection into `logs-car.*` and ES|QL `LOOKUP JOIN` flagging against
 the `car-detections` lookup index are proven by the Phase-0
 [risk gate](docs/riskgate.md); the detection rules are data
-[shipped with the Byakugan engine and baked into its image at `/rules`](https://github.com/Get-Sybers/Byakugan/-/blob/main/rules/README.md)
+[shipped with the Byakugan engine and baked into its image at `/rules`](https://github.com/Get-Sybers/Byakugan/blob/main/rules/README.md)
 (build- and suite-gated engine-side), and `dx byakugan export-stix` turns their
 hits into STIX 2.1 sightings via the engine's own exchange. `dx --help`
 lists every command (the source of truth for the grammar).
@@ -168,8 +168,8 @@ the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
 - **New here?** [What DX_DFIR is](docs/getting-started/README.md) · [Install](docs/getting-started/install.md) · [First run](docs/getting-started/first-run.md) · [The interface](docs/getting-started/the-interface.md) · [Command reference](docs/getting-started/commands.md)
 - **How it works:** [Architecture overview](docs/architecture/README.md) · [Processing lanes](docs/architecture/processing-lanes.md) · [CAR pipeline](docs/architecture/car-pipeline.md) · [The stack](docs/architecture/the-stack.md)
 - **Contributing:** [Standards](docs/reference/README.md) · [Repository map](docs/reference/repository-map.md) · [Contributing](.github/CONTRIBUTING.md) · [Security](.github/SECURITY.md)
-- **CAR engine reference** (owned by [Byakugan](https://github.com/Get-Sybers/Byakugan)): [CAR pipeline](https://github.com/Get-Sybers/Byakugan/-/blob/main/docs/CAR-Pipeline.md) · [extraction rules](https://github.com/Get-Sybers/Byakugan/-/blob/main/docs/CAR-Extraction-Rules.md) · [relations](https://github.com/Get-Sybers/Byakugan/-/blob/main/docs/CAR-Relations.md)
-- **Deep reference:** [risk gate](docs/riskgate.md) · [detection rules-as-code](https://github.com/Get-Sybers/Byakugan/-/blob/main/rules/README.md)
+- **CAR engine reference** (owned by [Byakugan](https://github.com/Get-Sybers/Byakugan)): [CAR pipeline](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-Pipeline.md) · [extraction rules](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-Extraction-Rules.md) · [relations](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-Relations.md)
+- **Deep reference:** [risk gate](docs/riskgate.md) · [detection rules-as-code](https://github.com/Get-Sybers/Byakugan/blob/main/rules/README.md)
 
 > The pre-beta code lives on the frozen
 > [`deprecated`](https://github.com/Get-Sybers/DX_DFIR/-/tree/deprecated) branch —
