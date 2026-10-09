@@ -194,8 +194,11 @@ def check_objects(label, files):
         rel = f"{label}/{os.path.basename(fn)}"
         for o in objs:
             if o["type"] not in ("index-pattern", "search", "dashboard", "visualization", "lens"): err(f"{rel}: object type {o['type']}")
-            if o["id"] in seen and seen[o["id"]] != o: err(f"{rel}: id {o['id']} differs from its other copy")
-            seen[o["id"]] = o
+            # the deploy concatenates a space's files into ONE import, and
+            # Kibana rejects a repeated id in an import even when the copies
+            # are identical ("Non-unique import objects detected")
+            if o["id"] in seen: err(f"{rel}: id {o['id']} is also in {seen[o['id']][0]}")
+            seen[o["id"]] = (os.path.basename(fn), o)
         for s in (o for o in objs if o["type"] == "search"):
             refs = {r["name"]: r for r in s.get("references", [])}
             if refs.get("kibanaSavedObjectMeta.searchSourceJSON.index", {}).get("id") not in views: err(f"{rel}: search {s['id']} references a data view the space does not define")
