@@ -1,0 +1,39 @@
+---
+# The operator's OWN access to the daemon — the identity every container task
+# runs as (deploy escalates only the privileged setup, docker_ensure.yml, and
+# runs the rest as the operator). Never escalated: root passes trivially; an
+# operator whose docker-group membership is missing, or newer than the shell
+# it runs in (a membership only reaches a new session), gets the remedy here
+# instead of a raw PermissionError from the first docker module. Reusable
+# entry point (README "Reusable entry points"): the stack preflight runs it
+# right after docker_ensure; dxdfir_images runs it before its first pull.
+
+- name: "stack-docker | the operator can reach the daemon"
+  ansible.builtin.command:
+    argv: [docker, version]
+  register: __dxdfir_stack_docker_access
+  changed_when: false
+  failed_when: false
+
+- name: "stack-docker | assert the daemon answers this user"
+  ansible.builtin.assert:
+    that:
+      - __dxdfir_stack_docker_access['rc'] == 0
+    fail_msg: "{{ _refused_msg if _refused else _down_msg }}"
+    quiet: true
+  vars:
+    _stderr: "{{ __dxdfir_stack_docker_access['stderr'] | default('') }}"
+    # the CLI's wording when the socket exists and refuses the caller
+    _refused: "{{ 'permission denied' in (_stderr | lower) }}"
+    _refused_msg: >-
+      the docker daemon is running but refuses
+      {{ lookup('ansible.builtin.env', 'USER') | default('this user', true) }}:
+      the account is not in the docker group, or was added to it after this
+      shell started (a membership only takes effect in a new session). Run
+      `newgrp docker` and retry, or log out and back in — or run as root
+      (sudo). Every container task runs as you, so this holds even for the
+      commands that escalate their privileged steps.
+    _down_msg: >-
+      the docker daemon does not answer `docker version`
+      ({{ _stderr | trim | default('no output', true) }}): is dockerd running?
+      `dx deploy stack` starts it.

@@ -39,6 +39,18 @@ is `0`, anything may change without notice.
   `event.dataset` is its EVE `event_type`.
 
 ### Fixed
+- **A fresh operator's first `dx deploy stack` / `dx build images` no longer
+  dies on the docker socket.** The engine gate probed the daemon as the
+  operator, so a shell that did not yet carry the docker-group membership
+  the same run had just granted read "permission denied" as "daemon down",
+  tried to start the service under sudo and then failed on the final
+  unescalated probe; `dx build images` failed one step later with a raw
+  PermissionError from the first docker module. The probes now escalate like
+  the start block already did, a refused probe counts as "running, not
+  reachable by this user", and a new `docker_access` gate (the stack
+  preflight, the images role) names the remedy: `newgrp docker`, a new
+  login, or root. The setup script's closing line said dx needed neither;
+  it does, and now says so.
 - **Filebeat starts again — the evidence ingest was down.** Beats 9 parses
   flags with cobra, which reads the compose-era `-environment container`
   spelling as a positional command and exits (`unknown command "container"`);

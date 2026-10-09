@@ -314,6 +314,19 @@ argument_specs:
         required: false
         default: false
         description: "Start (and enable) a stopped daemon."
+  docker_access:
+    short_description: "Assert the connection user can reach the docker daemon (never escalated)."
+    description:
+      - >-
+        Reusable entry point (tasks/docker_access.yml): runs `docker version`
+        as the connection user, the identity every container task runs as,
+        and fails with the remedy when the daemon refuses it — the account is
+        not in the docker group, or was added after the shell started, so
+        `newgrp docker` or a new login is needed (or running as root). A
+        daemon that does not answer at all is reported as such. The stack
+        preflight runs it right after docker_ensure; dxdfir_images runs it
+        before its first pull. No inputs.
+    options: {}
   ensure_running:
     short_description: "Ensure the required stack services are running (start existing, verify healthy)."
     description:

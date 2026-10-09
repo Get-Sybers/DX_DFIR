@@ -498,7 +498,8 @@ fi
 if [[ "$EUID" -ne 0 ]] && id -nG "$RUN_USER" 2>/dev/null | tr ' ' '\n' | grep -qx docker \
     && ! id -nG | tr ' ' '\n' | grep -qx docker; then
     warn "Your docker-group membership is new — this shell does not carry it yet."
-    detail "Run 'newgrp docker' here, or log out and back in once; dx itself needs neither."
+    detail "Run 'newgrp docker' here, or log out and back in once, before 'dx build images' or"
+    detail "'dx deploy stack': both talk to the daemon as you, and either says so if you forget."
 elif [[ "$DOCKER_WAS_INSTALLED" == false ]]; then
     ok "Docker engine installed."
 fi

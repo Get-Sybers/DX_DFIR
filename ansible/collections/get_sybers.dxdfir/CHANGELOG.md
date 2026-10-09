@@ -5,6 +5,23 @@ root [CHANGELOG.md](../../../CHANGELOG.md).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`dxdfir_stack`'s engine gate misread a stale docker-group membership as a
+  stopped daemon.** `docker_ensure.yml` / `docker_daemon.yml` probed
+  `docker version` as the connection user; on a fresh host, right after the
+  same run added the operator to the docker group, the probe's
+  permission-denied sent deploy into the start-the-daemon branch (under
+  sudo) and the final, unescalated probe then failed. The probes now carry
+  the same `become: "{{ __dxdfir_stack_escalate }}"` as the start block's
+  wait, a refused probe counts as "running, not reachable by this user"
+  rather than down, and a new reusable entry point,
+  `tasks/docker_access.yml`, asserts the connection user's own access with
+  the remedy (`newgrp docker`, a new login, or root): the stack preflight
+  runs it after `docker_ensure`, `dxdfir_images` before its first pull
+  (where the godfir_images docker module used to fail with a raw
+  PermissionError).
+
 ### Changed
 
 - **`dxdfir_stack` deploys the repo-root Elastic config tree.** A new

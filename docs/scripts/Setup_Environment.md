@@ -104,8 +104,10 @@ After running the script:
    source and no re-login.
 2. The **docker group** is the one thing a new shell is genuinely needed for,
    and only when the bootstrap just added you: the script says so when that
-   is the case (`newgrp docker` in place, or log out and back in once). `dx`
-   itself needs neither.
+   is the case (`newgrp docker` in place, or log out and back in once). Do it
+   before `dx build images` or `dx deploy stack`: both talk to the daemon as
+   you, and either stops with that same remedy if the shell does not carry
+   the membership yet.
 3. To drive ansible by hand, `. .venv/bin/activate`.
 4. If you are seeding an offline host, carry the tarballs from
    `data_store/docker_images/` across and run `scripts/save-docker-images.sh --load`
