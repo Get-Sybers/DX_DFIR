@@ -370,7 +370,7 @@ fi
 # after the real count passed 160. The harness prints the number; documents
 # point at the harness.
 _counts=$(grep -rnE '[0-9]{2,4} (static )?checks' --include='*.md' . 2>/dev/null \
-          | grep -vE '^\./(\.git|\.go|\.cache|data_store|docker/GoDFIR-toolz)/' \
+          | grep -vE '^\./(\.git|\.go|\.cache|\.venv|build|data_store|docker/GoDFIR-toolz)/' \
           | grep -v '/\.ansible/' || true)
 if [[ -z "$_counts" ]]; then
     pass "no document hardcodes the check count"
