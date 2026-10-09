@@ -110,7 +110,7 @@ dashboard's time range and filters. The query after a panel is the KQL it applie
 - PE - Section Name (table): `event.dataset:zeek.pe`
 - PE - Machine (table): `event.dataset:zeek.pe`
 - PE - Log Count (metric): `event.dataset:zeek.pe`
-- PE - Logs (Discover table of machine, os, subsystem, id): `event.dataset:zeek.pe`
+- PE - Logs (Discover table of machine, os, subsystem, zeek.file_id): `event.dataset:zeek.pe`
 
 ### Zeek Weird (`zeek-weird.ndjson`)
 
@@ -148,11 +148,11 @@ dashboard's time range and filters. The query after a panel is the KQL it applie
 ### DHCP (`dhcp.ndjson`)
 
 - DHCP - Log Count Over Time (chart): `event.dataset:zeek.dhcp`
-- DHCP - Destination IP Address (table): `event.dataset:zeek.dhcp`
-- DHCP - Source IP Address (table): `event.dataset:zeek.dhcp`
+- DHCP - Message Types (table): `event.dataset:zeek.dhcp`
+- DHCP - Client MAC Address (table): `event.dataset:zeek.dhcp`
 - DHCP - Log Count (metric): `event.dataset:zeek.dhcp`
-- DHCP - IP to MAC Assignment (table): `event.dataset:zeek.dhcp`
-- DHCP - Logs (Discover table of event.dataset, mac, assigned_addr, client_addr, server_addr, host_name, domain, msg_types, uids): `event.dataset:zeek.dhcp`
+- DHCP - MAC to Host Name (table): `event.dataset:zeek.dhcp`
+- DHCP - Logs (Discover table of event.dataset, mac, assigned_addr, client_addr, server_addr, host_name, msg_types, uids): `event.dataset:zeek.dhcp`
 
 ### DNS (`dns.ndjson`)
 
@@ -197,7 +197,7 @@ dashboard's time range and filters. The query after a panel is the KQL it applie
 - HTTP - Unique Usernames and Passwords (metric): `event.dataset:zeek.http`
 - HTTP - Version (pie chart): `(event.dataset:zeek.http) AND (NOT version:"0.0")`
 - HTTP - File Type (tag cloud): `event.dataset:zeek.http`
-- HTTP - Logs (Discover table of id.orig_h, id.resp_h, id.resp_p, host, method, status_msg, uid): `event.dataset:zeek.http`
+- HTTP - Logs (Discover table of id.orig_h, id.resp_h, id.resp_p, url.domain, method, status_msg, uid): `event.dataset:zeek.http`
 - HTTP - Method and Status (Vega)
 
 ### WebSocket (`websocket.ndjson`)
@@ -463,7 +463,7 @@ dashboard's time range and filters. The query after a panel is the KQL it applie
 - X.509 - Is Client Certificate (pie chart): `event.dataset:zeek.x509`
 - X.509 - Certificate Fingerprint (table): `event.dataset:zeek.x509`
 - X.509 - Logs (Discover table of host_cert, client_cert, certificate.sig_alg, certificate.version): `event.dataset:zeek.x509`
-- OCSP - Logs (Discover table of thisUpdate, nextUpdate, certStatus, revokereason, revoketime, serialNumber, id): `event.dataset:zeek.ocsp`
+- OCSP - Logs (Discover table of thisUpdate, nextUpdate, certStatus, revokereason, revoketime, serialNumber, zeek.file_id): `event.dataset:zeek.ocsp`
 
 ### Syslog (`syslog.ndjson`)
 

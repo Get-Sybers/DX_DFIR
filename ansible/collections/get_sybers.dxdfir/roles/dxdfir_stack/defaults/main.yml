@@ -79,6 +79,12 @@ dxdfir_stack_required_services:
 
 # destroy: also remove named volumes (WIPES ingested data)
 dxdfir_stack_remove_volumes: false
+# deploy: replay the processed tree from scratch — the logs-dxdfir.* streams
+# (their failure stores with them) and the shipper's registry are WIPED, the
+# evidence on disk is read again into the converged config tree. The only way a
+# mapping or pipeline fix reaches documents already indexed. A one-shot opt-in:
+# set it for one deploy, unset it after.
+dxdfir_stack_reingest: false
 
 # playbook decision: deploy/start enable it; stop/destroy/status stay ungated — they free space
 dxdfir_stack_pull_gate: false

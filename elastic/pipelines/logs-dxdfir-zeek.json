@@ -1,10 +1,26 @@
 {
-  "description": "Zeek logs: evidence time from ts (ISO8601 or epoch), event.dataset from the log name, ECS endpoint copies from the conn 4-tuple, network.bytes on conn records. Native Zeek fields stay in place.",
+  "description": "Zeek logs (zeek/<case>/<capture>/<log>.json): evidence time from ts (ISO8601 or epoch), event.dataset from the log name, labels.case/labels.item from the path, ECS endpoint copies from the conn 4-tuple, network.bytes on conn records. Native Zeek fields stay in place, except the three whose names collide with ECS objects or with other logs: files/weird `source` (a string) → zeek.log_source, ocsp/pe `id` (a file id string, where every other log has the id.orig_h/... tuple) → zeek.file_id, http `host` (the Host header) → url.domain. http.log arrives nested under zeek_http (see filebeat.yml) and is hoisted first.",
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/pipelines/logs-dxdfir-zeek.json"
   },
   "processors": [
+    {
+      "script": {
+        "description": "http.log ships nested under zeek_http with its dotted column names intact (Filebeat would clobber a top-level `host`): hoist every column to the root, expanding id.orig_h-style names into objects, and move the Host header to url.domain",
+        "lang": "painless",
+        "if": "ctx.zeek_http instanceof Map",
+        "source": "Map m = (Map) ctx.remove('zeek_http'); for (e in m.entrySet()) { String k = e.getKey(); def v = e.getValue(); if (k == 'host') { if (!(ctx.url instanceof Map)) { ctx.url = [:]; } ctx.url.domain = v; continue; } String[] parts = k.splitOnToken('.'); Map cur = ctx; for (int i = 0; i < parts.length - 1; i++) { if (!(cur[parts[i]] instanceof Map)) { cur[parts[i]] = [:]; } cur = (Map) cur[parts[i]]; } cur[parts[parts.length - 1]] = v; }"
+      }
+    },
+    {
+      "rename": {
+        "description": "ocsp.log/pe.log carry a STRING id (the Zeek file id of the analysed object); every other log's id is the orig_h/orig_p/resp_h/resp_p tuple, which the component template pins as an object",
+        "field": "id",
+        "target_field": "zeek.file_id",
+        "if": "ctx.id instanceof String"
+      }
+    },
     {
       "rename": {
         "description": "files.log/weird.log carry a native STRING source (e.g. HTTP) that collides with the ECS source object; move it aside before the endpoint copies",
@@ -25,6 +41,17 @@
         "field": "event.kind",
         "value": "event",
         "override": false
+      }
+    },
+    {
+      "grok": {
+        "description": "zeek/<case>/<capture>/<log>.json: the case and the capture the record came from",
+        "field": "log.file.path",
+        "patterns": [
+          "^/ingest/zeek/(?<labels.case>[^/]+)/(?<labels.item>[^/]+)/"
+        ],
+        "ignore_missing": true,
+        "ignore_failure": true
       }
     },
     {
@@ -66,7 +93,7 @@
       "set": {
         "field": "source.ip",
         "copy_from": "id.orig_h",
-        "if": "ctx.id?.orig_h != null",
+        "if": "ctx.id instanceof Map && ctx.id.orig_h != null",
         "override": false
       }
     },
@@ -74,7 +101,7 @@
       "set": {
         "field": "source.port",
         "copy_from": "id.orig_p",
-        "if": "ctx.id?.orig_p != null",
+        "if": "ctx.id instanceof Map && ctx.id.orig_p != null",
         "override": false
       }
     },
@@ -82,7 +109,7 @@
       "set": {
         "field": "destination.ip",
         "copy_from": "id.resp_h",
-        "if": "ctx.id?.resp_h != null",
+        "if": "ctx.id instanceof Map && ctx.id.resp_h != null",
         "override": false
       }
     },
@@ -90,7 +117,7 @@
       "set": {
         "field": "destination.port",
         "copy_from": "id.resp_p",
-        "if": "ctx.id?.resp_p != null",
+        "if": "ctx.id instanceof Map && ctx.id.resp_p != null",
         "override": false
       }
     },
@@ -98,7 +125,15 @@
       "set": {
         "field": "network.transport",
         "copy_from": "proto",
-        "if": "ctx.proto != null",
+        "if": "ctx.proto instanceof String",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "event.id",
+        "copy_from": "uid",
+        "if": "ctx.uid instanceof String",
         "override": false
       }
     },

@@ -177,6 +177,28 @@ for (kind, name), body in templates.items():
         for comp in body.get("composed_of", []):
             if comp.startswith("logs-dxdfir") and ("component", comp) not in templates: err(f"templates/index/{name}.json composes {comp}, which the tree does not ship")
 
+# ---- what the pipelines produce and what they take away: a field a processor
+# sets (set/rename/convert/json/lowercase targets, grok captures, ctx.x.y =
+# assignments in scripts) is a field a dashboard may read even when its name is
+# one Malcolm's enrichment would have produced; the source of a conditional
+# rename (zeek's string `id`, `source`, `host`; yara's `rule`) is NOT a column a
+# dashboard may read — the record that carries it has it renamed on the way in
+PRODUCED, RENAMED_AWAY = set(), set()
+for name, body in pipelines.items():
+    for pr in body.get("processors", []) + body.get("on_failure", []):
+        for kind, cfg in pr.items():
+            if not isinstance(cfg, dict): continue
+            if kind == "rename":
+                PRODUCED.add(cfg.get("target_field", "")); RENAMED_AWAY.add(cfg.get("field", ""))
+            elif kind in ("set", "convert", "json", "lowercase", "uppercase", "date"):
+                PRODUCED.add(cfg.get("target_field") or cfg.get("field", ""))
+            elif kind == "grok":
+                PRODUCED.update(re.findall(r"\(\?<([\w.@]+)>", " ".join(cfg.get("patterns", []))))
+                PRODUCED.update(re.findall(r"%\{\w+:([\w.@]+)", " ".join(cfg.get("patterns", []))))
+            elif kind == "script":
+                PRODUCED.update(re.findall(r"ctx\.([A-Za-z_][\w.]*)\s*=[^=]", cfg.get("source", "")))
+PRODUCED.discard(""); RENAMED_AWAY.discard("")
+
 # ---- saved objects: the default space's files, then every space directory
 LENS = {"lnsDatatable", "lnsPie", "lnsMetric", "lnsXY", "lnsTagcloud"}
 MALCOLM = ("network.protocol", "rule.", "event.action", "event.result", "event.severity", "event.provider",
@@ -202,6 +224,8 @@ def check_objects(label, files):
         for s in (o for o in objs if o["type"] == "search"):
             refs = {r["name"]: r for r in s.get("references", [])}
             if refs.get("kibanaSavedObjectMeta.searchSourceJSON.index", {}).get("id") not in views: err(f"{rel}: search {s['id']} references a data view the space does not define")
+            for col in s["attributes"].get("columns", []):
+                if col in RENAMED_AWAY: err(f"{rel}: search {s['id']} column {col}: a pipeline renames that field away (to {', '.join(sorted(t for n, b in pipelines.items() for p in b.get('processors', []) for k, c in p.items() if k == 'rename' and c.get('field') == col for t in [c.get('target_field')]))})")
         for dash in (o for o in objs if o["type"] == "dashboard"):
             refs = {r["name"]: r for r in dash.get("references", [])}
             searches = {o["id"] for objs2 in objs_by_file.values() for o in objs2 if o["type"] == "search"}
@@ -221,7 +245,8 @@ def check_objects(label, files):
                         if set(layer["columnOrder"]) != set(layer["columns"]): err(f"{rel}: {p.get('title')}: columnOrder")
                         for col in layer["columns"].values():
                             f = col["sourceField"]
-                            if f.startswith(MALCOLM): err(f"{rel}: {p.get('title')}: Malcolm field {f}")
+                            if f.startswith(MALCOLM) and f not in PRODUCED: err(f"{rel}: {p.get('title')}: Malcolm field {f} (no pipeline in the tree sets it)")
+                            if f in RENAMED_AWAY: err(f"{rel}: {p.get('title')}: field {f}: a pipeline renames that field away")
                         name = f"indexpattern-datasource-layer-{layer_id}"
                         if not a["references"] or a["references"][0]["name"] != name or a["references"][0]["id"] not in views: err(f"{rel}: {p.get('title')}: layer reference")
                         dash_ref = f"{p['panelIndex']}:{name}"
@@ -345,7 +370,7 @@ fi
 # after the real count passed 160. The harness prints the number; documents
 # point at the harness.
 _counts=$(grep -rnE '[0-9]{2,4} (static )?checks' --include='*.md' . 2>/dev/null \
-          | grep -vE '^\./(\.git|\.go|\.cache|data_store|docker/GoDFIR-toolz)/' \
+          | grep -vE '^\./(\.git|\.go|\.cache|\.venv|build|data_store|docker/GoDFIR-toolz)/' \
           | grep -v '/\.ansible/' || true)
 if [[ -z "$_counts" ]]; then
     pass "no document hardcodes the check count"

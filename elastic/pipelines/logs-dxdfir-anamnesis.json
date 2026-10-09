@@ -1,5 +1,5 @@
 {
-  "description": "Anamnesis memory plugins: event.dataset from the plugin's output filename (windows.anamnesis.processes, ...), evidence time from CreateTime when a row carries one. Memory rows without an event time keep the ingest time — a snapshot is not an event.",
+  "description": "Anamnesis memory plugins (anamnesis/<case>/<dump>/plugins/<plugin>.jsonl): event.dataset from the plugin's output filename (windows.anamnesis.processes, ...), labels.case/labels.item from the path, host.name the dump the row came from (Volatility rows name no host); evidence time from the row's own time when it carries one — CreateTime (processes, pslist, threads, sessions), Created (network, netstat), UnloadTime (unloaded), LoadTime (modules, when set). Memory rows without an event time keep the ingest time — a snapshot is not an event. ECS process.* copies next to the native PID/PPID/ImageFileName/CommandLine.",
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/pipelines/logs-dxdfir-anamnesis.json"
@@ -10,6 +10,17 @@
         "field": "event.module",
         "value": "anamnesis",
         "override": false
+      }
+    },
+    {
+      "grok": {
+        "description": "anamnesis/<case>/<dump>/plugins/<plugin>.jsonl: the case and the memory dump",
+        "field": "log.file.path",
+        "patterns": [
+          "^/ingest/anamnesis/(?<labels.case>[^/]+)/(?<labels.item>[^/]+)/"
+        ],
+        "ignore_missing": true,
+        "ignore_failure": true
       }
     },
     {
@@ -37,11 +48,73 @@
       }
     },
     {
+      "script": {
+        "description": "the evidence time: the first set field of the plugin's own time columns, in this order",
+        "lang": "painless",
+        "source": "def order = ['CreateTime', 'Created', 'UnloadTime', 'LoadTime']; for (String f : order) { def v = ctx[f]; if (v instanceof String && v.length() > 0 && !v.startsWith('1970-01-01T00:00:00') && !v.startsWith('0001-01-01')) { ctx._tmp_time = v; break; } }"
+      }
+    },
+    {
       "date": {
-        "field": "CreateTime",
+        "field": "_tmp_time",
         "target_field": "@timestamp",
         "formats": ["ISO8601"],
-        "if": "ctx.CreateTime instanceof String"
+        "if": "ctx._tmp_time instanceof String"
+      }
+    },
+    {
+      "set": {
+        "description": "Volatility rows name no host: the memory dump stands in",
+        "field": "host.name",
+        "copy_from": "labels.item",
+        "if": "ctx.labels?.item instanceof String",
+        "override": true
+      }
+    },
+    {
+      "set": {
+        "field": "process.pid",
+        "copy_from": "PID",
+        "if": "ctx.PID instanceof Number",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "process.parent.pid",
+        "copy_from": "PPID",
+        "if": "ctx.PPID instanceof Number",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "process.name",
+        "copy_from": "ImageFileName",
+        "if": "ctx.ImageFileName instanceof String",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "process.name",
+        "copy_from": "ProcessName",
+        "if": "ctx.process?.name == null && ctx.ProcessName instanceof String",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "process.command_line",
+        "copy_from": "CommandLine",
+        "if": "ctx.CommandLine instanceof String",
+        "override": false
+      }
+    },
+    {
+      "remove": {
+        "field": "_tmp_time",
+        "ignore_missing": true
       }
     }
   ]

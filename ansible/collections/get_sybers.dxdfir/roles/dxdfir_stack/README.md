@@ -21,10 +21,25 @@ reconciles read-first against the live APIs, and the Kibana saved objects
 it imports (gated on the tree's content hash, a deploy artifact in the
 secret store), into the default space and into every space the tree
 defines (`dashboards/<id>/space.json`, created or updated first). It also
-rolls over every existing `logs-dxdfir.*` stream whose write index is not
-yet on the router pipeline, once, so a stream created before the tree is
-routed from its next document on. The role carries no pipeline or dashboard
-bodies of its own — see `elastic/README.md`.
+rolls over every existing `logs-dxdfir.*` stream when a template changed
+(and once when a stream's write index is not yet on the router pipeline), so
+the change applies from the next document on. The role carries no pipeline
+or dashboard bodies of its own — see `elastic/README.md`.
+
+Documents already indexed keep what they were indexed with, Filebeat never
+re-reads a file it has finished, and a stream's failure store (the rows
+Elasticsearch rejected) is never replayed. **`dxdfir_stack_reingest: true`
+on one deploy** replays the processed tree from scratch
+(`tasks/deploy_reingest.yml`, right before the filebeat step): the filebeat
+container is stopped and removed, the `logs-dxdfir.*` data streams are
+deleted (their failure stores with them), the shipper's registry volume
+(`dxdfir_stack_volumes['filebeatdata']`) is wiped and recreated, and the
+filebeat step brings the shipper up again over the converged tree, reading
+every file anew. `logs-car.*`, the Kibana objects and the evidence on disk
+are not touched. Set it for one run (`playbooks/host_vars/<host>.yml`, or
+`-e dxdfir_stack_reingest=true` on a direct `ansible-playbook` run of
+`dxdfir-stack-deploy.yml`) and unset it after — it WIPES the indexed
+evidence, which the full re-read then restores.
 
 ## Actions and their playbook decisions
 
@@ -114,6 +129,7 @@ knobs:
 | `dxdfir_stack_pull_gate` / `_min_free_gib` | `false` / `15` | Image-store capacity gate before pulls (reclaims once when short). |
 | `dxdfir_stack_required_services` | `[elasticsearch, kibana]` | What ensure_running requires for "up". |
 | `dxdfir_stack_remove_volumes` | `false` | destroy: also remove the data volumes (WIPES ingested data). |
+| `dxdfir_stack_reingest` | `false` | deploy: replay the processed tree from scratch — WIPES the `logs-dxdfir.*` streams and the shipper's registry, then reads every file again. One-shot opt-in. |
 | `dxdfir_stack_wait_retries` / `_wait_delay` | `60` / `5` | Bring-up readiness probes. |
 | `dxdfir_stack_es_memlock` | `true` | Unlimited memlock on elasticsearch; false for runtimes that cannot grant it. |
 | `dxdfir_stack_allow_world_readable_keys` | `false` | Explicit opt-in before an unprivileged deploy writes 0644 node keys. |

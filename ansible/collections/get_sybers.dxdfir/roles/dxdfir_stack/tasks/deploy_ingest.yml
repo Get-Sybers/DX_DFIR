@@ -89,6 +89,8 @@
          | rejectattr('key', 'in', ['version', 'deprecated', 'created_date_millis', 'modified_date_millis'])
          | items2dict }}
   when: _live != (lookup('ansible.builtin.file', item) | from_json)
+  # registered: a changed component template rolls the existing streams over below
+  register: __dxdfir_stack_components_converged
   changed_when: true
   no_log: true
 
@@ -130,15 +132,19 @@
          | rejectattr('key', 'in', ['version', 'deprecated', 'created_date_millis', 'modified_date_millis'])
          | items2dict }}
   when: _live != (lookup('ansible.builtin.file', item) | from_json)
+  register: __dxdfir_stack_templates_converged
   changed_when: true
   no_log: true
 
 # ---- existing streams: a template applies to the backing indices created
-# after it, so a stream whose write index is not yet on the router pipeline is
-# rolled over once; its next document then goes through the tree's pipelines.
-# A new stream needs nothing: its first backing index is created from the
-# template. Documents indexed before the rollover keep what they were indexed
-# with.
+# after it, never to the current one. So every existing stream is rolled over
+# when a component or index template just changed (the new mappings and
+# settings apply from the next document on), and a stream whose write index is
+# not yet on the router pipeline is rolled over once whatever changed. A new
+# stream needs nothing: its first backing index is created from the template.
+# Documents indexed before the rollover keep what they were indexed with — a
+# re-ingest (deploy_reingest.yml) is the only way to replay them, and when one
+# is requested the streams are about to be deleted, so nothing is rolled over.
 
 - name: "stack-deploy | read the existing logs-dxdfir.* data streams"
   ansible.builtin.uri:
@@ -169,7 +175,7 @@
   changed_when: false
   no_log: true
 
-- name: "stack-deploy | roll over the streams whose write index is not on the router pipeline"
+- name: "stack-deploy | roll over the streams: all when a template changed, else those not on the router pipeline"
   ansible.builtin.uri:
     url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/{{ item['item']['name'] }}/_rollover"
     method: POST
@@ -190,7 +196,12 @@
     _bound: >-
       {{ ((((item['json'] | default({}))[_index] | default({}))['settings'] | default({}))['index'] | default({}))['default_pipeline']
          | default('') }}
-  when: _bound != _router
+  when:
+    - not (dxdfir_stack_reingest | bool)
+    - >-
+      _bound != _router
+      or __dxdfir_stack_components_converged is changed
+      or __dxdfir_stack_templates_converged is changed
   changed_when: true
   no_log: true
 
