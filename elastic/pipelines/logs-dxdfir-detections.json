@@ -1,22 +1,16 @@
 {
-  "description": "The signatures lane (detections/<engine>/...): event.module is the engine (yara, suricata, hayabusa, or byakugan's reserved tree), event.dataset <engine>.alert — for Suricata <engine>.<event_type>, so suricata.alert is the alerts and suricata.flow, suricata.dns, ... the rest of its EVE output; evidence time from the engine's own timestamp field (suricata: timestamp, hayabusa: Timestamp).",
+  "description": "The signatures lane (detections/<case>/<engine>/<item>/...): event.module is the engine (yara, suricata, hayabusa, or byakugan's reserved tree), event.dataset <engine>.alert — for Suricata <engine>.<event_type>, so suricata.alert is the alerts and suricata.flow, suricata.dns, ... the rest of its EVE output (event.kind event; stats metric); evidence time from the engine's own timestamp field (suricata: timestamp, hayabusa: Timestamp — YARA has none and keeps the ingest time); host.name from Hayabusa's Computer, for YARA the scanned item; an ECS projection of each engine's core fields (source/destination, rule.*, event.severity, message) next to the native ones. YARA's strings (every match offset) are capped at 200 per hit with the full count in yara.match_count — a single hit can carry hundreds of thousands, past the index's array-object limit.",
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/pipelines/logs-dxdfir-detections.json"
   },
   "processors": [
     {
-      "set": {
-        "field": "event.kind",
-        "value": "alert",
-        "override": false
-      }
-    },
-    {
       "grok": {
+        "description": "detections/<case>/<engine>/<item>/...: the case, the engine and the scanned item",
         "field": "log.file.path",
         "patterns": [
-          "^/ingest/detections/(?<_tmp_engine>[^/]+)/"
+          "^/ingest/detections/(?<labels.case>[^/]+)/(?<_tmp_engine>[^/]+)/(?<labels.item>[^/]+)/"
         ],
         "ignore_missing": true,
         "ignore_failure": true
@@ -48,9 +42,27 @@
       }
     },
     {
-      "remove": {
-        "field": "_tmp_engine",
-        "ignore_missing": true
+      "set": {
+        "field": "event.kind",
+        "value": "alert",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "description": "only Suricata's alert records are alerts; flow/dns/tls/http/... are protocol events, stats its self-monitoring",
+        "field": "event.kind",
+        "value": "event",
+        "if": "ctx._tmp_engine == 'suricata' && ctx.event_type instanceof String && ctx.event_type != 'alert'",
+        "override": true
+      }
+    },
+    {
+      "set": {
+        "field": "event.kind",
+        "value": "metric",
+        "if": "ctx._tmp_engine == 'suricata' && ctx.event_type == 'stats'",
+        "override": true
       }
     },
     {
@@ -65,12 +77,248 @@
     },
     {
       "date": {
+        "description": "Hayabusa writes `2025-02-17 15:46:52.275 +00:00`, not ISO 8601",
         "field": "Timestamp",
         "target_field": "@timestamp",
         "formats": [
-          "ISO8601"
+          "ISO8601",
+          "yyyy-MM-dd HH:mm:ss.SSS XXX",
+          "yyyy-MM-dd HH:mm:ss.SSS Z",
+          "yyyy-MM-dd HH:mm:ss XXX"
         ],
         "if": "ctx.timestamp == null && ctx.Timestamp instanceof String"
+      }
+    },
+    {
+      "set": {
+        "field": "source.ip",
+        "copy_from": "src_ip",
+        "if": "ctx.src_ip instanceof String",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "source.port",
+        "copy_from": "src_port",
+        "if": "ctx.src_port != null",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "destination.ip",
+        "copy_from": "dest_ip",
+        "if": "ctx.dest_ip instanceof String",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "destination.port",
+        "copy_from": "dest_port",
+        "if": "ctx.dest_port != null",
+        "override": false
+      }
+    },
+    {
+      "lowercase": {
+        "description": "Suricata writes TCP/UDP; ECS network.transport is lowercase (what the Zeek records carry)",
+        "field": "proto",
+        "target_field": "network.transport",
+        "if": "ctx._tmp_engine == 'suricata' && ctx.proto instanceof String"
+      }
+    },
+    {
+      "set": {
+        "field": "network.protocol",
+        "copy_from": "app_proto",
+        "if": "ctx.app_proto instanceof String",
+        "override": false
+      }
+    },
+    {
+      "convert": {
+        "field": "flow_id",
+        "target_field": "event.id",
+        "type": "string",
+        "if": "ctx.flow_id != null && ctx.event?.id == null"
+      }
+    },
+    {
+      "set": {
+        "field": "rule.name",
+        "copy_from": "alert.signature",
+        "if": "ctx.alert instanceof Map && ctx.alert.signature instanceof String",
+        "override": false
+      }
+    },
+    {
+      "convert": {
+        "field": "alert.signature_id",
+        "target_field": "rule.id",
+        "type": "string",
+        "if": "ctx.alert instanceof Map && ctx.alert.signature_id != null"
+      }
+    },
+    {
+      "set": {
+        "field": "rule.category",
+        "copy_from": "alert.category",
+        "if": "ctx.alert instanceof Map && ctx.alert.category instanceof String",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "event.severity",
+        "copy_from": "alert.severity",
+        "if": "ctx.alert instanceof Map && ctx.alert.severity != null",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "event.action",
+        "copy_from": "alert.action",
+        "if": "ctx.alert instanceof Map && ctx.alert.action instanceof String",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "host.name",
+        "copy_from": "Computer",
+        "if": "ctx.Computer instanceof String",
+        "override": true
+      }
+    },
+    {
+      "set": {
+        "field": "winlog.computer_name",
+        "copy_from": "Computer",
+        "if": "ctx.Computer instanceof String",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "rule.name",
+        "copy_from": "RuleTitle",
+        "if": "ctx.RuleTitle instanceof String",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "rule.id",
+        "copy_from": "RuleID",
+        "if": "ctx.RuleID instanceof String",
+        "override": false
+      }
+    },
+    {
+      "convert": {
+        "field": "EventID",
+        "target_field": "event.code",
+        "type": "string",
+        "if": "ctx.EventID != null"
+      }
+    },
+    {
+      "set": {
+        "field": "winlog.channel",
+        "copy_from": "Channel",
+        "if": "ctx.Channel instanceof String",
+        "override": false
+      }
+    },
+    {
+      "convert": {
+        "field": "RecordID",
+        "target_field": "winlog.record_id",
+        "type": "string",
+        "if": "ctx.RecordID != null"
+      }
+    },
+    {
+      "script": {
+        "description": "Hayabusa's Level (crit/high/med/low/info, or the full words) → ECS event.severity 5..1",
+        "lang": "painless",
+        "if": "ctx.Level instanceof String && ctx.event?.severity == null",
+        "source": "Map levels = ['crit': 5, 'critical': 5, 'emer': 5, 'emergency': 5, 'high': 4, 'med': 3, 'medium': 3, 'low': 2, 'info': 1, 'informational': 1]; def s = levels[ctx.Level.toLowerCase()]; if (s != null) { if (!(ctx.event instanceof Map)) { ctx.event = [:]; } ctx.event.severity = s; }"
+      }
+    },
+    {
+      "set": {
+        "field": "threat.tactic.name",
+        "copy_from": "MitreTactics",
+        "if": "ctx.MitreTactics instanceof List && !ctx.MitreTactics.isEmpty()",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "threat.technique.id",
+        "copy_from": "MitreTags",
+        "if": "ctx.MitreTags instanceof List && !ctx.MitreTags.isEmpty()",
+        "override": false
+      }
+    },
+    {
+      "rename": {
+        "description": "YARA's `rule` is a STRING (the rule name) that collides with the ECS rule object; move it aside",
+        "field": "rule",
+        "target_field": "yara.rule",
+        "if": "ctx.rule instanceof String"
+      }
+    },
+    {
+      "set": {
+        "field": "rule.name",
+        "copy_from": "yara.rule",
+        "if": "ctx.yara instanceof Map && ctx.yara.rule instanceof String",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "file.path",
+        "copy_from": "target",
+        "if": "ctx.target instanceof String",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "description": "YARA rows name no host: the scanned item (the image or memory dump) stands in",
+        "field": "host.name",
+        "copy_from": "labels.item",
+        "if": "ctx._tmp_engine == 'yara' && ctx.host?.name == null && ctx.labels?.item instanceof String",
+        "override": false
+      }
+    },
+    {
+      "script": {
+        "description": "YARA strings: keep the match count, cap the list (a memory-dump hit can carry hundreds of thousands of offsets, over the 50,000 array-object limit — a single rejected 14 MB row)",
+        "lang": "painless",
+        "if": "ctx.strings instanceof List",
+        "source": "if (!(ctx.yara instanceof Map)) { ctx.yara = [:]; } ctx.yara.match_count = ctx.strings.size(); if (ctx.strings.size() > 200) { ctx.strings = new ArrayList(ctx.strings.subList(0, 200)); ctx.yara.strings_truncated = true; }"
+      }
+    },
+    {
+      "set": {
+        "description": "message: the rule that fired, whichever engine wrote the record",
+        "field": "message",
+        "copy_from": "rule.name",
+        "if": "ctx.message == null && ctx.rule instanceof Map && ctx.rule.name instanceof String",
+        "override": false
+      }
+    },
+    {
+      "remove": {
+        "field": "_tmp_engine",
+        "ignore_missing": true
       }
     }
   ]

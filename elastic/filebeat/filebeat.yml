@@ -25,9 +25,24 @@ filebeat.inputs:
       # lane RUN SUMMARIES (what the dx CLI watches), not evidence — and their
       # own `log` key would clobber filebeat's log.file.path under
       # overwrite_keys, routing the rows to logs-dxdfir.misc-*
+      # (every lane writes under <type>/<case>/...: the case is the first
+      # segment after the type, the engine or tool the second)
       - '^/ingest/zeek/.*/zeek\.jsonl$'
       - '^/ingest/log2timeline/.*/(log2timeline|psort)\.jsonl$'
-      - '^/ingest/detections/(suricata|hayabusa)/.*/(suricata|hayabusa)\.jsonl$'
+      - '^/ingest/detections/[^/]+/(suricata|hayabusa|yara)/[^/]+/(suricata|hayabusa|scan)\.jsonl$'
+      - '^/ingest/windowlicker/[^/]+/goese/.*/goese\.jsonl$'
+      # Zeek's http.log ships through the second input below
+      - '^/ingest/zeek/.*/http\.json$'
+    # File identity by inode+device, not by content fingerprint. Filebeat 9's
+    # default fingerprint hashes the first 1024 bytes and treats two files that
+    # start alike as ONE file, skipping the second ("points to an already known
+    # ingest target") — Plaso timelines of different images routinely open with
+    # the same event, and no prefix length is safe for a 3 GB timeline. The
+    # ingest mount is a static read-only bind mount, so inode identity is
+    # stable there. (Changing the identity invalidates the registry: the
+    # operator's re-ingest wipes it anyway.)
+    file_identity.native: ~
+    prospector.scanner.fingerprint.enabled: false
     parsers:
       - ndjson:
           target: ""
@@ -36,6 +51,36 @@ filebeat.inputs:
           expand_keys: true
     processors:
       # the first directory under /ingest is the evidence type; it routes the data stream
+      - dissect:
+          tokenizer: "/ingest/%{labels.type}/%{?rest}"
+          field: log.file.path
+          target_prefix: ""
+
+  # Zeek's http.log alone: its top-level `host` column (the HTTP Host header)
+  # would be clobbered by Filebeat's own `host.name`, which libbeat writes over
+  # whatever the record put at `host` after the parsers and the processors
+  # have run (verified: a string `host` is gone by the time the event leaves
+  # Filebeat, nothing in this file can rename it first). So this input decodes
+  # the record under `zeek_http` instead; the zeek pipeline hoists it back to
+  # the root and moves the Host header to url.domain
+  # (elastic/pipelines/logs-dxdfir-zeek.json).
+  - type: filestream
+    id: dxdfir-zeek-http
+    enabled: true
+    paths:
+      - /ingest/zeek/*/**/http.json
+    prospector.scanner.exclude_files:
+      - '^/ingest/_[^/]*/.*'
+      - '^/ingest/[^/]+/_extracted[^/]*/.*'
+    file_identity.native: ~
+    prospector.scanner.fingerprint.enabled: false
+    parsers:
+      - ndjson:
+          target: "zeek_http"
+          add_error_key: true
+          overwrite_keys: true
+          expand_keys: true
+    processors:
       - dissect:
           tokenizer: "/ingest/%{labels.type}/%{?rest}"
           field: log.file.path

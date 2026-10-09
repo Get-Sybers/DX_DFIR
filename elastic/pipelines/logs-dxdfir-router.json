@@ -1,5 +1,5 @@
 {
-  "description": "logs-dxdfir.* default pipeline: stamp the ingest time, then hand the record to its evidence type's pipeline. labels.type is the first path segment under /ingest, dissected by Filebeat.",
+  "description": "logs-dxdfir.* default pipeline: stamp the ingest time, drop the shipper's host.name (Filebeat stamps its own container as host.name on every record; the evidence host is set by the per-type pipeline, agent.* still identifies the shipper), then hand the record to its evidence type's pipeline. labels.type is the first path segment under /ingest, dissected by Filebeat.",
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/pipelines/logs-dxdfir-router.json"
@@ -10,6 +10,13 @@
         "field": "event.ingested",
         "value": "{{{_ingest.timestamp}}}",
         "override": false
+      }
+    },
+    {
+      "remove": {
+        "description": "Filebeat's own host.name (the shipper's container id), never the evidence host",
+        "field": "host.name",
+        "ignore_missing": true
       }
     },
     {

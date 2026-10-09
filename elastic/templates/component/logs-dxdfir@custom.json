@@ -2,7 +2,13 @@
   "template": {
     "settings": {
       "index": {
-        "default_pipeline": "logs-dxdfir-router"
+        "default_pipeline": "logs-dxdfir-router",
+        "number_of_replicas": 0,
+        "mapping": {
+          "total_fields": {
+            "limit": 2000
+          }
+        }
       }
     },
     "mappings": {
@@ -10,6 +16,15 @@
         "labels": {
           "properties": {
             "type": {
+              "type": "keyword"
+            },
+            "case": {
+              "type": "keyword"
+            },
+            "item": {
+              "type": "keyword"
+            },
+            "pipeline_error": {
               "type": "keyword"
             }
           }
@@ -19,6 +34,212 @@
         },
         "date_time": {
           "type": "flattened"
+        },
+        "values": {
+          "type": "flattened"
+        },
+        "id": {
+          "properties": {
+            "orig_h": {
+              "type": "ip"
+            },
+            "orig_p": {
+              "type": "integer"
+            },
+            "resp_h": {
+              "type": "ip"
+            },
+            "resp_p": {
+              "type": "integer"
+            }
+          }
+        },
+        "uid": {
+          "type": "keyword"
+        },
+        "ts": {
+          "type": "date"
+        },
+        "zeek": {
+          "properties": {
+            "file_id": {
+              "type": "keyword"
+            },
+            "log_source": {
+              "type": "keyword"
+            }
+          }
+        },
+        "stats": {
+          "type": "flattened"
+        },
+        "metadata": {
+          "type": "flattened"
+        },
+        "strings": {
+          "type": "flattened"
+        },
+        "yara": {
+          "properties": {
+            "rule": {
+              "type": "keyword"
+            },
+            "match_count": {
+              "type": "long"
+            },
+            "strings_truncated": {
+              "type": "boolean"
+            }
+          }
+        },
+        "Details": {
+          "type": "flattened"
+        },
+        "ExtraFieldInfo": {
+          "type": "flattened"
+        },
+        "Level": {
+          "type": "keyword"
+        },
+        "Fields": {
+          "type": "flattened"
+        },
+        "Message": {
+          "type": "match_only_text"
+        },
+        "Raw": {
+          "type": "match_only_text"
+        },
+        "Payload": {
+          "type": "match_only_text"
+        },
+        "winlog": {
+          "properties": {
+            "event_data": {
+              "type": "flattened"
+            }
+          }
+        },
+        "AppId": {
+          "type": "long"
+        },
+        "goese": {
+          "properties": {
+            "table": {
+              "type": "keyword"
+            }
+          }
+        },
+        "PID": {
+          "type": "long"
+        },
+        "PPID": {
+          "type": "long"
+        },
+        "EnvVars": {
+          "type": "match_only_text"
+        },
+        "EventTime": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "SourceModified": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "TimeStamp": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "TimeCreated": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "Created0x10": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "Created0x30": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastModified0x10": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastModified0x30": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastAccess0x10": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastAccess0x30": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastRecordChange0x10": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastRecordChange0x30": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "FileKeyLastWriteTimestamp": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastModifiedTimeUTC": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastModifiedTime": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "StartTime": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "EndTime": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "DeletedOn": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastWriteTime": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm:ss.SSSSSSS||yyyy-MM-dd HH:mm:ss||strict_date_optional_time",
+          "ignore_malformed": true
+        },
+        "LastWriteTimestamp": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm:ss.SSSSSSS||yyyy-MM-dd HH:mm:ss||strict_date_optional_time",
+          "ignore_malformed": true
+        },
+        "CreateTime": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "ExitTime": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "Created": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "UnloadTime": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LoadTime": {
+          "type": "date",
+          "ignore_malformed": true
         }
       }
     }
@@ -26,6 +247,6 @@
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/templates/component/logs-dxdfir@custom.json",
-    "description": "DX_DFIR additions over the built-in logs behaviour: the router default_pipeline, labels.type as the routing key, and Plaso's recursive pathspec/date_time trees mapped flattened so they never explode the field count"
+    "description": "DX_DFIR additions over the built-in logs behaviour: the router default_pipeline; no replicas (one node); a 2000-field backstop; labels.* (the routing key, the case and item from the path, the pipeline-error drain); the fields whose type must not depend on which record lands first (Zeek's id tuple, ts, uid; the SRUM AppId; Level, PID, PPID across lanes); the recursive or free-form trees mapped flattened so they never explode the field count (Plaso pathspec/date_time/values, Suricata stats/metadata, Hayabusa Details/ExtraFieldInfo, YARA strings, journald Fields, the EVTX event data); the long tool strings as match_only_text instead of a truncated keyword; and the tools' own time columns as dates so Lens can use them"
   }
 }

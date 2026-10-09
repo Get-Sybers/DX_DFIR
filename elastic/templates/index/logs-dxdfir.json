@@ -10,6 +10,17 @@
     "logs-dxdfir@custom"
   ],
   "priority": 200,
+  "template": {
+    "data_stream_options": {
+      "failure_store": {
+        "enabled": true,
+        "lifecycle": {
+          "enabled": true,
+          "data_retention": "365d"
+        }
+      }
+    }
+  },
   "data_stream": {
     "hidden": false,
     "allow_custom_routing": false
@@ -21,6 +32,6 @@
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/templates/index/logs-dxdfir.json",
-    "description": "The processed-evidence streams: the built-in logs-*-* composition (logsdb, ECS dynamic mappings, the operator's logs@custom extension point) plus the logs-dxdfir@custom component, which wires the per-type ingest pipelines"
+    "description": "The processed-evidence streams: the built-in logs-*-* composition (logsdb, ECS dynamic mappings, the operator's logs@custom extension point) plus the logs-dxdfir@custom component, which wires the per-type ingest pipelines. The failure store (rejected evidence rows) is kept a year instead of the cluster default's 30 days — a rejected row is evidence waiting for a mapping fix and a re-ingest"
   }
 }

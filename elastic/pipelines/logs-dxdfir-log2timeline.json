@@ -1,5 +1,5 @@
 {
-  "description": "Plaso json_line events: evidence time from the epoch-microsecond timestamp (kept as ingest time when absent or the pre-1970 sentinel), filesystem/path grokked out of display_name. The pathspec tree is mapped flattened by the logs-dxdfir@custom component template.",
+  "description": "Plaso json_line events (log2timeline/<case>/<image>/timeline.jsonl): evidence time from the epoch-microsecond timestamp (kept as ingest time when absent or the pre-1970 sentinel), filesystem/path grokked out of display_name, labels.case/labels.item from the path, host.name from Plaso's hostname (else the image). The pathspec, date_time and winreg values trees are mapped flattened by the logs-dxdfir@custom component template (values.data is a string in one registry value and an object in the next).",
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/pipelines/logs-dxdfir-log2timeline.json"
@@ -10,6 +10,17 @@
         "field": "event.module",
         "value": "plaso",
         "override": false
+      }
+    },
+    {
+      "grok": {
+        "description": "log2timeline/<case>/<image>/timeline.jsonl: the case and the image",
+        "field": "log.file.path",
+        "patterns": [
+          "^/ingest/log2timeline/(?<labels.case>[^/]+)/(?<labels.item>[^/]+)/"
+        ],
+        "ignore_missing": true,
+        "ignore_failure": true
       }
     },
     {
@@ -51,6 +62,31 @@
         ],
         "if": "ctx.display_name != null && ctx.file?.path == null",
         "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "host.name",
+        "copy_from": "hostname",
+        "if": "ctx.hostname instanceof String && ctx.hostname.length() > 0",
+        "override": true
+      }
+    },
+    {
+      "set": {
+        "description": "no hostname on the event: the image stands in",
+        "field": "host.name",
+        "copy_from": "labels.item",
+        "if": "ctx.host?.name == null && ctx.labels?.item instanceof String",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "user.name",
+        "copy_from": "username",
+        "if": "ctx.username instanceof String && ctx.username.length() > 0",
+        "override": false
       }
     }
   ]
