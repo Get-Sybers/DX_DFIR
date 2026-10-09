@@ -39,6 +39,13 @@
     - name: "stack-deploy | the ingest config tree"
       ansible.builtin.import_tasks: deploy_ingest.yml
 
+    # the opt-in replay of the processed tree: tears the shipper and the
+    # logs-dxdfir.* streams down right before the filebeat step creates the
+    # shipper again, so it reads every file anew into the converged tree
+    - name: "stack-deploy | re-ingest the processed tree (opt-in)"
+      ansible.builtin.import_tasks: deploy_reingest.yml
+      when: dxdfir_stack_reingest | bool
+
     # filebeat needs only elasticsearch (and the config tree above), so it
     # comes up before fleet-server: a fleet enrolment failure must never
     # leave the evidence ingest down

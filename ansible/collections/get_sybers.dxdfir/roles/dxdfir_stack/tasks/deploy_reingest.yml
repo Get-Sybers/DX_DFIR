@@ -1,0 +1,56 @@
+---
+# Replay the processed tree from scratch — the ONLY way a mapping or pipeline
+# change in the config tree reaches documents already indexed: Filebeat never
+# re-reads a file it has finished, and a stream's failure store (the rows
+# Elasticsearch rejected) is never replayed. An explicit opt-in
+# (dxdfir_stack_reingest), imported by deploy.yml after the config tree has
+# converged and right BEFORE deploy_filebeat.yml, which creates the shipper
+# again: so this file tears down and deploy_filebeat.yml brings up. Nothing
+# else is touched — not logs-car.*, not the saved objects, not the evidence.
+
+# the container is REMOVED, not just stopped: docker refuses to remove a volume
+# a container still references, stopped or not; deploy_filebeat.yml recreates it
+- name: "stack-deploy | re-ingest: remove the filebeat container (frees its registry volume)"
+  community.docker.docker_container:
+    name: "{{ dxdfir_stack_containers['filebeat'] }}"
+    state: absent
+
+- name: "stack-deploy | re-ingest: read the logs-dxdfir.* data streams"
+  ansible.builtin.uri:
+    url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_data_stream/logs-dxdfir.*-*"
+    ca_path: "{{ dxdfir_stack_ca_file }}"
+    url_username: elastic
+    url_password: "{{ dxdfir_stack_elastic_password }}"
+    force_basic_auth: true
+    status_code: [200, 404]
+  register: __dxdfir_stack_reingest_streams
+  changed_when: false
+  no_log: true
+
+# deleting a data stream drops its backing indices AND its failure store
+- name: "stack-deploy | re-ingest: delete the logs-dxdfir.* data streams (WIPES the indexed evidence)"
+  ansible.builtin.uri:
+    url: "https://{{ dxdfir_stack_bind }}:{{ dxdfir_stack_es_port }}/_data_stream/{{ item['name'] }}"
+    method: DELETE
+    ca_path: "{{ dxdfir_stack_ca_file }}"
+    url_username: elastic
+    url_password: "{{ dxdfir_stack_elastic_password }}"
+    force_basic_auth: true
+    status_code: [200, 404]
+  loop: "{{ (__dxdfir_stack_reingest_streams['json'] | default({}))['data_streams'] | default([]) }}"
+  loop_control:
+    label: "{{ item['name'] }}"
+  changed_when: true
+  no_log: true
+
+- name: "stack-deploy | re-ingest: remove the filebeat registry volume"
+  community.docker.docker_volume:
+    name: "{{ dxdfir_stack_volumes['filebeatdata'] }}"
+    state: absent
+
+# recreated empty, labelled like deploy_prepare.yml creates it, so the filebeat
+# step mounts a volume the stack owns rather than one docker made on the fly
+- name: "stack-deploy | re-ingest: the filebeat registry volume, empty"
+  community.docker.docker_volume:
+    name: "{{ dxdfir_stack_volumes['filebeatdata'] }}"
+    labels: "{{ dxdfir_stack_labels }}"

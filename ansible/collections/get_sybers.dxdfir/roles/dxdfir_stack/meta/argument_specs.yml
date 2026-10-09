@@ -176,6 +176,20 @@ argument_specs:
         required: false
         default: false
         description: "destroy: also remove named volumes (WIPES ingested data)."
+      dxdfir_stack_reingest:
+        type: bool
+        required: false
+        default: false
+        description: >-
+          deploy: replay the processed tree from scratch once the config tree
+          has converged — stop and remove the filebeat container, delete the
+          logs-dxdfir.* data streams (their failure stores with them), wipe
+          the shipper's registry volume (dxdfir_stack_volumes['filebeatdata'])
+          and bring filebeat up again so it reads every file anew. The only
+          way a mapping or pipeline fix reaches documents already indexed;
+          logs-car.*, the saved objects and the evidence on disk are not
+          touched. A one-shot opt-in: set it for one deploy (host_vars or
+          -e), unset it after.
       dxdfir_stack_pull_gate:
         type: bool
         required: false
