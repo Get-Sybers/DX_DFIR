@@ -21,9 +21,10 @@ malcolm/
 
 ## What the dashboards read
 
-The documents Filebeat ships from the Zeek lane (`processed/zeek/<item>/<log>.json`)
-and the signatures lane (`processed/detections/suricata/<item>/eve.json`),
-after the stack's ingest pipelines ([`../../pipelines/`](../../pipelines/)):
+The documents Filebeat ships from the Zeek lane
+(`processed/zeek/<case>/<capture>/<log>.json`) and the signatures lane
+(`processed/detections/<case>/suricata/<item>/eve.json`), after the stack's
+ingest pipelines ([`../../pipelines/`](../../pipelines/)):
 
 - the record's own fields, named as the tool wrote them: Zeek's `ts`, `uid`,
   `id.orig_h`, `conn_state`, `query`, …; Suricata's `timestamp`, `event_type`,
@@ -34,7 +35,15 @@ after the stack's ingest pipelines ([`../../pipelines/`](../../pipelines/)):
   …);
 - on Zeek `conn` records `network.bytes` (`orig_ip_bytes + resp_ip_bytes`);
   on Zeek `files` and `weird` records the string column `source` under
-  `zeek.log_source`.
+  `zeek.log_source`; on `ocsp` and `pe` records the string column `id` (a
+  Zeek file id, where every other log's `id` is the `id.orig_h`/… tuple)
+  under `zeek.file_id`; on `http` records the Host header column `host`
+  under `url.domain` (the ECS `host` is an object, and Filebeat writes its
+  own `host.name` over the record's);
+- `labels.case` and `labels.item`, the case and the capture (or scanned
+  item) from the path, on every record; `host.name` only where the evidence
+  names one (Hayabusa's `Computer`; YARA rows carry the scanned item) —
+  Zeek and Suricata records have none.
 
 Every panel query is KQL on the data view: `event.dataset:zeek.<log>` selects
 a Zeek log, `event.dataset:suricata.alert` the Suricata alerts. A dashboard
@@ -65,8 +74,8 @@ use the names above. A Zeek column name applies to the log that carries it.
 | `network.protocol` as a filter | `event.dataset` | `event.dataset` |
 | `network.protocol` bucketed over conn | `service` | `app_proto` |
 | `network.protocol_version` | `version` | |
-| `event.id` | `uid` (pe, ocsp: `id`; x509: `fingerprint`; dhcp: `uids`) | `flow_id` |
-| `zeek.<log>.<field>` | `<field>`; renamed columns: `ssl_version` is `version`, `certificate_subject_full` is `certificate.subject`, `certificate_issuer_full` is `certificate.issuer`, kerberos `cname`/`sname` are `client`/`service`, ntlm `user`/`host`/`domain` are `username`/`hostname`/`domainname`, ldap `operation`/`result_code`/`result_message` are `opcode`/`result`/`diagnostic_message`, modbus `trans_id`/`unit_id` are `tid`/`unit`, redis `cmd_name`/`cmd_key`/`cmd_value`/`reply` are `cmd.name`/`cmd.key`/`cmd.value`/`reply.value`, dhcp `assigned_ip`/`requested_ip` are `assigned_addr`/`requested_addr`, conn `conn_state_description` is `conn_state` | |
+| `event.id` | `uid` (pe, ocsp: `zeek.file_id`; x509: `fingerprint`; dhcp: `uids`) | `flow_id` |
+| `zeek.<log>.<field>` | `<field>`; renamed columns: `ssl_version` is `version`, http `host` is `url.domain`, `certificate_subject_full` is `certificate.subject`, `certificate_issuer_full` is `certificate.issuer`, kerberos `cname`/`sname` are `client`/`service`, ntlm `user`/`host`/`domain` are `username`/`hostname`/`domainname`, ldap `operation`/`result_code`/`result_message` are `opcode`/`result`/`diagnostic_message`, modbus `trans_id`/`unit_id` are `tid`/`unit`, redis `cmd_name`/`cmd_key`/`cmd_value`/`reply` are `cmd.name`/`cmd.key`/`cmd.value`/`reply.value`, dhcp `assigned_ip`/`requested_ip` are `assigned_addr`/`requested_addr`, conn `conn_state_description` is `conn_state` | |
 | `event.action` | the log's own verb: http `method`, dns `opcode_name`, ftp `command`, dce_rpc `operation`, dhcp `msg_types`, dnp3 `fc_request`, irc `command`, kerberos `request_type`, ldap `opcode`, modbus `func`, mqtt_subscribe `action`, mysql `cmd`, ntp `mode`, postgresql `frontend`, redis `cmd.name`, sip `method`, smb_files `action`, tunnel `action` | `alert.action` |
 | `event.result` | the log's own outcome: http `status_code`, dns `rcode_name`, ftp `reply_code`, dhcp `server_message`, dnp3 `fc_reply`, kerberos/mysql/postgresql/redis/ntlm `success`, ldap and ldap_search `result`, modbus `exception`, mqtt_connect `connect_status`, mqtt_publish `status`, rdp `result`, sip `status_code`, smtp `last_reply`, ssh `auth_success`, ssl `last_alert` | |
 | `rule.name`, `rule.category`, `rule.id` | weird: `name` | `alert.signature`, `alert.category`, `alert.signature_id` |
@@ -80,9 +89,16 @@ use the names above. A Zeek column name applies to the log that carries it.
 | `network.bytes` (conn) | `network.bytes`, set by the Zeek pipeline | |
 | `event.duration` | `duration` (seconds) | |
 | `quic.host`, `quic.version` | `server_name`, `version` | |
-| `@timestamp`, `event.ingested`, `host.name` | the same names, set by the pipelines or by Filebeat | the same names |
+| `@timestamp`, `event.ingested` | the same names, set by the pipelines | the same names |
+| `host.name` | unset (a capture names no host; `labels.item` is the capture) | unset for Suricata; Hayabusa's `Computer`, YARA's scanned item |
 
 ## Scope
+
+A note on DHCP: the lane's `dhcp.log` on the captures seen so far carries
+only `ts, uids, mac, host_name, msg_types, duration` (DISCOVER messages, no
+lease), so the DHCP dashboard's tables read `mac`, `host_name` and
+`msg_types`; its Logs table also lists `assigned_addr`, `client_addr` and
+`server_addr`, which fill when a capture holds the full exchange.
 
 The space holds the Malcolm dashboards whose panels can be computed from
 Zeek's default-script logs and Suricata's EVE records: the general dashboards

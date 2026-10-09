@@ -36,8 +36,13 @@ elastic/
    `labels.type` — `zeek`, `windowlicker`, `daemonhunter`, `anamnesis`,
    `log2timeline`, `detections`, … Every JSON/JSONL file under `processed/`
    ships, except the CAR stores (`byakugan/`, `byakugan-load/` — those land
-   ECS-projected in `logs-car.*` via `dx byakugan load`) and the `_`-prefixed
-   staging trees.
+   ECS-projected in `logs-car.*` via `dx byakugan load`), the `_`-prefixed
+   staging trees and the lanes' run summaries. Files are identified by
+   inode, not by a content fingerprint (two Plaso timelines of different
+   images open with the same event). Zeek's `http.log` alone goes through
+   a second input that nests the record under `zeek_http`: Filebeat writes
+   its own `host.name` over any top-level `host`, and that column is the
+   HTTP Host header.
 2. The record lands in the **`logs-dxdfir.<type>-<namespace>`** data stream.
    The [index template](templates/index/logs-dxdfir.json) mirrors the
    built-in `logs-*-*` behaviour (logsdb, ECS dynamic mappings) and adds the
@@ -45,14 +50,26 @@ elastic/
    component: field mappings plus `index.default_pipeline` →
    **`logs-dxdfir-router`**.
 3. The [router pipeline](pipelines/logs-dxdfir-router.json) stamps
-   `event.ingested` and hands the record to its **per-type pipeline**, which
-   owns the parsing: evidence time → `@timestamp` (never re-stamped — the
-   dead-box rule the [risk gate](../docs/riskgate.md) enforces for CAR holds
-   here too; a record without a usable evidence time keeps the ingest time),
-   `event.module` / `event.dataset`, grok over composite strings, and the
-   cheap ECS copies (`source.ip`, `host.name`, …). A parse failure never
-   drops evidence: the pipeline's `on_failure` indexes the record as-is with
-   the error in `labels.pipeline_error`.
+   `event.ingested`, drops Filebeat's `host.name` (the shipper's container,
+   never the evidence host; `agent.*` still names the shipper) and hands the
+   record to its **per-type pipeline**, which owns the parsing: evidence
+   time → `@timestamp` (never re-stamped — the dead-box rule the
+   [risk gate](../docs/riskgate.md) enforces for CAR holds here too; a
+   record without a usable evidence time keeps the ingest time),
+   `event.module` / `event.dataset`, `labels.case` and `labels.item` (the
+   case and the capture/image/dump, from the path), `host.name` from the
+   evidence (the GoDFIR envelope, an EVTX `Computer`, Plaso's `hostname`,
+   else the image or dump the row came from), grok over composite strings,
+   and the cheap ECS copies (`source.ip`, `rule.name`, `message`, …) next
+   to the tool's own fields, which stay in place — except a native name
+   that collides with an ECS object (Zeek's string `source`, `id`, `host`;
+   YARA's `rule`), which moves under the tool's own prefix (`zeek.*`,
+   `yara.*`). A parse failure never drops evidence: the pipeline's
+   `on_failure` indexes the record as-is with the error in
+   `labels.pipeline_error`. A record Elasticsearch rejects (a mapping
+   conflict) lands in the stream's **failure store**
+   (`logs-dxdfir.<type>-<ns>::failures`), kept 365 days by the index
+   template — evidence waiting for a mapping fix and a re-ingest.
 
 ## Editing
 
@@ -66,11 +83,19 @@ elastic/
   deploying.
 - **Mappings**: add to the
   [`logs-dxdfir@custom`](templates/component/logs-dxdfir@custom.json)
-  component template. Template changes apply to a stream's **next** backing
-  index — existing indices keep their mappings. Deploy rolls over every
-  existing `logs-dxdfir.*` stream whose write index is not yet on the router
-  pipeline, so a stream created before the tree existed is routed from its
-  next document on.
+  component template: pin any field whose type must not depend on which
+  record lands first (Zeek's `id` tuple, the SRUM `AppId`), and map a
+  free-form or recursive tree `flattened` (Plaso's `values`, Hayabusa's
+  `Details`, journald's `Fields`) — it then costs one mapper whatever its
+  keys. Template changes apply to a stream's **next** backing index —
+  existing indices keep their mappings. Deploy rolls over every existing
+  `logs-dxdfir.*` stream when the component template changed, and once
+  when a stream's write index is not yet on the router pipeline, so the
+  change applies from the next document on. Documents already indexed keep
+  what they were indexed with; to replay them (and the failure stores) run
+  the deploy with `dxdfir_stack_reingest: true` — it stops Filebeat, deletes
+  the `logs-dxdfir.*` streams and the shipper's registry, and Filebeat
+  reads the whole tree again (the `dxdfir_stack` role README).
 - **Dashboards**: export from Kibana (*Stack Management → Saved Objects*)
   into `dashboards/*.ndjson`. Deploy imports with `overwrite=true`, gated on
   a content hash, so hand-edits in Kibana survive until the tree changes.
