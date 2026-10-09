@@ -14,13 +14,13 @@ root [CHANGELOG.md](../../../CHANGELOG.md).
   permission-denied sent deploy into the start-the-daemon branch (under
   sudo) and the final, unescalated probe then failed. The probes now carry
   the same `become: "{{ __dxdfir_stack_escalate }}"` as the start block's
-  wait, a refused probe is classified `__dxdfir_stack_docker_denied`
-  ("running, not reachable by this user") rather than down, and a new
-  reusable entry point, `tasks/docker_access.yml`, asserts the connection
-  user's own access with the remedy (`newgrp docker`, a new login, or root):
-  the stack preflight runs it after `docker_ensure`, `dxdfir_images` before
-  its first pull (where the godfir_images docker module used to fail with a
-  raw PermissionError).
+  wait, a refused probe counts as "running, not reachable by this user"
+  rather than down, and a new reusable entry point,
+  `tasks/docker_access.yml`, asserts the connection user's own access with
+  the remedy (`newgrp docker`, a new login, or root): the stack preflight
+  runs it after `docker_ensure`, `dxdfir_images` before its first pull
+  (where the godfir_images docker module used to fail with a raw
+  PermissionError).
 
 ### Changed
 

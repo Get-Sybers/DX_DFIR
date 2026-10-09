@@ -14,7 +14,6 @@
 
 - name: "stack-docker | refresh the engine facts"
   ansible.builtin.set_fact:
-    __dxdfir_stack_docker_denied: "{{ _denied }}"
     __dxdfir_stack_docker_up: "{{ (__dxdfir_stack_docker['rc'] | default(1)) == 0 or _denied }}"
   vars:
     _denied: >-

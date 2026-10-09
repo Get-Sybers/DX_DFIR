@@ -58,7 +58,6 @@
 - name: "stack-docker | the engine's state as facts"
   ansible.builtin.set_fact:
     __dxdfir_stack_docker_installed: "{{ __dxdfir_stack_docker_cli['rc'] == 0 }}"
-    __dxdfir_stack_docker_denied: "{{ _denied }}"
     __dxdfir_stack_docker_up: >-
       {{ __dxdfir_stack_docker_cli['rc'] == 0
          and ((__dxdfir_stack_docker['rc'] | default(1)) == 0 or _denied) }}
