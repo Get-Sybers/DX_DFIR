@@ -8,7 +8,11 @@ sibling `*.ndjson`.
 | policy | source index | key | enriches | fills |
 |---|---|---|---|---|
 | `windows-signature` | `logs-dxdfir-enrich-windows-signature` | `signature_id` (= `winlog.event_id`) | `signature`, `action`, `result`, `category_string` | ECS `message` |
-| `windows-reason` | `logs-dxdfir-enrich-windows-reason` | `key` (= `winlog.event_id` + `|` + `Status` + `|` + `SubStatus`, hex lowercased) | `reason` | ECS `event.reason` |
+
+(The failed-logon `event.reason` is **not** an enrich policy: its lookup was a
+20×20 Status×Sub_Status product of just 20 base phrases, so it is composed
+inline in `logs-dxdfir-winlog` from a 20-entry code→phrase map —
+`phrase[Status] + " " + phrase[SubStatus]`.)
 
 ## Deploy contract (ordering matters)
 

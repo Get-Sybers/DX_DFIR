@@ -1,5 +1,5 @@
 {
-  "description": "The shared winlog derived layer. Runs after a source submodule (windowlicker's goevtx, log2timeline's winevtx) has mapped its native shape onto the canonical winlog.* model, so it is lane-agnostic: it reads winlog.* and winlog.data.* and projects the event onto ECS (event.*, log.level, user.*, source.*, destination.*, process.*), then dispatches to the per-channel pipeline for the channel-specific extractions. The native winlog.* fields are left in place. The base block here is what applies to every channel: event.kind/code/provider, the Level->log.level rendering, the Level->event.severity bucket (inline), and the EventID->message enrichment via the windows-signature enrich policy (elastic/enrich/). The lookups without a clean ECS home (reason, privilege names, task category) are not projected; their raw inputs stay in winlog.*.",
+  "description": "The shared winlog derived layer. Runs after a source submodule (windowlicker's goevtx, log2timeline's winevtx) has mapped its native shape onto the canonical winlog.* model, so it is lane-agnostic: it reads winlog.* and winlog.data.* and projects the event onto ECS (event.*, log.level, user.*, source.*, destination.*, process.*), then dispatches to the per-channel pipeline for the channel-specific extractions. The native winlog.* fields are left in place. The base block here is what applies to every channel: event.kind/code/provider, the Level->log.level rendering, the Level->event.severity bucket (inline), the EventID->message enrichment via the windows-signature enrich policy (elastic/enrich/), and the failed-logon event.reason composed inline from the Status/Sub_Status codes. The lookups without a clean ECS home (privilege names, task category) are not projected; their raw inputs stay in winlog.*.",
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/pipelines/logs-dxdfir-winlog.json"
@@ -72,35 +72,10 @@
     },
     {
       "script": {
-        "description": "build the composite key for the reason lookup (signature_id|status|substatus, hex lowercased) when the record carries a Status",
+        "description": "failed-logon reason composed from the Status and Sub_Status codes: each code maps to a phrase, and event.reason is the Status phrase followed by the Sub_Status phrase (or the single phrase when the two codes are equal). Inline 20-code map, collapsed from the 400-row Status x Sub_Status product (every row was phrase[Status] + ' ' + phrase[Sub_Status]); chiefly 4625.",
         "lang": "painless",
-        "if": "ctx.winlog?.event_id != null && ctx.winlog?.data instanceof Map && ctx.winlog.data.Status instanceof String && ctx.winlog.data.Status.length() > 0",
-        "source": "def st = ctx.winlog.data.Status; def sub = ctx.winlog.data.SubStatus; def subk = (sub instanceof String && sub.length() > 0) ? sub.toLowerCase() : st.toLowerCase(); ctx._tmp_rkey = ctx.winlog.event_id + '|' + st.toLowerCase() + '|' + subk;"
-      }
-    },
-    {
-      "enrich": {
-        "description": "failed-logon reason via the windows-reason enrich policy",
-        "policy_name": "windows-reason",
-        "field": "_tmp_rkey",
-        "target_field": "_tmp_reason",
-        "max_matches": 1,
-        "ignore_missing": true,
-        "if": "ctx._tmp_rkey != null"
-      }
-    },
-    {
-      "set": {
-        "field": "event.reason",
-        "copy_from": "_tmp_reason.reason",
-        "if": "ctx._tmp_reason?.reason instanceof String",
-        "override": false
-      }
-    },
-    {
-      "remove": {
-        "field": ["_tmp_rkey", "_tmp_reason"],
-        "ignore_missing": true
+        "if": "ctx.event?.reason == null && ctx.winlog?.data instanceof Map && ctx.winlog.data.Status instanceof String && ctx.winlog.data.Status.length() > 0",
+        "source": "def P = ['0xc000005e':'There are currently no logon servers available to service the logon request.', '0xc0000064':'The specified account does not exist.', '0xc000006a':'User logon with misspelled or bad password.', '0xc000006d':'The cause is either a bad username or authentication information.', '0xc000006e':'Indicates a referenced user name and authentication information are valid, but some user account restriction has prevented successful authentication (such as time-of-day restrictions).', '0xc000006f':'User logon outside authorized hours.', '0xc0000070':'User logon from unauthorized workstation.', '0xc0000071':'User logon with expired password.', '0xc0000072':'User logon to account disabled by administrator.', '0xc00000dc':'Indicates the Sam Server was in the wrong state to perform the desired operation.', '0xc0000133':'Clocks between DC and other computer too far out of sync.', '0xc000015b':'The user has not been granted the requested logon type (also called the logon right) at this machine.', '0xc000018c':'The logon request failed because the trust relationship between the primary domain and the trusted domain failed.', '0xc0000192':'An attempt was made to logon, but the Netlogon service was not started.', '0xc0000193':'User logon with expired account.', '0xc0000224':'The user password must be changed before logging on the first time.', '0xc0000225':'The object was not found.', '0xc0000234':'User logon with account locked.', '0xc00002ee':'A security context was deleted before the context was completed. This is considered a logon failure.', '0xc0000413':'Logon Failure: The machine you are logging on to is protected by an authentication firewall. The specified account is not allowed to authenticate to the machine.']; def st = ctx.winlog.data.Status.toLowerCase(); def sub = ctx.winlog.data.SubStatus; sub = (sub instanceof String && sub.length() > 0) ? sub.toLowerCase() : st; def ps = P.get(st); def pu = P.get(sub); if (pu != null) { if (!(ctx.event instanceof Map)) { ctx.event = [:]; } ctx.event.reason = (st == sub || ps == null) ? pu : ps + ' ' + pu; }"
       }
     },
     {
