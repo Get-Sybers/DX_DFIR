@@ -1,5 +1,5 @@
 {
-  "description": "Zeek logs (zeek/<case>/<capture>/<log>.json): evidence time from ts (ISO8601 or epoch), event.dataset from the log name, labels.case/labels.item from the path, ECS endpoint copies from the conn 4-tuple, network.bytes on conn records. Native Zeek fields stay in place, except the three whose names collide with ECS objects or with other logs: files/weird `source` (a string) → zeek.log_source, ocsp/pe `id` (a file id string, where every other log has the id.orig_h/... tuple) → zeek.file_id, http `host` (the Host header) → url.domain. http.log arrives nested under zeek_http (see filebeat.yml) and is hoisted first.",
+  "description": "Zeek logs (zeek/<case>/<capture>/<log>.json): evidence time from ts (ISO8601 or epoch), event.dataset from the log name, labels.case/labels.item from the path, ECS endpoint copies from the conn 4-tuple, network.bytes on conn records. Native Zeek fields stay in place, except the ones whose names collide with an ECS object or across Zeek logs: files/weird `source` (a string) → zeek.log_source, ocsp/pe `id` (a file id string, where every other log has the id.orig_h/... tuple) → zeek.file_id, and `cmd` — a {name,key,value} record in redis, a string in mysql — split to zeek.redis_cmd / zeek.mysql_cmd so the bare name never has to be both. http.log and websocket.log carry a top-level Host header that libbeat would clobber, so Filebeat ships them nested under zeek_http / zeek_websocket (see filebeat.yml); the hoist below lifts their columns back to the root and moves the Host header to url.domain. (Bare per-protocol names the Malcolm dashboards read, like ftp/postgresql `user` or smtp `tls`, stay in place: logs-dxdfir@zeek is composed only into the zeek stream, so they do not clash with the ECS user / Suricata tls objects other streams carry.)",
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/pipelines/logs-dxdfir-zeek.json"
@@ -7,10 +7,10 @@
   "processors": [
     {
       "script": {
-        "description": "http.log ships nested under zeek_http with its dotted column names intact (Filebeat would clobber a top-level `host`): hoist every column to the root, expanding id.orig_h-style names into objects, and move the Host header to url.domain",
+        "description": "http.log and websocket.log carry a top-level `host` (the Host header) that libbeat clobbers with its own host object on the main input, so Filebeat ships them nested under zeek_http / zeek_websocket (filebeat.yml) with their dotted column names intact: hoist every column to the root, expanding id.orig_h-style names into objects, and move the Host header to url.domain",
         "lang": "painless",
-        "if": "ctx.zeek_http instanceof Map",
-        "source": "Map m = (Map) ctx.remove('zeek_http'); for (e in m.entrySet()) { String k = e.getKey(); def v = e.getValue(); if (k == 'host') { if (!(ctx.url instanceof Map)) { ctx.url = [:]; } ctx.url.domain = v; continue; } String[] parts = k.splitOnToken('.'); Map cur = ctx; for (int i = 0; i < parts.length - 1; i++) { if (!(cur[parts[i]] instanceof Map)) { cur[parts[i]] = [:]; } cur = (Map) cur[parts[i]]; } cur[parts[parts.length - 1]] = v; }"
+        "if": "ctx.zeek_http instanceof Map || ctx.zeek_websocket instanceof Map",
+        "source": "for (String w : new String[]{'zeek_http', 'zeek_websocket'}) { if (!(ctx[w] instanceof Map)) { continue; } Map m = (Map) ctx.remove(w); for (e in m.entrySet()) { String k = e.getKey(); def v = e.getValue(); if (k == 'host') { if (!(ctx.url instanceof Map)) { ctx.url = [:]; } ctx.url.domain = v; continue; } String[] parts = k.splitOnToken('.'); Map cur = ctx; for (int i = 0; i < parts.length - 1; i++) { if (!(cur[parts[i]] instanceof Map)) { cur[parts[i]] = [:]; } cur = (Map) cur[parts[i]]; } cur[parts[parts.length - 1]] = v; } }"
       }
     },
     {
@@ -27,6 +27,22 @@
         "field": "source",
         "target_field": "zeek.log_source",
         "if": "ctx.source instanceof String"
+      }
+    },
+    {
+      "rename": {
+        "description": "redis.log's cmd is a {name,key,value} record; mysql.log's cmd is a string, so in one stream the bare name cannot be both — move the redis record to zeek.redis_cmd",
+        "field": "cmd",
+        "target_field": "zeek.redis_cmd",
+        "if": "ctx.cmd instanceof Map"
+      }
+    },
+    {
+      "rename": {
+        "description": "and mysql.log's string cmd to zeek.mysql_cmd, so bare cmd is renamed away entirely (no dashboard reads it) rather than carrying one protocol's value",
+        "field": "cmd",
+        "target_field": "zeek.mysql_cmd",
+        "if": "ctx.cmd instanceof String"
       }
     },
     {

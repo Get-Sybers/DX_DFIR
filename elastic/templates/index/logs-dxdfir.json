@@ -7,14 +7,7 @@
     "logs@settings",
     "logs@custom",
     "ecs@mappings",
-    "logs-dxdfir@settings",
-    "logs-dxdfir@winlog",
-    "logs-dxdfir@windowlicker",
-    "logs-dxdfir@log2timeline",
-    "logs-dxdfir@daemonhunter",
-    "logs-dxdfir@zeek",
-    "logs-dxdfir@detections",
-    "logs-dxdfir@hayabusa"
+    "logs-dxdfir@settings"
   ],
   "priority": 200,
   "template": {
@@ -39,6 +32,6 @@
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/templates/index/logs-dxdfir.json",
-    "description": "The processed-evidence streams: the built-in logs-*-* composition (logsdb, ECS dynamic mappings, the operator's logs@custom extension point) plus the decomposed logs-dxdfir@* models — logs-dxdfir@settings (the router default_pipeline and stack-wide backstops) and one model per lane (@winlog shared, @windowlicker, @log2timeline, @daemonhunter, @zeek, @detections, @hayabusa). Each lane owns its own fields; the components all merge into every logs-dxdfir.* index (unused fields for a given stream simply never populate). The failure store (rejected evidence rows) is kept a year instead of the cluster default's 30 days — a rejected row is evidence waiting for a mapping fix and a re-ingest"
+    "description": "The fallback index template for the processed-evidence streams: the built-in logs-*-* composition (logsdb, ECS dynamic mappings, the operator's logs@custom extension point) plus logs-dxdfir@settings (the router default_pipeline and the stack-wide backstops). It carries NO lane model \u2014 each lane now has its own higher-priority template (logs-dxdfir-<lane>, priority 500, matching logs-dxdfir.<lane>-*) that adds only that lane's fields, so a lane's columns never merge into another lane's stream. This one (priority 200) catches the streams without a dedicated template: anamnesis (ECS + backstops is enough) and any brand-new processed/<type>/ evidence, which ships untouched into logs-dxdfir.<type>-*. The failure store (rejected evidence rows) is kept a year instead of the cluster default's 30 days \u2014 a rejected row is evidence waiting for a mapping fix and a re-ingest."
   }
 }
