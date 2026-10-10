@@ -1,5 +1,5 @@
 {
-  "description": "Anamnesis memory plugins (anamnesis/<case>/<dump>/plugins/<plugin>.jsonl): event.dataset from the plugin's output filename (windows.anamnesis.processes, ...), labels.case/labels.item from the path, host.name the dump the row came from (Volatility rows name no host); evidence time from the row's own time when it carries one — CreateTime (processes, pslist, threads, sessions), Created (network, netstat), UnloadTime (unloaded), LoadTime (modules, when set). Memory rows without an event time keep the ingest time — a snapshot is not an event. ECS process.* copies next to the native PID/PPID/ImageFileName/CommandLine.",
+  "description": "Anamnesis memory plugins (anamnesis/<case>/<dump>/plugins/<plugin>.jsonl): event.dataset from the plugin's output filename (windows.anamnesis.processes, ...), labels.case/labels.item from the path, host.name the dump the row came from (Volatility rows name no host); evidence time from the row's own time when it carries one — CreateTime (processes, pslist, threads, sessions), Created (network, netstat), UnloadTime (unloaded), LoadTime (modules, when set), LastWrite (registry), ExitTime (an exited process/thread with no start). Memory rows without an event time keep the ingest time — a snapshot is not an event. ECS process.* copies next to the native PID/PPID/ImageFileName/CommandLine.",
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/pipelines/logs-dxdfir-anamnesis.json"
@@ -49,9 +49,9 @@
     },
     {
       "script": {
-        "description": "the evidence time: the first set field of the plugin's own time columns, in this order",
+        "description": "the evidence time: the first set field of the plugin's own time columns, in this order (CreateTime stays first so pslist/threads keep process start; LastWrite is the registry row's key last-write, ExitTime the process/thread exit when no start is set)",
         "lang": "painless",
-        "source": "def order = ['CreateTime', 'Created', 'UnloadTime', 'LoadTime']; for (String f : order) { def v = ctx[f]; if (v instanceof String && v.length() > 0 && !v.startsWith('1970-01-01T00:00:00') && !v.startsWith('0001-01-01')) { ctx._tmp_time = v; break; } }"
+        "source": "def order = ['CreateTime', 'Created', 'UnloadTime', 'LoadTime', 'LastWrite', 'ExitTime']; for (String f : order) { def v = ctx[f]; if (v instanceof String && v.length() > 0 && !v.startsWith('1970-01-01T00:00:00') && !v.startsWith('0001-01-01')) { ctx._tmp_time = v; break; } }"
       }
     },
     {

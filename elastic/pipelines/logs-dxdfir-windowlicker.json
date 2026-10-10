@@ -63,7 +63,7 @@
       "script": {
         "description": "the evidence time: the first set field of the tool's own time columns, in this order; an epoch-zero or 0001 string is a sentinel",
         "lang": "painless",
-        "source": "def order = ['EventTime', 'TimeStamp', 'Timestamp', 'SourceModified', 'TimeCreated', 'Created0x10', 'FileKeyLastWriteTimestamp', 'LastModifiedTimeUTC', 'StartTime', 'LastModifiedTime', 'DeletedOn', 'LastWriteTime', 'LastWriteTimestamp']; for (String f : order) { def v = ctx[f]; if (v instanceof String && v.length() > 0 && !v.startsWith('1970-01-01T00:00:00') && !v.startsWith('0001-01-01')) { ctx._tmp_time = v; break; } }"
+        "source": "def order = ['EventTime', 'TimeStamp', 'Timestamp', 'LastRun', 'SourceModified', 'TimeCreated', 'Created0x10', 'FileKeyLastWriteTimestamp', 'LastModifiedTimeUTC', 'StartTime', 'LastModifiedTime', 'DeletedOn', 'LastWriteTime', 'LastWriteTimestamp']; for (String f : order) { def v = ctx[f]; if (v instanceof String && v.length() > 0 && !v.startsWith('1970-01-01T00:00:00') && !v.startsWith('0001-01-01')) { ctx._tmp_time = v; break; } }"
       }
     },
     {

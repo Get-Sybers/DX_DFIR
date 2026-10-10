@@ -1,5 +1,5 @@
 {
-  "description": "windowlicker submodule: gojle (jump lists). gojle writes AppId as an object {AppId, Description}; the SRUM ESE tables write AppId as an integer. One name cannot be both, so the object form moves to jumplist.app (flattened in logs-dxdfir@windowlicker) and the integer AppId keeps its mapping.",
+  "description": "windowlicker submodule: gojle (jump lists). gojle writes AppId as an object {AppId, Description}; the SRUM ESE tables write AppId as an integer. One name cannot be both, so the object form moves to jumplist.app (flattened in logs-dxdfir@windowlicker) and the integer AppId keeps its mapping. The evidence time is not a top-level column the parent can reach: each DestList entry carries its own CreatedOn/LastModified as a .NET /Date(epoch-ms)/ string, so @timestamp is set here to the most-recent interaction across the entries (one record = one jump-list file holding many entries; per-entry events would need gojle to emit one row each).",
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/pipelines/logs-dxdfir-windowlicker-gojle.json"
@@ -11,6 +11,14 @@
         "target_field": "jumplist.app",
         "if": "ctx.AppId instanceof Map",
         "ignore_missing": true
+      }
+    },
+    {
+      "script": {
+        "description": "jump-list entries carry no top-level time the parent order list can reach; the record's evidence time is the most recent DestList interaction (LastModified, else CreatedOn), written as .NET /Date(epoch-ms)/ — parsed here and set as @timestamp over the ingest-time default",
+        "lang": "painless",
+        "if": "ctx.DestListEntries instanceof List",
+        "source": "long max = Long.MIN_VALUE; for (def e : ctx.DestListEntries) { if (!(e instanceof Map)) { continue; } for (String f : new String[]{'LastModified', 'CreatedOn'}) { def v = e.get(f); if (v instanceof String) { int s = v.indexOf('('); int en = v.indexOf(')'); if (s >= 0 && en > s) { String num = v.substring(s + 1, en); int off = num.indexOf('+'); if (off < 0) { off = num.indexOf('-'); } if (off > 0) { num = num.substring(0, off); } try { long t = Long.parseLong(num.trim()); if (t > max) { max = t; } } catch (Exception ex) {} } } } } if (max > 0L) { ctx['@timestamp'] = Instant.ofEpochMilli(max).toString(); }"
       }
     }
   ],
