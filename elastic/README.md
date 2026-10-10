@@ -25,7 +25,7 @@ elastic/
 │   └── …
 ├── templates/
 │   ├── component/             # component templates: one logs-dxdfir@<lane> model each
-│   └── index/                 # index templates (composed of the above)
+│   └── index/                 # one index template per lane (logs-dxdfir-<lane>) + a logs-dxdfir.* fallback
 └── dashboards/                # Kibana saved objects (*.ndjson), imported on deploy
     └── malcolm/               # a Kibana SPACE: space.json + its own *.ndjson (see dashboards/malcolm/README.md)
 ```
@@ -41,18 +41,27 @@ elastic/
    ECS-projected in `logs-car.*` via `dx byakugan load`), the `_`-prefixed
    staging trees and the lanes' run summaries. Files are identified by
    inode, not by a content fingerprint (two Plaso timelines of different
-   images open with the same event). Zeek's `http.log` alone goes through
-   a second input that nests the record under `zeek_http`: Filebeat writes
-   its own `host.name` over any top-level `host`, and that column is the
-   HTTP Host header.
+   images open with the same event). Zeek's `http.log` and `websocket.log`
+   go through their own inputs that nest the record under `zeek_http` /
+   `zeek_websocket`: Filebeat writes its own `host.name` over any top-level
+   `host`, and that column is the Host header — the zeek pipeline hoists the
+   record back and moves it to `url.domain`.
 2. The record lands in the **`logs-dxdfir.<type>-<namespace>`** data stream.
-   The [index template](templates/index/logs-dxdfir.json) mirrors the
-   built-in `logs-*-*` behaviour (logsdb, ECS dynamic mappings) and composes
-   the decomposed **`logs-dxdfir@*`** components: `@settings` carries
+   Each lane has its **own index template** (`templates/index/logs-dxdfir-<lane>.json`,
+   `priority: 500`, matching `logs-dxdfir.<lane>-*`) that mirrors the built-in
+   `logs-*-*` behaviour (logsdb, ECS dynamic mappings) and composes only the
+   components that lane needs: the base plus `@settings` (which carries
    `index.default_pipeline` → **`logs-dxdfir-router`** and the stack-wide
-   backstops, `@winlog` is the shared Windows Event Log model, and one
-   `@<lane>` model (`@windowlicker`, `@log2timeline`, `@daemonhunter`,
-   `@zeek`, `@detections`, `@hayabusa`) owns that lane's fields.
+   backstops) plus its own `@<lane>` model — and `@winlog`, the shared Windows
+   Event Log model, wherever a lane projects onto `winlog.*` (`log2timeline`
+   and `windowlicker` normalise EVTX onto it, `detections` via Hayabusa).
+   There is no `winlog` stream of its own — it is a shared model, not a lane. A lane's fields are composed **only into its
+   own stream**, so a bare per-protocol name (Zeek's `user`, `tls`, `severity`)
+   never merges into another lane's mapping and collides with that lane's ECS
+   or Suricata objects. The remaining [`logs-dxdfir.json`](templates/index/logs-dxdfir.json)
+   (`priority: 200`, matching `logs-dxdfir.*-*`) is the fallback for the streams
+   without a dedicated template — `anamnesis` and any brand-new
+   `processed/<type>/` evidence — giving them the base plus `@settings` alone.
 3. The [router pipeline](pipelines/logs-dxdfir-router.json) stamps
    `event.ingested`, drops Filebeat's `host.name` (the shipper's container,
    never the evidence host; `agent.*` still names the shipper) and hands the
@@ -107,8 +116,14 @@ elastic/
   record lands first (Zeek's `id` tuple, the SRUM `AppId`), and map a
   free-form or recursive tree `flattened` (Plaso's `values`, Hayabusa's
   `Details`, journald's `Fields`) — it then costs one mapper whatever its
-  keys. A new lane model must also be added to the index template's
-  `composed_of`. Template changes apply to a stream's **next** backing index —
+  keys. A bare name a lane adds must not clash with another lane's — but since
+  each lane's model is composed **only into its own stream** (per-lane index
+  template), a name only has to be unique within its own lane. A new lane needs
+  its own `templates/index/logs-dxdfir-<lane>.json` (copy an existing one;
+  `composed_of` the base + `@settings` + the new `@<lane>`, `priority: 500`,
+  `index_patterns: ["logs-dxdfir.<lane>-*"]`); a lane that just reuses the base
+  (like `anamnesis`) needs none — the `logs-dxdfir.*-*` fallback covers it.
+  Template changes apply to a stream's **next** backing index —
   existing indices keep their mappings. Deploy rolls over every existing
   `logs-dxdfir.*` stream when the component template changed, and once
   when a stream's write index is not yet on the router pipeline, so the

@@ -1,0 +1,40 @@
+{
+  "index_patterns": [
+    "logs-dxdfir.detections-*"
+  ],
+  "composed_of": [
+    "logs@mappings",
+    "logs@settings",
+    "logs@custom",
+    "ecs@mappings",
+    "logs-dxdfir@settings",
+    "logs-dxdfir@detections",
+    "logs-dxdfir@hayabusa",
+    "logs-dxdfir@winlog"
+  ],
+  "priority": 500,
+  "template": {
+    "data_stream_options": {
+      "failure_store": {
+        "enabled": true,
+        "lifecycle": {
+          "enabled": true,
+          "data_retention": "365d"
+        }
+      }
+    }
+  },
+  "data_stream": {
+    "hidden": false,
+    "allow_custom_routing": false
+  },
+  "allow_auto_create": true,
+  "ignore_missing_component_templates": [
+    "logs@custom"
+  ],
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/templates/index/logs-dxdfir-detections.json",
+    "description": "The detections stream (logs-dxdfir.detections-*): the logs-*-* base + logs-dxdfir@settings + the YARA/Suricata fields (@detections, incl. Suricata's flattened stats/metadata), the Hayabusa EVTX-detection model (@hayabusa), and the shared @winlog model because Hayabusa projects onto winlog.computer/channel/event_record_id. Priority 500 \u2014 higher than the logs-dxdfir.*-* fallback (200) \u2014 so this stream composes only this lane's model(s), not every lane's, and bare field names stay contained to the stream that uses them."
+  }
+}

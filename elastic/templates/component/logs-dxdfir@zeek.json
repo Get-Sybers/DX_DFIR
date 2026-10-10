@@ -31,14 +31,217 @@
             },
             "log_source": {
               "type": "keyword"
+            },
+            "mysql_cmd": {
+              "type": "keyword"
+            },
+            "redis_cmd": {
+              "properties": {
+                "name": {
+                  "type": "keyword"
+                },
+                "key": {
+                  "type": "keyword"
+                },
+                "value": {
+                  "type": "keyword",
+                  "ignore_above": 1024
+                }
+              }
             }
           }
         },
-        "stats": {
-          "type": "flattened"
+        "opcode": {
+          "type": "keyword"
         },
-        "metadata": {
-          "type": "flattened"
+        "action": {
+          "type": "keyword"
+        },
+        "application_name": {
+          "type": "keyword"
+        },
+        "arg": {
+          "type": "keyword"
+        },
+        "auth": {
+          "type": "keyword"
+        },
+        "authentication_method": {
+          "type": "keyword"
+        },
+        "client_build": {
+          "type": "keyword"
+        },
+        "client_extensions": {
+          "type": "keyword"
+        },
+        "client_id": {
+          "type": "keyword"
+        },
+        "client_major_version": {
+          "type": "long"
+        },
+        "client_minor_version": {
+          "type": "long"
+        },
+        "command": {
+          "type": "keyword"
+        },
+        "community": {
+          "type": "keyword"
+        },
+        "connect_info": {
+          "type": "keyword"
+        },
+        "content_type": {
+          "type": "keyword"
+        },
+        "cookie": {
+          "type": "keyword"
+        },
+        "database": {
+          "type": "keyword"
+        },
+        "desktop_name": {
+          "type": "keyword"
+        },
+        "domainname": {
+          "type": "keyword"
+        },
+        "encryption_level": {
+          "type": "keyword"
+        },
+        "encryption_method": {
+          "type": "keyword"
+        },
+        "endpoint": {
+          "type": "keyword"
+        },
+        "exception": {
+          "type": "keyword"
+        },
+        "facility": {
+          "type": "keyword"
+        },
+        "fc_reply": {
+          "type": "keyword"
+        },
+        "fc_request": {
+          "type": "keyword"
+        },
+        "from_client": {
+          "type": "boolean"
+        },
+        "frontend": {
+          "type": "keyword"
+        },
+        "hostname": {
+          "type": "keyword"
+        },
+        "keyboard_layout": {
+          "type": "keyword"
+        },
+        "mailfrom": {
+          "type": "keyword"
+        },
+        "named_pipe": {
+          "type": "keyword"
+        },
+        "object": {
+          "type": "keyword"
+        },
+        "operation": {
+          "type": "keyword"
+        },
+        "password": {
+          "type": "keyword"
+        },
+        "path": {
+          "type": "keyword"
+        },
+        "payload": {
+          "type": "keyword"
+        },
+        "payload_len": {
+          "type": "long"
+        },
+        "proto_name": {
+          "type": "keyword"
+        },
+        "proto_version": {
+          "type": "long"
+        },
+        "rcptto": {
+          "type": "keyword"
+        },
+        "renewable": {
+          "type": "boolean"
+        },
+        "reply_code": {
+          "type": "long"
+        },
+        "reply_msg": {
+          "type": "keyword"
+        },
+        "request_path": {
+          "type": "keyword"
+        },
+        "request_type": {
+          "type": "keyword"
+        },
+        "response": {
+          "type": "keyword"
+        },
+        "result": {
+          "type": "keyword"
+        },
+        "result_count": {
+          "type": "long"
+        },
+        "revokereason": {
+          "type": "keyword"
+        },
+        "scope": {
+          "type": "keyword"
+        },
+        "server_extensions": {
+          "type": "keyword"
+        },
+        "server_major_version": {
+          "type": "long"
+        },
+        "server_minor_version": {
+          "type": "long"
+        },
+        "severity": {
+          "type": "keyword"
+        },
+        "share_flag": {
+          "type": "keyword"
+        },
+        "status": {
+          "type": "keyword"
+        },
+        "subject": {
+          "type": "keyword"
+        },
+        "tls": {
+          "type": "boolean"
+        },
+        "topic": {
+          "type": "keyword"
+        },
+        "topics": {
+          "type": "keyword"
+        },
+        "tunnel_type": {
+          "type": "keyword"
+        },
+        "user": {
+          "type": "keyword"
+        },
+        "username": {
+          "type": "keyword"
         }
       }
     }
@@ -46,6 +249,6 @@
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/templates/component/logs-dxdfir@zeek.json",
-    "description": "The zeek lane model: the connection id tuple pinned (orig_h/resp_h as ip, orig_p/resp_p as integer) so its type never depends on which log lands first, uid as keyword, ts as date, and zeek.file_id / zeek.log_source where the native source and file id move to avoid colliding with the ECS source and file objects. stats and metadata (Suricata's counters and event metadata ride the zeek streams) are flattened."
+    "description": "The zeek lane model, composed ONLY into the zeek stream (logs-dxdfir-zeek index template) — so its bare per-protocol field names never reach the winlog/log2timeline/detections streams and collide with their ECS/Suricata objects. The connection id tuple is pinned (orig_h/resp_h as ip, orig_p/resp_p as integer) so its type never depends on which log lands first, uid keyword, ts date, and zeek.file_id / zeek.log_source where the native source and file id move to avoid colliding with the ECS source and file objects. opcode is pinned keyword because DNS emits it numeric while LDAP/IRC emit it as a string and every Zeek protocol shares the zeek stream (a long mapping breaks LDAP's opcode:bind* prefix query and would reject string-opcode records to the failure store). The flat keyword/long/boolean fields below are the native Zeek per-protocol columns the Malcolm dashboards aggregate on (NTLM hostname/username, FTP user, SMTP tls/mailfrom, ...): pre-mapped so a panel for a protocol not yet in the captures shows 'No results' instead of a red field-not-found error, and fills in when that traffic is ingested. Within the zeek stream two names still clash across logs and are moved in the pipeline: cmd (a {name,key,value} record in redis, a string in mysql) to zeek.redis_cmd / zeek.mysql_cmd, and a Host-header host string to url.domain rather than the ECS host object (following cisagov/Malcolm, which namespaces every Zeek field under zeek.<protocol>). Suricata's stats/metadata moved to logs-dxdfir@detections."
   }
 }
