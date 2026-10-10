@@ -1,5 +1,5 @@
 {
-  "description": "Derived extractions for Microsoft Defender (winlog.channel == 'Microsoft-Windows-Windows Defender/Operational'), projected to ECS. Detection and remediation events (1006/1007/1116/1117/1118/1119) classify as malware; the Defender EventData names carry spaces, so they are read as winlog.data['Threat Name'] etc. Projects rule.name (the threat/signature), file.path (the detected object), process.executable, and user from 'Detection User'. The native winlog.data.* stays in place.",
+  "description": "Derived extractions for Microsoft Defender (winlog.channel == 'Microsoft-Windows-Windows Defender/Operational'), projected to ECS. Detection and remediation events (1006/1007/1015/1116/1117/1118/1119) classify as malware; the Defender EventData names carry spaces, so they are read as winlog.data['Threat Name'] etc. Projects rule.name (the threat/signature), file.path (the detected object), process.executable, and user from 'Detection User'. The native winlog.data.* stays in place.",
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/pipelines/logs-dxdfir-winlog-defender.json"

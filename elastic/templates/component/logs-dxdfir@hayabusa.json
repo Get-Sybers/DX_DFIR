@@ -13,7 +13,7 @@
   },
   "_meta": {
     "managed_by": "dxdfir_stack",
-    "source": "elastic/templates/component/logs-dxdfir@hayabussa.json",
+    "source": "elastic/templates/component/logs-dxdfir@hayabusa.json",
     "description": "The hayabusa model (the EVTX detection engine on the detections lane): its Details and ExtraFieldInfo trees vary per rule, so both are flattened — one mapper each, whatever keys a rule emits. The rule severity rides the cross-lane Level backstop in logs-dxdfir@settings; the underlying Windows event that a hit was raised from is projected onto the shared logs-dxdfir@winlog model."
   }
 }

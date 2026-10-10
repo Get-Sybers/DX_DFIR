@@ -188,9 +188,9 @@
   loop_control:
     label: "{{ item['item']['name'] }}"
   vars:
-    # the pipeline the tree binds to the streams (templates/component/logs-dxdfir@custom.json)
+    # the pipeline the tree binds to the streams (templates/component/logs-dxdfir@settings.json)
     _router: >-
-      {{ (lookup('ansible.builtin.file', dxdfir_stack_config_dir ~ '/templates/component/logs-dxdfir@custom.json')
+      {{ (lookup('ansible.builtin.file', dxdfir_stack_config_dir ~ '/templates/component/logs-dxdfir@settings.json')
           | from_json)['template']['settings']['index']['default_pipeline'] }}
     _index: "{{ (item['item']['indices'] | last)['index_name'] }}"
     _bound: >-

@@ -52,7 +52,7 @@ elastic/
    `index.default_pipeline` → **`logs-dxdfir-router`** and the stack-wide
    backstops, `@winlog` is the shared Windows Event Log model, and one
    `@<lane>` model (`@windowlicker`, `@log2timeline`, `@daemonhunter`,
-   `@zeek`, `@detections`, `@hayabussa`) owns that lane's fields.
+   `@zeek`, `@detections`, `@hayabusa`) owns that lane's fields.
 3. The [router pipeline](pipelines/logs-dxdfir-router.json) stamps
    `event.ingested`, drops Filebeat's `host.name` (the shipper's container,
    never the evidence host; `agent.*` still names the shipper) and hands the
