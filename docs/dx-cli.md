@@ -10,8 +10,8 @@ case-a`, `list evidence`. The evidence verbs also take a bare NAME in place of t
 tool namespace whose subcommands are its own verbs (`byakugan build`, `byakugan
 export-stix`).
 
-One command sits outside `dx`: the [setup script](install.md)
-for the [stack](../architecture/the-stack.md) (which the `dx … stack` verbs also drive).
+One command sits outside `dx`: the [setup script](scripts/Setup_Environment.md)
+for the [stack](architecture/the-stack.md) (which the `dx … stack` verbs also drive).
 
 ## Setup
 
@@ -34,11 +34,11 @@ staged raw evidence as a whole.
 | `dx sort [evidence] [NAME] [--dry-run]` | Magic-byte-sort the dropzone into a collection's lane subdirs (content beats extension); no NAME means the active one. |
 | `dx select [evidence] NAME` / `dx unselect [evidence]` | Set / clear the active collection (later commands scope to it). |
 | `dx unregister [evidence] NAME` | Drop the registry row + marker (evidence and log preserved). |
-| `dx process [evidence] [SCOPE] [TOOL]` | Process evidence with a [tool](../architecture/processing-lanes.md). `TOOL` ∈ `zeek·gowindowlicker·godaemonhunter·anamnesis·plaso·signatures·all` (aliases: `evtx`/`windowlicker`/`lick` → gowindowlicker, `daemonhunter`/`hunt` → godaemonhunter, `memory` → anamnesis, `log2timeline` → plaso, `godfir-toolz` → both host lanes). `SCOPE` is a collection name, or a raw-evidence type (`disk_images·filesystem·logs·memory·mobile·other_raw_data·pcaps·VM_files`) which scopes to the tools that read it; positionals are order-independent. Output lands in `processed/<tool>/[<collection>/]<host>/…`. |
+| `dx process [evidence] [SCOPE] [TOOL]` | Process evidence with a [tool](architecture/processing-lanes.md). `TOOL` ∈ `zeek·gowindowlicker·godaemonhunter·anamnesis·plaso·signatures·all` (aliases: `evtx`/`windowlicker`/`lick` → gowindowlicker, `daemonhunter`/`hunt` → godaemonhunter, `memory` → anamnesis, `log2timeline` → plaso, `godfir-toolz` → both host lanes). `SCOPE` is a collection name, or a raw-evidence type (`disk_images·filesystem·logs·memory·mobile·other_raw_data·pcaps·VM_files`) which scopes to the tools that read it; positionals are order-independent. Output lands in `processed/<tool>/[<collection>/]<host>/…`. |
 | `dx process … --force` | Reprocess inputs that already have output (default is idempotent). |
 | `dx process … -e KEY=VALUE` | Pass an Ansible extra-var (repeatable). |
 
-See the [collection concept](../architecture/processing-lanes.md#collections).
+See the [collection concept](architecture/processing-lanes.md#collections).
 
 ## Byakugan (CAR normalisation + CTI exchange)
 
@@ -48,8 +48,8 @@ exchange, both run inside the hardened `get-sybers/byakugan` image.
 | Command | What it does |
 |---|---|
 | `dx byakugan build [DIR] [--out DIR] [--rebuild] [--derive] [--stix]` | Build per-source CAR stores from the processed tree (`byakugan build`). `--rebuild` re-derives existing stores; `--derive` adds the derived relationship pass (`car_inferred.jsonl`); `--stix` the STIX 2.1 bundle. |
-| `dx byakugan verify [--car-dir DIR]` | The [CAR correctness gate](../architecture/car-pipeline.md#verify). Run before trusting the CAR. |
-| `dx byakugan load [--namespace NS] [--no-setup] [--force] [--kibana]` | Bulk-load the materialised CAR into the [analysis stack](../architecture/the-stack.md)'s `logs-car.*` data streams (`byakugan load`). `--setup` (default) applies the index/component templates first; `--no-setup` for routine repeat loads; `--kibana` also imports the rendered Kibana saved objects. |
+| `dx byakugan verify [--car-dir DIR]` | The [CAR correctness gate](architecture/car-pipeline.md#verify). Run before trusting the CAR. |
+| `dx byakugan load [--namespace NS] [--no-setup] [--force] [--kibana]` | Bulk-load the materialised CAR into the [analysis stack](architecture/the-stack.md)'s `logs-car.*` data streams (`byakugan load`). `--setup` (default) applies the index/component templates first; `--no-setup` for routine repeat loads; `--kibana` also imports the rendered Kibana saved objects. |
 | `dx byakugan export-timeline CAR_DIR [--out-dir DIR] [--force] [--after ISO] [--before ISO]` | Build one time-ordered `timeline.jsonl` across a source or a whole tree, beside the stores unless `--out-dir` (alias: `timeline`). |
 | `dx byakugan export-stix [HITS_DIR] [--bundles-dir DIR] [--case ID] [--push --network NET]` | Turn detection hits into a validated STIX 2.1 bundle (`dxdfir_exchange` role → `byakugan stix-export`; alias `export`). Writes `<out>/bundle.json` under `data_store/processed/exchange`. |
 | `dx byakugan behaviour [CAR_DIR] --case ID [--detections-dir DIR]` | Join the detection lanes to the CAR entities they touch as STIX behaviour sightings (`byakugan stix-behaviour`, fully offline). Writes `<out>/behaviour-sightings.json`. |
@@ -60,13 +60,13 @@ exchange, both run inside the hardened `get-sybers/byakugan` image.
 
 | Command | What it does |
 |---|---|
-| `dx deploy stack` | Bring up and verify the analysis stack from inventory data (installs docker itself when missing), including the Elastic config tree: the ingest pipelines, the `logs-dxdfir.*` templates and the Kibana saved objects, among them the `malcolm` space ([the dashboards](../architecture/the-stack.md#the-dashboards)). The service containers read the node TLS keys as gid 0, so the keys must be `root:root 0640`; deploy holds that automatically: when not already root it escalates only the privileged tasks (TLS key lifecycle + docker setup) and prompts once for the sudo password, running the rest as you. No prompt when run as root (`sudo dx deploy stack`). |
+| `dx deploy stack` | Bring up and verify the analysis stack from inventory data (installs docker itself when missing), including the Elastic config tree: the ingest pipelines, the `logs-dxdfir.*` templates and the Kibana saved objects, among them the `malcolm` space ([the dashboards](architecture/the-stack.md#the-dashboards)). The service containers read the node TLS keys as gid 0, so the keys must be `root:root 0640`; deploy holds that automatically: when not already root it escalates only the privileged tasks (TLS key lifecycle + docker setup) and prompts once for the sudo password, running the rest as you. No prompt when run as root (`sudo dx deploy stack`). |
 | `dx start stack` / `stop stack` / `status stack` | Start / stop / show the stack's containers. |
 | `dx restart stack` | Stop the containers, then start them again (no data removed). |
 | `dx update stack` | Re-converge the stack onto the current inventory/images (in-place update). Runs the deploy play, so it escalates automatically exactly as `deploy stack` does (a sudo prompt when not already root). |
 
 The destructive teardown is `dx purge stack` (see [Housekeeping](#housekeeping)).
-See [the stack](../architecture/the-stack.md).
+See [the stack](architecture/the-stack.md).
 
 ## Housekeeping
 
@@ -78,12 +78,12 @@ See [the stack](../architecture/the-stack.md).
 | `dx purge evidence [--dry-run] [-y]` | Wipe `data_store/processed/` (all lanes + CAR). |
 | `dx purge car [--dry-run] [-y]` | Wipe the materialised CAR tree only. |
 | `dx purge images [--dangling] [--all-dxdfir] [-y]` | Remove the hardened `get-sybers/*` tool images. |
-| `dx validate` | Run the repository [check harness](../reference/build-and-test.md) (`.github/tests/run-checks.sh`). |
+| `dx validate` | Run the repository [check harness](reference/build-and-test.md) (`.github/tests/run-checks.sh`). |
 
 ## The command itself
 
 | Command | What it does |
 |---|---|
-| `dx` | No subcommand: the [landing readout](the-interface.md), showing environment readiness, tracked collections, staged evidence. |
+| `dx` | No subcommand: the landing readout, showing environment readiness, tracked collections, staged evidence. |
 | `dx --repo-root PATH` | Point at a DX_DFIR checkout explicitly (else auto-detected). |
 | `dx --version` · `--help` | Version · help (at every level). |

@@ -14,7 +14,7 @@ The grammar is **verb first** — `<verb> <noun>` (`deploy stack`, `register
 evidence NAME`, `list evidence`). The evidence verbs also accept a bare NAME in
 place of the noun (`select NAME`). `byakugan` is the one noun-first exception: a
 tool namespace whose subcommands are its own verbs (`byakugan build`, `byakugan
-export-stix`). See [the command reference](../docs/getting-started/dx-cli.md).
+export-stix`). See [the command reference](../docs/dx-cli.md).
 
 The binary never re-implements processing. It shells out to what already exists:
 
@@ -93,8 +93,7 @@ Environment / flags:
 - `$DXDFIR_VENV` — the ansible venv to use (else `<repo>/.venv`, then PATH).
 
 A bare `dx` prints a plain landing readout (environment readiness + tracked
-collections + staged evidence) on stdout — see
-[the interface](../docs/getting-started/the-interface.md).
+collections + staged evidence) on stdout.
 
 The external Byakugan CAR engine is no longer a host checkout: it is cloned +
 built into the hardened `get-sybers/byakugan` image at its Dockerfile's
