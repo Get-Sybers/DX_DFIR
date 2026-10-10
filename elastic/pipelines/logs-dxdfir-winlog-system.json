@@ -18,7 +18,7 @@
         "description": "project SCM service events onto ECS service.name / process.executable",
         "lang": "painless",
         "if": "ctx.winlog?.data instanceof Map && ctx.winlog?.provider_name == 'Service Control Manager'",
-        "source": "def d = ctx.winlog.data; def id = ctx.winlog?.event_id; Closure real = { v -> v instanceof String && v.length() > 0 && v != '-' }; Closure put = { path, v -> if (real(v)) { def cur = ctx; for (int i = 0; i < path.size() - 1; i++) { if (!(cur[path[i]] instanceof Map)) { cur[path[i]] = [:]; } cur = cur[path[i]]; } if (cur[path[path.size() - 1]] == null) { cur[path[path.size() - 1]] = v; } } }; if (id == '7045') { put(['service','name'], d.ServiceName); put(['process','executable'], d.ImagePath); put(['user','name'], d.AccountName); } else if (id == '7040') { put(['service','name'], d.param1); } else if (id == '7036' || id == '7034' || id == '7035' || id == '7031') { put(['service','name'], d.param1); }"
+        "source": "boolean real(def v) { return v instanceof String && v.length() > 0 && v != '-'; } void put(def root, List path, def v) { if (!real(v)) { return; } def cur = root; for (int i = 0; i < path.size() - 1; i++) { if (!(cur[path[i]] instanceof Map)) { cur[path[i]] = [:]; } cur = cur[path[i]]; } if (cur[path[path.size() - 1]] == null) { cur[path[path.size() - 1]] = v; } } def d = ctx.winlog.data; def id = ctx.winlog?.event_id; if (id == '7045') { put(ctx, ['service','name'], d.ServiceName); put(ctx, ['process','executable'], d.ImagePath); put(ctx, ['user','name'], d.AccountName); } else if (id == '7040') { put(ctx, ['service','name'], d.param1); } else if (id == '7036' || id == '7034' || id == '7035' || id == '7031') { put(ctx, ['service','name'], d.param1); }"
       }
     }
   ],
