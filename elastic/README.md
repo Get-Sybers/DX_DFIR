@@ -148,4 +148,9 @@ Pipeline and template **names are the filenames** (minus `.json`); keep the
 `logs-dxdfir-` / `logs-dxdfir@` prefixes so the stack's objects stay
 recognisable and never collide with built-ins. `logs-car.*` is deliberately
 not configured here: that family is the CAR→ECS projection, owned by the
-Byakugan engine's contract (`dx byakugan load`).
+Byakugan engine's contract — its templates and its own **`byakugan` Kibana
+space** (the `logs-car.*` data view, the CAR timeline dashboard) come from
+[the engine's `elastic/` tree](https://github.com/Get-Sybers/Byakugan/blob/main/elastic/README.md),
+baked into the `get-sybers/byakugan` image and installed into this stack by
+`dx byakugan load` (`--setup`, plus `--kibana` for the space). See
+[spaces.md](spaces.md).

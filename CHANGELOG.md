@@ -7,6 +7,25 @@ is `0`, anything may change without notice.
 
 ## [Unreleased]
 
+### Changed
+- **The Byakugan Kibana space arrives with `dx byakugan load --kibana`.** The
+  engine's Elastic assets are now one config tree in the Byakugan repository
+  (`elastic/`: `templates/component` `logs-car@<model>`, `templates/index`
+  `logs-car-<stream>`, `dashboards/byakugan/` — the same shape as this repo's
+  own `elastic/`), rendered from its `model/projection/` CAR→ECS contract and
+  baked into the `get-sybers/byakugan` image. A `--setup` load PUTs those
+  templates (component templates renamed from `logs-car-<name>` to
+  `logs-car@<name>`; index templates and the `logs-car@custom` slot are
+  unchanged, so an existing stack keeps working and the old components just
+  go unused), and `--kibana` creates the **`byakugan` space** (steel blue,
+  `/s/byakugan`) and imports the `logs-car.*` data view and the CAR timeline
+  dashboard into it — previously the saved objects landed in the default
+  space. Nothing in this repo's tree changes for `logs-car.*`; `dx byakugan
+  load --kibana` help, `dxdfir_car_load`'s README/argument spec,
+  `elastic/README.md`, `elastic/spaces.md` and `docs/architecture/the-stack.md`
+  say where the family comes from. Takes effect once GoDFIR-toolz's image
+  pins the engine at that layout (its `BYAKUGAN_REF`).
+
 ### Added
 - **The Elastic config tree: `elastic/` at the repo root.** What the analysis
   stack ingests and shows is now configuration as data, in one

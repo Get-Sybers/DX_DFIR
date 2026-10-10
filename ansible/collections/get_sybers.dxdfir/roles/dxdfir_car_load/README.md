@@ -52,3 +52,16 @@ them up):
 manifest/report already show the run complete (`BYAKUGAN_LOAD_FORCE`). The
 namespace convention matches the raw streams: one namespace per case
 (`dxdfir_elastic_namespace` for `logs-dxdfir.*`).
+
+## The Byakugan Kibana space
+
+`dxdfir_car_load_kibana_import` (`dx byakugan load --kibana`, setup runs
+only) sends `BYAKUGAN_LOAD_KIBANA_URL`, and the engine creates its own
+**`byakugan` Kibana space** (steel blue, `/s/byakugan`) and imports the
+`logs-car.*` data view and the CAR timeline dashboard into it. Both the
+templates the setup run PUTs and the space come from the engine's `elastic/`
+config tree — rendered in the Byakugan repository from its CAR→ECS contract
+and baked into the image at `/opt/byakugan/elastic/` — never from this
+repo's `elastic/`, which configures only `logs-dxdfir.*` and the `malcolm`
+space. The engine's run is idempotent: an unchanged template or space is
+left alone, the saved objects re-import with overwrite.
