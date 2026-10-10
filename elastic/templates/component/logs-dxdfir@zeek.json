@@ -1,0 +1,51 @@
+{
+  "template": {
+    "mappings": {
+      "properties": {
+        "id": {
+          "properties": {
+            "orig_h": {
+              "type": "ip"
+            },
+            "orig_p": {
+              "type": "integer"
+            },
+            "resp_h": {
+              "type": "ip"
+            },
+            "resp_p": {
+              "type": "integer"
+            }
+          }
+        },
+        "uid": {
+          "type": "keyword"
+        },
+        "ts": {
+          "type": "date"
+        },
+        "zeek": {
+          "properties": {
+            "file_id": {
+              "type": "keyword"
+            },
+            "log_source": {
+              "type": "keyword"
+            }
+          }
+        },
+        "stats": {
+          "type": "flattened"
+        },
+        "metadata": {
+          "type": "flattened"
+        }
+      }
+    }
+  },
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/templates/component/logs-dxdfir@zeek.json",
+    "description": "The zeek lane model: the connection id tuple pinned (orig_h/resp_h as ip, orig_p/resp_p as integer) so its type never depends on which log lands first, uid as keyword, ts as date, and zeek.file_id / zeek.log_source where the native source and file id move to avoid colliding with the ECS source and file objects. stats and metadata (Suricata's counters and event metadata ride the zeek streams) are flattened."
+  }
+}

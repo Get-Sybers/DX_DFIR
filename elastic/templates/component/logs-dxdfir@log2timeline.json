@@ -1,0 +1,22 @@
+{
+  "template": {
+    "mappings": {
+      "properties": {
+        "pathspec": {
+          "type": "flattened"
+        },
+        "date_time": {
+          "type": "flattened"
+        },
+        "values": {
+          "type": "flattened"
+        }
+      }
+    }
+  },
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/templates/component/logs-dxdfir@log2timeline.json",
+    "description": "The log2timeline (Plaso) lane model: the recursive or free-form trees that would otherwise explode the field count are mapped flattened so each costs one mapper whatever its keys — pathspec (the nested storage-media path), date_time (Plaso's DateTimeValues object) and values (a winreg value whose data is a string in one record and an object in the next). Plaso's windows:evtx:record data_type is normalised onto the shared logs-dxdfir@winlog model by the winevtx submodule, so its System and EventData fields do not live here."
+  }
+}

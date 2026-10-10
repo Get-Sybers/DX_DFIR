@@ -1,0 +1,634 @@
+{"signature_id": "512", "signature": "Windows NT is starting up"}
+{"signature_id": "513", "signature": "Windows is shutting down"}
+{"signature_id": "514", "signature": "An authentication package has been loaded by the Local Security Authority"}
+{"signature_id": "515", "signature": "A trusted logon process has registered with the Local Security Authority"}
+{"signature_id": "516", "signature": "Internal resources allocated for the queuing of audit messages have been exhausted, leading to the loss of some audits"}
+{"signature_id": "517", "signature": "The audit log was cleared"}
+{"signature_id": "518", "signature": "A notification package has been loaded by the Security Account Manager"}
+{"signature_id": "519", "signature": "A process is using an invalid local procedure call (LPC) port"}
+{"signature_id": "520", "signature": "The system time was changed"}
+{"signature_id": "521", "signature": "Unable to log events to security log"}
+{"signature_id": "528", "signature": "Successful Logon"}
+{"signature_id": "529", "signature": "Unknown user name or bad password"}
+{"signature_id": "530", "signature": "Account logon time restriction violation"}
+{"signature_id": "531", "signature": "Account currently disabled"}
+{"signature_id": "532", "signature": "The specified user account has expired"}
+{"signature_id": "533", "signature": "User not allowed to logon at this computer"}
+{"signature_id": "534", "signature": "The user has not been granted the requested logon type at this machine"}
+{"signature_id": "535", "signature": "The specified account's password has expired"}
+{"signature_id": "536", "signature": "The NetLogon component is not active"}
+{"signature_id": "537", "signature": "The logon attempt failed for other reasons."}
+{"signature_id": "538", "signature": "User Logoff"}
+{"signature_id": "539", "signature": "Logon Failure - Account locked out"}
+{"signature_id": "540", "signature": "Successful Network Logon"}
+{"signature_id": "550", "signature": "Possible denial-of-service (DoS) attack"}
+{"signature_id": "551", "signature": "User initiated logoff"}
+{"signature_id": "552", "signature": "Logon attempt using explicit credentials"}
+{"signature_id": "560", "signature": "Object Open"}
+{"signature_id": "561", "signature": "Handle Allocated"}
+{"signature_id": "562", "signature": "Handle Closed"}
+{"signature_id": "563", "signature": "Object Open for Delete"}
+{"signature_id": "564", "signature": "Object Deleted"}
+{"signature_id": "565", "signature": "Object Open (Active Directory)"}
+{"signature_id": "566", "signature": "Object Operation (W3 Active Directory)"}
+{"signature_id": "567", "signature": "Object Access Attempt"}
+{"signature_id": "576", "signature": "Special privileges assigned to new logon"}
+{"signature_id": "577", "signature": "Privileged Service Called"}
+{"signature_id": "578", "signature": "Privileged object operation"}
+{"signature_id": "592", "signature": "A new process has been created"}
+{"signature_id": "593", "signature": "A process has exited"}
+{"signature_id": "594", "signature": "A handle to an object has been duplicated"}
+{"signature_id": "595", "signature": "Indirect access to an object has been obtained"}
+{"signature_id": "596", "signature": "Backup of data protection master key"}
+{"signature_id": "600", "signature": "A process was assigned a primary token"}
+{"signature_id": "601", "signature": "Attempt to install service"}
+{"signature_id": "602", "signature": "Scheduled Task created"}
+{"signature_id": "608", "signature": "User Right Assigned"}
+{"signature_id": "609", "signature": "User Right Removed"}
+{"signature_id": "610", "signature": "New Trusted Domain"}
+{"signature_id": "611", "signature": "Removing Trusted Domain"}
+{"signature_id": "612", "signature": "Audit Policy Change"}
+{"signature_id": "613", "signature": "IPSec policy agent started"}
+{"signature_id": "614", "signature": "IPSec policy agent disabled"}
+{"signature_id": "615", "signature": "IPSEC PolicyAgent Service"}
+{"signature_id": "616", "signature": "IPSec policy agent encountered a potentially serious failure."}
+{"signature_id": "617", "signature": "Kerberos Policy Changed"}
+{"signature_id": "618", "signature": "Encrypted Data Recovery Policy Changed"}
+{"signature_id": "619", "signature": "Quality of Service Policy Changed"}
+{"signature_id": "620", "signature": "Trusted Domain Information Modified"}
+{"signature_id": "621", "signature": "System Security Access Granted"}
+{"signature_id": "622", "signature": "System Security Access Removed"}
+{"signature_id": "623", "signature": "Per User Audit Policy was refreshed"}
+{"signature_id": "624", "signature": "User Account Created", "action": "created", "category_string": "Account Management"}
+{"signature_id": "625", "signature": "User Account Type Changed"}
+{"signature_id": "626", "signature": "User Account Enabled", "category_string": "Account Management"}
+{"signature_id": "627", "signature": "Change Password Attempt", "category_string": "Account Management"}
+{"signature_id": "628", "signature": "User Account password set", "action": "modified", "category_string": "Account Management"}
+{"signature_id": "629", "signature": "User Account Disabled", "category_string": "Account Management"}
+{"signature_id": "630", "signature": "User Account Deleted", "action": "deleted", "category_string": "Account Management"}
+{"signature_id": "631", "signature": "Security Enabled Global Group Created", "category_string": "Account Management"}
+{"signature_id": "632", "signature": "Security Enabled Global Group Member Added", "category_string": "Account Management"}
+{"signature_id": "633", "signature": "Security Enabled Global Group Member Removed", "category_string": "Account Management"}
+{"signature_id": "634", "signature": "Security Enabled Global Group Deleted", "category_string": "Account Management"}
+{"signature_id": "635", "signature": "Security Enabled Local Group Created", "category_string": "Account Management"}
+{"signature_id": "636", "signature": "Security Enabled Local Group Member Added", "category_string": "Account Management"}
+{"signature_id": "637", "signature": "Security Enabled Local Group Member Removed", "category_string": "Account Management"}
+{"signature_id": "638", "signature": "Security Enabled Local Group Deleted", "category_string": "Account Management"}
+{"signature_id": "639", "signature": "Security Enabled Local Group Changed", "category_string": "Account Management"}
+{"signature_id": "640", "signature": "General Account Database Change", "category_string": "Account Management"}
+{"signature_id": "641", "signature": "Security Enabled Global Group Changed", "category_string": "Account Management"}
+{"signature_id": "642", "signature": "User Account Changed", "action": "modified", "category_string": "Account Management"}
+{"signature_id": "643", "signature": "Domain Policy Changed", "category_string": "Account Management"}
+{"signature_id": "644", "signature": "User Account Locked Out", "action": "modified", "result": "lockout", "category_string": "Account Management"}
+{"signature_id": "645", "signature": "Computer Account Created", "category_string": "Account Management"}
+{"signature_id": "646", "signature": "Computer Account Changed", "category_string": "Account Management"}
+{"signature_id": "647", "signature": "Computer Account Deleted", "category_string": "Account Management"}
+{"signature_id": "648", "signature": "Security Disabled Local Group Created", "category_string": "Account Management"}
+{"signature_id": "649", "signature": "Security Disabled Local Group Changed", "category_string": "Account Management"}
+{"signature_id": "650", "signature": "Security Disabled Local Group Member Added", "category_string": "Account Management"}
+{"signature_id": "651", "signature": "Security Disabled Local Group Member Removed", "category_string": "Account Management"}
+{"signature_id": "652", "signature": "Security Disabled Local Group Deleted", "category_string": "Account Management"}
+{"signature_id": "653", "signature": "Security Disabled Global Group Created", "category_string": "Account Management"}
+{"signature_id": "654", "signature": "Security Disabled Global Group Changed", "category_string": "Account Management"}
+{"signature_id": "655", "signature": "Security Disabled Global Group Member Added", "category_string": "Account Management"}
+{"signature_id": "656", "signature": "Security Disabled Global Group Member Removed", "category_string": "Account Management"}
+{"signature_id": "657", "signature": "Security Disabled Global Group Deleted", "category_string": "Account Management"}
+{"signature_id": "658", "signature": "Security Enabled Universal Group Created", "category_string": "Account Management"}
+{"signature_id": "659", "signature": "Security Enabled Universal Group Changed", "category_string": "Account Management"}
+{"signature_id": "660", "signature": "Security Enabled Universal Group Member Added", "category_string": "Account Management"}
+{"signature_id": "661", "signature": "Security Enabled Universal Group Member Removed", "category_string": "Account Management"}
+{"signature_id": "662", "signature": "Security Enabled Universal Group Deleted", "category_string": "Account Management"}
+{"signature_id": "663", "signature": "Security Disabled Universal Group Created", "category_string": "Account Management"}
+{"signature_id": "664", "signature": "Security Disabled Universal Group Changed", "category_string": "Account Management"}
+{"signature_id": "665", "signature": "Security Disabled Universal Group Member Added", "category_string": "Account Management"}
+{"signature_id": "666", "signature": "Security Disabled Universal Group Member Removed", "category_string": "Account Management"}
+{"signature_id": "667", "signature": "Security Disabled Universal Group Deleted", "category_string": "Account Management"}
+{"signature_id": "668", "signature": "Group Type Changed", "category_string": "Account Management"}
+{"signature_id": "669", "signature": "Add SID History", "category_string": "Account Management"}
+{"signature_id": "670", "signature": "Add SID History", "category_string": "Account Management"}
+{"signature_id": "671", "signature": "User Account Unlocked", "category_string": "Account Management"}
+{"signature_id": "672", "signature": "Authentication Ticket Granted"}
+{"signature_id": "673", "signature": "Service Ticket Granted"}
+{"signature_id": "674", "signature": "Ticket Granted Renewed"}
+{"signature_id": "675", "signature": "Pre-authentication failed"}
+{"signature_id": "676", "signature": "Authentication Ticket Request Failed"}
+{"signature_id": "677", "signature": "Service Ticket Request Failed"}
+{"signature_id": "678", "signature": "Account Mapped for Logon by"}
+{"signature_id": "679", "signature": "The name: %2 could not be mapped for logon by: %1"}
+{"signature_id": "680", "signature": "Account Used for Logon by"}
+{"signature_id": "681", "signature": "The logon to account: %2 by: %1 from workstation: %3 failed."}
+{"signature_id": "682", "signature": "Session reconnected to winstation"}
+{"signature_id": "683", "signature": "Session disconnected from winstation"}
+{"signature_id": "684", "signature": "Set ACLs of members in administrators groups", "category_string": "Account Management"}
+{"signature_id": "685", "signature": "Account Name Changed", "category_string": "Account Management"}
+{"signature_id": "686", "signature": "Password of the following user accessed", "category_string": "Account Management"}
+{"signature_id": "687", "signature": "Basic Application Group Created", "category_string": "Account Management"}
+{"signature_id": "688", "signature": "Basic Application Group Changed", "category_string": "Account Management"}
+{"signature_id": "689", "signature": "Basic Application Group Member Added", "category_string": "Account Management"}
+{"signature_id": "690", "signature": "Basic Application Group Member Removed", "category_string": "Account Management"}
+{"signature_id": "691", "signature": "Basic Application Group Non-Member Added", "category_string": "Account Management"}
+{"signature_id": "692", "signature": "Basic Application Group Non-Member Removed", "category_string": "Account Management"}
+{"signature_id": "693", "signature": "Basic Application Group Deleted", "category_string": "Account Management"}
+{"signature_id": "694", "signature": "LDAP Query Group Created", "category_string": "Account Management"}
+{"signature_id": "695", "signature": "LDAP Query Group Changed", "category_string": "Account Management"}
+{"signature_id": "696", "signature": "LDAP Query Group Deleted", "category_string": "Account Management"}
+{"signature_id": "697", "signature": "Password Policy Checking API is called", "category_string": "API Calls"}
+{"signature_id": "772", "signature": "The certificate manager denied a pending certificate request."}
+{"signature_id": "773", "signature": "Certificate Services received a resubmitted certificate request."}
+{"signature_id": "774", "signature": "Certificate Services revoked a certificate."}
+{"signature_id": "775", "signature": "Certificate Services received a request to publish the certificate revocation list (CRL)."}
+{"signature_id": "776", "signature": "Certificate Services published the certificate revocation list (CRL)."}
+{"signature_id": "777", "signature": "A certificate request extension changed."}
+{"signature_id": "778", "signature": "One or more certificate request attributes changed."}
+{"signature_id": "779", "signature": "Certificate Services received a request to shut down."}
+{"signature_id": "780", "signature": "Certificate Services backup started."}
+{"signature_id": "781", "signature": "Certificate Services backup completed."}
+{"signature_id": "782", "signature": "Certificate Services restore started."}
+{"signature_id": "783", "signature": "Certificate Services restore completed."}
+{"signature_id": "784", "signature": "Certificate Services started."}
+{"signature_id": "785", "signature": "Certificate Services stopped."}
+{"signature_id": "786", "signature": "The security permissions for Certificate Services changed."}
+{"signature_id": "787", "signature": "Certificate Services retrieved an archived key."}
+{"signature_id": "788", "signature": "Certificate Services imported a certificate into its database."}
+{"signature_id": "789", "signature": "The audit filter for Certificate Services changed."}
+{"signature_id": "790", "signature": "Certificate Services received a certificate request."}
+{"signature_id": "791", "signature": "Certificate Services approved a certificate request and issued a certificate."}
+{"signature_id": "792", "signature": "Certificate Services denied a certificate request."}
+{"signature_id": "793", "signature": "Certificate Services set the status of a certificate request to pending."}
+{"signature_id": "794", "signature": "The certificate manager settings for Certificate Services changed."}
+{"signature_id": "795", "signature": "A configuration entry changed in Certificate Services."}
+{"signature_id": "796", "signature": "A property of Certificate Services changed."}
+{"signature_id": "797", "signature": "Certificate Services archived a key."}
+{"signature_id": "798", "signature": "Certificate Services imported and archived a key."}
+{"signature_id": "799", "signature": "Certificate Services published the CA certificate to Active Directory Domain Services."}
+{"signature_id": "800", "signature": "Print job has entered the spooling process."}
+{"signature_id": "801", "signature": "A print job has started the printing process."}
+{"signature_id": "802", "signature": "Certificate Services loaded a template."}
+{"signature_id": "806", "signature": "Per User Audit Policy was refreshed"}
+{"signature_id": "807", "signature": "Per user auditing policy set for user"}
+{"signature_id": "808", "signature": "A security event source has attempted to register"}
+{"signature_id": "809", "signature": "A security event source has attempted to unregister"}
+{"signature_id": "848", "signature": "The following policy was active when the Windows Firewall started"}
+{"signature_id": "849", "signature": "An application was listed as an exception when the Windows Firewall started"}
+{"signature_id": "850", "signature": "A port was listed as an exception when the Windows Firewall started"}
+{"signature_id": "851", "signature": "A change has been made to the Windows Firewall application exception list"}
+{"signature_id": "852", "signature": "A change has been made to the Windows Firewall port exception list"}
+{"signature_id": "853", "signature": "The Windows Firewall operational mode has changed"}
+{"signature_id": "854", "signature": "The Windows Firewall logging settings have changed"}
+{"signature_id": "855", "signature": "A Windows Firewall ICMP setting has changed"}
+{"signature_id": "856", "signature": "The Windows Firewall setting to allow unicast responses to multicast/broadcast traffic has changed"}
+{"signature_id": "858", "signature": "Windows Firewall group policy settings have been applied"}
+{"signature_id": "859", "signature": "The Windows Firewall group policy settings have been removed"}
+{"signature_id": "860", "signature": "The Windows Firewall has switched the active policy profile"}
+{"signature_id": "861", "signature": "The Windows Firewall has detected an application listening for incoming traffic"}
+{"signature_id": "1100", "signature": "The event logging service has shut down"}
+{"signature_id": "1101", "signature": "Audit events have been dropped by the transport."}
+{"signature_id": "1102", "signature": "The audit log was cleared"}
+{"signature_id": "1104", "signature": "The security Log is now full"}
+{"signature_id": "1105", "signature": "Event log automatic backup"}
+{"signature_id": "1108", "signature": "The event logging service encountered an error"}
+{"signature_id": "4500", "signature": "Metabase Add Key"}
+{"signature_id": "4501", "signature": "Metabase Delete Key"}
+{"signature_id": "4502", "signature": "Metabase Delete Chid Keys"}
+{"signature_id": "4503", "signature": "Metabase Copy Key"}
+{"signature_id": "4504", "signature": "Metabase Rename Key"}
+{"signature_id": "4505", "signature": "Metabase Set Data"}
+{"signature_id": "4506", "signature": "Metabase Delete Data"}
+{"signature_id": "4507", "signature": "Metabase Delete All Data"}
+{"signature_id": "4508", "signature": "Metabase Copy Data"}
+{"signature_id": "4509", "signature": "Metabase Set Last Change Time"}
+{"signature_id": "4510", "signature": "Metabase Restore"}
+{"signature_id": "4511", "signature": "Metabase Delete Backup"}
+{"signature_id": "4512", "signature": "Metabase Import"}
+{"signature_id": "4608", "signature": "Windows is starting up"}
+{"signature_id": "4609", "signature": "Windows is shutting down"}
+{"signature_id": "4610", "signature": "An authentication package has been loaded by the Local Security Authority"}
+{"signature_id": "4611", "signature": "A trusted logon process has been registered with the Local Security Authority"}
+{"signature_id": "4612", "signature": "Internal resources allocated for the queuing of audit messages have been exhausted, leading to the loss of some audits."}
+{"signature_id": "4614", "signature": "A notification package has been loaded by the Security Account Manager."}
+{"signature_id": "4615", "signature": "Invalid use of LPC port"}
+{"signature_id": "4616", "signature": "The system time was changed."}
+{"signature_id": "4618", "signature": "A monitored security event pattern has occurred"}
+{"signature_id": "4621", "signature": "Administrator recovered system from CrashOnAuditFail"}
+{"signature_id": "4622", "signature": "A security package has been loaded by the Local Security Authority."}
+{"signature_id": "4624", "signature": "An account was successfully logged on"}
+{"signature_id": "4625", "signature": "An account failed to log on"}
+{"signature_id": "4626", "signature": "User/Device claims information"}
+{"signature_id": "4627", "signature": "Group membership information."}
+{"signature_id": "4634", "signature": "An account was logged off"}
+{"signature_id": "4646", "signature": "%1"}
+{"signature_id": "4647", "signature": "User initiated logoff"}
+{"signature_id": "4648", "signature": "A logon was attempted using explicit credentials"}
+{"signature_id": "4649", "signature": "A replay attack was detected"}
+{"signature_id": "4650", "signature": "An IPsec Main Mode security association was established"}
+{"signature_id": "4651", "signature": "An IPsec Main Mode security association was established"}
+{"signature_id": "4652", "signature": "An IPsec Main Mode negotiation failed"}
+{"signature_id": "4653", "signature": "An IPsec Main Mode negotiation failed"}
+{"signature_id": "4654", "signature": "An IPsec Quick Mode negotiation failed"}
+{"signature_id": "4655", "signature": "An IPsec Main Mode security association ended"}
+{"signature_id": "4656", "signature": "A handle to an object was requested"}
+{"signature_id": "4657", "signature": "A registry value was modified"}
+{"signature_id": "4658", "signature": "The handle to an object was closed"}
+{"signature_id": "4659", "signature": "A handle to an object was requested with intent to delete"}
+{"signature_id": "4660", "signature": "An object was deleted"}
+{"signature_id": "4661", "signature": "A handle to an object was requested"}
+{"signature_id": "4662", "signature": "An operation was performed on an object"}
+{"signature_id": "4663", "signature": "An attempt was made to access an object"}
+{"signature_id": "4664", "signature": "An attempt was made to create a hard link"}
+{"signature_id": "4665", "signature": "An attempt was made to create an application client context."}
+{"signature_id": "4666", "signature": "An application attempted an operation"}
+{"signature_id": "4667", "signature": "An application client context was deleted"}
+{"signature_id": "4668", "signature": "An application was initialized"}
+{"signature_id": "4670", "signature": "Permissions on an object were changed"}
+{"signature_id": "4671", "signature": "An application attempted to access a blocked ordinal through the TBS"}
+{"signature_id": "4672", "signature": "Special privileges assigned to new logon"}
+{"signature_id": "4673", "signature": "A privileged service was called"}
+{"signature_id": "4674", "signature": "An operation was attempted on a privileged object"}
+{"signature_id": "4675", "signature": "SIDs were filtered"}
+{"signature_id": "4685", "signature": "The state of a transaction has changed"}
+{"signature_id": "4688", "signature": "A new process has been created"}
+{"signature_id": "4689", "signature": "A process has exited"}
+{"signature_id": "4690", "signature": "An attempt was made to duplicate a handle to an object"}
+{"signature_id": "4691", "signature": "Indirect access to an object was requested"}
+{"signature_id": "4692", "signature": "Backup of data protection master key was attempted"}
+{"signature_id": "4693", "signature": "Recovery of data protection master key was attempted"}
+{"signature_id": "4694", "signature": "Protection of auditable protected data was attempted"}
+{"signature_id": "4695", "signature": "Unprotection of auditable protected data was attempted"}
+{"signature_id": "4696", "signature": "A primary token was assigned to process"}
+{"signature_id": "4697", "signature": "A service was installed in the system"}
+{"signature_id": "4698", "signature": "A scheduled task was created"}
+{"signature_id": "4699", "signature": "A scheduled task was deleted"}
+{"signature_id": "4700", "signature": "A scheduled task was enabled"}
+{"signature_id": "4701", "signature": "A scheduled task was disabled"}
+{"signature_id": "4702", "signature": "A scheduled task was updated"}
+{"signature_id": "4703", "signature": "A token right was adjusted"}
+{"signature_id": "4704", "signature": "A user right was assigned"}
+{"signature_id": "4705", "signature": "A user right was removed"}
+{"signature_id": "4706", "signature": "A new trust was created to a domain", "result": "A new trust was created to a domain"}
+{"signature_id": "4707", "signature": "A trust to a domain was removed"}
+{"signature_id": "4709", "signature": "IPsec Services was started"}
+{"signature_id": "4710", "signature": "IPsec Services was disabled"}
+{"signature_id": "4711", "signature": "PAStore Engine (1%)"}
+{"signature_id": "4712", "signature": "IPsec Services encountered a potentially serious failure"}
+{"signature_id": "4713", "signature": "Kerberos policy was changed", "result": "Kerberos policy was changed"}
+{"signature_id": "4714", "signature": "Encrypted data recovery policy was changed"}
+{"signature_id": "4715", "signature": "The audit policy (SACL) on an object was changed"}
+{"signature_id": "4716", "signature": "Trusted domain information was modified"}
+{"signature_id": "4717", "signature": "System security access was granted to an account"}
+{"signature_id": "4718", "signature": "System security access was removed from an account"}
+{"signature_id": "4719", "signature": "System audit policy was changed"}
+{"signature_id": "4720", "signature": "A user account was created", "category_string": "Account Management"}
+{"signature_id": "4722", "signature": "A user account was enabled", "category_string": "Account Management"}
+{"signature_id": "4723", "signature": "An attempt was made to change an account's password", "category_string": "Account Management"}
+{"signature_id": "4724", "signature": "An attempt was made to reset an accounts password", "category_string": "Account Management"}
+{"signature_id": "4725", "signature": "A user account was disabled", "category_string": "Account Management"}
+{"signature_id": "4726", "signature": "A user account was deleted", "category_string": "Account Management"}
+{"signature_id": "4727", "signature": "A security-enabled global group was created", "category_string": "Account Management"}
+{"signature_id": "4728", "signature": "A member was added to a security-enabled global group", "category_string": "Account Management"}
+{"signature_id": "4729", "signature": "A member was removed from a security-enabled global group", "category_string": "Account Management"}
+{"signature_id": "4730", "signature": "A security-enabled global group was deleted", "category_string": "Account Management"}
+{"signature_id": "4731", "signature": "A security-enabled local group was created", "category_string": "Account Management"}
+{"signature_id": "4732", "signature": "A member was added to a security-enabled local group", "category_string": "Account Management"}
+{"signature_id": "4733", "signature": "A member was removed from a security-enabled local group", "category_string": "Account Management"}
+{"signature_id": "4734", "signature": "A security-enabled local group was deleted", "category_string": "Account Management"}
+{"signature_id": "4735", "signature": "A security-enabled local group was changed", "category_string": "Account Management"}
+{"signature_id": "4737", "signature": "A security-enabled global group was changed", "category_string": "Account Management"}
+{"signature_id": "4738", "signature": "A user account was changed", "category_string": "Account Management"}
+{"signature_id": "4739", "signature": "Domain Policy was changed", "category_string": "Account Management"}
+{"signature_id": "4740", "signature": "A user account was locked out", "category_string": "Account Management"}
+{"signature_id": "4741", "signature": "A computer account was created", "category_string": "Account Management"}
+{"signature_id": "4742", "signature": "A computer account was changed", "category_string": "Account Management"}
+{"signature_id": "4743", "signature": "A computer account was deleted", "category_string": "Account Management"}
+{"signature_id": "4744", "signature": "A security-disabled local group was created", "result": "A security-disabled local group was created"}
+{"signature_id": "4745", "signature": "A security-disabled local group was changed", "category_string": "Account Management"}
+{"signature_id": "4746", "signature": "A member was added to a security-disabled local group", "category_string": "Account Management"}
+{"signature_id": "4747", "signature": "A member was removed from a security-disabled local group", "category_string": "Account Management"}
+{"signature_id": "4748", "signature": "A security-disabled local group was deleted", "category_string": "Account Management"}
+{"signature_id": "4749", "signature": "A security-disabled global group was created", "result": "A security-disabled global group was created"}
+{"signature_id": "4750", "signature": "A security-disabled global group was changed", "result": "A security-disabled global group was changed"}
+{"signature_id": "4751", "signature": "A member was added to a security-disabled global group", "category_string": "Account Management"}
+{"signature_id": "4752", "signature": "A member was removed from a security-disabled global group", "category_string": "Account Management"}
+{"signature_id": "4753", "signature": "A security-disabled global group was deleted", "category_string": "Account Management"}
+{"signature_id": "4754", "signature": "A security-enabled universal group was created", "category_string": "Account Management"}
+{"signature_id": "4755", "signature": "A security-enabled universal group was changed", "category_string": "Account Management"}
+{"signature_id": "4756", "signature": "A member was added to a security-enabled universal group", "category_string": "Account Management"}
+{"signature_id": "4757", "signature": "A member was removed from a security-enabled universal group", "category_string": "Account Management"}
+{"signature_id": "4758", "signature": "A security-enabled universal group was deleted", "category_string": "Account Management"}
+{"signature_id": "4759", "signature": "A security-disabled universal group was created", "result": "A security-disabled universal group was created"}
+{"signature_id": "4760", "signature": "A security-disabled universal group was changed", "category_string": "Account Management"}
+{"signature_id": "4761", "signature": "A member was added to a security-disabled universal group", "category_string": "Account Management"}
+{"signature_id": "4762", "signature": "A member was removed from a security-disabled universal group", "category_string": "Account Management"}
+{"signature_id": "4763", "signature": "A security-disabled universal group was deleted", "category_string": "Account Management"}
+{"signature_id": "4764", "signature": "A group's type was changed", "category_string": "Account Management"}
+{"signature_id": "4765", "signature": "SID History was added to an account", "category_string": "Account Management"}
+{"signature_id": "4766", "signature": "An attempt to add SID History to an account failed", "category_string": "Account Management"}
+{"signature_id": "4767", "signature": "A user account was unlocked", "category_string": "Account Management"}
+{"signature_id": "4768", "signature": "A Kerberos authentication ticket (TGT) was requested"}
+{"signature_id": "4769", "signature": "A Kerberos service ticket was requested"}
+{"signature_id": "4770", "signature": "A Kerberos service ticket was renewed"}
+{"signature_id": "4771", "signature": "Kerberos pre-authentication failed"}
+{"signature_id": "4772", "signature": "A Kerberos authentication ticket request failed"}
+{"signature_id": "4773", "signature": "A Kerberos service ticket request failed"}
+{"signature_id": "4774", "signature": "An account was mapped for logon"}
+{"signature_id": "4775", "signature": "An account could not be mapped for logon"}
+{"signature_id": "4776", "signature": "The domain controller attempted to validate the credentials for an account"}
+{"signature_id": "4777", "signature": "The domain controller failed to validate the credentials for an account"}
+{"signature_id": "4778", "signature": "A session was reconnected to a Window Station"}
+{"signature_id": "4779", "signature": "A session was disconnected from a Window Station"}
+{"signature_id": "4780", "signature": "The ACL was set on accounts which are members of administrators groups", "category_string": "Account Management"}
+{"signature_id": "4781", "signature": "The name of an account was changed", "category_string": "Account Management"}
+{"signature_id": "4782", "signature": "The password hash an account was accessed", "category_string": "Account Management"}
+{"signature_id": "4783", "signature": "A basic application group was created", "category_string": "Account Management"}
+{"signature_id": "4784", "signature": "A basic application group was changed", "category_string": "Account Management"}
+{"signature_id": "4785", "signature": "A member was added to a basic application group", "category_string": "Account Management"}
+{"signature_id": "4786", "signature": "A member was removed from a basic application group", "category_string": "Account Management"}
+{"signature_id": "4787", "signature": "A non-member was added to a basic application group", "category_string": "Account Management"}
+{"signature_id": "4788", "signature": "A non-member was removed from a basic application group..", "category_string": "Account Management"}
+{"signature_id": "4789", "signature": "A basic application group was deleted", "category_string": "Account Management"}
+{"signature_id": "4790", "signature": "An LDAP query group was created", "category_string": "Account Management"}
+{"signature_id": "4791", "signature": "A basic application group was changed", "category_string": "Account Management"}
+{"signature_id": "4792", "signature": "An LDAP query group was deleted", "category_string": "Account Management"}
+{"signature_id": "4793", "signature": "The Password Policy Checking API was called", "category_string": "API Calls"}
+{"signature_id": "4794", "signature": "An attempt was made to set the Directory Services Restore Mode administrator password", "category_string": "Account Management"}
+{"signature_id": "4797", "signature": "An attempt was made to query the existence of a blank password for an account"}
+{"signature_id": "4798", "signature": "A user's local group membership was enumerated."}
+{"signature_id": "4799", "signature": "A security-enabled local group membership was enumerated"}
+{"signature_id": "4800", "signature": "The workstation was locked"}
+{"signature_id": "4801", "signature": "The workstation was unlocked"}
+{"signature_id": "4802", "signature": "The screen saver was invoked"}
+{"signature_id": "4803", "signature": "The screen saver was dismissed"}
+{"signature_id": "4816", "signature": "RPC detected an integrity violation while decrypting an incoming message"}
+{"signature_id": "4817", "signature": "Auditing settings on object were changed."}
+{"signature_id": "4818", "signature": "Proposed Central Access Policy does not grant the same access permissions as the current Central Access Policy"}
+{"signature_id": "4819", "signature": "Central Access Policies on the machine have been changed"}
+{"signature_id": "4820", "signature": "A Kerberos Ticket-granting-ticket (TGT) was denied because the device does not meet the access control restrictions"}
+{"signature_id": "4822", "signature": "NTLM authentication failed because the account was a member of the Protected User group"}
+{"signature_id": "4823", "signature": "NTLM authentication failed because access control restrictions are required"}
+{"signature_id": "4824", "signature": "Kerberos preauthentication by using DES or RC4 failed because the account was a member of the Protected User group"}
+{"signature_id": "4826", "signature": "Boot Configuration Data loaded"}
+{"signature_id": "4830", "signature": "SID History was removed from an account"}
+{"signature_id": "4864", "signature": "A namespace collision was detected"}
+{"signature_id": "4865", "signature": "A trusted forest information entry was added"}
+{"signature_id": "4866", "signature": "A trusted forest information entry was removed"}
+{"signature_id": "4867", "signature": "A trusted forest information entry was modified"}
+{"signature_id": "4868", "signature": "The certificate manager denied a pending certificate request"}
+{"signature_id": "4869", "signature": "Certificate Services received a resubmitted certificate request"}
+{"signature_id": "4870", "signature": "Certificate Services revoked a certificate"}
+{"signature_id": "4871", "signature": "Certificate Services received a request to publish the certificate revocation list (CRL)"}
+{"signature_id": "4872", "signature": "Certificate Services published the certificate revocation list (CRL)"}
+{"signature_id": "4873", "signature": "A certificate request extension changed"}
+{"signature_id": "4874", "signature": "One or more certificate request attributes changed."}
+{"signature_id": "4875", "signature": "Certificate Services received a request to shut down"}
+{"signature_id": "4876", "signature": "Certificate Services backup started", "result": "Certificate Services backup started"}
+{"signature_id": "4877", "signature": "Certificate Services backup completed"}
+{"signature_id": "4878", "signature": "Certificate Services restore started"}
+{"signature_id": "4879", "signature": "Certificate Services restore completed"}
+{"signature_id": "4880", "signature": "Certificate Services started"}
+{"signature_id": "4881", "signature": "Certificate Services stopped"}
+{"signature_id": "4882", "signature": "The security permissions for Certificate Services changed"}
+{"signature_id": "4883", "signature": "Certificate Services retrieved an archived key"}
+{"signature_id": "4884", "signature": "Certificate Services imported a certificate into its database"}
+{"signature_id": "4885", "signature": "The audit filter for Certificate Services changed"}
+{"signature_id": "4886", "signature": "Certificate Services received a certificate request"}
+{"signature_id": "4887", "signature": "Certificate Services approved a certificate request and issued a certificate"}
+{"signature_id": "4888", "signature": "Certificate Services denied a certificate request"}
+{"signature_id": "4889", "signature": "Certificate Services set the status of a certificate request to pending"}
+{"signature_id": "4890", "signature": "The certificate manager settings for Certificate Services changed."}
+{"signature_id": "4891", "signature": "A configuration entry changed in Certificate Services"}
+{"signature_id": "4892", "signature": "A property of Certificate Services changed"}
+{"signature_id": "4893", "signature": "Certificate Services archived a key"}
+{"signature_id": "4894", "signature": "Certificate Services imported and archived a key"}
+{"signature_id": "4895", "signature": "Certificate Services published the CA certificate to Active Directory Domain Services"}
+{"signature_id": "4896", "signature": "One or more rows have been deleted from the certificate database"}
+{"signature_id": "4897", "signature": "Role separation enabled"}
+{"signature_id": "4898", "signature": "Certificate Services loaded a template"}
+{"signature_id": "4899", "signature": "A Certificate Services template was updated"}
+{"signature_id": "4900", "signature": "Certificate Services template security was updated"}
+{"signature_id": "4902", "signature": "The Per-user audit policy table was created"}
+{"signature_id": "4904", "signature": "An attempt was made to register a security event source"}
+{"signature_id": "4905", "signature": "An attempt was made to unregister a security event source"}
+{"signature_id": "4906", "signature": "The CrashOnAuditFail value has changed"}
+{"signature_id": "4907", "signature": "Auditing settings on object were changed"}
+{"signature_id": "4908", "signature": "Special Groups Logon table modified"}
+{"signature_id": "4909", "signature": "The local policy settings for the TBS were changed"}
+{"signature_id": "4910", "signature": "The group policy settings for the TBS were changed"}
+{"signature_id": "4911", "signature": "Resource attributes of the object were changed"}
+{"signature_id": "4912", "signature": "Per User Audit Policy was changed"}
+{"signature_id": "4913", "signature": "Central Access Policy on the object was changed"}
+{"signature_id": "4928", "signature": "An Active Directory replica source naming context was established"}
+{"signature_id": "4929", "signature": "An Active Directory replica source naming context was removed"}
+{"signature_id": "4930", "signature": "An Active Directory replica source naming context was modified"}
+{"signature_id": "4931", "signature": "An Active Directory replica destination naming context was modified"}
+{"signature_id": "4932", "signature": "Synchronization of a replica of an Active Directory naming context has begun"}
+{"signature_id": "4933", "signature": "Synchronization of a replica of an Active Directory naming context has ended"}
+{"signature_id": "4934", "signature": "Attributes of an Active Directory object were replicated"}
+{"signature_id": "4935", "signature": "Replication failure begins"}
+{"signature_id": "4936", "signature": "Replication failure ends"}
+{"signature_id": "4937", "signature": "A lingering object was removed from a replica"}
+{"signature_id": "4944", "signature": "The following policy was active when the Windows Firewall started"}
+{"signature_id": "4945", "signature": "A rule was listed when the Windows Firewall started"}
+{"signature_id": "4946", "signature": "A change has been made to Windows Firewall exception list. A rule was added"}
+{"signature_id": "4947", "signature": "A change has been made to Windows Firewall exception list. A rule was modified"}
+{"signature_id": "4948", "signature": "A change has been made to Windows Firewall exception list. A rule was deleted"}
+{"signature_id": "4949", "signature": "Windows Firewall settings were restored to the default values"}
+{"signature_id": "4950", "signature": "A Windows Firewall setting has changed"}
+{"signature_id": "4951", "signature": "A rule has been ignored because its major version number was not recognized by Windows Firewall"}
+{"signature_id": "4952", "signature": "Parts of a rule have been ignored because its minor version number was not recognized by Windows Firewall"}
+{"signature_id": "4953", "signature": "A rule has been ignored by Windows Firewall because it could not parse the rule"}
+{"signature_id": "4954", "signature": "Windows Firewall Group Policy settings has changed. The new settings have been applied"}
+{"signature_id": "4956", "signature": "Windows Firewall has changed the active profile"}
+{"signature_id": "4957", "signature": "Windows Firewall did not apply the following rule"}
+{"signature_id": "4958", "signature": "Windows Firewall did not apply the following rule because the rule referred to items not configured on this computer"}
+{"signature_id": "4960", "signature": "IPsec dropped an inbound packet that failed an integrity check"}
+{"signature_id": "4961", "signature": "IPsec dropped an inbound packet that failed a replay check"}
+{"signature_id": "4962", "signature": "IPsec dropped an inbound packet that failed a replay check"}
+{"signature_id": "4963", "signature": "IPsec dropped an inbound clear text packet that should have been secured"}
+{"signature_id": "4964", "signature": "Special groups have been assigned to a new logon"}
+{"signature_id": "4965", "signature": "IPsec received a packet from a remote computer with an incorrect Security Parameter Index (SPI)."}
+{"signature_id": "4976", "signature": "During Main Mode negotiation, IPsec received an invalid negotiation packet."}
+{"signature_id": "4977", "signature": "During Quick Mode negotiation, IPsec received an invalid negotiation packet."}
+{"signature_id": "4978", "signature": "During Extended Mode negotiation, IPsec received an invalid negotiation packet."}
+{"signature_id": "4979", "signature": "IPsec Main Mode and Extended Mode security associations were established."}
+{"signature_id": "4980", "signature": "IPsec Main Mode and Extended Mode security associations were established"}
+{"signature_id": "4981", "signature": "IPsec Main Mode and Extended Mode security associations were established"}
+{"signature_id": "4982", "signature": "IPsec Main Mode and Extended Mode security associations were established"}
+{"signature_id": "4983", "signature": "An IPsec Extended Mode negotiation failed"}
+{"signature_id": "4984", "signature": "An IPsec Extended Mode negotiation failed"}
+{"signature_id": "4985", "signature": "The state of a transaction has changed"}
+{"signature_id": "5024", "signature": "The Windows Firewall Service has started successfully"}
+{"signature_id": "5025", "signature": "The Windows Firewall Service has been stopped"}
+{"signature_id": "5027", "signature": "The Windows Firewall Service was unable to retrieve the security policy from the local storage"}
+{"signature_id": "5028", "signature": "The Windows Firewall Service was unable to parse the new security policy."}
+{"signature_id": "5029", "signature": "The Windows Firewall Service failed to initialize the driver"}
+{"signature_id": "5030", "signature": "The Windows Firewall Service failed to start"}
+{"signature_id": "5031", "signature": "The Windows Firewall Service blocked an application from accepting incoming connections on the network."}
+{"signature_id": "5032", "signature": "Windows Firewall was unable to notify the user that it blocked an application from accepting incoming connections on the network"}
+{"signature_id": "5033", "signature": "The Windows Firewall Driver has started successfully"}
+{"signature_id": "5034", "signature": "The Windows Firewall Driver has been stopped"}
+{"signature_id": "5035", "signature": "The Windows Firewall Driver failed to start"}
+{"signature_id": "5037", "signature": "The Windows Firewall Driver detected critical runtime error. Terminating"}
+{"signature_id": "5038", "signature": "Code integrity determined that the image hash of a file is not valid"}
+{"signature_id": "5039", "signature": "A registry key was virtualized."}
+{"signature_id": "5040", "signature": "A change has been made to IPsec settings. An Authentication Set was added."}
+{"signature_id": "5041", "signature": "A change has been made to IPsec settings. An Authentication Set was modified"}
+{"signature_id": "5042", "signature": "A change has been made to IPsec settings. An Authentication Set was deleted"}
+{"signature_id": "5043", "signature": "A change has been made to IPsec settings. A Connection Security Rule was added"}
+{"signature_id": "5044", "signature": "A change has been made to IPsec settings. A Connection Security Rule was modified"}
+{"signature_id": "5045", "signature": "A change has been made to IPsec settings. A Connection Security Rule was deleted"}
+{"signature_id": "5046", "signature": "A change has been made to IPsec settings. A Crypto Set was added"}
+{"signature_id": "5047", "signature": "A change has been made to IPsec settings. A Crypto Set was modified"}
+{"signature_id": "5048", "signature": "A change has been made to IPsec settings. A Crypto Set was deleted"}
+{"signature_id": "5049", "signature": "An IPsec Security Association was deleted"}
+{"signature_id": "5050", "signature": "An attempt to programmatically disable the Windows Firewall using a call to INetFwProfile.FirewallEnabled(FALSE"}
+{"signature_id": "5051", "signature": "A file was virtualized"}
+{"signature_id": "5056", "signature": "A cryptographic self test was performed"}
+{"signature_id": "5057", "signature": "A cryptographic primitive operation failed"}
+{"signature_id": "5058", "signature": "Key file operation"}
+{"signature_id": "5059", "signature": "Key migration operation"}
+{"signature_id": "5060", "signature": "Verification operation failed"}
+{"signature_id": "5061", "signature": "Cryptographic operation"}
+{"signature_id": "5062", "signature": "A kernel-mode cryptographic self test was performed"}
+{"signature_id": "5063", "signature": "A cryptographic provider operation was attempted"}
+{"signature_id": "5064", "signature": "A cryptographic context operation was attempted"}
+{"signature_id": "5065", "signature": "A cryptographic context modification was attempted"}
+{"signature_id": "5066", "signature": "A cryptographic function operation was attempted"}
+{"signature_id": "5067", "signature": "A cryptographic function modification was attempted"}
+{"signature_id": "5068", "signature": "A cryptographic function provider operation was attempted"}
+{"signature_id": "5069", "signature": "A cryptographic function property operation was attempted"}
+{"signature_id": "5070", "signature": "A cryptographic function property operation was attempted"}
+{"signature_id": "5071", "signature": "Key access denied by Microsoft key distribution service"}
+{"signature_id": "5120", "signature": "OCSP Responder Service Started"}
+{"signature_id": "5121", "signature": "OCSP Responder Service Stopped"}
+{"signature_id": "5122", "signature": "A Configuration entry changed in the OCSP Responder Service"}
+{"signature_id": "5123", "signature": "A configuration entry changed in the OCSP Responder Service"}
+{"signature_id": "5124", "signature": "A security setting was updated on OCSP Responder Service"}
+{"signature_id": "5125", "signature": "A request was submitted to OCSP Responder Service"}
+{"signature_id": "5126", "signature": "Signing Certificate was automatically updated by the OCSP Responder Service"}
+{"signature_id": "5127", "signature": "The OCSP Revocation Provider successfully updated the revocation information"}
+{"signature_id": "5136", "signature": "A directory service object was modified"}
+{"signature_id": "5137", "signature": "A directory service object was created"}
+{"signature_id": "5138", "signature": "A directory service object was undeleted"}
+{"signature_id": "5139", "signature": "A directory service object was moved"}
+{"signature_id": "5140", "signature": "A network share object was accessed"}
+{"signature_id": "5141", "signature": "A directory service object was deleted"}
+{"signature_id": "5142", "signature": "A network share object was added."}
+{"signature_id": "5143", "signature": "A network share object was modified"}
+{"signature_id": "5144", "signature": "A network share object was deleted."}
+{"signature_id": "5145", "signature": "A network share object was checked to see whether client can be granted desired access"}
+{"signature_id": "5146", "signature": "The Windows Filtering Platform has blocked a packet"}
+{"signature_id": "5147", "signature": "A more restrictive Windows Filtering Platform filter has blocked a packet"}
+{"signature_id": "5148", "signature": "The Windows Filtering Platform has detected a DoS attack and entered a defensive mode; packets associated with this attack will be discarded."}
+{"signature_id": "5149", "signature": "The DoS attack has subsided and normal processing is being resumed."}
+{"signature_id": "5150", "signature": "The Windows Filtering Platform has blocked a packet."}
+{"signature_id": "5151", "signature": "A more restrictive Windows Filtering Platform filter has blocked a packet."}
+{"signature_id": "5152", "signature": "The Windows Filtering Platform blocked a packet"}
+{"signature_id": "5153", "signature": "A more restrictive Windows Filtering Platform filter has blocked a packet"}
+{"signature_id": "5154", "signature": "The Windows Filtering Platform has permitted an application or service to listen on a port for incoming connections"}
+{"signature_id": "5155", "signature": "The Windows Filtering Platform has blocked an application or service from listening on a port for incoming connections"}
+{"signature_id": "5156", "signature": "The Windows Filtering Platform has allowed a connection"}
+{"signature_id": "5157", "signature": "The Windows Filtering Platform has blocked a connection"}
+{"signature_id": "5158", "signature": "The Windows Filtering Platform has permitted a bind to a local port"}
+{"signature_id": "5159", "signature": "The Windows Filtering Platform has blocked a bind to a local port"}
+{"signature_id": "5168", "signature": "Spn check for SMB/SMB2 fails."}
+{"signature_id": "5169", "signature": "A directory service object was modified"}
+{"signature_id": "5170", "signature": "A directory service object was modified during a background cleanup task"}
+{"signature_id": "5376", "signature": "Credential Manager credentials were backed up", "category_string": "Account Management"}
+{"signature_id": "5377", "signature": "Credential Manager credentials were restored from a backup", "category_string": "Account Management"}
+{"signature_id": "5378", "signature": "The requested credentials delegation was disallowed by policy"}
+{"signature_id": "5379", "signature": "Credential Manager credentials were read"}
+{"signature_id": "5380", "signature": "Vault Find Credential"}
+{"signature_id": "5381", "signature": "Vault credentials were read"}
+{"signature_id": "5382", "signature": "Vault credentials were read"}
+{"signature_id": "5440", "signature": "The following callout was present when the Windows Filtering Platform Base Filtering Engine started"}
+{"signature_id": "5441", "signature": "The following filter was present when the Windows Filtering Platform Base Filtering Engine started"}
+{"signature_id": "5442", "signature": "The following provider was present when the Windows Filtering Platform Base Filtering Engine started"}
+{"signature_id": "5443", "signature": "The following provider context was present when the Windows Filtering Platform Base Filtering Engine started"}
+{"signature_id": "5444", "signature": "The following sub-layer was present when the Windows Filtering Platform Base Filtering Engine started"}
+{"signature_id": "5446", "signature": "A Windows Filtering Platform callout has been changed"}
+{"signature_id": "5447", "signature": "A Windows Filtering Platform filter has been changed"}
+{"signature_id": "5448", "signature": "A Windows Filtering Platform provider has been changed"}
+{"signature_id": "5449", "signature": "A Windows Filtering Platform provider context has been changed"}
+{"signature_id": "5450", "signature": "A Windows Filtering Platform sub-layer has been changed"}
+{"signature_id": "5451", "signature": "An IPsec Quick Mode security association was established"}
+{"signature_id": "5452", "signature": "An IPsec Quick Mode security association ended"}
+{"signature_id": "5453", "signature": "An IPsec negotiation with a remote computer failed because the IKE and AuthIP IPsec Keying Modules (IKEEXT) service is not started"}
+{"signature_id": "5456", "signature": "PAStore Engine applied Active Directory storage IPsec policy on the computer"}
+{"signature_id": "5457", "signature": "PAStore Engine failed to apply Active Directory storage IPsec policy on the computer"}
+{"signature_id": "5458", "signature": "PAStore Engine applied locally cached copy of Active Directory storage IPsec policy on the computer"}
+{"signature_id": "5459", "signature": "PAStore Engine failed to apply locally cached copy of Active Directory storage IPsec policy on the computer"}
+{"signature_id": "5460", "signature": "PAStore Engine applied local registry storage IPsec policy on the computer"}
+{"signature_id": "5461", "signature": "PAStore Engine failed to apply local registry storage IPsec policy on the computer"}
+{"signature_id": "5462", "signature": "PAStore Engine failed to apply some rules of the active IPsec policy on the computer"}
+{"signature_id": "5463", "signature": "PAStore Engine polled for changes to the active IPsec policy and detected no changes"}
+{"signature_id": "5464", "signature": "PAStore Engine polled for changes to the active IPsec policy, detected changes, and applied them to IPsec Services"}
+{"signature_id": "5465", "signature": "PAStore Engine received a control for forced reloading of IPsec policy and processed the control successfully"}
+{"signature_id": "5466", "signature": "PAStore Engine polled for changes to the Active Directory IPsec policy, determined that Active Directory cannot be reached, and will use the cached copy of the Active Directory IPsec policy instead"}
+{"signature_id": "5467", "signature": "PAStore Engine polled for changes to the Active Directory IPsec policy, determined that Active Directory can be reached, and found no changes to the policy"}
+{"signature_id": "5468", "signature": "PAStore Engine polled for changes to the Active Directory IPsec policy, determined that Active Directory can be reached, found changes to the policy, and applied those changes"}
+{"signature_id": "5471", "signature": "PAStore Engine loaded local storage IPsec policy on the computer"}
+{"signature_id": "5472", "signature": "PAStore Engine failed to load local storage IPsec policy on the computer"}
+{"signature_id": "5473", "signature": "PAStore Engine loaded directory storage IPsec policy on the computer"}
+{"signature_id": "5474", "signature": "PAStore Engine failed to load directory storage IPsec policy on the computer"}
+{"signature_id": "5477", "signature": "PAStore Engine failed to add quick mode filter"}
+{"signature_id": "5478", "signature": "IPsec Services has started successfully"}
+{"signature_id": "5479", "signature": "IPsec Services has been shut down successfully"}
+{"signature_id": "5480", "signature": "IPsec Services failed to get the complete list of network interfaces on the computer"}
+{"signature_id": "5483", "signature": "IPsec Services failed to initialize RPC server. IPsec Services could not be started"}
+{"signature_id": "5484", "signature": "IPsec Services has experienced a critical failure and has been shut down"}
+{"signature_id": "5485", "signature": "IPsec Services failed to process some IPsec filters on a plug-and-play event for network interfaces"}
+{"signature_id": "5632", "signature": "A request was made to authenticate to a wireless network"}
+{"signature_id": "5633", "signature": "A request was made to authenticate to a wired network"}
+{"signature_id": "5712", "signature": "A Remote Procedure Call (RPC) was attempted"}
+{"signature_id": "5827", "signature": "The Netlogon service denied a vulnerable Netlogon secure channel connection from a machine account."}
+{"signature_id": "5828", "signature": "The Netlogon service denied a vulnerable Netlogon secure channel connection using a trust account."}
+{"signature_id": "5888", "signature": "An object in the COM+ Catalog was modified"}
+{"signature_id": "5889", "signature": "An object was deleted from the COM+ Catalog"}
+{"signature_id": "5890", "signature": "An object was added to the COM+ Catalog"}
+{"signature_id": "6008", "signature": "The previous system shutdown was unexpected"}
+{"signature_id": "6144", "signature": "Security policy in the group policy objects has been applied successfully"}
+{"signature_id": "6145", "signature": "One or more errors occured while processing security policy in the group policy objects"}
+{"signature_id": "6272", "signature": "Network Policy Server granted access to a user"}
+{"signature_id": "6273", "signature": "Network Policy Server denied access to a user"}
+{"signature_id": "6274", "signature": "Network Policy Server discarded the request for a user"}
+{"signature_id": "6275", "signature": "Network Policy Server discarded the accounting request for a user"}
+{"signature_id": "6276", "signature": "Network Policy Server quarantined a user"}
+{"signature_id": "6277", "signature": "Network Policy Server granted access to a user but put it on probation because the host did not meet the defined health policy"}
+{"signature_id": "6278", "signature": "Network Policy Server granted full access to a user because the host met the defined health policy"}
+{"signature_id": "6279", "signature": "Network Policy Server locked the user account due to repeated failed authentication attempts"}
+{"signature_id": "6280", "signature": "Network Policy Server unlocked the user account"}
+{"signature_id": "6281", "signature": "Code Integrity determined that the page hashes of an image file are not valid..."}
+{"signature_id": "6400", "signature": "BranchCache: Received an incorrectly formatted response while discovering availability of content."}
+{"signature_id": "6401", "signature": "BranchCache: Received invalid data from a peer. Data discarded."}
+{"signature_id": "6402", "signature": "BranchCache: The message to the hosted cache offering it data is incorrectly formatted."}
+{"signature_id": "6403", "signature": "BranchCache: The hosted cache sent an incorrectly formatted response to the client's message to offer it data."}
+{"signature_id": "6404", "signature": "BranchCache: Hosted cache could not be authenticated using the provisioned SSL certificate."}
+{"signature_id": "6405", "signature": "BranchCache: %2 instance(s) of event id %1 occurred."}
+{"signature_id": "6406", "signature": "%1 registered to Windows Firewall to control filtering for the following:"}
+{"signature_id": "6407", "signature": "%1"}
+{"signature_id": "6408", "signature": "Registered product %1 failed and Windows Firewall is now controlling the filtering for %2."}
+{"signature_id": "6409", "signature": "BranchCache: A service connection point object could not be parsed"}
+{"signature_id": "6410", "signature": "Code integrity determined that a file does not meet the security requirements to load into a process. This could be due to the use of shared sections or other issues"}
+{"signature_id": "6416", "signature": "A new external device was recognized by the system."}
+{"signature_id": "6417", "signature": "The FIPS mode crypto selftests succeeded"}
+{"signature_id": "6418", "signature": "The FIPS mode crypto selftests failed"}
+{"signature_id": "6419", "signature": "A request was made to disable a device"}
+{"signature_id": "6420", "signature": "A device was disabled"}
+{"signature_id": "6421", "signature": "A request was made to enable a device"}
+{"signature_id": "6422", "signature": "A device was enabled"}
+{"signature_id": "6423", "signature": "The installation of this device is forbidden by system policy"}
+{"signature_id": "8191", "signature": "Highest System-Defined Audit Message Value"}
+{"signature_id": "24577", "signature": "Encryption of volume started"}
+{"signature_id": "24578", "signature": "Encryption of volume stopped"}
+{"signature_id": "24579", "signature": "Encryption of volume completed"}
+{"signature_id": "24580", "signature": "Decryption of volume started"}
+{"signature_id": "24581", "signature": "Decryption of volume stopped"}
+{"signature_id": "24582", "signature": "Decryption of volume completed"}
+{"signature_id": "24583", "signature": "Conversion worker thread for volume started"}
+{"signature_id": "24584", "signature": "Conversion worker thread for volume temporarily stopped"}
+{"signature_id": "24586", "signature": "An error was encountered converting volume"}
+{"signature_id": "24588", "signature": "The conversion operation on volume %2 encountered a bad sector error. Please validate the data on this volume"}
+{"signature_id": "24592", "signature": "An attempt to automatically restart conversion on volume %2 failed."}
+{"signature_id": "24593", "signature": "Metadata write: Volume %2 returning errors while trying to modify metadata. If failures continue, decrypt volume"}
+{"signature_id": "24594", "signature": "Metadata rebuild: An attempt to write a copy of metadata on volume %2 failed and may appear as disk corruption. If failures continue, decrypt volume."}
+{"signature_id": "24595", "signature": "Volume %2 contains bad clusters. These clusters will be skipped during conversion."}
+{"signature_id": "24621", "signature": "Initial state check: Rolling volume conversion transaction on %2."}

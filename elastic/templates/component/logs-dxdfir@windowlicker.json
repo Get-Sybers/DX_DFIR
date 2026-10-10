@@ -1,0 +1,138 @@
+{
+  "template": {
+    "mappings": {
+      "properties": {
+        "Payload": {
+          "type": "match_only_text"
+        },
+        "EnvVars": {
+          "type": "match_only_text"
+        },
+        "AppId": {
+          "type": "long"
+        },
+        "goese": {
+          "properties": {
+            "table": {
+              "type": "keyword"
+            }
+          }
+        },
+        "jumplist": {
+          "properties": {
+            "app": {
+              "type": "flattened"
+            }
+          }
+        },
+        "EventTime": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "SourceModified": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "TimeStamp": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "TimeCreated": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "Created0x10": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "Created0x30": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastModified0x10": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastModified0x30": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastAccess0x10": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastAccess0x30": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastRecordChange0x10": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastRecordChange0x30": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "FileKeyLastWriteTimestamp": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastModifiedTimeUTC": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastModifiedTime": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "StartTime": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "EndTime": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "DeletedOn": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LastWriteTime": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm:ss.SSSSSSS||yyyy-MM-dd HH:mm:ss||strict_date_optional_time",
+          "ignore_malformed": true
+        },
+        "LastWriteTimestamp": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm:ss.SSSSSSS||yyyy-MM-dd HH:mm:ss||strict_date_optional_time",
+          "ignore_malformed": true
+        },
+        "CreateTime": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "ExitTime": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "Created": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "UnloadTime": {
+          "type": "date",
+          "ignore_malformed": true
+        },
+        "LoadTime": {
+          "type": "date",
+          "ignore_malformed": true
+        }
+      }
+    }
+  },
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/templates/component/logs-dxdfir@windowlicker.json",
+    "description": "The windowlicker lane model: the fields its GoDFIR submodules (goevtx, gomft, goese, goamcache, goappcompat, goprefetch, gowxt, gosbe, gore, gole, gojle, gorb) write. The tools' own time columns are pinned as dates (ignore_malformed, so an epoch-zero sentinel never fails the record) and the goevtx winlog.* projection lives in the shared logs-dxdfir@winlog model. goese.table is the ESE table alias; AppId is the SRUM integer (gojle's object AppId is moved to jumplist.app by the submodule before it can collide); Payload and EnvVars are the long raw strings kept as match_only_text. daemonhunter, the other GoDFIR lane, carries its own logs-dxdfir@daemonhunter model."
+  }
+}

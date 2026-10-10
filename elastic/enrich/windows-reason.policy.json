@@ -1,0 +1,16 @@
+{
+  "match": {
+    "indices": [
+      "logs-dxdfir-enrich-windows-reason"
+    ],
+    "match_field": "key",
+    "enrich_fields": [
+      "reason"
+    ]
+  },
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/enrich/windows-reason.policy.json",
+    "description": "The failed-logon reason keyed on three values (EventID, Status, Sub_Status). Enrich matches one field, so the source rows (windows-reason.ndjson) carry a composite key 'event_id|status|substatus' (hex lowercased) and the logs-dxdfir-winlog pipeline builds the same key from winlog.event_id + winlog.data.Status + winlog.data.SubStatus before matching. Fills ECS event.reason (chiefly 4625)."
+  }
+}

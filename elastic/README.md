@@ -18,11 +18,13 @@ single source of truth every consumer references.
 elastic/
 ├── filebeat/filebeat.yml      # the shipper: processed tree → logs-dxdfir.<type>-<ns>
 ├── pipelines/                 # ES ingest pipelines, one file per pipeline (name = filename)
-│   ├── logs-dxdfir-router.json        # default_pipeline: routes on labels.type
-│   ├── logs-dxdfir-zeek.json          # per-type parsing lives one level down
+│   ├── logs-dxdfir-router.json           # default_pipeline: routes on labels.type
+│   ├── logs-dxdfir-windowlicker.json     # a lane PARENT: common work, then dispatch
+│   ├── logs-dxdfir-windowlicker-goevtx.json  # a SUBMODULE: one tool's shaping
+│   ├── logs-dxdfir-winlog.json           # shared: the Windows Event Log normaliser
 │   └── …
 ├── templates/
-│   ├── component/             # component templates (deployed first)
+│   ├── component/             # component templates: one logs-dxdfir@<lane> model each
 │   └── index/                 # index templates (composed of the above)
 └── dashboards/                # Kibana saved objects (*.ndjson), imported on deploy
     └── malcolm/               # a Kibana SPACE: space.json + its own *.ndjson (see dashboards/malcolm/README.md)
@@ -45,14 +47,23 @@ elastic/
    HTTP Host header.
 2. The record lands in the **`logs-dxdfir.<type>-<namespace>`** data stream.
    The [index template](templates/index/logs-dxdfir.json) mirrors the
-   built-in `logs-*-*` behaviour (logsdb, ECS dynamic mappings) and adds the
-   [`logs-dxdfir@custom`](templates/component/logs-dxdfir@custom.json)
-   component: field mappings plus `index.default_pipeline` →
-   **`logs-dxdfir-router`**.
+   built-in `logs-*-*` behaviour (logsdb, ECS dynamic mappings) and composes
+   the decomposed **`logs-dxdfir@*`** components: `@settings` carries
+   `index.default_pipeline` → **`logs-dxdfir-router`** and the stack-wide
+   backstops, `@winlog` is the shared Windows Event Log model, and one
+   `@<lane>` model (`@windowlicker`, `@log2timeline`, `@daemonhunter`,
+   `@zeek`, `@detections`, `@hayabussa`) owns that lane's fields.
 3. The [router pipeline](pipelines/logs-dxdfir-router.json) stamps
    `event.ingested`, drops Filebeat's `host.name` (the shipper's container,
    never the evidence host; `agent.*` still names the shipper) and hands the
-   record to its **per-type pipeline**, which owns the parsing: evidence
+   record to its **lane parent pipeline**, which owns the parsing. A parent
+   does the work common to its lane then dispatches to a **submodule
+   pipeline** per sub-tool (`logs-dxdfir-windowlicker` → its `goevtx`,
+   `gomft`, `goese`, `gojle` submodules; `logs-dxdfir-log2timeline` → its
+   `winevtx` submodule); the EVTX submodules (`goevtx`, `winevtx`) normalise
+   onto the shared winlog model and hand off to **`logs-dxdfir-winlog`**, so a
+   Plaso-parsed event and a goevtx-parsed one land under the same
+   `winlog.*` field names. The parsing sets: evidence
    time → `@timestamp` (never re-stamped — the dead-box rule the
    [risk gate](../docs/riskgate.md) enforces for CAR holds here too; a
    record without a usable evidence time keeps the ingest time),
@@ -75,19 +86,29 @@ elastic/
 
 - **A new evidence type**: it already ships — Filebeat routes any
   `processed/<type>/` into `logs-dxdfir.<type>-*` untouched. To parse it,
-  add `pipelines/logs-dxdfir-<type>.json` and a routing entry in
-  [the router](pipelines/logs-dxdfir-router.json).
-- **Grok**: lives in the per-type pipeline (see the `display_name` grok in
+  add a lane parent `pipelines/logs-dxdfir-<lane>.json` and a routing entry
+  in [the router](pipelines/logs-dxdfir-router.json); give a multi-tool lane
+  one submodule `pipelines/logs-dxdfir-<lane>-<tool>.json` per tool that
+  needs its own shaping, dispatched from the parent. An EVTX source maps
+  onto the shared [winlog model](templates/component/logs-dxdfir@winlog.json)
+  and calls [logs-dxdfir-winlog](pipelines/logs-dxdfir-winlog.json) rather
+  than inventing its own Windows fields.
+- **Grok**: lives in the lane/submodule pipeline (see the `display_name`
+  grok in
   [logs-dxdfir-log2timeline.json](pipelines/logs-dxdfir-log2timeline.json)
   for the pattern to copy). Test with `_ingest/pipeline/_simulate` before
   deploying.
-- **Mappings**: add to the
-  [`logs-dxdfir@custom`](templates/component/logs-dxdfir@custom.json)
-  component template: pin any field whose type must not depend on which
+- **Mappings**: add to the owning lane model
+  `templates/component/logs-dxdfir@<lane>.json` (shared Windows fields to
+  [`logs-dxdfir@winlog`](templates/component/logs-dxdfir@winlog.json),
+  stack-wide backstops to
+  [`logs-dxdfir@settings`](templates/component/logs-dxdfir@settings.json)):
+  pin any field whose type must not depend on which
   record lands first (Zeek's `id` tuple, the SRUM `AppId`), and map a
   free-form or recursive tree `flattened` (Plaso's `values`, Hayabusa's
   `Details`, journald's `Fields`) — it then costs one mapper whatever its
-  keys. Template changes apply to a stream's **next** backing index —
+  keys. A new lane model must also be added to the index template's
+  `composed_of`. Template changes apply to a stream's **next** backing index —
   existing indices keep their mappings. Deploy rolls over every existing
   `logs-dxdfir.*` stream when the component template changed, and once
   when a stream's write index is not yet on the router pipeline, so the

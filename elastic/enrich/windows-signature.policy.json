@@ -1,0 +1,19 @@
+{
+  "match": {
+    "indices": [
+      "logs-dxdfir-enrich-windows-signature"
+    ],
+    "match_field": "signature_id",
+    "enrich_fields": [
+      "signature",
+      "action",
+      "result",
+      "category_string"
+    ]
+  },
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/enrich/windows-signature.policy.json",
+    "description": "EventID (winlog.event_id) -> the Windows event's human-readable description. Source rows are windows-signature.ndjson, loaded into the logs-dxdfir-enrich-windows-signature index. Referenced by the logs-dxdfir-winlog pipeline's enrich processor (policy_name windows-signature) to fill ECS message."
+  }
+}

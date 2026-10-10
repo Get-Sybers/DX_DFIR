@@ -1,0 +1,154 @@
+{
+  "description": "The shared winlog derived layer. Runs after a source submodule (windowlicker's goevtx, log2timeline's winevtx) has mapped its native shape onto the canonical winlog.* model, so it is lane-agnostic: it reads winlog.* and winlog.data.* and projects the event onto ECS (event.*, log.level, user.*, source.*, destination.*, process.*), then dispatches to the per-channel pipeline for the channel-specific extractions. The native winlog.* fields are left in place. The base block here is what applies to every channel: event.kind/code/provider, the Level->log.level rendering, the Level->event.severity bucket (inline), and the EventID->message enrichment via the windows-signature enrich policy (elastic/enrich/). The lookups without a clean ECS home (reason, privilege names, task category) are not projected; their raw inputs stay in winlog.*.",
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/pipelines/logs-dxdfir-winlog.json"
+  },
+  "processors": [
+    {
+      "set": {
+        "field": "event.kind",
+        "value": "event",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "event.code",
+        "copy_from": "winlog.event_id",
+        "if": "ctx.winlog?.event_id != null",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "event.provider",
+        "copy_from": "winlog.provider_name",
+        "if": "ctx.winlog?.provider_name instanceof String && ctx.winlog.provider_name.length() > 0",
+        "override": false
+      }
+    },
+    {
+      "script": {
+        "description": "EVTX Level -> ECS log.level, the way Windows renders it (1 critical, 2 error, 3 warning, 4 information, 5 verbose; 0 is LogAlways/undefined -> information)",
+        "lang": "painless",
+        "if": "ctx.winlog?.level != null && ctx.log?.level == null",
+        "source": "def m = ['0':'information','1':'critical','2':'error','3':'warning','4':'information','5':'verbose']; def n = m.get(String.valueOf(ctx.winlog.level)); if (n != null) { if (!(ctx.log instanceof Map)) { ctx.log = [:]; } ctx.log.level = n; }"
+      }
+    },
+    {
+      "script": {
+        "description": "severity bucket from the Level -> ECS event.severity (critical 4, high 3, medium 2, informational 1); inline 6-row Level-to-severity map",
+        "lang": "painless",
+        "if": "ctx.winlog?.level != null && ctx.event?.severity == null",
+        "source": "def m = ['0':1,'1':4,'2':3,'3':2,'4':1,'5':1]; def n = m.get(String.valueOf(ctx.winlog.level)); if (n != null) { if (!(ctx.event instanceof Map)) { ctx.event = [:]; } ctx.event.severity = n; }"
+      }
+    },
+    {
+      "enrich": {
+        "description": "EventID -> the event's human-readable description, via the windows-signature enrich policy. The policy must exist at pipeline-create time; see elastic/enrich/README.md.",
+        "policy_name": "windows-signature",
+        "field": "winlog.event_id",
+        "target_field": "_tmp_sig",
+        "max_matches": 1,
+        "ignore_missing": true,
+        "if": "ctx.winlog?.event_id != null"
+      }
+    },
+    {
+      "set": {
+        "description": "ECS message from the signature description, only when the record carries none of its own (Plaso's message is left intact)",
+        "field": "message",
+        "copy_from": "_tmp_sig.signature",
+        "if": "ctx.message == null && ctx._tmp_sig?.signature instanceof String",
+        "override": false
+      }
+    },
+    {
+      "remove": {
+        "field": "_tmp_sig",
+        "ignore_missing": true
+      }
+    },
+    {
+      "script": {
+        "description": "build the composite key for the reason lookup (signature_id|status|substatus, hex lowercased) when the record carries a Status",
+        "lang": "painless",
+        "if": "ctx.winlog?.event_id != null && ctx.winlog?.data instanceof Map && ctx.winlog.data.Status instanceof String && ctx.winlog.data.Status.length() > 0",
+        "source": "def st = ctx.winlog.data.Status; def sub = ctx.winlog.data.SubStatus; def subk = (sub instanceof String && sub.length() > 0) ? sub.toLowerCase() : st.toLowerCase(); ctx._tmp_rkey = ctx.winlog.event_id + '|' + st.toLowerCase() + '|' + subk;"
+      }
+    },
+    {
+      "enrich": {
+        "description": "failed-logon reason via the windows-reason enrich policy",
+        "policy_name": "windows-reason",
+        "field": "_tmp_rkey",
+        "target_field": "_tmp_reason",
+        "max_matches": 1,
+        "ignore_missing": true,
+        "if": "ctx._tmp_rkey != null"
+      }
+    },
+    {
+      "set": {
+        "field": "event.reason",
+        "copy_from": "_tmp_reason.reason",
+        "if": "ctx._tmp_reason?.reason instanceof String",
+        "override": false
+      }
+    },
+    {
+      "remove": {
+        "field": ["_tmp_rkey", "_tmp_reason"],
+        "ignore_missing": true
+      }
+    },
+    {
+      "set": {
+        "description": "fall back to the event's own Computer for host.name when the parent lane did not set one",
+        "field": "host.name",
+        "copy_from": "winlog.computer",
+        "if": "ctx.host?.name == null && ctx.winlog?.computer instanceof String && ctx.winlog.computer.length() > 0",
+        "override": false
+      }
+    },
+    {
+      "pipeline": {
+        "name": "logs-dxdfir-winlog-security",
+        "if": "ctx.winlog?.channel == 'Security'"
+      }
+    },
+    {
+      "pipeline": {
+        "name": "logs-dxdfir-winlog-system",
+        "if": "ctx.winlog?.channel == 'System'"
+      }
+    },
+    {
+      "pipeline": {
+        "name": "logs-dxdfir-winlog-sysmon",
+        "if": "ctx.winlog?.channel == 'Microsoft-Windows-Sysmon/Operational'"
+      }
+    },
+    {
+      "pipeline": {
+        "name": "logs-dxdfir-winlog-powershell",
+        "if": "ctx.winlog?.channel == 'Microsoft-Windows-PowerShell/Operational' || ctx.winlog?.channel == 'Windows PowerShell'"
+      }
+    },
+    {
+      "pipeline": {
+        "name": "logs-dxdfir-winlog-defender",
+        "if": "ctx.winlog?.channel == 'Microsoft-Windows-Windows Defender/Operational'"
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "field": "labels.pipeline_error",
+        "value": "{{{ _ingest.on_failure_message }}}"
+      }
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "description": "windowlicker submodule: goese (one record per ESE table row). Sets goese.table to the table's alias (ApplicationResourceUsage, ...) when the tool resolved one, else the raw table name, so every goese row is dataset goese with the table in goese.table.",
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/pipelines/logs-dxdfir-windowlicker-goese.json"
+  },
+  "processors": [
+    {
+      "set": {
+        "field": "goese.table",
+        "copy_from": "TableAlias",
+        "if": "ctx.TableAlias instanceof String",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "goese.table",
+        "copy_from": "Table",
+        "if": "ctx.goese?.table == null && ctx.Table instanceof String",
+        "override": false
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "field": "labels.pipeline_error",
+        "value": "{{{ _ingest.on_failure_message }}}"
+      }
+    }
+  ]
+}

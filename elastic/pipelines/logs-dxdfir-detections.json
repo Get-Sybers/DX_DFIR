@@ -195,7 +195,7 @@
     },
     {
       "set": {
-        "field": "winlog.computer_name",
+        "field": "winlog.computer",
         "copy_from": "Computer",
         "if": "ctx.Computer instanceof String",
         "override": false
@@ -236,7 +236,7 @@
     {
       "convert": {
         "field": "RecordID",
-        "target_field": "winlog.record_id",
+        "target_field": "winlog.event_record_id",
         "type": "string",
         "if": "ctx.RecordID != null"
       }

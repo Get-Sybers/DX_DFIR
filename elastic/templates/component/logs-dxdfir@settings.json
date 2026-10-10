@@ -1,0 +1,49 @@
+{
+  "template": {
+    "settings": {
+      "index": {
+        "default_pipeline": "logs-dxdfir-router",
+        "number_of_replicas": 0,
+        "mapping": {
+          "total_fields": {
+            "limit": 2000
+          }
+        }
+      }
+    },
+    "mappings": {
+      "properties": {
+        "labels": {
+          "properties": {
+            "type": {
+              "type": "keyword"
+            },
+            "case": {
+              "type": "keyword"
+            },
+            "item": {
+              "type": "keyword"
+            },
+            "pipeline_error": {
+              "type": "keyword"
+            }
+          }
+        },
+        "Level": {
+          "type": "keyword"
+        },
+        "PID": {
+          "type": "long"
+        },
+        "PPID": {
+          "type": "long"
+        }
+      }
+    }
+  },
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/templates/component/logs-dxdfir@settings.json",
+    "description": "Stack-wide base for every logs-dxdfir.* stream: the router default_pipeline, no replicas (one node), the 2000-field backstop, labels.* (the routing key, the case and item from the path, the pipeline-error drain), and the cross-lane scalar backstops (Level, PID, PPID) whose type must not depend on which lane's record lands in a stream first. Per-lane field models live in the sibling logs-dxdfir@<lane> components; this file carries nothing lane-specific."
+  }
+}

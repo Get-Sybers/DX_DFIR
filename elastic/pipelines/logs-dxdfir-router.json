@@ -33,8 +33,14 @@
     },
     {
       "pipeline": {
-        "name": "logs-dxdfir-godfir",
-        "if": "ctx.labels?.type == 'windowlicker' || ctx.labels?.type == 'daemonhunter'"
+        "name": "logs-dxdfir-windowlicker",
+        "if": "ctx.labels?.type == 'windowlicker'"
+      }
+    },
+    {
+      "pipeline": {
+        "name": "logs-dxdfir-daemonhunter",
+        "if": "ctx.labels?.type == 'daemonhunter'"
       }
     },
     {

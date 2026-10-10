@@ -1,0 +1,25 @@
+{
+  "description": "Derived extractions for the PowerShell channels (winlog.channel == 'Microsoft-Windows-PowerShell/Operational' or 'Windows PowerShell'). These events classify as process activity; the script content (ScriptBlockText for 4104, HostApplication/CommandLine for the classic log) is left in winlog.data.* where it is already searchable, since ECS has no dedicated PowerShell field. event.category/type only.",
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/pipelines/logs-dxdfir-winlog-powershell.json"
+  },
+  "processors": [
+    {
+      "script": {
+        "description": "event.category/type for PowerShell engine/pipeline/script-block events",
+        "lang": "painless",
+        "if": "ctx.winlog?.event_id != null",
+        "source": "def id = ctx.winlog.event_id; def M = ['4103':['process',null],'4104':['process',null],'400':['process','start'],'403':['process','end'],'600':['process',null],'800':['process',null]]; def e = M.get(id); if (e != null) { if (!(ctx.event instanceof Map)) { ctx.event = [:]; } if (e[0] != null && ctx.event.category == null) { ctx.event.category = e[0]; } if (e[1] != null && ctx.event.type == null) { ctx.event.type = e[1]; } }"
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "field": "labels.pipeline_error",
+        "value": "{{{ _ingest.on_failure_message }}}"
+      }
+    }
+  ]
+}

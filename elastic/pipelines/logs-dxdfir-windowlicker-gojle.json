@@ -1,0 +1,25 @@
+{
+  "description": "windowlicker submodule: gojle (jump lists). gojle writes AppId as an object {AppId, Description}; the SRUM ESE tables write AppId as an integer. One name cannot be both, so the object form moves to jumplist.app (flattened in logs-dxdfir@windowlicker) and the integer AppId keeps its mapping.",
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/pipelines/logs-dxdfir-windowlicker-gojle.json"
+  },
+  "processors": [
+    {
+      "rename": {
+        "field": "AppId",
+        "target_field": "jumplist.app",
+        "if": "ctx.AppId instanceof Map",
+        "ignore_missing": true
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "field": "labels.pipeline_error",
+        "value": "{{{ _ingest.on_failure_message }}}"
+      }
+    }
+  ]
+}
