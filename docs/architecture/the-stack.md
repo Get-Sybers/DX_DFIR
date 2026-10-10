@@ -132,6 +132,17 @@ lists [every dashboard](../../elastic/dashboards/malcolm/DASHBOARDS.md) and
 the field conversion. Like the rest of the tree, the space is re-imported
 in place whenever its files change.
 
+The third space is the engine's, not this tree's: `dx byakugan load --kibana`
+(a `--setup` run) creates the **`byakugan` Kibana space** — steel blue, at
+<http://127.0.0.1:5601/s/byakugan/app/dashboards> — and imports the
+`logs-car.*` data view and the **CAR timeline** dashboard into it, from the
+`elastic/` config tree the Byakugan engine renders from its own CAR→ECS
+contract and bakes into the `get-sybers/byakugan` image
+([the engine's `elastic/README.md`](https://github.com/Get-Sybers/Byakugan/blob/main/elastic/README.md)).
+The same run installs the `logs-car.*` component/index templates. Nothing
+about `logs-car.*` is configured in this repo's tree: the engine owns that
+family end to end, and this stack receives it through the image.
+
 ## Two index families
 
 | Family | Holds | From |

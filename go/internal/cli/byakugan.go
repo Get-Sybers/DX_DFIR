@@ -154,8 +154,9 @@ func newByakuganLoadCmd(env *Env) *cobra.Command {
 			"logs-car.* index/component templates before loading and authenticates as the\n" +
 			"elastic superuser; pass --no-setup for routine repeat loads once the templates\n" +
 			"exist, which authenticates as the least-privilege byakugan_loader identity\n" +
-			"instead. --kibana also imports the rendered Kibana saved objects (only sent when\n" +
-			"--setup is also on).",
+			"instead. --kibana also creates the engine's Byakugan Kibana space (/s/byakugan: the\n" +
+			"logs-car.* data view and the CAR timeline dashboard, from the image's own elastic/\n" +
+			"tree; only sent when --setup is also on).",
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			// The saved-objects import only runs in the setup pass (the role
@@ -188,7 +189,7 @@ func newByakuganLoadCmd(env *Env) *cobra.Command {
 	cmd.Flags().BoolVar(&setup, "setup", true, "Apply the logs-car.* templates before loading (first run).")
 	cmd.Flags().BoolVar(&noSetup, "no-setup", false, "Skip template setup — routine repeat loads once they exist.")
 	cmd.Flags().BoolVar(&force, "force", false, "Re-render and re-push even when already loaded.")
-	cmd.Flags().BoolVar(&kibana, "kibana", false, "Also import the rendered Kibana saved objects (requires --setup).")
+	cmd.Flags().BoolVar(&kibana, "kibana", false, "Also create the Byakugan Kibana space and import its saved objects (requires --setup).")
 	return cmd
 }
 

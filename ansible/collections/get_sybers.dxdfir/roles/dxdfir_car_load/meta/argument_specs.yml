@@ -94,7 +94,9 @@ argument_specs:
         required: false
         default: false
         description: >-
-          Also import the rendered Kibana saved objects
+          Also create the engine's Byakugan Kibana space (/s/byakugan) and
+          import its saved objects — the logs-car.* data view and the CAR
+          timeline dashboard, from the image's baked elastic/ tree
           (BYAKUGAN_LOAD_KIBANA_URL set). Only ever sent when
           dxdfir_car_load_setup is also true — the contract requires
           BYAKUGAN_LOAD_SETUP for the Kibana import.
