@@ -91,7 +91,7 @@ processed into CAR:
 The full documentation set:
 
 - **Getting started:** [Get started](docs/Get-Started.md) · [Command reference](docs/dx-cli.md) · [Directory structure](docs/Dir-Structure.md)
-- **How it works:** [Architecture overview](docs/architecture/README.md) · [Setup flow](docs/architecture/setup-flow.md) · [Processing lanes](docs/architecture/processing-lanes.md) · [CAR pipeline](docs/architecture/car-pipeline.md) · [The stack](docs/architecture/the-stack.md) · [Logical architecture](docs/architecture/DFIR%20Suite%20Logical%20Architecture.md)
+- **How it works:** [Architecture overview](docs/architecture/README.md) · [Setup flow](docs/architecture/setup-flow.md) · [Processing lanes](docs/architecture/processing-lanes.md) · [CAR pipeline](docs/architecture/car-pipeline.md) · [The stack](docs/architecture/the-stack.md) · [Logical architecture](docs/architecture/dfir-suite-logical-architecture.md)
 - **Pipeline internals:** [Tool containers](docs/Containers.md) · [Signature rules](docs/Signature-Rules.md) · [Risk gate](docs/riskgate.md) · [Scripts overview](docs/scripts/Scripts-Overview.md) · [Setup-environment script](docs/scripts/Setup_Environment.md)
 - **Elastic stack:** [Config tree](elastic/README.md) · [Spaces](elastic/spaces.md) · [malcolm space](elastic/dashboards/malcolm/README.md) · [malcolm dashboards](elastic/dashboards/malcolm/DASHBOARDS.md) · Filebeat fields: [Zeek](elastic/filebeat/Zeek.md) · [Suricata](elastic/filebeat/Suricata.md) · [Winlog](elastic/filebeat/Winlog.md)
 - **Contributing:** [Go standards](docs/reference/go-standards.md) · [Ansible standards](docs/reference/ansible-standards.md) · [Build & test](docs/reference/build-and-test.md) · [Contributing](.github/CONTRIBUTING.md) · [Security](.github/SECURITY.md)

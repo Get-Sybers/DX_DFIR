@@ -22,7 +22,7 @@ flowchart TD
 
 | Layer | Owns | Explicitly does **not** |
 |---|---|---|
-| **Go CLI** (`go/`) | Build a run plan, drive `ansible-playbook`, [stream progress](../getting-started/the-interface.md) by watching output files land | No processing, no `docker run`, no CAR logic (the one native read is the [collection registry](processing-lanes.md#collections)) |
+| **Go CLI** (`go/`) | Build a run plan, drive `ansible-playbook`, stream progress by watching output files land | No processing, no `docker run`, no CAR logic (the one native read is the [collection registry](processing-lanes.md#collections)) |
 | **Ansible** (`ansible/`) | *Roles group; playbooks decide.* Assert inputs, build each confined `docker run` from the tool's contract (the `dxdfir_lane` skeleton), gate on the result | No idempotence in `when:`; that lives in the tool |
 | **Containers** (`docker/`) | Run one hardened tool over one input; discover, batch and skip inside | Nothing else: fixed non-root user, no network, read-only rootfs |
 | **[Byakugan](https://github.com/Get-Sybers/Byakugan)** (external) | Normalise processed evidence into MITRE CAR | Lives outside the repo entirely, cloned + built into the hardened `get-sybers/byakugan` image at its Dockerfile's `BYAKUGAN_REF` pin, never vendored |
@@ -64,4 +64,4 @@ raw ──process──▶ processed ──byakugan build──▶ car ──bya
 - **[Processing lanes](processing-lanes.md)**: the six lanes in detail.
 - **[CAR pipeline](car-pipeline.md)**: normalisation, verification, timeline.
 - **[The stack](the-stack.md)**: Elasticsearch, Kibana, detections, STIX.
-- **[Repository map](../reference/repository-map.md)**: the Get-Sybers repos this is built on.
+- **[Repository map](dfir-suite-logical-architecture.md)**: the Get-Sybers repos this is built on.

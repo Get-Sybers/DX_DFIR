@@ -14,7 +14,7 @@ Every statement below is taken from the repositories' own files — `go.mod`, Do
 
 ## Architecture diagram
 
-[dxdfir_elastic_stack_architecture.png](/opt/git/dx_dfir/docs/architecture/dxdfir_elastic_stack_architecture.png)
+![DX_DFIR Elastic stack architecture](dxdfir_elastic_stack_architecture.png)
 
 Arrows inside layer 1 are build-time dependencies: `go.mod` requires (solid) and the gomount binary the Dockerfiles copy into the gowindowlicker and godaemonhunter images (dashed). The three arrows between the bands are files: `dx process` runs each engine over `data_store/raw`, byakugan reads what the engines wrote under `data_store/processed`, and byakugan `load` writes into the Elasticsearch that the `dxdfir_stack` role deployed.
 

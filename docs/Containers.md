@@ -63,6 +63,6 @@ policing a large image from inside.
 
 ## Offline / air-gapped hosts
 
-1. run [scripts/save-docker-images.sh](save-docker-images.sh) to save the required docker images as tar balls. they will be saved `dx_dfir/data_store/docker_images`
+1. run [scripts/save-docker-images.sh](../scripts/save-docker-images.sh) to save the required docker images as tar balls. they will be saved `dx_dfir/data_store/docker_images`
 
 2. `setup-environment.sh` in the air gapped environment will check for these images when run.
