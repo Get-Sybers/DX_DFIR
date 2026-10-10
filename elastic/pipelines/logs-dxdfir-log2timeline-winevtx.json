@@ -1,0 +1,197 @@
+{
+  "description": "log2timeline submodule: Plaso's winevtx parser (data_type windows:evtx:record). Maps Plaso's native EVTX representation onto the canonical winlog model (logs-dxdfir@winlog) so a Plaso-parsed event sits under the same field names as a goevtx-parsed one. The scalars map straight across (event_identifier->winlog.event_id, record_number->winlog.event_record_id, source_name->winlog.provider_name, provider_identifier->winlog.provider_guid, event_level->winlog.level, user_sid->winlog.user_id, hostname->winlog.computer). Plaso does not break out the <System> envelope or name the EventData — it keeps the raw xml_string — so Channel and the rest of <System> (version, task, opcode, keywords, time_created, process_id, thread_id, activity_id) are grokked from the XML and the <Data Name=..> pairs are pulled into winlog.data by a small regex. The derived field-extraction layer runs later, shared, over winlog.* — not here.",
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/pipelines/logs-dxdfir-log2timeline-winevtx.json"
+  },
+  "processors": [
+    {
+      "convert": {
+        "field": "event_identifier",
+        "target_field": "winlog.event_id",
+        "type": "string",
+        "if": "ctx.event_identifier != null",
+        "ignore_missing": true
+      }
+    },
+    {
+      "convert": {
+        "field": "record_number",
+        "target_field": "winlog.event_record_id",
+        "type": "string",
+        "if": "ctx.record_number != null",
+        "ignore_missing": true
+      }
+    },
+    {
+      "set": {
+        "field": "winlog.provider_name",
+        "copy_from": "source_name",
+        "if": "ctx.source_name instanceof String && ctx.source_name.length() > 0",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "winlog.provider_guid",
+        "copy_from": "provider_identifier",
+        "if": "ctx.provider_identifier instanceof String && ctx.provider_identifier.length() > 0",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "winlog.level",
+        "copy_from": "event_level",
+        "if": "ctx.event_level != null",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "winlog.user_id",
+        "copy_from": "user_sid",
+        "if": "ctx.user_sid instanceof String && ctx.user_sid.length() > 0",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "winlog.computer",
+        "copy_from": "computer_name",
+        "if": "ctx.computer_name instanceof String && ctx.computer_name.length() > 0",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "winlog.computer",
+        "copy_from": "hostname",
+        "if": "ctx.winlog?.computer == null && ctx.hostname instanceof String && ctx.hostname.length() > 0",
+        "override": false
+      }
+    },
+    {
+      "grok": {
+        "description": "the <System> envelope out of the raw event XML; each optional, never fatal",
+        "field": "xml_string",
+        "patterns": [
+          "<Channel>%{DATA:winlog.channel}</Channel>"
+        ],
+        "if": "ctx.xml_string instanceof String",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "grok": {
+        "field": "xml_string",
+        "patterns": [
+          "<Provider[^>]*Guid=\"%{DATA:winlog.provider_guid}\""
+        ],
+        "if": "ctx.xml_string instanceof String && ctx.winlog?.provider_guid == null",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "grok": {
+        "field": "xml_string",
+        "patterns": [
+          "<Version>%{NUMBER:winlog.version}</Version>"
+        ],
+        "if": "ctx.xml_string instanceof String",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "grok": {
+        "field": "xml_string",
+        "patterns": [
+          "<Task>%{NUMBER:winlog.task}</Task>"
+        ],
+        "if": "ctx.xml_string instanceof String",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "grok": {
+        "field": "xml_string",
+        "patterns": [
+          "<Opcode>%{NUMBER:winlog.opcode}</Opcode>"
+        ],
+        "if": "ctx.xml_string instanceof String",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "grok": {
+        "field": "xml_string",
+        "patterns": [
+          "<Keywords>%{DATA:winlog.keywords}</Keywords>"
+        ],
+        "if": "ctx.xml_string instanceof String",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "grok": {
+        "field": "xml_string",
+        "patterns": [
+          "<TimeCreated SystemTime=\"%{DATA:winlog.time_created}\""
+        ],
+        "if": "ctx.xml_string instanceof String",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "grok": {
+        "field": "xml_string",
+        "patterns": [
+          "<Execution ProcessID=\"%{NUMBER:winlog.process_id}\" ThreadID=\"%{NUMBER:winlog.thread_id}\""
+        ],
+        "if": "ctx.xml_string instanceof String",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "grok": {
+        "field": "xml_string",
+        "patterns": [
+          "<Correlation[^>]*ActivityID=\"%{DATA:winlog.activity_id}\""
+        ],
+        "if": "ctx.xml_string instanceof String",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "script": {
+        "description": "pull the <Data Name='x'>y</Data> pairs (either quote style) out of the raw XML into the named winlog.data map; self-closing empty Data tags are skipped",
+        "lang": "painless",
+        "if": "ctx.xml_string instanceof String && ctx.xml_string.contains('<Data')",
+        "source": "def m = [:]; def mt = /<Data\\s+Name=['\"]([^'\"]+)['\"]\\s*>([^<]*)<\\/Data>/.matcher(ctx.xml_string); while (mt.find()) { m[mt.group(1)] = mt.group(2); } if (!m.isEmpty()) { if (!(ctx.winlog instanceof Map)) { ctx.winlog = [:]; } if (ctx.winlog.data instanceof Map) { ctx.winlog.data.putAll(m); } else { ctx.winlog.data = m; } }"
+      }
+    },
+    {
+      "pipeline": {
+        "description": "shared derived layer: ECS projection + per-channel extractions over winlog.*",
+        "name": "logs-dxdfir-winlog"
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "field": "labels.pipeline_error",
+        "value": "{{{ _ingest.on_failure_message }}}"
+      }
+    }
+  ]
+}

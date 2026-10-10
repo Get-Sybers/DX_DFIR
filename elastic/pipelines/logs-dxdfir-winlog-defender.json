@@ -1,0 +1,33 @@
+{
+  "description": "Derived extractions for Microsoft Defender (winlog.channel == 'Microsoft-Windows-Windows Defender/Operational'), projected to ECS. Detection and remediation events (1006/1007/1015/1116/1117/1118/1119) classify as malware; the Defender EventData names carry spaces, so they are read as winlog.data['Threat Name'] etc. Projects rule.name (the threat/signature), file.path (the detected object), process.executable, and user from 'Detection User'. The native winlog.data.* stays in place.",
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/pipelines/logs-dxdfir-winlog-defender.json"
+  },
+  "processors": [
+    {
+      "script": {
+        "description": "event.category/type/outcome for Defender detection and remediation events",
+        "lang": "painless",
+        "if": "ctx.winlog?.event_id != null",
+        "source": "def id = ctx.winlog.event_id; def detect = ['1006','1015','1116','1118','1119']; def action = ['1007','1117']; if (!(ctx.event instanceof Map)) { ctx.event = [:]; } if (detect.contains(id)) { if (ctx.event.category == null) { ctx.event.category = 'malware'; } if (ctx.event.type == null) { ctx.event.type = 'info'; } } else if (action.contains(id)) { if (ctx.event.category == null) { ctx.event.category = 'malware'; } if (ctx.event.type == null) { ctx.event.type = 'info'; } if (ctx.event.outcome == null) { ctx.event.outcome = 'success'; } }"
+      }
+    },
+    {
+      "script": {
+        "description": "project Defender EventData (space-named) onto ECS rule.name / file.path / process.executable / user",
+        "lang": "painless",
+        "if": "ctx.winlog?.data instanceof Map",
+        "source": "def d = ctx.winlog.data; Closure real = { v -> v instanceof String && v.length() > 0 && v != '-' }; Closure put = { path, v -> if (real(v)) { def cur = ctx; for (int i = 0; i < path.size() - 1; i++) { if (!(cur[path[i]] instanceof Map)) { cur[path[i]] = [:]; } cur = cur[path[i]]; } if (cur[path[path.size() - 1]] == null) { cur[path[path.size() - 1]] = v; } } }; put(['rule','name'], d['Threat Name']); put(['file','path'], d['Path']); put(['process','executable'], d['Process Name']); def u = d['Detection User']; if (u instanceof String && u.length() > 0 && u != '-') { int ix = u.lastIndexOf('\\\\'); if (ix >= 0) { put(['user','domain'], u.substring(0, ix)); put(['user','name'], u.substring(ix + 1)); } else { put(['user','name'], u); } }"
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "field": "labels.pipeline_error",
+        "value": "{{{ _ingest.on_failure_message }}}"
+      }
+    }
+  ]
+}

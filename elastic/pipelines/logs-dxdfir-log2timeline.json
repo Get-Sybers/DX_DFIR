@@ -1,5 +1,5 @@
 {
-  "description": "Plaso json_line events (log2timeline/<case>/<image>/timeline.jsonl): evidence time from the epoch-microsecond timestamp (kept as ingest time when absent or the pre-1970 sentinel), filesystem/path grokked out of display_name, labels.case/labels.item from the path, host.name from Plaso's hostname (else the image). The pathspec, date_time and winreg values trees are mapped flattened by the logs-dxdfir@custom component template (values.data is a string in one registry value and an object in the next).",
+  "description": "The log2timeline (Plaso) lane parent (log2timeline/<case>/<image>/timeline.jsonl). Does the Plaso-common work every data_type shares — event.module, labels.case/labels.item from the path, event.dataset from the output filename, evidence time from the epoch-microsecond timestamp (kept as ingest time when absent or the pre-1970 sentinel), filesystem/path grokked out of display_name, host.name from Plaso's hostname (else the image) and user.name from username — then dispatches EVTX records (data_type windows:evtx:record) to the winevtx submodule, which normalises them onto the shared winlog model. The pathspec, date_time and winreg values trees are mapped flattened by logs-dxdfir@log2timeline.",
   "_meta": {
     "managed_by": "dxdfir_stack",
     "source": "elastic/pipelines/logs-dxdfir-log2timeline.json"
@@ -87,6 +87,20 @@
         "copy_from": "username",
         "if": "ctx.username instanceof String && ctx.username.length() > 0",
         "override": false
+      }
+    },
+    {
+      "pipeline": {
+        "name": "logs-dxdfir-log2timeline-winevtx",
+        "if": "ctx.data_type == 'windows:evtx:record'"
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "field": "labels.pipeline_error",
+        "value": "{{{ _ingest.on_failure_message }}}"
       }
     }
   ]

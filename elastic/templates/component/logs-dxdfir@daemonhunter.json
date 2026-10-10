@@ -1,0 +1,22 @@
+{
+  "template": {
+    "mappings": {
+      "properties": {
+        "Fields": {
+          "type": "flattened"
+        },
+        "Message": {
+          "type": "match_only_text"
+        },
+        "Raw": {
+          "type": "match_only_text"
+        }
+      }
+    }
+  },
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/templates/component/logs-dxdfir@daemonhunter.json",
+    "description": "The daemonhunter lane model (the Linux GoDFIR sweep): the journald Fields tree mapped flattened (one mapper for every structured-log key), and the long syslog/journal line kept as match_only_text in Message and Raw rather than a truncated keyword. The parent pipeline copies Message into ECS message. Shares the GoDFIR time-column conventions with the windowlicker model."
+  }
+}

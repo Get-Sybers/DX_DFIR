@@ -1,0 +1,49 @@
+{
+  "description": "windowlicker submodule: gomft ($MFT records). ECS file.* copies from the record's own columns; file.path is ParentPath/FileName. The eight MFT timestamps stay as their own fields (typed by logs-dxdfir@windowlicker); the parent has already chosen Created0x10, the $STANDARD_INFORMATION creation time, as the evidence time.",
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/pipelines/logs-dxdfir-windowlicker-gomft.json"
+  },
+  "processors": [
+    {
+      "set": {
+        "field": "file.name",
+        "copy_from": "FileName",
+        "if": "ctx.FileName instanceof String",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "file.directory",
+        "copy_from": "ParentPath",
+        "if": "ctx.ParentPath instanceof String",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "file.size",
+        "copy_from": "FileSize",
+        "if": "ctx.FileSize != null",
+        "override": false
+      }
+    },
+    {
+      "script": {
+        "description": "file.path = ParentPath/FileName",
+        "lang": "painless",
+        "if": "ctx.ParentPath instanceof String && ctx.FileName instanceof String && ctx.file?.path == null",
+        "source": "String d = ctx.ParentPath; if (!(ctx.file instanceof Map)) { ctx.file = [:]; } ctx.file.path = (d.endsWith('/') ? d : d + '/') + ctx.FileName;"
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "field": "labels.pipeline_error",
+        "value": "{{{ _ingest.on_failure_message }}}"
+      }
+    }
+  ]
+}

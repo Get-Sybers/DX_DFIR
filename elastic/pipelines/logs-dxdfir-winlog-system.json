@@ -1,0 +1,33 @@
+{
+  "description": "Derived extractions for the System channel (winlog.channel == 'System'), projected to ECS over winlog.*. System EventIDs collide across providers (EventID 1 is Kernel-General on one record and a filter driver on the next), so every rule is gated on winlog.provider_name: Service Control Manager (7045 service installed, 7040 start-type changed, 7036/7034/7035/7031 service state/failure) -> service.name + process.executable; Microsoft-Windows-WindowsUpdateClient (19 installed, 20 failed, 43/44 download/install started) -> event.category package. The native winlog.data.* stays in place.",
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/pipelines/logs-dxdfir-winlog-system.json"
+  },
+  "processors": [
+    {
+      "script": {
+        "description": "event.category/type/outcome for the SCM and WindowsUpdateClient providers",
+        "lang": "painless",
+        "if": "ctx.winlog?.event_id != null",
+        "source": "def id = ctx.winlog.event_id; def prov = ctx.winlog?.provider_name; if (!(ctx.event instanceof Map)) { ctx.event = [:]; } if (prov == 'Service Control Manager') { def M = ['7045':['configuration','installation',null],'7040':['configuration','change',null],'7036':['process',null,null],'7034':['process',null,'failure'],'7031':['process',null,'failure'],'7035':['process',null,null]]; def e = M.get(id); if (e != null) { if (e[0] != null && ctx.event.category == null) ctx.event.category = e[0]; if (e[1] != null && ctx.event.type == null) ctx.event.type = e[1]; if (e[2] != null && ctx.event.outcome == null) ctx.event.outcome = e[2]; } } else if (prov == 'Microsoft-Windows-WindowsUpdateClient') { if (id == '19') { if (ctx.event.category == null) ctx.event.category = 'package'; if (ctx.event.type == null) ctx.event.type = 'installation'; if (ctx.event.outcome == null) ctx.event.outcome = 'success'; } else if (id == '20') { if (ctx.event.category == null) ctx.event.category = 'package'; if (ctx.event.type == null) ctx.event.type = 'installation'; if (ctx.event.outcome == null) ctx.event.outcome = 'failure'; } else if (id == '43' || id == '44') { if (ctx.event.category == null) ctx.event.category = 'package'; if (ctx.event.type == null) ctx.event.type = 'start'; } }"
+      }
+    },
+    {
+      "script": {
+        "description": "project SCM service events onto ECS service.name / process.executable",
+        "lang": "painless",
+        "if": "ctx.winlog?.data instanceof Map && ctx.winlog?.provider_name == 'Service Control Manager'",
+        "source": "def d = ctx.winlog.data; def id = ctx.winlog?.event_id; Closure real = { v -> v instanceof String && v.length() > 0 && v != '-' }; Closure put = { path, v -> if (real(v)) { def cur = ctx; for (int i = 0; i < path.size() - 1; i++) { if (!(cur[path[i]] instanceof Map)) { cur[path[i]] = [:]; } cur = cur[path[i]]; } if (cur[path[path.size() - 1]] == null) { cur[path[path.size() - 1]] = v; } } }; if (id == '7045') { put(['service','name'], d.ServiceName); put(['process','executable'], d.ImagePath); put(['user','name'], d.AccountName); } else if (id == '7040') { put(['service','name'], d.param1); } else if (id == '7036' || id == '7034' || id == '7035' || id == '7031') { put(['service','name'], d.param1); }"
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "field": "labels.pipeline_error",
+        "value": "{{{ _ingest.on_failure_message }}}"
+      }
+    }
+  ]
+}

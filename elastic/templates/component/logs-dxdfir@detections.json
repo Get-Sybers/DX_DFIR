@@ -1,0 +1,29 @@
+{
+  "template": {
+    "mappings": {
+      "properties": {
+        "yara": {
+          "properties": {
+            "rule": {
+              "type": "keyword"
+            },
+            "match_count": {
+              "type": "long"
+            },
+            "strings_truncated": {
+              "type": "boolean"
+            }
+          }
+        },
+        "strings": {
+          "type": "flattened"
+        }
+      }
+    }
+  },
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/templates/component/logs-dxdfir@detections.json",
+    "description": "The detections lane model: YARA's native rule string moves under yara.rule to avoid colliding with the ECS rule object, with yara.match_count and yara.strings_truncated alongside, and the YARA string-match list mapped flattened. Hayabusa, the EVTX detection engine that also rides this lane, carries its own logs-dxdfir@hayabusa model."
+  }
+}

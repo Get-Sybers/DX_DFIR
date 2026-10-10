@@ -1,0 +1,112 @@
+{
+  "description": "windowlicker submodule: goevtx. Maps goevtx's native record onto the canonical winlog model (logs-dxdfir@winlog). goevtx exposes the global identity plus the Security UserID and TimeCreated, and carries the <EventData> payload as a JSON string in Payload (the <System> envelope's Task/Opcode/Keywords/Version/Execution/Correlation/Provider-GUID are not in goevtx output, so those winlog.* System fields stay empty for this lane). Payload is parsed and its EventData.Data[] {@Name,#text} pairs (or the lone object, for a single-field event) are pivoted into the named winlog.data.<Name> map; the raw Payload string is dropped afterwards. The derived field-extraction layer runs later, shared, over winlog.* — not here.",
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/pipelines/logs-dxdfir-windowlicker-goevtx.json"
+  },
+  "processors": [
+    {
+      "convert": {
+        "field": "EventId",
+        "target_field": "winlog.event_id",
+        "type": "string",
+        "if": "ctx.EventId != null",
+        "ignore_missing": true
+      }
+    },
+    {
+      "convert": {
+        "field": "EventRecordId",
+        "target_field": "winlog.event_record_id",
+        "type": "string",
+        "if": "ctx.EventRecordId != null",
+        "ignore_missing": true
+      }
+    },
+    {
+      "set": {
+        "field": "winlog.channel",
+        "copy_from": "Channel",
+        "if": "ctx.Channel instanceof String && ctx.Channel.length() > 0",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "winlog.provider_name",
+        "copy_from": "Provider",
+        "if": "ctx.Provider instanceof String && ctx.Provider.length() > 0",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "winlog.computer",
+        "copy_from": "Computer",
+        "if": "ctx.Computer instanceof String && ctx.Computer.length() > 0",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "winlog.level",
+        "copy_from": "Level",
+        "if": "ctx.Level != null",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "winlog.user_id",
+        "copy_from": "UserId",
+        "if": "ctx.UserId instanceof String && ctx.UserId.length() > 0",
+        "override": false
+      }
+    },
+    {
+      "set": {
+        "field": "winlog.time_created",
+        "copy_from": "TimeCreated",
+        "if": "ctx.TimeCreated instanceof String && ctx.TimeCreated.length() > 0",
+        "override": false
+      }
+    },
+    {
+      "json": {
+        "description": "parse the double-encoded Payload JSON string into a temp tree",
+        "field": "Payload",
+        "target_field": "_tmp_evt",
+        "if": "ctx.Payload instanceof String && ctx.Payload.startsWith('{')",
+        "ignore_failure": true
+      }
+    },
+    {
+      "script": {
+        "description": "pivot EventData.Data[] {@Name,#text} into the named winlog.data map (handles the single-Data object case too)",
+        "lang": "painless",
+        "if": "ctx._tmp_evt instanceof Map",
+        "source": "def data = ctx._tmp_evt?.EventData?.Data; if (data != null) { def m = [:]; if (data instanceof List) { for (def it : data) { if (it instanceof Map && it['@Name'] != null) { m[it['@Name']] = it['#text']; } } } else if (data instanceof Map && data['@Name'] != null) { m[data['@Name']] = data['#text']; } if (!m.isEmpty()) { if (!(ctx.winlog instanceof Map)) { ctx.winlog = [:]; } ctx.winlog.data = m; } }"
+      }
+    },
+    {
+      "remove": {
+        "field": ["_tmp_evt", "Payload"],
+        "ignore_missing": true
+      }
+    },
+    {
+      "pipeline": {
+        "description": "shared derived layer: ECS projection + per-channel extractions over winlog.*",
+        "name": "logs-dxdfir-winlog"
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "field": "labels.pipeline_error",
+        "value": "{{{ _ingest.on_failure_message }}}"
+      }
+    }
+  ]
+}

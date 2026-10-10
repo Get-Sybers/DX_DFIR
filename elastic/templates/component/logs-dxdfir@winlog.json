@@ -1,0 +1,72 @@
+{
+  "template": {
+    "mappings": {
+      "properties": {
+        "winlog": {
+          "properties": {
+            "channel": {
+              "type": "keyword"
+            },
+            "computer": {
+              "type": "keyword"
+            },
+            "event_id": {
+              "type": "keyword"
+            },
+            "event_record_id": {
+              "type": "keyword"
+            },
+            "provider_name": {
+              "type": "keyword"
+            },
+            "provider_guid": {
+              "type": "keyword"
+            },
+            "level": {
+              "type": "long"
+            },
+            "time_created": {
+              "type": "date",
+              "ignore_malformed": true
+            },
+            "version": {
+              "type": "long"
+            },
+            "task": {
+              "type": "keyword"
+            },
+            "opcode": {
+              "type": "keyword"
+            },
+            "keywords": {
+              "type": "keyword"
+            },
+            "process_id": {
+              "type": "long"
+            },
+            "thread_id": {
+              "type": "long"
+            },
+            "activity_id": {
+              "type": "keyword"
+            },
+            "relative_activity_id": {
+              "type": "keyword"
+            },
+            "user_id": {
+              "type": "keyword"
+            },
+            "data": {
+              "type": "flattened"
+            }
+          }
+        }
+      }
+    }
+  },
+  "_meta": {
+    "managed_by": "dxdfir_stack",
+    "source": "elastic/templates/component/logs-dxdfir@winlog.json",
+    "description": "The canonical Windows Event Log model. Every field name is a value-bearing element or attribute of the actual EVTX <Event> record, lowercased to snake_case — taken from the Windows Event Log schema itself, never from a vendor normalisation (it is 'Computer' and 'EventRecordID' as the log writes them). The container elements that merely group attributes (<Provider>, <TimeCreated>, <Correlation>, <Execution>, <Security>) are flattened out, since a container is not a field. The whole <System> envelope sits flat on winlog.* — channel, computer, event_id, event_record_id, provider_name/provider_guid (<Provider @Name/@Guid>), level, task, opcode, keywords, version, time_created (<TimeCreated @SystemTime>), process_id/thread_id (<Execution @ProcessID/@ThreadID>), activity_id/relative_activity_id (<Correlation @ActivityID/@RelativeActivityID>), user_id (<Security @UserID>). winlog.data is the <EventData> payload: the <Data Name=X>Y pairs as a flattened name→value map (a <UserData> event's fields fold in here too). windowlicker's goevtx submodule and log2timeline's winevtx submodule each map their own native representation onto this one contract — same data, different source shapes, one model."
+  }
+}
