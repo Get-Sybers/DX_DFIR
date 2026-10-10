@@ -14,7 +14,7 @@ The grammar is **verb first** — `<verb> <noun>` (`deploy stack`, `register
 evidence NAME`, `list evidence`). The evidence verbs also accept a bare NAME in
 place of the noun (`select NAME`). `byakugan` is the one noun-first exception: a
 tool namespace whose subcommands are its own verbs (`byakugan build`, `byakugan
-export-stix`). See [the command reference](../docs/getting-started/commands.md).
+export-stix`). See [the command reference](../docs/getting-started/dx-cli.md).
 
 The binary never re-implements processing. It shells out to what already exists:
 

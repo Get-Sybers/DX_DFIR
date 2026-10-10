@@ -17,7 +17,6 @@ for the [stack](../architecture/the-stack.md) (which the `dx … stack` verbs al
 
 | Command | What it does |
 |---|---|
-| `./scripts/setup-environment.sh [--yes] [--no-color]` | One-time host prep: Docker, tools, the Byakugan engine, the venv, the `dx` binary. See [install](install.md). |
 | `dx build images [-i NAME] [--force]` | Pull + hardening-verify the `get-sybers/*` tool images from the registry. Run once per host. |
 | `dx verify images` | Audit the hardened tool-image inventory (fails on any missing or un-hardened image). |
 

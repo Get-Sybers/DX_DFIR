@@ -10,3 +10,12 @@
 # (cryptography for community.crypto, the docker SDK). Interpreter discovery
 # lands on the system python, which has neither.
 ansible_python_interpreter: "{{ ansible_playbook_python }}"
+
+# Where the stack's published ports bind. The inventory default (group_vars,
+# 127.0.0.1) keeps the stack loopback-only; the workstation publishes it on
+# its primary address instead so a browser on the LAN reaches Kibana at
+# http://<this host's ip>:5601. The role derives the TLS IP SAN and Kibana's
+# public base URL from the same value, and docker then publishes ONLY on that
+# address — 127.0.0.1:<port> no longer answers; use the host's ip there too.
+# Elasticsearch (TLS + auth) and Fleet Server follow onto the same address.
+dxdfir_elastic_bind: "{{ ansible_default_ipv4['address'] }}"

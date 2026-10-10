@@ -11,7 +11,7 @@ discovers its inputs, batches over them, skips items that already have valid out
 and writes deterministic output; no host-side processor exists.
 
 `dx process [SCOPE] [TOOL]` picks the tool; `all` runs every lane that has
-evidence. See the [command reference](../getting-started/commands.md#evidence).
+evidence. See the [command reference](../getting-started/dx-cli.md#evidence).
 
 ## The six lanes
 
@@ -102,4 +102,4 @@ dx select case-a                # make it the active target
 
 The registry read path (`list collections`, the lane and state reads) is native Go, no
 subprocess, and shares the SQLite schema as its contract with the Python writers. Full command
-list: [commands → evidence](../getting-started/commands.md#evidence).
+list: [commands → evidence](../getting-started/dx-cli.md#evidence).

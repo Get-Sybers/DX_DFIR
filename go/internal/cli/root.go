@@ -48,7 +48,7 @@ func (e *Env) resolveRepo() (*repo.Repo, error) {
 	return r, nil
 }
 
-// Root-help groups, mirroring the sections of docs/getting-started/commands.md
+// Root-help groups, mirroring the sections of docs/getting-started/dx-cli.md
 // so `dx --help` reads like the reference. Every visible root command carries
 // one (root_test.go enforces it).
 const (

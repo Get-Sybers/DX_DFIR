@@ -4,179 +4,100 @@
 [![pipeline](https://github.com/Get-Sybers/DX_DFIR/badges/main/pipeline.svg)](https://github.com/Get-Sybers/DX_DFIR/-/pipelines)
 [![licence](https://img.shields.io/badge/licence-Apache--2.0-blue)](/LICENSE)
 
-Point DX_DFIR at a disk image or a PCAP; it processes the evidence with
-**[Plaso](https://github.com/log2timeline/plaso)**, **[Zeek](https://zeek.org/)**,
-**goevtx**,
-**[anamnesis](https://github.com/Get-Sybers/Anamnesis)** (memory) and the
-**[GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz)**, normalises it into the
-**[MITRE CAR](https://car.mitre.org/data_model/)** data model — materialised, one
-`car_<object>.jsonl` per object — and feeds an **Elastic-native analysis backend**
-(Elasticsearch + Kibana with security on, Fleet, Filebeat; Basic
-licence, everything on `127.0.0.1`). Detections are ES|QL / EQL rules-as-code run
-by Elastic's Detection Engine, tagging the CAR evidence lines they match, with a
-STIX 2.1 / OpenCTI exchange on top. You get normalised CAR in a real analytics
-stack instead of a pile of CSVs.
-
 > **Pre-release software** — the version and maturity are whatever the badge above
 > says (it reads the latest [Release](https://github.com/Get-Sybers/DX_DFIR/-/releases)
 > live). Runs on the author's corpus; interfaces may still change. Release notes:
 > [CHANGELOG.md](CHANGELOG.md).
 
+**DX_DFIR turns a pile of raw evidence into normalised, searchable forensic leads. Hand it packet captures, disk images, memory dumps, or Windows event logs.**
+
+1. **Processes** each kind of evidence with the right specialist tool, in a hardened
+   container: Zeek for PCAPs, goevtx for Windows logs, anamnesis (MemProcFS) for memory,
+   Plaso and the GoDFIR-toolz parsers for disk images.
+2. **Normalises** all of it into one common shape, the
+   [MITRE CAR](https://car.mitre.org/data_model/) data model, written out as plain
+   per-object JSONL files you can read, diff, and grep.
+3. **Feeds** a security-on [Elastic stack](docs/architecture/the-stack.md)
+   (Elasticsearch + Kibana, everything bound to `127.0.0.1`) where detections run as
+
+## Who it's for
+
+Incident responders and forensic analysts who want a repeatable, offline pipeline over
+mixed evidence, and who'd rather run a handful of commands than wire five tools
+together by hand. Everything runs on a single Debian/Ubuntu host; every published port
+is localhost-only.
+
+## Index
+
+| I want to… | Go to |
+|---|---|
+| Understand what this is, and run my first case | [Get started](docs/Get-Started.md) |
+| Install it on a fresh host | [Setup script](docs/scripts/Setup_Environment.md) |
+| Look up a specific command | [Command reference](docs/dx-cli.md) |
+| Understand how it works under the hood | [Architecture overview](docs/architecture/README.md) |
+| See the processing lanes | [Processing lanes](docs/architecture/processing-lanes.md) |
+| Contribute code that fits the house style | [Go standards](docs/reference/go-standards.md) · [Ansible standards](docs/reference/ansible-standards.md) |
+
 ## Quick start
+### Setup
+Clone Repo
+  ```bash
+  git clone https://github.com/Get-Sybers/DX_DFIR.git
+  cd DX_DFIR
+  ```
 
-Fresh Debian/Ubuntu host — installs Docker and the `dx` CLI:
+Run setup script
+  ```bash
+  ./scripts/setup-environment.sh
+  ```
 
-```bash
-git clone --recursive https://github.com/Get-Sybers/DX_DFIR.git
-cd DX_DFIR
-./scripts/setup-environment.sh      # Docker + dx CLI — usable in this shell as it is
-```
+Build the docker images from [goDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz)
 
-Build the hardened tool images — first run, and again after every pull (images
-whose pinned sources moved are rebuilt and the stale ones removed):
+  ```bash
+  dx build images
+  ```
 
-```bash
-dx build images
-```
-
+### Process
 **Work a case** — evidence arrives, becomes a registered collection, gets
 processed into CAR:
 
-```bash
-mkdir -p data_store/raw/sort/ACME-24            # the case's dropzone folder
-cp /mnt/evidence/* data_store/raw/sort/ACME-24/
-dx register ACME-24                 # promote the dropzone: lane-sort by content, SHA-1 hash, registry row
-dx select ACME-24                   # the active collection subsequent commands target
-dx list collections                 # the active one is starred, per-lane counts shown
-dx process ACME-24                  # every lane with staged evidence — or one: dx process ACME-24 memory
-dx byakugan build                   # normalise every source into per-source CAR stores (car_<object>.jsonl)
-dx byakugan verify                  # the CAR correctness gate over what was written
-dx byakugan export-timeline data_store/processed/byakugan   # one property-rich, time-ordered timeline JSONL
-```
+1. Place the evidence to be processed in `data_store/raw/sort/<case-name>/`
+2. Sort the evidence into the correct lane for processing.
+  ```bash
+  dx sort <case-name>
+  ```
+3. Process evidence
+  3.1. process case with all processing lanes. *not specifying a lane will default to all*
+  ```bash
+  dx process <case-name>
+  ```
+  3.2. process a case with a specific lane
+  ```bash
+  dx process <case-name> [zeek|gowindowlicker|godaemonhunter|anamnesis|log2timeline]
+  ```
 
-Evidence that arrives mid-case goes back through the dropzone: copy it into
-`data_store/raw/sort/ACME-24/`, then `dx sort ACME-24`.
+### Analyse
+  1. Deploy the elastic stack
+    - the password can either be specicified or read from `ansible/inventory/secrets/<host>/`
 
-**Quick look at loose evidence** — no collection, one artefact, one lane:
+  ```bash
+  dx deploy stack                                 # Elasticsearch + Kibana + Fleet + Filebeat, localhost-only
+  ```
 
-```bash
-dx unselect                         # with no active collection, lanes read data_store/raw/<type>/ directly
-cp memdump.mem data_store/raw/memory/
-dx process anamnesis                # zeek | gowindowlicker | godaemonhunter | anamnesis | plaso | signatures
-```
-
-Bring up the backend:
-
-```bash
-sudo sysctl -w vm.max_map_count=262144         # Elasticsearch needs this (persist it in /etc/sysctl.conf)
-dx deploy stack                                 # Elasticsearch + Kibana + Fleet + Filebeat, localhost-only
-```
-
-Deploy converges the whole stack from the inventory
-(`ansible/collections/.../playbooks/group_vars/all.yml`): it installs Docker
-when the host has none (Debian/Ubuntu), generates any secret not yet set into
-`ansible/inventory/secrets/<host>/` (gitignored; override any as an ansible
-variable — `ansible-vault encrypt_string` works), generates the TLS material,
-and brings the services up in order, verified. Re-runs converge; a compose-era
-deployment is migrated in place with its data volumes untouched.
-
-Kibana is at `http://127.0.0.1:5601`. Filebeat tails the processed evidence tree
-(`<type>/**/*.json[l]`, pointed at by `ELASTIC_INGEST_DIR`) into
-`logs-dxdfir.<type>-*` data streams — see [the stack](docs/architecture/the-stack.md).
-The deploy also imports the `malcolm` Kibana space: 36 dashboards derived from
-[cisagov/Malcolm](https://github.com/cisagov/Malcolm) over the Zeek and Suricata
-streams ([the dashboards](docs/architecture/the-stack.md#the-dashboards)).
-The CAR→ECS projection into `logs-car.*` and ES|QL `LOOKUP JOIN` flagging against
-the `car-detections` lookup index are proven by the Phase-0
-[risk gate](docs/riskgate.md); the detection rules are data
-[shipped with the Byakugan engine and baked into its image at `/rules`](https://github.com/Get-Sybers/Byakugan/blob/main/rules/README.md)
-(build- and suite-gated engine-side), and `dx byakugan export-stix` turns their
-hits into STIX 2.1 sightings via the engine's own exchange. `dx --help`
-lists every command (the source of truth for the grammar).
-
-## How it runs
-<a name="how-it-runs"></a>
-
-A three-layer stack — the **`dx` CLI** → the **`get_sybers.dxdfir` Ansible
-collection** (one role per source, one action per task) → the
-**[GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) tool containers** —
-writing the processed tree the CAR lane builds from and Filebeat ships. Each
-source runs as `dx process <source>` (driving the matching
-`dxdfir_<source>` role); the role builds every `docker run` purely from the
-tool's `contract.yml` (its environment variables and mounts) and the container
-discovers, batches and skips its own inputs. There is no host python layer:
-the engine logic lives in the Byakugan image, the detection rules-as-code ride
-that image at `/rules` (owned and build-gated by GoDFIR-toolz), and the image
-supply-chain gate is ansible (the GoDFIR-toolz build galaxy's
-`verify`/`audit` entries).
-
-## What it produces
-
-Every lane writes `data_store/processed/<tool>/[<collection>/]<host>/…` — one
-leaf per tool, a collection-scoped run (`dx process <collection> <tool>`)
-one level below it, one folder per **host** (a disk image, a capture, a staged
-log folder) and the tool's own items under that:
-
-| Source | Command | Lands in (`data_store/processed/`) |
-|:---|:---|:---|
-| PCAP (Zeek) | `process zeek` | `zeek/[<collection>/]<capture>/` (`conn.json` + every other Zeek log) |
-| Windows hosts — event logs (`raw/logs/winevt/<host>/`) and disk images / VMs, through the [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) Windows parsers (goevtx, gore, gomft, goprefetch, goese, …) | `process gowindowlicker` | `windowlicker/[<collection>/]<subtool>/<host>/<item>/<subtool>.jsonl` |
-| Linux hosts — logs / root trees (`raw/logs/linux/<host>/`) and disk images / VMs, through the daemon parsers (gojournal, goauditd, gosyslog, …) enriched by a per-host knowledge store | `process godaemonhunter` | `daemonhunter/[<collection>/]<subtool>/<host>/<item>/<subtool>.jsonl` + `knowledge/<host>/` |
-| Memory ([anamnesis](https://github.com/Get-Sybers/Anamnesis)) | `process anamnesis` | `anamnesis/[<collection>/]<image>/` (per-plugin JSONL + `car.db`) |
-| Disk images / VM exports (Plaso) | `process plaso` | `log2timeline/[<collection>/]<host>/` (`<host>.plaso` + `timeline.jsonl`, Plaso `json_line`, side by side) |
-| YARA / Suricata / Hayabusa / disk scan | `process signatures` | `detections/{yara,suricata,hayabusa}/[<collection>/]<host>/` (JSONL) |
-
-The host lanes run their parsers **on** the disk image — E01/Ex01, raw, VMDK,
-VHDX, VHD, QCOW2, VDI, DMG, sparseimage, holding NTFS, ext2/3/4, XFS, vfat, APFS or HFS+/HFSX volumes —
-through the gomount baked into each image: the
-artefact sets are pulled out of the OS volume into a scratch while the parsers
-run, nothing is mounted and nothing is exported — hayabusa and the disk scan
-included. `dxdfir_export` (`gomount materialise` into
-`processed/_extracted/[<collection>/]<image>/export/`) stays as a utility for an
-operator who wants the artefact set on disk. The older lane names still work
-as aliases (`evtx`, `memory`, `godfir-toolz`).
-
-The **CAR layer is materialised**: the [Byakugan](https://github.com/Get-Sybers/Byakugan)
-engine normalises each processed source into finished
-CAR events — one `car_<object>.jsonl` per object (13 objects) plus
-`car_relationships.jsonl` — under `processed/byakugan/<source>/`. The engine runs
-entirely inside the hardened `get-sybers/byakugan` image, cloned + built at the
-`BYAKUGAN_REF` commit pinned in its Dockerfile by `dx build images` — never a host checkout.
-Extraction happens once, in the engine, so that JSON is the contract every sink
-reads and cannot drift from what the engine emits.
-
-**Validated** by the CI **smoke test** (the real EVTX → goevtx → CAR path over
-pinned Sysmon fixtures, asserting the extracted field values) and by
-**`dx byakugan verify`** (each CAR object populated, values sane — IPs, ports, SIDs —
-`car_action` checked against the engine's model vocabulary, every row traceable to
-a source). The other lanes (Plaso, Zeek, Memory, GoDFIR-toolz) are run by hand on
-the author's corpus. The Elastic-side assumptions (evidence-time detection runs,
-`LOOKUP JOIN`) have their own [risk gate](docs/riskgate.md).
-
-## Before you run anything
-
-- **The backend holds evidence.** The Elastic stack runs with security **on**
-  — authentication, RBAC, TLS on the Elasticsearch API — its credentials live
-  in the gitignored per-host secret store (`ansible/inventory/secrets/`,
-  generated by `dx deploy stack`; vault-overridable) and every port binds
-  `127.0.0.1`. See [SECURITY.md](.github/SECURITY.md).
-- **This handles real evidence.** `data_store/` is gitignored deny-by-default, so
-  unknown/extensionless formats are covered — a safety net, not a guarantee. Check
-  `git status` before you commit.
+  2. Open Kibana is at `http://127.0.0.1:5601`
 
 ## Docs
 
-**Start at the [documentation hub](docs/README.md)** — it routes you by what you want:
+The full documentation set:
 
-- **New here?** [What DX_DFIR is](docs/getting-started/README.md) · [Install](docs/getting-started/install.md) · [First run](docs/getting-started/first-run.md) · [The interface](docs/getting-started/the-interface.md) · [Command reference](docs/getting-started/commands.md)
-- **How it works:** [Architecture overview](docs/architecture/README.md) · [Processing lanes](docs/architecture/processing-lanes.md) · [CAR pipeline](docs/architecture/car-pipeline.md) · [The stack](docs/architecture/the-stack.md)
-- **Contributing:** [Standards](docs/reference/README.md) · [Repository map](docs/reference/repository-map.md) · [Contributing](.github/CONTRIBUTING.md) · [Security](.github/SECURITY.md)
-- **CAR engine reference** (owned by [Byakugan](https://github.com/Get-Sybers/Byakugan)): [CAR pipeline](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-Pipeline.md) · [extraction rules](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-Extraction-Rules.md) · [relations](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-Relations.md)
-- **Deep reference:** [risk gate](docs/riskgate.md) · [detection rules-as-code](https://github.com/Get-Sybers/Byakugan/blob/main/rules/README.md)
+- **Getting started:** [Get started](docs/Get-Started.md) · [Command reference](docs/dx-cli.md) · [Directory structure](docs/Dir-Structure.md)
+- **How it works:** [Architecture overview](docs/architecture/README.md) · [Setup flow](docs/architecture/setup-flow.md) · [Processing lanes](docs/architecture/processing-lanes.md) · [CAR pipeline](docs/architecture/car-pipeline.md) · [The stack](docs/architecture/the-stack.md) · [Logical architecture](docs/architecture/DFIR%20Suite%20Logical%20Architecture.md)
+- **Pipeline internals:** [Tool containers](docs/Containers.md) · [Signature rules](docs/Signature-Rules.md) · [Risk gate](docs/riskgate.md) · [Scripts overview](docs/scripts/Scripts-Overview.md) · [Setup-environment script](docs/scripts/Setup_Environment.md)
+- **Elastic stack:** [Config tree](elastic/README.md) · [Spaces](elastic/spaces.md) · [malcolm space](elastic/dashboards/malcolm/README.md) · [malcolm dashboards](elastic/dashboards/malcolm/DASHBOARDS.md) · Filebeat fields: [Zeek](elastic/filebeat/Zeek.md) · [Suricata](elastic/filebeat/Suricata.md) · [Winlog](elastic/filebeat/Winlog.md)
+- **Contributing:** [Go standards](docs/reference/go-standards.md) · [Ansible standards](docs/reference/ansible-standards.md) · [Build & test](docs/reference/build-and-test.md) · [Contributing](.github/CONTRIBUTING.md) · [Security](.github/SECURITY.md)
+- **Research:** [Research notes](docs/research/README.md) · [Evidence spine](docs/research/evidence-spine.md)
+- **CAR engine reference** (owned by [Byakugan](https://github.com/Get-Sybers/Byakugan)): [CAR pipeline](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-Pipeline.md) · [extraction rules](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-Extraction-Rules.md) · [relations](https://github.com/Get-Sybers/Byakugan/blob/main/docs/CAR-Relations.md) · [detection rules-as-code](https://github.com/Get-Sybers/Byakugan/blob/main/rules/README.md)
 
-> The pre-beta code lives on the frozen
-> [`deprecated`](https://github.com/Get-Sybers/DX_DFIR/-/tree/deprecated) branch —
-> unsupported, keeps every defect later releases fixed. Don't build on it.
 
 ## Licence
 

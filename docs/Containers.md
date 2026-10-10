@@ -1,28 +1,19 @@
 # 01_Containers
 
-Every tool container the pipeline runs is **built in-repo, hardened**: no
-third-party tool image is pulled at runtime. This page lists the images, how
-they are built, and the posture they enforce.
-
----
-
-## Build the hardened tool images
-
-```sh
-ansible-playbook ansible/collections/get_sybers.dxdfir/playbooks/dxdfir-build-images.yml
-```
+[goDFIR-Toolz](https://github.com/Get-Sybers/GoDFIR-toolz) images are built from the docker files located. goDFIR-toolz also hosts the pre-built container images via the GitHub registry.
 
 | Image | Tool | Source |
 |---|---|---|
-| `get-sybers/zeek` | PCAP → Zeek JSON | Zeek LTS from the project's OBS Debian repo (`docker/GoDFIR-toolz/zeek/`) |
-| `get-sybers/signatures` | detections: YARA + Suricata (offline replay) + Hayabusa | Debian packages + the pinned Hayabusa release (`docker/GoDFIR-toolz/signatures/`) |
-| `get-sybers/byakugan` | CAR/STIX behaviour engine | clone-at-build at its Dockerfile's `BYAKUGAN_REF` pin (`docker/GoDFIR-toolz/byakugan/`) |
-| `get-sybers/anamnesis` | memory (anamnesis / MemProcFS) | `docker/GoDFIR-toolz/anamnesis/` (clone-at-build) |
-| `get-sybers/plaso` | Plaso timelining + `image_export` (dfVFS) | GIFT stable PPA (`docker/GoDFIR-toolz/plaso/`) |
-| `get-sybers/gowindowlicker` | the Windows artefact matrix: every parser (goevtx, gomft, gore, goprefetch, …) a sub-tool of one binary | static Go, FROM scratch (`docker/GoDFIR-toolz/gowindowlicker/`) |
-| `get-sybers/godaemonhunter` | the Linux daemon-parser matrix (`hunt`: Layer-1 knowledge store → enriched daemon parsers) | static Go, FROM scratch (repo-root context) |
-| `get-sybers/gomount` | disk-image reader (E01/Ex01, raw, VMDK, VHDX, VHD, QCOW2, VDI, DMG, sparseimage; a sparsebundle directory is readable by gomount itself but is not a lane item; NTFS, the Linux filesystems, APFS, HFS+, LVM2): drives the signatures disk scan, the hayabusa export (`materialise`), and baked into the two host-lane images so their parsers run on the image | static Go (`docker/GoDFIR-toolz/gomount/`) |
+| [get-sybers/zeek](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/zeek/README.md) | PCAP → Zeek JSON | Zeek LTS from the project's OBS Debian repo (`docker/GoDFIR-toolz/zeek/`) |
+| [get-sybers/signatures](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/signatures/README.md) | detections: YARA + Suricata (offline replay) + Hayabusa | Debian packages + the pinned Hayabusa release (`docker/GoDFIR-toolz/signatures/`) |
+| [get-sybers/byakugan](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/byakugan/README.md) | [Byakugan](https://github.com/Get-Sybers/Byakugan) CAR/STIX behaviour engine | `BYAKUGAN_REF` pin (`docker/GoDFIR-toolz/byakugan/`) |
+| [get-sybers/anamnesis](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/anamnesis/README.md) | [Anamnesis](https://github.com/Get-Sybers/Anamnesis) memory (anamnesis / MemProcFS) | `docker/GoDFIR-toolz/anamnesis/` (clone-at-build) |
+| [get-sybers/plaso](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/plaso/README.md) | [Plaso](https://github.com/log2timeline/plaso) timelining + `image_export` (dfVFS) | GIFT stable PPA (`docker/GoDFIR-toolz/plaso/`) |
+| [get-sybers/gowindowlicker](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/gowindowlicker/README.md) | [gowindowlicker](https://github.com/Get-Sybers/gowindowlicker) the Windows artefact matrix: every parser (goevtx, gomft, gore, goprefetch, …) a sub-tool of one binary | static Go, FROM scratch (`docker/GoDFIR-toolz/gowindowlicker/`) |
+| [get-sybers/godaemonhunter](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/godaemonhunter/README.md) | [godaemonhunter](https://github.com/Get-Sybers/godaemonhunter) the Linux & MacOS daemon-parser matrix (`hunt`: Layer-1 knowledge store → enriched daemon parsers) | static Go, FROM scratch (repo-root context) |
+| [get-sybers/gomount](https://github.com/Get-Sybers/GoDFIR-toolz/blob/main/gomount/README.md) | [gomount](https://github.com/Get-Sybers/gomount) the disk-image reader (E01/Ex01, raw, VMDK, VHDX, VHD, QCOW2, VDI, DMG, sparseimage; a sparsebundle directory is readable by gomount itself but is not a lane item; NTFS, the Linux filesystems, APFS, HFS+, LVM2): drives the signatures disk scan, the hayabusa export (`materialise`), and baked into the two host-lane images so their parsers run on the image | static Go (`docker/GoDFIR-toolz/gomount/`) |
 
+## Ansible
 The `dxdfir_images` role builds each one and **verifies the minimal-posture
 contract** per build: the static image config plus a shell-free
 `docker export` scan proving the removed binaries (and, for the tool-only
@@ -70,46 +61,8 @@ orchestrator to police it only enlarges the supply-chain and execution surface.
 So the design minimises what is present and confines what runs, rather than
 policing a large image from inside.
 
-## Pulled images
-
-No tool image is pulled; every `get-sybers/*` image is built from source. The
-one pulled set is the analysis backend: the Elastic stack
-is the official `docker.elastic.co/*` images, version-pinned
-(`dxdfir_elastic_version`), deployed by the `dxdfir_stack` role on `127.0.0.1` with
-security on (see its README). `scripts/save-docker-images.sh` includes them in
-the offline tarball set, so the stack deploys air-gapped with zero pulls.
-
 ## Offline / air-gapped hosts
 
-Two levels:
+1. run [scripts/save-docker-images.sh](save-docker-images.sh) to save the required docker images as tar balls. they will be saved `dx_dfir/data_store/docker_images`
 
-**Images only:** `save-docker-images.sh` saves the built `get-sybers/*` images
-plus the pulled Elastic-stack images into `data_store/docker_images/`:
-
-```bash
-scripts/save-docker-images.sh --build     # online: build the get-sybers/* images, then save all
-scripts/save-docker-images.sh --verify    # offline: load every tarball, then assert the hardened inventory
-```
-
-**Full provisioning:** `setup-environment.sh` itself is the offline path:
-provision the host connected first (it builds the images and installs the
-toolchain), save the tarballs, then move/disconnect. A re-run that finds no
-route to the internet falls back to loading the pre-seeded tarballs instead of
-building, and `dx verify images` confirms the loaded inventory is the
-expected hardened set. Nothing reaches
-the network.
-
-**Not containers:** **Hayabusa** ships as a self-contained Rust binary (no
-official image), operator-supplied: download the pinned release into
-`data_store/dependencies/hayabusa/`. Disk-image file access uses host tools
-(`ewf-tools`, `sleuthkit`, `ntfs-3g`) installed by `setup-environment.sh`.
-
-## Upstream documentation
-
-- [Zeek](https://zeek.org/) · [Suricata](https://suricata.io/) · [YARA](https://virustotal.github.io/yara/)
-- [MemProcFS](https://github.com/ufrisk/MemProcFS) · [Plaso / GIFT PPA](https://launchpad.net/~gift)
-- [go-evtx (Velociraptor)](https://github.com/Velocidex/evtx) · [GoDFIR-toolz](https://github.com/Get-Sybers/GoDFIR-toolz) · [Hayabusa (Yamato Security)](https://github.com/Yamato-Security/hayabusa)
-- [Elastic Stack](https://www.elastic.co/docs): the analysis backend ([the stack](architecture/the-stack.md))
-
-The obligations the tools and the backend place on the operator are recorded in
-[THIRD_PARTY_NOTICES.md](../.github/THIRD_PARTY_NOTICES.md).
+2. `setup-environment.sh` in the air gapped environment will check for these images when run.

@@ -130,7 +130,7 @@ func TestRootFindRejectsTypos(t *testing.T) {
 
 // TestRootCommandsGrouped keeps `dx --help` sectioned: every visible root
 // command sits in one of the declared help groups (mirroring
-// docs/getting-started/commands.md), so a new verb cannot land in cobra's
+// docs/getting-started/dx-cli.md), so a new verb cannot land in cobra's
 // "Additional Commands" bucket unnoticed.
 func TestRootCommandsGrouped(t *testing.T) {
 	root := NewRootCmd("test")
