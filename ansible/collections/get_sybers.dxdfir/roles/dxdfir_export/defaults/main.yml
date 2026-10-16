@@ -7,7 +7,13 @@
 # the image (E01/Ex01, raw, VMDK, VHDX, VHD, QCOW2, VDI) and reads the OS
 # volume's filesystem (NTFS, ext2/3/4, XFS, vfat; LVM2 peeled) in-process.
 
-dxdfir_export_repo_root: "{{ role_path }}/../../../../.."
+# Repo root: anchor on the inventory layer's canonical dxdfir_repo_root (playbook_dir-based,
+# stable no matter which role renders it); the playbook_dir fallback keeps the role runnable alone.
+dxdfir_export_repo_root: >-
+  {{ dxdfir_repo_root | default((playbook_dir ~ '/../../../..') | realpath, true) }}
+
+# the one processed-evidence root (group_vars/all.yml), with the same standalone fallback
+dxdfir_export_processed_dir: "{{ dxdfir_processed_dir | default(dxdfir_export_repo_root ~ '/data_store/processed', true) }}"
 
 # a collection-scoped run lands one level below the leaf: processed/_extracted/<collection>/
 dxdfir_export_collection: ""
@@ -23,7 +29,7 @@ dxdfir_export_trees: []
 # item, export/ inside it with materialise.jsonl (the done marker + origin
 # manifest) at its root. An image already exported is not re-pulled unless force.
 dxdfir_export_stage_dir: >-
-  {{ dxdfir_export_repo_root }}/data_store/processed/_extracted{{
+  {{ dxdfir_export_processed_dir }}/_extracted{{
   ('/' ~ dxdfir_export_collection) if dxdfir_export_collection | length > 0 else '' }}
 
 # the artefact sets gomount materialises out of each image — ONE list for every

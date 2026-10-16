@@ -5,11 +5,14 @@
 
 dxdfir_cleanup_action: processed
 
-# Repo root is five levels up from this role.
-dxdfir_cleanup_repo_root: "{{ role_path }}/../../../../.."
+# Repo root: anchor on the inventory layer's canonical dxdfir_repo_root (playbook_dir-based,
+# stable no matter which role renders it); the playbook_dir fallback keeps the role runnable alone.
+dxdfir_cleanup_repo_root: >-
+  {{ dxdfir_repo_root | default((playbook_dir ~ '/../../../..') | realpath, true) }}
 
-dxdfir_cleanup_processed_dir: "{{ dxdfir_cleanup_repo_root }}/data_store/processed"
-dxdfir_cleanup_car_dir: "{{ dxdfir_cleanup_repo_root }}/data_store/processed/byakugan"
+# the one processed-evidence root (group_vars/all.yml), with the same standalone fallback
+dxdfir_cleanup_processed_dir: "{{ dxdfir_processed_dir | default(dxdfir_cleanup_repo_root ~ '/data_store/processed', true) }}"
+dxdfir_cleanup_car_dir: "{{ dxdfir_cleanup_processed_dir }}/byakugan"
 
 # docker: also prune dangling layers; and target EVERY get-sybers/* image rather
 # than only the hardened tool set (which is selected by the

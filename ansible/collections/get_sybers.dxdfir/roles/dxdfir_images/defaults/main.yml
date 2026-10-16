@@ -1,5 +1,8 @@
 ---
-dxdfir_images_repo_root: "{{ role_path }}/../../../../.."
+# Repo root: anchor on the inventory layer's canonical dxdfir_repo_root (playbook_dir-based,
+# stable no matter which role renders it); the playbook_dir fallback keeps the role runnable alone.
+dxdfir_images_repo_root: >-
+  {{ dxdfir_repo_root | default((playbook_dir ~ '/../../../..') | realpath, true) }}
 
 # one knob renames the whole image family
 dxdfir_images_namespace: get-sybers

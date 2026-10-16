@@ -13,9 +13,11 @@ dxdfir_car_load_action: load
 dxdfir_car_load_repo_root: >-
   {{ dxdfir_repo_root | default((playbook_dir ~ '/../../../..') | realpath, true) }}
 
-# output is a SIBLING of byakugan/, never inside it (gitignore + filebeat exclusion chains)
-dxdfir_car_load_dir: "{{ dxdfir_car_load_repo_root }}/data_store/processed/byakugan"
-dxdfir_car_load_out_dir: "{{ dxdfir_car_load_repo_root }}/data_store/processed/byakugan-load"
+# output is a SIBLING of byakugan/, never inside it (gitignore + filebeat exclusion chains).
+# Derive from the inventory layer's canonical processed root; standalone fallback keeps the role runnable alone.
+dxdfir_car_load_processed_dir: "{{ dxdfir_processed_dir | default(dxdfir_car_load_repo_root ~ '/data_store/processed', true) }}"
+dxdfir_car_load_dir: "{{ dxdfir_car_load_processed_dir }}/byakugan"
+dxdfir_car_load_out_dir: "{{ dxdfir_car_load_processed_dir }}/byakugan-load"
 
 # the same contract as godfir_byakugan, a different declared sub-tool
 dxdfir_car_load_contract: >-

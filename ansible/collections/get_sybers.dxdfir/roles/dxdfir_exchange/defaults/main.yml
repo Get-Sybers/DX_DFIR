@@ -3,7 +3,15 @@
 # the playbook picks
 dxdfir_exchange_action: export
 
-dxdfir_exchange_repo_root: "{{ role_path }}/../../../../.."
+# Repo root: anchor on the inventory layer's canonical dxdfir_repo_root (playbook_dir-based,
+# stable no matter which role renders it); the playbook_dir fallback keeps the role runnable alone.
+# NB these dirs are handed to godfir_run as mount hosts and rendered lazily *inside that role*,
+# where a role_path-based anchor would resolve to the installed godfir_run collection, not this repo.
+dxdfir_exchange_repo_root: >-
+  {{ dxdfir_repo_root | default((playbook_dir ~ '/../../../..') | realpath, true) }}
+
+# the one processed-evidence root (group_vars/all.yml), with the same standalone fallback
+dxdfir_exchange_processed_dir: "{{ dxdfir_processed_dir | default(dxdfir_exchange_repo_root ~ '/data_store/processed', true) }}"
 
 # the contract the actions are driven from; the engine ships its rules-as-code
 # (the repo's rules/), and the image bakes both from the clone at the pin
@@ -19,7 +27,7 @@ dxdfir_exchange_image: ""
 
 # where every exchange product lands — engine-written output, kept
 # un-commit-able by data_store/.gitignore's deny-by-default
-dxdfir_exchange_out_dir: "{{ dxdfir_exchange_repo_root }}/data_store/processed/exchange"
+dxdfir_exchange_out_dir: "{{ dxdfir_exchange_processed_dir }}/exchange"
 
 # operator rules-as-code mounted read-only over /rules; empty = the baked set
 dxdfir_exchange_rules_dir: ""
@@ -41,15 +49,15 @@ dxdfir_exchange_case: ""
 dxdfir_exchange_tlp: ""
 
 # export: detection hits -> STIX 2.1 sightings + indicators (<out>/bundle.json)
-dxdfir_exchange_hits_dir: "{{ dxdfir_exchange_repo_root }}/data_store/processed/detections"
+dxdfir_exchange_hits_dir: "{{ dxdfir_exchange_processed_dir }}/detections"
 # a materialised CAR tree whose stix_bundle.json projections pass through; empty = none
 dxdfir_exchange_bundles_dir: ""
 dxdfir_exchange_push: false
 
 # behaviour: the CAR tree joined to the detection lanes as sightings
 # (<out>/behaviour-sightings.json); the case is REQUIRED by the contract
-dxdfir_exchange_car_dir: "{{ dxdfir_exchange_repo_root }}/data_store/processed/byakugan"
-dxdfir_exchange_detections_dir: "{{ dxdfir_exchange_repo_root }}/data_store/processed/detections"
+dxdfir_exchange_car_dir: "{{ dxdfir_exchange_processed_dir }}/byakugan"
+dxdfir_exchange_detections_dir: "{{ dxdfir_exchange_processed_dir }}/detections"
 dxdfir_exchange_producer: ""
 
 # pull: OpenCTI indicators -> the cti-* Elastic _bulk copy
